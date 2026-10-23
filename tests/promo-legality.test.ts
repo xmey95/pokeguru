@@ -12,7 +12,7 @@ const html = `<div><a id="upcoming-promo-cards"></a></div><div><table>
 
 describe('Registro ufficiale delle promo', () => {
   it('usa offline lo snapshot completo MEP/SVP e conserva le date future', async () => {
-    const { registry } = await loadPromoPackage(undefined, async () => { throw new Error('offline') })
+    const { registry } = loadPromoPackage()
     expect(registry.version).toBe(2)
     expect(registry.complete).toBe(true)
     expect(registry.entries.size).toBe(346)
@@ -41,14 +41,10 @@ describe('Registro ufficiale delle promo', () => {
     expect(() => parsePromoRegistry(html.replace('11/20/2026', '11/40/2026'), '2026-10-23')).toThrow()
   })
 
-  it('conserva lo snapshot incluso se un aggiornamento duplica un codice', async () => {
-    const response = Response.json({ schema: 1, version: 3, checkedAt: '2026-10-24T00:00:00.000Z',
-      sourceUrl: 'https://www.pokemon.com/uk/play-pokemon/about/pokemon-tcg-promo-card-legality-status',
-      complete: true, availableRanges: [{ code: 'MEP', first: 1, last: 2 }],
-      entries: [{ code: 'MEP', number: '001', state: 'available', legalDate: null, dateNote: null }] })
-    const { registry, error } = await loadPromoPackage(undefined, async () => response)
+  it('conserva lo snapshot incluso come unica versione delle regole promo', () => {
+    const { registry, error } = loadPromoPackage()
     expect(registry.version).toBe(2)
     expect(registry.entries.size).toBe(346)
-    expect(error).toContain('duplicato')
+    expect(error).toBeNull()
   })
 })

@@ -12,7 +12,7 @@ import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
 import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
   OFFICIAL_SET_RELEASE_VERSION, officialSetRelease, officialSetReleases } from './official-set-releases'
-import { BUNDLED_WESTERN_RULE_PACKAGE, newerRulePackage, parseWesternRulePackage,
+import { BUNDLED_WESTERN_RULE_PACKAGE,
   type WesternRulePackage } from '../shared/western-rule-package'
 
 type SetResponse = {
@@ -174,12 +174,12 @@ export async function fetchCatalogSample(): Promise<{ sets: CatalogSet[]; prints
   return { sets, prints, fetchedAt }
 }
 
-export async function fetchStandardManifest(promoFetcher: typeof fetch = fetch, dataDir?: string): Promise<StandardManifest> {
+export async function fetchStandardManifest(): Promise<StandardManifest> {
   const fetchedAt = new Date().toISOString()
   // H is the first mark in the verified 2026 rotation. Future marks are inventory
   // candidates only; the legality evaluator still requires verified rules.
   const markFilter = candidateMarks.join('%7C')
-  const promoAttempt = loadPromoPackage(dataDir, promoFetcher)
+  const promoAttempt = loadPromoPackage()
   const [marked, lowerMarked, setIndex, scarletEnergy, megaEnergy, promoResult] = await Promise.all([
     json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter}`),
     json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter.toLowerCase()}`),
@@ -248,12 +248,12 @@ export async function fetchStandardManifest(promoFetcher: typeof fetch = fetch, 
 
 export async function syncStandardCatalog(store: CatalogStore,
   progress?: (phase: string, expected: number, acquired: number) => void,
-  mode: CatalogSyncMode = 'new', promoFetcher: typeof fetch = fetch): Promise<CatalogView> {
+  mode: CatalogSyncMode = 'new'): Promise<CatalogView> {
   try {
     if (!store.resumeJob(mode)) {
       store.startJob(mode)
       progress?.('Lettura inventario TCGdex', 0, 0)
-      const manifest = await fetchStandardManifest(promoFetcher, store.dataDir)
+      const manifest = await fetchStandardManifest()
       store.save(manifest, 'standard-marks')
       store.queueJob(mode)
     }
@@ -514,30 +514,9 @@ export class CatalogStore {
   }
 
   rulePackage(): { value: WesternRulePackage; error: string | null } {
-    const row = this.db.prepare('SELECT payload FROM catalog_rule_package WHERE id = 1')
-      .get() as { payload: string } | undefined
-    if (!row) return { value: BUNDLED_WESTERN_RULE_PACKAGE, error: null }
-    try {
-      const installed = parseWesternRulePackage(JSON.parse(row.payload) as unknown)
-      return { value: newerRulePackage(installed, BUNDLED_WESTERN_RULE_PACKAGE)
-        ? installed : BUNDLED_WESTERN_RULE_PACKAGE, error: null }
-    } catch {
-      return { value: BUNDLED_WESTERN_RULE_PACKAGE,
-        error: 'Pacchetto di regole salvato non valido: in uso il pacchetto incluso nell’app.' }
-    }
-  }
-
-  installRulePackage(input: unknown): WesternRulePackage {
-    const candidate = parseWesternRulePackage(input)
-    const current = this.rulePackage()
-    if (current.error) throw new Error(current.error)
-    if (!newerRulePackage(candidate, current.value)) {
-      throw new Error('Il pacchetto di regole non è più recente di quello in uso.')
-    }
-    this.db.prepare(`INSERT INTO catalog_rule_package VALUES (1, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET payload=excluded.payload, installed_at=excluded.installed_at`)
-      .run(JSON.stringify(candidate), new Date().toISOString())
-    return candidate
+    // Rules are distributed with verified application releases. Older databases
+    // may contain a package from an experimental build; it must not override the release.
+    return { value: BUNDLED_WESTERN_RULE_PACKAGE, error: null }
   }
 
   view(): CatalogView {
@@ -548,8 +527,17 @@ export class CatalogStore {
         return { id: item.id, name: item.name, sourceTotal: item.source_total, sampleTotal: item.sample_total,
           fetchedAt: item.fetched_at, releaseDate: item.release_date }
       })
+    const promoRegistry = loadPromoPackage().registry
     const prints = this.db.prepare('SELECT payload FROM catalog_prints ORDER BY id')
-      .all().map((row) => JSON.parse((row as { payload: string }).payload) as CatalogPrint)
+      .all().map((row) => {
+        const print = JSON.parse((row as { payload: string }).payload) as CatalogPrint
+        if (!print.isPromo) return print
+        const entry = promoRegistry.entries.get(promoKey(print.setId, print.localId))
+        return { ...print, promoStatus: {
+          state: entry?.state ?? 'unlisted', legalDate: entry?.legalDate ?? null,
+          dateNote: entry?.dateNote ?? null, checkedAt: promoRegistry.checkedAt
+        } } as CatalogPrint
+      })
     const sync = this.db.prepare('SELECT fetched_at FROM catalog_sync WHERE id = 1').get() as { fetched_at: string } | undefined
     const kind = this.scopeKind()
     const targetIds = kind === 'standard-marks' ? new Set(this.db.prepare('SELECT print_id FROM catalog_targets')
@@ -558,10 +546,6 @@ export class CatalogStore {
     const acquiredTargets = targetPrints.filter((print) => print.detailAt !== null).length
     const promoTargets = targetPrints.filter((print) => print.isPromo)
     const acquiredPromos = promoTargets.filter((print) => print.detailAt !== null).length
-    const promoAuditRow = this.db.prepare('SELECT checked_at, error, series_json FROM catalog_promo_audit WHERE id = 1')
-      .get() as { checked_at: string | null; error: string | null; series_json: string } | undefined
-    const promoPackage = this.db.prepare('SELECT version, complete FROM catalog_promo_package WHERE id = 1')
-      .get() as { version: number; complete: number } | undefined
     const targetSetIds = [...new Set(targetPrints.map((print) => print.setId))].sort()
     const officialReleased = officialSetReleases().filter((set) =>
       set.releaseDate <= new Date().toISOString().slice(0, 10))
@@ -604,9 +588,9 @@ export class CatalogStore {
             unlisted: promoTargets.filter((print) => print.promoStatus?.state === 'unlisted').length,
             unchecked: promoTargets.filter((print) => !print.promoStatus).length } } : undefined,
       promoAudit: targetIds ? { sourceUrl: PROMO_LEGALITY_SOURCE,
-        checkedAt: promoAuditRow?.checked_at ?? null, error: promoAuditRow?.error ?? null,
-        series: promoAuditRow ? JSON.parse(promoAuditRow.series_json) as string[] : [],
-        packageVersion: promoPackage?.version, complete: promoPackage?.complete === 1 } : undefined,
+        checkedAt: promoRegistry.checkedAt, error: null,
+        series: promoRegistry.series,
+        packageVersion: promoRegistry.version, complete: promoRegistry.complete } : undefined,
       syncedAt: sync?.fetched_at ?? null,
       sets: targetIds ? sets.filter((set) => targetSetIds.includes(set.id)) : sets,
       prints: targetIds ? targetPrints : prints

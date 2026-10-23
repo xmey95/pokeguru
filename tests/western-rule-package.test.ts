@@ -2,12 +2,13 @@ import { expect, it } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { CatalogStore } from '../src/main/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import type { CatalogPrint } from '../src/shared/catalog'
 import { evaluateWesternRotation } from '../src/shared/standard-rotation'
 import { evaluateSetAdmission } from '../src/shared/standard-admission'
-import { BUNDLED_WESTERN_RULE_PACKAGE, newerRulePackage, parseWesternRulePackage } from '../src/shared/western-rule-package'
+import { BUNDLED_WESTERN_RULE_PACKAGE, parseWesternRulePackage } from '../src/shared/western-rule-package'
 
 function futurePackage() {
   const candidate = structuredClone(BUNDLED_WESTERN_RULE_PACKAGE)
@@ -36,8 +37,7 @@ function print(): CatalogPrint {
 
 it('accetta solo intervalli, date e fonti coerenti del circuito occidentale', () => {
   const good = parseWesternRulePackage(futurePackage())
-  expect(newerRulePackage(good, BUNDLED_WESTERN_RULE_PACKAGE)).toBe(true)
-  expect(newerRulePackage(BUNDLED_WESTERN_RULE_PACKAGE, good)).toBe(false)
+  expect(good.version).toBe('2026-11-01.1')
   const overlapping = futurePackage()
   overlapping.rotations[2].effectiveFrom = '2026-12-31'
   expect(() => parseWesternRulePackage(overlapping)).toThrow(/sovrapposti/)
@@ -49,27 +49,30 @@ it('accetta solo intervalli, date e fonti coerenti del circuito occidentale', ()
   expect(() => parseWesternRulePackage(duplicate)).toThrow(/duplicata/)
 })
 
-it('persiste il pacchetto nuovo e ricalcola rotazione e ammissione senza cambiare la lista', () => {
+it('usa sempre le regole incluse nella release anche con un pacchetto sperimentale salvato', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pokeguru-rules-'))
   const path = join(directory, 'pokeguru.sqlite')
   try {
     let store = new CatalogStore(path)
     const before = store.view()
     const candidate = futurePackage()
-    expect(() => store.installRulePackage(BUNDLED_WESTERN_RULE_PACKAGE)).toThrow(/non è più recente/)
-    store.installRulePackage(candidate)
     store.close()
+    const database = new DatabaseSync(path)
+    database.prepare('INSERT INTO catalog_rule_package VALUES (1, ?, ?)')
+      .run(JSON.stringify(candidate), '2026-11-01T00:00:00.000Z')
+    database.close()
     store = new CatalogStore(path)
     const after = store.view()
     expect(before.rulePackage?.version).toBe('2026-10-23.1')
-    expect(after.rulePackage?.version).toBe(candidate.version)
+    expect(after.rulePackage?.version).toBe(before.rulePackage?.version)
     const withPrint = { ...after, syncedAt: '2027-01-01T00:00:00.000Z', prints: [print()] }
     const baseline = deck('1 Future Card FUTURE 001')
-    expect(evaluateWesternRotation(baseline, withPrint, '2027-01-15').lines[0].status).toBe('mark-accepted')
-    expect(evaluateSetAdmission(baseline, withPrint, '2027-01-14').lines[0].status).toBe('waiting')
-    expect(evaluateSetAdmission(baseline, withPrint, '2027-01-15').lines[0].status).toBe('admitted')
-    expect(evaluateWesternRotation(baseline, { ...withPrint, rulePackage: before.rulePackage }, '2027-01-15')
-      .lines[0].status).toBe('indeterminate')
+    expect(evaluateWesternRotation(baseline, withPrint, '2027-01-15').lines[0].status).toBe('indeterminate')
+    expect(evaluateSetAdmission(baseline, withPrint, '2027-01-15').lines[0].status).toBe('indeterminate')
+    const nextRelease = { ...withPrint, rulePackage: parseWesternRulePackage(candidate) }
+    expect(evaluateWesternRotation(baseline, nextRelease, '2027-01-15').lines[0].status).toBe('mark-accepted')
+    expect(evaluateSetAdmission(baseline, nextRelease, '2027-01-14').lines[0].status).toBe('waiting')
+    expect(evaluateSetAdmission(baseline, nextRelease, '2027-01-15').lines[0].status).toBe('admitted')
     expect(baseline.rawText).toBe('1 Future Card FUTURE 001')
     store.close()
   } finally { rmSync(directory, { recursive: true, force: true }) }

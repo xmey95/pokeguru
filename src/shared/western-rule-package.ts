@@ -86,13 +86,3 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
 }
 
 export const BUNDLED_WESTERN_RULE_PACKAGE = parseWesternRulePackage(bundled)
-
-export function newerRulePackage(candidate: WesternRulePackage, current: WesternRulePackage): boolean {
-  const parts = (version: string): number[] => version.replace('.', '-').split('-').map(Number)
-  const left = parts(candidate.version)
-  const right = parts(current.version)
-  for (let index = 0; index < left.length; index++) {
-    if (left[index] !== right[index]) return left[index] > right[index]
-  }
-  return false
-}

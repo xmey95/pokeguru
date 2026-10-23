@@ -1,10 +1,5 @@
-import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import bundled from './promo-status-western.json'
 import { promoKey, type PromoRegistry, type PromoRegistryEntry } from './promo-legality'
-
-export const PROMO_PACKAGE_URL =
-  'https://raw.githubusercontent.com/xmey95/pokeguru/main/src/main/promo-status-western.json'
 
 interface PromoPackage {
   schema: 1
@@ -53,34 +48,14 @@ function parsePackage(value: unknown): PromoPackage {
   return { ...pkg, entries }
 }
 
-export async function loadPromoPackage(dataDir?: string, fetcher: typeof fetch = fetch): Promise<{
+export function loadPromoPackage(): {
   registry: PromoRegistry & { complete: boolean; version: number }; error: string | null
-}> {
-  let selected = parsePackage(bundled)
-  const path = dataDir ? join(dataDir, 'promo-status-western.json') : null
-  if (path) {
-    try {
-      const cached = parsePackage(JSON.parse(readFileSync(path, 'utf8')))
-      if (cached.version > selected.version) selected = cached
-    } catch { /* A missing or invalid cache cannot replace the bundled package. */ }
-  }
-  let error: string | null = null
-  try {
-    const response = await fetcher(PROMO_PACKAGE_URL, { signal: AbortSignal.timeout(10_000), cache: 'no-store' })
-    if (!response.ok) throw new Error(`Pacchetto promo: HTTP ${response.status}.`)
-    if (Number(response.headers.get('content-length') ?? 0) > 500_000) throw new Error('Pacchetto promo troppo grande.')
-    const body = await response.text()
-    if (body.length > 500_000) throw new Error('Pacchetto promo troppo grande.')
-    const remote = parsePackage(JSON.parse(body))
-    if (remote.version > selected.version) {
-      selected = remote
-      if (path) writeFileSync(path, body, 'utf8')
-    }
-  } catch (cause) { error = cause instanceof Error ? cause.message : 'Pacchetto promo non disponibile.' }
+} {
+  const selected = parsePackage(bundled)
   return { registry: {
     checkedAt: selected.checkedAt,
     entries: new Map(selected.entries.map((entry) => [promoKey(entry.code, entry.number), entry])),
     series: [...new Set(selected.entries.map((entry) => entry.code))].sort(),
     complete: selected.complete, version: selected.version
-  }, error }
+  }, error: null }
 }

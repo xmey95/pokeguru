@@ -38,23 +38,14 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     { id: 'nvp-001', localId: '001', name: 'Nuova promo' }
   ]
   const sets = ['sv05', 'me01', 'mep', 'nvp', 'sve', 'mee'].map((id) =>
-    ({ id, name: id.toUpperCase(), cardCount: { total: 1 },
+    ({ id, name: id === 'nvp' ? 'NVP Promos' : id.toUpperCase(), cardCount: { total: 1 },
       releaseDate: id === 'sv05' ? '2024-03-22' : id === 'me01' ? '2026-02-30' : undefined }))
   let failPromo = true
-  let officialUnavailable = false
   let updatedRarity = false
   const details = new Map<string, number>()
   vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
     const url = String(input)
-    if (url.includes('promo-status-western.json')) {
-      if (officialUnavailable) return new Response('', { status: 503 })
-      return Response.json({ schema: 1, version: 3, checkedAt: '2026-10-23T12:00:00.000Z',
-        sourceUrl: 'https://www.pokemon.com/us/play-pokemon/about/pokemon-tcg-promo-card-legality-status',
-        complete: true, entries: [
-          { code: 'NVP', number: '001', state: 'upcoming', legalDate: '2026-11-20', dateNote: null },
-          { code: 'MEP', number: '001', state: 'available', legalDate: null, dateNote: null }
-        ] })
-    }    if (url.includes('/cards?regulationMark=eq:h')) return Response.json([briefs[2]])
+    if (url.includes('/cards?regulationMark=eq:h')) return Response.json([briefs[2]])
     if (url.includes('/cards?')) return Response.json([briefs[0], briefs[1], briefs[3]])
     if (url.endsWith('/sets')) return Response.json(sets)
     if (url.includes('/sets/')) {
@@ -78,7 +69,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   expect(manifest.sets.find((set) => set.id === 'sv05')?.releaseDate).toBe('2024-03-22')
   expect(manifest.sets.find((set) => set.id === 'me01')?.releaseDate).toBeNull()
   expect(manifest.prints.find((print) => print.id === 'nvp-001')?.promoStatus).toMatchObject({
-    state: 'upcoming', legalDate: '2026-11-20'
+    state: 'unlisted', legalDate: null
   })
   const store = new CatalogStore(database)
   await expect(syncStandardCatalog(store)).rejects.toThrow('limitato temporaneamente')
@@ -95,7 +86,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     expected: 1, acquired: 0, missing: 1, promoVerified: 1, promoUnchecked: 0
   })
   expect(store.view().standardCoverage?.promos).toMatchObject({ expected: 2, acquired: 1, missing: 1,
-    series: 2, available: 1, upcoming: 1 })
+    series: 2, available: 1, unlisted: 1 })
   expect(store.view().scope.kind).toBe('standard-marks')
   store.close()
 
@@ -111,6 +102,10 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   expect(view.standardCoverage?.bySet.find((set) => set.setId === 'me01')?.officialReleaseDate).toBe('2025-09-26')
   expect(view.standardCoverage?.bySet.find((set) => set.setId === 'nvp')?.officialReleaseDate).toBeNull()
   expect(view.standardCoverage?.promos).toMatchObject({ expected: 2, acquired: 2, missing: 0 })
+  const legacyPromo = view.prints.find((print) => print.id === 'nvp-001')!
+  reopened.savePrints([{ ...legacyPromo, promoStatus: { state: 'available', legalDate: null,
+    dateNote: null, checkedAt: '2026-11-01' } }])
+  expect(reopened.view().prints.find((print) => print.id === 'nvp-001')?.promoStatus?.state).toBe('unlisted')
   expect(details.get('sv05-001')).toBe(1)
   expect(details.get('mep-001')).toBe(5)
   expect(view.prints.find((print) => print.id === 'mep-001')?.rarity).toBe('Common')
@@ -129,11 +124,12 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   expect(reopened.getPrint('sv05-001')?.rarity).toBe('Rare')
   const unchangedDetailAt = reopened.getPrint('mep-001')?.detailAt
   const latestOfficialCheck = reopened.view().promoAudit?.checkedAt
-  officialUnavailable = true
   const staleOfficial = await syncStandardCatalog(reopened)
-  expect(staleOfficial.promoAudit?.error).toContain('HTTP 503')
+  expect(staleOfficial.promoAudit?.error).toBeNull()
   expect(staleOfficial.promoAudit?.checkedAt).toBe(latestOfficialCheck)
-  expect(staleOfficial.prints.find((print) => print.id === 'nvp-001')?.promoStatus?.state).toBe('upcoming')
+  expect(staleOfficial.prints.find((print) => print.id === 'nvp-001')?.promoStatus?.state).toBe('unlisted')
+  expect((fetch as ReturnType<typeof vi.fn>).mock.calls.some(([url]) =>
+    String(url).includes('promo-status-western.json'))).toBe(false)
   expect(reopened.getPrint('mep-001')?.detailAt).toBe(unchangedDetailAt)
   reopened.close()
 }, 20_000)

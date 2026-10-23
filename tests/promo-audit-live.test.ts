@@ -4,7 +4,7 @@ import { loadPromoPackage } from '../src/main/promo-package'
 import { promoKey } from '../src/main/promo-legality'
 
 it.skipIf(process.env.POKEGURU_PROMO_AUDIT_LIVE !== '1')('confronta registro ufficiale e indici TCGdex delle promo', async () => {
-  const { registry } = await loadPromoPackage(undefined, async () => { throw new Error('offline') })
+  const { registry } = loadPromoPackage()
   const manifest = await fetchStandardManifest()
   const included = new Set(manifest.prints.map((print) => print.id))
   const report: Record<string, { available: number; inSet: number; inManifest: number; missingInSet: string[]; outsideManifest: string[] }> = {}
