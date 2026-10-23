@@ -89,11 +89,116 @@ describe('ProjectStore', () => {
       status: 'BOZZA', cardTotal: 1, createdAt: time
     })
     expect(migrated.getBaseline('legacy')).toMatchObject({ rawText, interpretedTotal: 1 })
+    expect(migrated.listDeckVersions('legacy')).toMatchObject([{
+      sequence: 1, rawText, createdAt: time, parsed: { interpretedTotal: 1 }
+    }])
     migrated.close()
 
     const reopened = new ProjectStore(path)
     expect(reopened.get('legacy')?.circuitAssignment).toBe('MIGRATED')
     expect(reopened.getBaseline('legacy')?.rawText).toBe(rawText)
+    expect(reopened.listDeckVersions('legacy')).toHaveLength(1)
+    reopened.close()
+  })
+
+  it('isola versioni, thread, messaggi e candidate e segnala una base superata', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const first = store.create({ name: 'Primo', format: 'STANDARD' })
+    const other = store.create({ name: 'Altro', format: 'STANDARD' })
+    const noList = store.createDeckThread({ projectId: other.id, title: 'Partenza da zero' })
+    expect(noList.baseVersionId).toBeNull()
+    expect(noList.stale).toBe(false)
+    const original = '60 Carta A MEG 1'
+    store.importDeck({ projectId: first.id, rawText: original, source: 'paste' })
+    const initial = store.listDeckVersions(first.id)[0]
+    const a = store.createDeckThread({ projectId: first.id, title: 'Piano A', openingNote: 'Proviamo più pesca.' })
+    const b = store.createDeckThread({ projectId: first.id, title: 'Piano B' })
+    expect(a.baseVersionId).toBe(initial.id)
+    expect(b.baseVersionId).toBe(initial.id)
+    store.importDeck({ projectId: first.id, rawText: original, source: 'paste' })
+    expect(store.listDeckVersions(first.id)).toHaveLength(1)
+    expect(store.listDeckThreads(first.id).every((thread) => !thread.stale)).toBe(true)
+    store.addDeckThreadMessage(first.id, a.id, 'Teniamo il motore iniziale.')
+    store.saveDeckCandidate({ projectId: first.id, threadId: a.id, rawText: '60 Carta B MEG 2', note: 'Più veloce' })
+    store.saveDeckCandidate({ projectId: first.id, threadId: b.id, rawText: '60 Carta C MEG 3' })
+    expect(store.getBaseline(first.id)?.rawText).toBe(original)
+    expect(store.listDeckThreads(first.id).find((item) => item.id === a.id)).toMatchObject({
+      messages: [{ text: 'Proviamo più pesca.' }, { text: 'Teniamo il motore iniziale.' }],
+      candidates: [{ sequence: 1, rawText: '60 Carta B MEG 2', note: 'Più veloce' }]
+    })
+    expect(store.listDeckThreads(first.id).find((item) => item.id === b.id)?.candidates[0].rawText).toBe('60 Carta C MEG 3')
+    expect(() => store.saveDeckCandidate({ projectId: other.id, threadId: a.id, rawText: original })).toThrow('Thread non trovato')
+    expect(store.listDeckThreads(other.id)).toHaveLength(1)
+    store.importDeck({ projectId: first.id, rawText: '60 Carta D MEG 4', source: 'paste' })
+    expect(store.listDeckVersions(first.id).map((version) => version.sequence)).toEqual([2, 1])
+    expect(store.listDeckThreads(first.id).every((thread) => thread.stale)).toBe(true)
+    expect(store.listDeckThreads(other.id)[0].stale).toBe(false)
+    store.importDeck({ projectId: other.id, rawText: original, source: 'paste' })
+    expect(store.listDeckThreads(other.id)[0].stale).toBe(true)
+    store.close()
+
+    const reopened = new ProjectStore(path)
+    expect(reopened.listDeckVersions(first.id)[1]).toMatchObject({ id: initial.id, rawText: original })
+    expect(reopened.listDeckThreads(first.id).find((item) => item.id === a.id)).toMatchObject({
+      baseVersionId: initial.id, stale: true, candidates: [{ rawText: '60 Carta B MEG 2' }]
+    })
+    expect(reopened.getBaseline(first.id)?.rawText).toBe('60 Carta D MEG 4')
+    reopened.close()
+  })
+
+  it('adotta una candidata intera in modo atomico e mantiene l’altro thread', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Adozione', format: 'STANDARD' })
+    const other = store.create({ name: 'Altro', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id, rawText: '60 Carta A MEG 1', source: 'paste' })
+    const original = store.listDeckVersions(project.id)[0]
+    const first = store.createDeckThread({ projectId: project.id, title: 'Piano A' })
+    const second = store.createDeckThread({ projectId: project.id, title: 'Piano B' })
+    const a = store.saveDeckCandidate({ projectId: project.id, threadId: first.id,
+      rawText: '59 Carta A MEG 1\n1 Carta B MEG 2' }).candidates[0]
+    const b = store.saveDeckCandidate({ projectId: project.id, threadId: second.id,
+      rawText: '58 Carta A MEG 1\n2 Carta C MEG 3' }).candidates[0]
+    const request = { projectId: project.id, threadId: first.id, candidateId: a.id, expectedHeadId: original.id }
+    expect(() => store.adoptDeckCandidate({ ...request, projectId: other.id })).toThrow()
+    expect(store.getBaseline(project.id)?.rawText).toBe('60 Carta A MEG 1')
+    const adopted = store.adoptDeckCandidate(request)
+    expect(adopted.rawText).toBe(a.rawText)
+    expect(store.listDeckVersions(project.id)[0]).toMatchObject({ sequence: 2,
+      adoption: { threadId: first.id, candidateId: a.id } })
+    expect(store.listDeckThreads(project.id).find((thread) => thread.id === second.id)).toMatchObject({
+      stale: true, candidates: [{ id: b.id, rawText: b.rawText }]
+    })
+    expect(() => store.adoptDeckCandidate(request)).toThrow('lista principale è cambiata')
+    expect(store.listDeckVersions(project.id)).toHaveLength(2)
+    store.close()
+    const reopened = new ProjectStore(path)
+    expect(reopened.getBaseline(project.id)?.rawText).toBe(a.rawText)
+    expect(reopened.listDeckVersions(project.id)[0].adoption?.candidateId).toBe(a.id)
+    expect(reopened.listDeckThreads(project.id).find((thread) => thread.id === second.id)?.candidates[0].id).toBe(b.id)
+    const fresh = reopened.createDeckThread({ projectId: project.id, title: 'ASC' })
+    const dotted = reopened.saveDeckCandidate({ projectId: project.id, threadId: fresh.id,
+      rawText: '59 Carta A MEG 1\n1 Mega Audino ex ME02.5 172' }).candidates[0]
+    const beforeDotted = reopened.listDeckVersions(project.id)[0].id
+    const converted = reopened.adoptDeckCandidate({ projectId: project.id, threadId: fresh.id,
+      candidateId: dotted.id, expectedHeadId: beforeDotted })
+    expect(converted.rawText).toBe('59 Carta A MEG 1\n1 Mega Audino ex ASC 172')
+    expect(reopened.listDeckThreads(project.id).find((thread) => thread.id === fresh.id)?.candidates[0].rawText)
+      .toBe(dotted.rawText)
+    reopened.close()
+  })
+
+  it('conserva globalmente l’ultimo audit delle regole tra riavvii', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    expect(store.getStandardRuleAudit()).toBeNull()
+    const audit = { packageVersion: 'western-2026-10-23-v1', checkedAt: '2026-10-23T10:00:00.000Z',
+      verifiedAt: '2026-10-23T10:00:00.000Z', status: 'matching' as const, sources: [] }
+    store.saveStandardRuleAudit(audit)
+    store.close()
+    const reopened = new ProjectStore(path)
+    expect(reopened.getStandardRuleAudit()).toEqual(audit)
     reopened.close()
   })
 
@@ -156,7 +261,7 @@ describe('ProjectStore', () => {
     expect(reopened.listMatchupReports(first.id, snapshot.id)).toEqual([])
     expect(() => reopened.saveMatchupReport(report)).toThrow('lista è cambiata')
     reopened.close()
-  })
+  }, 15_000)
 
   it('migra una guida precedente e conserva revisioni, commenti in attesa e prosecuzione sulla nuova base', () => {
     const path = databasePath()

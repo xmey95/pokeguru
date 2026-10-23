@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            command: package:linux
+            binary: release/linux-unpacked/pokeguru
+            artifact: release/*.AppImage
+            name: linux
+          - os: windows-2022
+            command: package:win
+            binary: release/win-unpacked/Pokeguru.exe
+            artifact: release/*-setup.exe
+            name: windows
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm test
+      - name: Install Linux display tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
+      - run: npm run ${{ matrix.command }}
+      - name: Smoke packaged app on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/package-smoke.mjs "${{ matrix.binary }}"
+      - name: Smoke AppImage payload
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          "$GITHUB_WORKSPACE"/release/*.AppImage --appimage-extract >/dev/null
+          xvfb-run -a node "$GITHUB_WORKSPACE/tests/package-smoke.mjs" "$RUNNER_TEMP/squashfs-root/AppRun"
+      - name: Smoke packaged app on Windows
+        if: runner.os == 'Windows'
+        run: node tests/package-smoke.mjs "${{ matrix.binary }}"
+      - name: Smoke installed Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem -LiteralPath release -Filter '*-setup.exe' | Select-Object -First 1).FullName
+          $target = Join-Path $env:RUNNER_TEMP 'pokeguru-test-install'
+          $install = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$target" -WindowStyle Hidden -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer exited $($install.ExitCode)" }
+          node tests/package-smoke.mjs (Join-Path $target 'Pokeguru.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'Installed app smoke failed' }
+          $uninstall = Start-Process -FilePath (Join-Path $target 'Uninstall Pokeguru.exe') -ArgumentList '/S' -WindowStyle Hidden -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited $($uninstall.ExitCode)" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.name }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub release
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          merge-multiple: true
+          path: release
+      - name: Check package version and files
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "The release version must be X.Y.Z" >&2
+            exit 1
+          fi
+          test "$(find release -maxdepth 1 -name '*.AppImage' | wc -l)" -eq 1
+          test "$(find release -maxdepth 1 -name '*-setup.exe' | wc -l)" -eq 1
+          echo "TAG=v$version" >> "$GITHUB_ENV"
+          (cd release && sha256sum ./*.AppImage ./*-setup.exe > SHA256SUMS.txt)
+      - name: Create and publish verified release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          status=$(gh api -i "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" 2>/dev/null | head -n 1 | awk '{print $2}' || true)
+          case "$status" in
+            404) ;;
+            200) echo "Tag ${TAG} already exists; refusing to replace a release." >&2; exit 1 ;;
+            *) echo "Cannot verify tag ${TAG} (HTTP ${status:-unknown})." >&2; exit 1 ;;
+          esac
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Pokeguru $TAG" --draft --generate-notes
+          gh release upload "$TAG" release/*.AppImage release/*-setup.exe release/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length' | grep -qx '3'
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false

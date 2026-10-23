@@ -1,0 +1,72 @@
+import type { ParsedDeck } from './deck-import'
+import type { AiRunConfig } from './ai'
+
+export interface DeckVersion {
+  id: string
+  projectId: string
+  sequence: number
+  source: 'paste' | 'file'
+  fileName: string | null
+  rawText: string
+  parsed: ParsedDeck
+  createdAt: string
+  adoption: { threadId: string; candidateId: string } | null
+}
+
+export interface DeckThreadMessage {
+  id: string
+  text: string
+  createdAt: string
+  author: 'user' | 'assistant'
+  aiConfig: AiRunConfig | null
+  aiTurnId: string | null
+}
+
+export interface DeckCandidate {
+  id: string
+  sequence: number
+  rawText: string
+  parsed: ParsedDeck
+  note: string
+  createdAt: string
+  origin: 'manual' | 'ai'
+  aiConfig: AiRunConfig | null
+  aiTurnId: string | null
+  sources: { id: string; label: string; url: string | null }[]
+  checks: string[]
+}
+
+export interface DeckThread {
+  id: string
+  projectId: string
+  title: string
+  baseVersionId: string | null
+  baseVersionNumber: number | null
+  currentVersionId: string | null
+  stale: boolean
+  aiSessionRef: string | null
+  createdAt: string
+  updatedAt: string
+  messages: DeckThreadMessage[]
+  candidates: DeckCandidate[]
+}
+
+export interface CreateDeckThreadInput {
+  projectId: string
+  title: string
+  openingNote?: string
+}
+
+export interface SaveDeckCandidateInput {
+  projectId: string
+  threadId: string
+  rawText: string
+  note?: string
+}
+
+export interface AdoptDeckCandidateInput {
+  projectId: string
+  threadId: string
+  candidateId: string
+  expectedHeadId: string
+}

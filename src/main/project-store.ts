@@ -7,6 +7,11 @@ import type { MatchupNote, SaveMatchupNoteInput } from '../shared/matchups'
 import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot, MatchupTurn } from '../shared/meta-matchups'
 import type { CreateProjectInput, Project } from '../shared/projects'
 import type { ClearLineMappingInput, DeckLineMapping, DeckReconciliation, IdentityTotal, MappedPrint, SaveLineMappingInput } from '../shared/reconciliation'
+import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AiRunConfig } from '../shared/ai'
+import { normalizeDeckCodes } from '../shared/deck-code-normalization'
+import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 
 interface ProjectRow {
   id: string
@@ -118,6 +123,18 @@ export class ProjectStore {
         selected_at TEXT NOT NULL,
         PRIMARY KEY (project_id, line_number)
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_constraints (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        identity_id TEXT NOT NULL,
+        identity_name TEXT NOT NULL,
+        print_id TEXT,
+        kind TEXT NOT NULL CHECK (kind IN ('required', 'minimum', 'exact')),
+        quantity INTEGER NOT NULL CHECK (quantity BETWEEN 1 AND 60),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS deck_constraints_project ON deck_constraints(project_id, created_at);
     `)
     const columns = new Set((this.db.prepare('PRAGMA table_info(projects)').all() as { name: string }[]).map((row) => row.name))
     if (!columns.has('circuit') || !columns.has('circuit_assignment')) {
@@ -135,6 +152,91 @@ export class ProjectStore {
         throw error
       }
     }
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS deck_versions (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        sequence INTEGER NOT NULL,
+        source TEXT NOT NULL CHECK (source IN ('paste', 'file')),
+        file_name TEXT,
+        raw_text TEXT NOT NULL,
+        parsed_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(project_id, sequence),
+        UNIQUE(project_id, id)
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_main_heads (
+        project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+        version_id TEXT NOT NULL,
+        FOREIGN KEY (project_id, version_id) REFERENCES deck_versions(project_id, id)
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_threads (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        base_version_id TEXT REFERENCES deck_versions(id),
+        ai_session_ref TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(project_id, id)
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS deck_threads_project ON deck_threads(project_id, created_at);
+      CREATE TABLE IF NOT EXISTS deck_thread_messages (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL REFERENCES deck_threads(id) ON DELETE CASCADE,
+        author TEXT NOT NULL CHECK (author IN ('user', 'assistant')),
+        text TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS deck_thread_messages_thread ON deck_thread_messages(thread_id, created_at);
+      CREATE TABLE IF NOT EXISTS deck_thread_candidates (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL REFERENCES deck_threads(id) ON DELETE CASCADE,
+        sequence INTEGER NOT NULL,
+        raw_text TEXT NOT NULL,
+        parsed_json TEXT NOT NULL,
+        note TEXT NOT NULL,
+        origin TEXT NOT NULL CHECK (origin = 'manual'),
+        created_at TEXT NOT NULL,
+        UNIQUE(thread_id, sequence)
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_ai_candidates (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL REFERENCES deck_threads(id) ON DELETE CASCADE,
+        sequence INTEGER NOT NULL,
+        raw_text TEXT NOT NULL,
+        parsed_json TEXT NOT NULL,
+        note TEXT NOT NULL,
+        sources_json TEXT NOT NULL,
+        checks_json TEXT NOT NULL,
+        ai_config_json TEXT NOT NULL,
+        ai_turn_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(thread_id, sequence),
+        UNIQUE(thread_id, ai_turn_id)
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_adoptions (
+        version_id TEXT PRIMARY KEY REFERENCES deck_versions(id) ON DELETE CASCADE,
+        thread_id TEXT NOT NULL REFERENCES deck_threads(id) ON DELETE CASCADE,
+        candidate_id TEXT NOT NULL,
+        adopted_at TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS standard_rule_audit (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        payload_json TEXT NOT NULL
+      ) STRICT;
+    `)
+    const messageColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[]).map((row) => row.name))
+    if (!messageColumns.has('ai_config_json') || !messageColumns.has('ai_turn_id')) {
+      this.db.exec('BEGIN IMMEDIATE')
+      try {
+        if (!messageColumns.has('ai_config_json')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN ai_config_json TEXT')
+        if (!messageColumns.has('ai_turn_id')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN ai_turn_id TEXT')
+        this.db.exec('COMMIT')
+      } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    }
+    this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS deck_thread_messages_ai_turn ON deck_thread_messages(thread_id, ai_turn_id) WHERE ai_turn_id IS NOT NULL')
+    this.migrateDeckVersions()
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS matchup_notes (
         id TEXT PRIMARY KEY,
@@ -191,6 +293,30 @@ export class ProjectStore {
       ) STRICT;
     `)
     this.migrateMatchupReports()
+  }
+
+  private migrateDeckVersions(): void {
+    const rows = this.db.prepare(`SELECT b.project_id, b.source, b.file_name, b.raw_text,
+      b.parsed_json, b.imported_at FROM deck_baselines b
+      LEFT JOIN deck_main_heads h ON h.project_id = b.project_id
+      WHERE h.project_id IS NULL`).all() as {
+      project_id: string; source: 'paste' | 'file'; file_name: string | null
+      raw_text: string; parsed_json: string; imported_at: string
+    }[]
+    if (!rows.length) return
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      for (const row of rows) {
+        const id = randomUUID()
+        this.db.prepare(`INSERT INTO deck_versions
+          (id, project_id, sequence, source, file_name, raw_text, parsed_json, created_at)
+          VALUES (?, ?, 1, ?, ?, ?, ?, ?)`)
+          .run(id, row.project_id, row.source, row.file_name, row.raw_text, row.parsed_json, row.imported_at)
+        this.db.prepare('INSERT INTO deck_main_heads (project_id, version_id) VALUES (?, ?)')
+          .run(row.project_id, id)
+      }
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
   private migrateMatchupReports(): void {
@@ -285,6 +411,269 @@ export class ProjectStore {
     }
   }
 
+  listDeckVersions(projectId: string): DeckVersion[] {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const rows = this.db.prepare(`SELECT v.id, v.project_id, v.sequence, v.source, v.file_name,
+      v.raw_text, v.parsed_json, v.created_at, a.thread_id, a.candidate_id
+      FROM deck_versions v LEFT JOIN deck_adoptions a ON a.version_id = v.id
+      WHERE v.project_id = ? ORDER BY v.sequence DESC`)
+      .all(projectId) as {
+        id: string; project_id: string; sequence: number; source: 'paste' | 'file'
+        file_name: string | null; raw_text: string; parsed_json: string; created_at: string
+        thread_id: string | null; candidate_id: string | null
+      }[]
+    return rows.map((row) => ({
+      id: row.id, projectId: row.project_id, sequence: row.sequence, source: row.source,
+      fileName: row.file_name, rawText: row.raw_text,
+      parsed: JSON.parse(row.parsed_json) as ParsedDeck, createdAt: row.created_at,
+      adoption: row.thread_id && row.candidate_id ? { threadId: row.thread_id, candidateId: row.candidate_id } : null
+    }))
+  }
+
+  getStandardRuleAudit(): StandardRuleAudit | null {
+    const row = this.db.prepare('SELECT payload_json FROM standard_rule_audit WHERE id = 1')
+      .get() as { payload_json: string } | undefined
+    return row ? JSON.parse(row.payload_json) as StandardRuleAudit : null
+  }
+
+  saveStandardRuleAudit(audit: StandardRuleAudit): void {
+    this.db.prepare(`INSERT INTO standard_rule_audit (id, payload_json) VALUES (1, ?)
+      ON CONFLICT(id) DO UPDATE SET payload_json = excluded.payload_json`).run(JSON.stringify(audit))
+  }
+
+  adoptDeckCandidate(input: AdoptDeckCandidateInput): DeckBaseline {
+    if (!input || !this.get(input.projectId) || typeof input.threadId !== 'string' ||
+      typeof input.candidateId !== 'string' || typeof input.expectedHeadId !== 'string')
+      throw new Error('Richiesta di adozione non valida.')
+    const now = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const head = this.db.prepare('SELECT version_id FROM deck_main_heads WHERE project_id = ?')
+        .get(input.projectId) as { version_id: string } | undefined
+      const thread = this.db.prepare('SELECT base_version_id FROM deck_threads WHERE project_id = ? AND id = ?')
+        .get(input.projectId, input.threadId) as { base_version_id: string | null } | undefined
+      if (!head || !thread) throw new Error('Lista principale o thread non trovato nel progetto.')
+      if (head.version_id !== input.expectedHeadId || thread.base_version_id !== head.version_id)
+        throw new Error('La lista principale è cambiata: confronta la candidata con la versione corrente prima di adottarla.')
+      const candidate = this.db.prepare(`SELECT raw_text FROM deck_thread_candidates WHERE thread_id = ? AND id = ?
+        UNION ALL SELECT raw_text FROM deck_ai_candidates WHERE thread_id = ? AND id = ?`)
+        .get(input.threadId, input.candidateId, input.threadId, input.candidateId) as { raw_text: string } | undefined
+      if (!candidate) throw new Error('Candidata non trovata in questo thread.')
+      const normalized = normalizeDeckCodes(candidate.raw_text)
+      const parsed = parseDeck(normalized.rawText)
+      if (parsed.interpretedTotal !== 60 || parsed.lines.some((line) => line.kind === 'unparsed') ||
+        parsed.diagnostics.some((item) => item.code === 'TOTAL_MISMATCH'))
+        throw new Error('La candidata deve contenere 60 carte e nessuna riga o totale incoerente.')
+      if (normalized.unsupported.length)
+        throw new Error('Alcuni codici set con punto non sono ancora verificati nell’export Limitless.')
+      if (parsed.diagnostics.some((item) => item.code === 'ALT_PRINT'))
+        throw new Error('Le stampe ALT non sono riconosciute in modo affidabile da Limitless.')
+      const previous = this.db.prepare('SELECT raw_text FROM deck_baselines WHERE project_id = ?')
+        .get(input.projectId) as { raw_text: string } | undefined
+      if (previous?.raw_text === normalized.rawText) throw new Error('La candidata coincide già con la lista principale.')
+      const latest = this.db.prepare('SELECT COALESCE(MAX(sequence), 0) AS sequence FROM deck_versions WHERE project_id = ?')
+        .get(input.projectId) as { sequence: number }
+      const versionId = randomUUID()
+      this.db.prepare(`INSERT INTO deck_versions
+        (id, project_id, sequence, source, file_name, raw_text, parsed_json, created_at)
+        VALUES (?, ?, ?, 'paste', NULL, ?, ?, ?)`)
+        .run(versionId, input.projectId, latest.sequence + 1, normalized.rawText, JSON.stringify(parsed), now)
+      this.db.prepare('INSERT INTO deck_adoptions (version_id, thread_id, candidate_id, adopted_at) VALUES (?, ?, ?, ?)')
+        .run(versionId, input.threadId, input.candidateId, now)
+      this.db.prepare('DELETE FROM deck_line_mappings WHERE project_id = ?').run(input.projectId)
+      this.db.prepare(`INSERT INTO deck_baselines
+        (project_id, source, file_name, raw_text, parsed_json, interpreted_total, problem_count, imported_at)
+        VALUES (?, 'paste', NULL, ?, ?, 60, 0, ?)
+        ON CONFLICT(project_id) DO UPDATE SET source = excluded.source, file_name = NULL,
+        raw_text = excluded.raw_text, parsed_json = excluded.parsed_json,
+        interpreted_total = 60, problem_count = 0, imported_at = excluded.imported_at`)
+        .run(input.projectId, normalized.rawText, JSON.stringify(parsed), now)
+      this.db.prepare('UPDATE deck_main_heads SET version_id = ? WHERE project_id = ?').run(versionId, input.projectId)
+      this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(now, input.projectId)
+      this.db.exec('COMMIT')
+      return { projectId: input.projectId, rawText: normalized.rawText,
+        source: 'paste', fileName: null, importedAt: now, ...parsed }
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+  }
+
+  listDeckThreads(projectId: string): DeckThread[] {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const current = this.db.prepare('SELECT version_id FROM deck_main_heads WHERE project_id = ?')
+      .get(projectId) as { version_id: string } | undefined
+    const rows = this.db.prepare(`SELECT t.id, t.project_id, t.title, t.base_version_id,
+      t.ai_session_ref, t.created_at, t.updated_at, v.sequence AS base_sequence
+      FROM deck_threads t LEFT JOIN deck_versions v ON v.id = t.base_version_id
+      WHERE t.project_id = ? ORDER BY t.created_at DESC, t.rowid DESC`).all(projectId) as {
+        id: string; project_id: string; title: string; base_version_id: string | null
+        ai_session_ref: string | null; created_at: string; updated_at: string; base_sequence: number | null
+      }[]
+    const messages = this.db.prepare(`SELECT id, text, created_at, author, ai_config_json, ai_turn_id FROM deck_thread_messages
+      WHERE thread_id = ? ORDER BY created_at, rowid`)
+    const candidates = this.db.prepare(`SELECT id, sequence, raw_text, parsed_json, note, origin, created_at
+      FROM deck_thread_candidates WHERE thread_id = ? ORDER BY sequence`)
+    const aiCandidates = this.db.prepare(`SELECT id, sequence, raw_text, parsed_json, note, sources_json,
+      checks_json, ai_config_json, ai_turn_id, created_at FROM deck_ai_candidates WHERE thread_id = ? ORDER BY sequence`)
+    return rows.map((row) => ({
+      id: row.id, projectId: row.project_id, title: row.title,
+      baseVersionId: row.base_version_id, baseVersionNumber: row.base_sequence,
+      currentVersionId: current?.version_id ?? null,
+      stale: row.base_version_id !== (current?.version_id ?? null),
+      aiSessionRef: row.ai_session_ref, createdAt: row.created_at, updatedAt: row.updated_at,
+      messages: (messages.all(row.id) as {
+        id: string; text: string; created_at: string; author: DeckThreadMessage['author']; ai_config_json: string | null; ai_turn_id: string | null
+      }[]).map((message): DeckThreadMessage => ({
+        id: message.id, text: message.text, createdAt: message.created_at, author: message.author,
+        aiConfig: message.ai_config_json ? JSON.parse(message.ai_config_json) as AiRunConfig : null,
+        aiTurnId: message.ai_turn_id
+      })),
+      candidates: [...(candidates.all(row.id) as {
+        id: string; sequence: number; raw_text: string; parsed_json: string
+        note: string; origin: 'manual'; created_at: string
+      }[]).map((candidate): DeckCandidate => ({
+        id: candidate.id, sequence: candidate.sequence, rawText: candidate.raw_text,
+        parsed: JSON.parse(candidate.parsed_json) as ParsedDeck,
+        note: candidate.note, origin: candidate.origin, createdAt: candidate.created_at,
+        aiConfig: null, aiTurnId: null, sources: [], checks: []
+      })), ...(aiCandidates.all(row.id) as {
+        id: string; sequence: number; raw_text: string; parsed_json: string; note: string
+        sources_json: string; checks_json: string; ai_config_json: string; ai_turn_id: string; created_at: string
+      }[]).map((candidate): DeckCandidate => ({
+        id: candidate.id, sequence: candidate.sequence, rawText: candidate.raw_text,
+        parsed: JSON.parse(candidate.parsed_json) as ParsedDeck,
+        note: candidate.note, origin: 'ai', createdAt: candidate.created_at,
+        aiConfig: JSON.parse(candidate.ai_config_json) as AiRunConfig, aiTurnId: candidate.ai_turn_id,
+        sources: JSON.parse(candidate.sources_json) as DeckCandidate['sources'],
+        checks: JSON.parse(candidate.checks_json) as string[]
+      }))].sort((a, b) => a.sequence - b.sequence)
+    }))
+  }
+
+  createDeckThread(input: CreateDeckThreadInput): DeckThread {
+    if (!input || !this.get(input.projectId)) throw new Error('Progetto non trovato.')
+    const title = typeof input.title === 'string' ? input.title.trim() : ''
+    const openingNote = typeof input.openingNote === 'string' ? input.openingNote.trim() : ''
+    if (!title || title.length > 120 || title.includes('\0')) throw new Error('Inserisci un titolo da 1 a 120 caratteri.')
+    if (openingNote.length > 5000 || openingNote.includes('\0')) throw new Error('Scrivi un messaggio fino a 5.000 caratteri.')
+    const id = randomUUID()
+    const now = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const head = this.db.prepare('SELECT version_id FROM deck_main_heads WHERE project_id = ?')
+        .get(input.projectId) as { version_id: string } | undefined
+      this.db.prepare(`INSERT INTO deck_threads
+        (id, project_id, title, base_version_id, ai_session_ref, created_at, updated_at)
+        VALUES (?, ?, ?, ?, NULL, ?, ?)`).run(id, input.projectId, title, head?.version_id ?? null, now, now)
+      if (openingNote) this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
+        VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), id, openingNote, now)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return this.listDeckThreads(input.projectId).find((thread) => thread.id === id)!
+  }
+
+  addDeckThreadMessage(projectId: string, threadId: string, value: string): DeckThread {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
+    if (!thread) throw new Error('Thread non trovato in questo progetto.')
+    const message = typeof value === 'string' ? value.trim() : ''
+    if (!message || message.length > 5000 || message.includes('\0'))
+      throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
+    const now = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
+        VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), threadId, message, now)
+      this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+  }
+
+  assignDeckAiSession(projectId: string, threadId: string, sessionId: string): DeckThread {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    if (!sessionId || sessionId.length > 200) throw new Error('Sessione Codex non valida.')
+    const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
+    if (!thread) throw new Error('Thread non trovato in questo progetto.')
+    if (thread.aiSessionRef && thread.aiSessionRef !== sessionId) throw new Error('Il thread ha già una sessione Codex diversa.')
+    this.db.prepare(`UPDATE deck_threads SET ai_session_ref = ?, updated_at = ?
+      WHERE id = ? AND project_id = ? AND (ai_session_ref IS NULL OR ai_session_ref = ?)`)
+      .run(sessionId, new Date().toISOString(), threadId, projectId, sessionId)
+    return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+  }
+
+  saveDeckAiExchange(projectId: string, threadId: string, sessionId: string,
+    question: string, answer: string, turnId: string, config: AiRunConfig,
+    proposal?: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] }): DeckThread {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
+    if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questo thread.')
+    const userText = typeof question === 'string' ? question.trim() : ''
+    const aiText = typeof answer === 'string' ? answer.trim() : ''
+    if (!userText || userText.length > 5000 || userText.includes('\0')) throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
+    if (!aiText || aiText.length > 10000 || aiText.includes('\0')) throw new Error('Risposta Codex non valida.')
+    if (!turnId || turnId.length > 200) throw new Error('Turno Codex non valido.')
+    if (proposal && (!proposal.rawText || proposal.rawText.length > 200_000 ||
+      !proposal.note || proposal.note.length > 5000 || proposal.sources.length > 100))
+      throw new Error('Proposta Codex non valida.')
+    const parsedProposal = proposal ? parseDeck(proposal.rawText) : null
+    if (parsedProposal && (parsedProposal.interpretedTotal !== 60 ||
+      parsedProposal.lines.some((line) => line.kind === 'unparsed') ||
+      parsedProposal.diagnostics.some((item) => item.code === 'TOTAL_MISMATCH')))
+      throw new Error('La proposta Codex non contiene una lista completa di 60 carte.')
+    const now = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
+        VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), threadId, userText, now)
+      this.db.prepare(`INSERT INTO deck_thread_messages
+        (id, thread_id, author, text, created_at, ai_config_json, ai_turn_id)
+        VALUES (?, ?, 'assistant', ?, ?, ?, ?)`)
+        .run(randomUUID(), threadId, aiText, now, JSON.stringify(config), turnId)
+      if (proposal && parsedProposal) {
+        const next = this.nextCandidateSequence(threadId)
+        this.db.prepare(`INSERT INTO deck_ai_candidates
+          (id, thread_id, sequence, raw_text, parsed_json, note, sources_json, checks_json,
+            ai_config_json, ai_turn_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(randomUUID(), threadId, next, proposal.rawText, JSON.stringify(parsedProposal), proposal.note,
+            JSON.stringify(proposal.sources), JSON.stringify(proposal.checks), JSON.stringify(config), turnId, now)
+      }
+      this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+  }
+
+  private nextCandidateSequence(threadId: string): number {
+    const row = this.db.prepare(`SELECT MAX(sequence) AS n FROM (
+      SELECT sequence FROM deck_thread_candidates WHERE thread_id = ?
+      UNION ALL SELECT sequence FROM deck_ai_candidates WHERE thread_id = ?)`)
+      .get(threadId, threadId) as { n: number | null }
+    return (row.n ?? 0) + 1
+  }
+
+  saveDeckCandidate(input: SaveDeckCandidateInput): DeckThread {
+    if (!input || !this.get(input.projectId)) throw new Error('Progetto non trovato.')
+    const thread = this.listDeckThreads(input.projectId).find((item) => item.id === input.threadId)
+    if (!thread) throw new Error('Thread non trovato in questo progetto.')
+    if (typeof input.rawText !== 'string' || !input.rawText.trim() ||
+      input.rawText.length > 200_000 || input.rawText.includes('\0'))
+      throw new Error('Inserisci una lista di testo non vuota, fino a 200.000 caratteri.')
+    const note = typeof input.note === 'string' ? input.note.trim() : ''
+    if (note.length > 5000 || note.includes('\0')) throw new Error('Scrivi una nota fino a 5.000 caratteri.')
+    const parsed = parseDeck(input.rawText)
+    if (parsed.lines.length > 5_000) throw new Error('La lista contiene troppe righe (massimo 5.000).')
+    const now = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare(`INSERT INTO deck_thread_candidates
+        (id, thread_id, sequence, raw_text, parsed_json, note, origin, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'manual', ?)`)
+        .run(randomUUID(), thread.id, this.nextCandidateSequence(thread.id), input.rawText, JSON.stringify(parsed), note, now)
+      this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, thread.id)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return this.listDeckThreads(input.projectId).find((item) => item.id === thread.id)!
+  }
+
   getReconciliation(projectId: string): DeckReconciliation {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const baseline = this.getBaseline(projectId)
@@ -375,6 +764,69 @@ export class ProjectStore {
     return this.getReconciliation(input.projectId)
   }
 
+  listConstraints(projectId: string): DeckConstraint[] {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    return (this.db.prepare(`SELECT id, project_id, identity_id, identity_name, print_id,
+      kind, quantity, created_at, updated_at FROM deck_constraints WHERE project_id = ?
+      ORDER BY created_at, id`).all(projectId) as {
+        id: string; project_id: string; identity_id: string; identity_name: string
+        print_id: string | null; kind: DeckConstraint['kind']; quantity: number
+        created_at: string; updated_at: string
+      }[]).map((row) => ({
+      id: row.id, projectId: row.project_id, identityId: row.identity_id,
+      identityName: row.identity_name, printId: row.print_id, kind: row.kind,
+      quantity: row.quantity, createdAt: row.created_at, updatedAt: row.updated_at
+    }))
+  }
+
+  saveConstraint(input: SaveConstraintInput, identityName: string): DeckConstraint {
+    if (!input || !this.get(input.projectId)) throw new Error('Progetto non trovato.')
+    if (typeof input.identityId !== 'string' || !input.identityId || input.identityId.length > 120 ||
+      typeof identityName !== 'string' || !identityName || identityName.length > 160 ||
+      (input.printId != null && (typeof input.printId !== 'string' || input.printId.length > 100)) ||
+      !['required', 'minimum', 'exact'].includes(input.kind) ||
+      !Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 60 ||
+      (input.kind === 'required' && input.quantity !== 1)) throw new Error('Vincolo non valido.')
+    const existing = input.id ? this.listConstraints(input.projectId).find((item) => item.id === input.id) : null
+    if (input.id && !existing) throw new Error('Vincolo non trovato in questo progetto.')
+    const now = new Date().toISOString()
+    const item: DeckConstraint = {
+      id: existing?.id ?? randomUUID(), projectId: input.projectId,
+      identityId: input.identityId, identityName, printId: input.printId ?? null,
+      kind: input.kind, quantity: input.quantity,
+      createdAt: existing?.createdAt ?? now, updatedAt: now
+    }
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare(`INSERT INTO deck_constraints
+        (id, project_id, identity_id, identity_name, print_id, kind, quantity, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET identity_id=excluded.identity_id,
+          identity_name=excluded.identity_name, print_id=excluded.print_id,
+          kind=excluded.kind, quantity=excluded.quantity, updated_at=excluded.updated_at`)
+        .run(item.id, item.projectId, item.identityId, item.identityName, item.printId,
+          item.kind, item.quantity, item.createdAt, item.updatedAt)
+      this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(now, item.projectId)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return item
+  }
+
+  deleteConstraint(input: DeleteConstraintInput): DeckConstraint[] {
+    if (!input || !this.get(input.projectId) || typeof input.id !== 'string') throw new Error('Progetto non trovato.')
+    const existing = this.listConstraints(input.projectId).find((item) => item.id === input.id)
+    if (!existing) throw new Error('Vincolo non trovato in questo progetto.')
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare('DELETE FROM deck_constraints WHERE project_id = ? AND id = ?')
+        .run(input.projectId, input.id)
+      this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?')
+        .run(new Date().toISOString(), input.projectId)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return this.listConstraints(input.projectId)
+  }
+
   importDeck(input: ImportDeckInput): DeckBaseline {
     if (!input || typeof input.projectId !== 'string' || !this.get(input.projectId)) {
       throw new Error('Progetto non trovato.')
@@ -419,6 +871,19 @@ export class ProjectStore {
           problem_count = excluded.problem_count,
           imported_at = excluded.imported_at
       `).run(input.projectId, input.source, fileName ?? null, input.rawText, JSON.stringify(parsed), parsed.interpretedTotal, problemCount, importedAt)
+      if (!previous || previous.raw_text !== input.rawText) {
+        const latest = this.db.prepare('SELECT COALESCE(MAX(sequence), 0) AS sequence FROM deck_versions WHERE project_id = ?')
+          .get(input.projectId) as { sequence: number }
+        const versionId = randomUUID()
+        this.db.prepare(`INSERT INTO deck_versions
+          (id, project_id, sequence, source, file_name, raw_text, parsed_json, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(versionId, input.projectId, latest.sequence + 1, input.source, fileName ?? null,
+            input.rawText, JSON.stringify(parsed), importedAt)
+        this.db.prepare(`INSERT INTO deck_main_heads (project_id, version_id) VALUES (?, ?)
+          ON CONFLICT(project_id) DO UPDATE SET version_id = excluded.version_id`)
+          .run(input.projectId, versionId)
+      }
       if (previous?.raw_text === input.rawText) {
         this.db.prepare('UPDATE deck_line_mappings SET baseline_imported_at = ? WHERE project_id = ?')
           .run(importedAt, input.projectId)

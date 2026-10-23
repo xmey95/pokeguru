@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, join, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { AiPreferencesStore, resolveAiConfig } from '../src/main/ai-preferences'
@@ -29,5 +29,17 @@ describe('preferenze AI', () => {
     expect(() => resolveAiConfig({ model: 'missing', reasoningEffort: null }, models, 'override')).toThrow('non è più disponibile')
     expect(() => resolveAiConfig({ model: 'example-model', reasoningEffort: 'high' }, models, 'override')).toThrow('non è disponibile')
     expect(() => resolveAiConfig({ model: null, reasoningEffort: 'low' }, models, 'global')).toThrow('Seleziona un modello')
+  })
+
+  it('rifiuta un archivio preferenze incompleto senza sostituire silenziosamente i valori', () => {
+    const directory = mkdtempSync(join(process.cwd(), '.pokeguru-ai-settings-'))
+    try {
+      writeFileSync(join(directory, 'ai-preferences.json'), '{"model":"example-model"}')
+      expect(() => new AiPreferencesStore(directory).read()).toThrow('Impossibile leggere')
+    } finally {
+      if (!realpathSync(directory).startsWith(`${realpathSync(process.cwd())}${sep}`) ||
+        !basename(directory).startsWith('.pokeguru-ai-settings-')) throw new Error('Percorso temporaneo inatteso.')
+      rmSync(directory, { recursive: true, force: true })
+    }
   })
 })
