@@ -1,6 +1,6 @@
 # Prodotto e requisiti iniziali
 
-**Versione:** 23 ottobre 2026. **Stato:** I1 e il primo percorso I2 implementati sul campione dichiarato, incluso l'export verificato in Limitless; la discussione iterativa delle guide Matchup è disponibile come anticipo di I3. APP-027/028 anticipano I3 con controllo del marchio 2025/2026 e prime verifiche di costruzione della lista; APP-031 acquisisce un inventario TCGdex H/I/J riprendibile. Copertura Standard ufficialmente completa, thread AI per modificare il mazzo, dati di torneo e validazione Standard completa restano pianificati.
+**Versione:** 24 ottobre 2026. **Stato:** I1 e I2 implementati; I3 in verifica. Catalogo Standard occidentale misurato sul manifest TCGdex, thread Codex paralleli, primo evento Limitless, guide Matchup con evidenze, controlli Standard per data e pacchetti Linux/Windows sono presenti. Una lista interamente coperta può ricevere esito conforme allo snapshot incluso nella release; casi fuori copertura restano da verificare. La prima release GitHub da `main` deve ancora essere eseguita.
 
 ## Visione e confini
 

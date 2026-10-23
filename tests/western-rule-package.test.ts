@@ -47,6 +47,9 @@ it('accetta solo intervalli, date e fonti coerenti del circuito occidentale', ()
   const duplicate = futurePackage()
   duplicate.setAdmissions.push({ ...duplicate.setAdmissions[0] })
   expect(() => parseWesternRulePackage(duplicate)).toThrow(/duplicata/)
+  const invalidBanSource = futurePackage()
+  invalidBanSource.standardBans.sourceUrl = 'https://example.com/banned'
+  expect(() => parseWesternRulePackage(invalidBanSource)).toThrow(/carte vietate/)
 })
 
 it('usa sempre le regole incluse nella release anche con un pacchetto sperimentale salvato', () => {
@@ -63,7 +66,7 @@ it('usa sempre le regole incluse nella release anche con un pacchetto sperimenta
     database.close()
     store = new CatalogStore(path)
     const after = store.view()
-    expect(before.rulePackage?.version).toBe('2026-10-23.1')
+    expect(before.rulePackage?.version).toBe('2026-10-24.1')
     expect(after.rulePackage?.version).toBe(before.rulePackage?.version)
     const withPrint = { ...after, syncedAt: '2027-01-01T00:00:00.000Z', prints: [print()] }
     const baseline = deck('1 Future Card FUTURE 001')

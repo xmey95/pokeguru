@@ -7,6 +7,7 @@ import { evaluateDeckConstruction } from '../../shared/deck-construction'
 import { evaluateSetAdmission } from '../../shared/standard-admission'
 import { evaluatePromoAdmission } from '../../shared/promo-admission'
 import { evaluateStandardDeck } from '../../shared/standard-deck'
+import { BUNDLED_WESTERN_RULE_PACKAGE } from '../../shared/western-rule-package'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 
 function localDate(): string {
@@ -105,7 +106,13 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
     <section className={`standard-deck-panel ${standardDeck.status}`} aria-label="Esito Standard occidentale">
       <strong>Esito Standard occidentale: {standardDeck.status === 'problem' ? 'errore certo nei controlli' :
         standardDeck.status === 'review' ? 'da verificare' : 'controlli disponibili superati'}</strong>
-      <p>Data {asOf}. Fonti del pacchetto: {ruleAudit?.status === 'matching' ? `coerenti al ${ruleAudit.checkedAt.slice(0, 10)}` : ruleAudit?.status === 'changed' ? 'da rivedere' : ruleAudit?.status === 'unavailable' ? 'non raggiungibili all’ultimo controllo' : 'non ricontrollate da questa installazione'}. La legalità per i tornei resta indeterminata: errata, carte vietate, eccezioni e completezza delle stampe non sono verificate automaticamente.</p>
+      <p>Data {asOf}. Fonti del pacchetto: {ruleAudit?.status === 'matching' ? `coerenti al ${ruleAudit.checkedAt.slice(0, 10)}` : ruleAudit?.status === 'changed' ? 'da rivedere' : ruleAudit?.status === 'unavailable' ? 'non raggiungibili all’ultimo controllo' : 'non ricontrollate da questa installazione'}. {standardDeck.legality === 'supported'
+        ? 'La lista è conforme ai controlli Standard coperti dal pacchetto incluso. La verifica riguarda la lista e le stampe riconosciute, non lingua, autenticità o condizioni delle carte fisiche.'
+        : standardDeck.legality === 'invalid' ? 'La lista viola almeno una regola Standard verificata.'
+          : 'La conformità Standard resta indeterminata dove regole, stampe o date non sono sufficientemente verificate.'}</p>
+      <p>Elenco carte vietate verificato il {BUNDLED_WESTERN_RULE_PACKAGE.standardBans.checkedAt}; errata consultate il {BUNDLED_WESTERN_RULE_PACKAGE.errata.checkedAt}.{' '}
+        <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('standard-bans')}>Carte vietate ↗</button>{' '}
+        <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('errata')}>Errata ↗</button></p>
       {standardDeck.problems.length > 0 && <div><b>Problemi accertati</b><ul>{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
       {standardDeck.toReview.length > 0 && <details><summary>Da verificare ({standardDeck.toReview.length})</summary><ul>{standardDeck.toReview.map((reason, index) => <li key={index}>{reason}</li>)}</ul></details>}
       {standardDeck.passed.length > 0 && <details><summary>Controlli superati ({standardDeck.passed.length})</summary><ul>{standardDeck.passed.map((item) => <li key={item}>{item}</li>)}</ul></details>}
@@ -117,7 +124,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       <p>{rotation.rule ? `Regole ${rotation.rule.version}: marchio ${rotation.rule.firstAllowedMark} o successivo, tra quelli documentati. ` : 'Nessuna regola locale verificata per questa data. '}
         Marchio ammesso: {rotation.counts['mark-accepted']} copie · marchio ruotato: {rotation.counts['mark-rotated']} · da chiarire: {rotation.counts.indeterminate}.
       </p>
-      <p>La legalità completa resta <strong>indeterminata</strong>: copertura del catalogo, promo, date non confermate, errata e stampe storiche richiedono verifica. Fonte controllata il {rotation.sourceChecked}; aggiornamento online delle regole non ancora disponibile.
+      <p>Il solo controllo del marchio non conclude la validazione della lista: il riquadro «Esito Standard occidentale» combina costruzione, ammissione, promo e carte vietate. Fonte controllata il {rotation.sourceChecked}; nuove regole arrivano con una release dell’app.
         {rotation.rule && <> <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(rotation.rule!.version)}>Fonte Play! Pokémon ↗</button></>}
       </p>
     </section>

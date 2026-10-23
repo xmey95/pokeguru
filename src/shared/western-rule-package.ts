@@ -21,6 +21,8 @@ export interface WesternRulePackage {
   version: string
   circuit: 'WESTERN'
   checkedAt: string
+  standardBans: { checkedAt: string; sourceUrl: string; cardNames: string[] }
+  errata: { checkedAt: string; sourceUrl: string; lastUpdated: string }
   rotations: RulePeriod[]
   setAdmissions: SetAdmissionRule[]
 }
@@ -40,7 +42,7 @@ function officialSource(value: unknown): value is string {
   if (typeof value !== 'string') return false
   try {
     const url = new URL(value)
-    return url.protocol === 'https:' && ['www.pokemon.com', 'community.pokemon.com', 'press.pokemon.com']
+    return url.protocol === 'https:' && ['www.pokemon.com', 'community.pokemon.com', 'press.pokemon.com', 'play.pokemon.com']
       .includes(url.hostname) && !url.username && !url.password
   } catch { return false }
 }
@@ -53,6 +55,17 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
     !isoDate(value.checkedAt) || !Array.isArray(value.rotations) || !Array.isArray(value.setAdmissions) ||
     value.rotations.length === 0 || value.rotations.length > 10 || value.setAdmissions.length > 150) {
     throw new Error('Versione o struttura del pacchetto regole non valida.')
+  }
+  const bans = record(value.standardBans)
+  const errata = record(value.errata)
+  if (!isoDate(bans.checkedAt) || bans.checkedAt > value.checkedAt || !officialSource(bans.sourceUrl) ||
+    !Array.isArray(bans.cardNames) || bans.cardNames.length > 100 ||
+    !bans.cardNames.every((name) => typeof name === 'string' && name.length > 0 && name.length <= 100) ||
+    new Set(bans.cardNames.map((name: string) => name.toLocaleLowerCase())).size !== bans.cardNames.length ||
+    !isoDate(errata.checkedAt) || errata.checkedAt > value.checkedAt ||
+    !officialSource(errata.sourceUrl) || !isoDate(errata.lastUpdated) ||
+    errata.lastUpdated > errata.checkedAt) {
+    throw new Error('Fonti o elenco delle carte vietate non validi nel pacchetto.')
   }
   const rotations: RulePeriod[] = value.rotations.map((raw) => {
     const rule = record(raw)
@@ -82,7 +95,8 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
     return rule as unknown as SetAdmissionRule
   })
   return { schema: 1, version: value.version, circuit: 'WESTERN', checkedAt: value.checkedAt,
-    rotations, setAdmissions }
+    standardBans: bans as unknown as WesternRulePackage['standardBans'],
+    errata: errata as unknown as WesternRulePackage['errata'], rotations, setAdmissions }
 }
 
 export const BUNDLED_WESTERN_RULE_PACKAGE = parseWesternRulePackage(bundled)

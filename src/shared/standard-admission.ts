@@ -2,6 +2,7 @@ import type { CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
 import { suggestPrints } from './reconciliation'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from './western-rule-package'
+import { currentBasicEnergy, BASIC_ENERGY_OBSERVED_AT } from './standard-basic-energy'
 
 export const SET_ADMISSION_VERSION = BUNDLED_WESTERN_RULE_PACKAGE.version
 export const SET_ADMISSION_CHECKED_AT = BUNDLED_WESTERN_RULE_PACKAGE.checkedAt
@@ -38,6 +39,10 @@ function evaluateLine(line: DeckLine, catalog: CatalogView | null, asOf: string)
     return { ...base, status: 'indeterminate', message: 'Data di riferimento non valida.' }
   }
   if (!catalog?.syncedAt) return { ...base, status: 'indeterminate', message: 'Catalogo locale non sincronizzato.' }
+  const basicEnergy = currentBasicEnergy(line, catalog, asOf)
+  if (basicEnergy) return { ...base, setId: basicEnergy.setId, printId: basicEnergy.id,
+    legalDate: BASIC_ENERGY_OBSERVED_AT, status: 'admitted',
+    message: `Energia Base corrente verificata nel catalogo al ${BASIC_ENERGY_OBSERVED_AT}; data storica non attestata.` }
   const matches = suggestPrints(line, catalog).filter((item) => item.reason === 'same-print')
   if (matches.length !== 1) return { ...base, status: 'indeterminate',
     message: 'Stampa non identificata univocamente nel catalogo locale.' }

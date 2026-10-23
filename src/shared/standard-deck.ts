@@ -5,6 +5,7 @@ import { evaluateWesternRotation } from './standard-rotation'
 import { evaluateSetAdmission } from './standard-admission'
 import { evaluatePromoAdmission } from './promo-admission'
 import { STANDARD_RULE_PACKAGE_VERSION, type StandardRuleAudit } from './standard-rule-audit'
+import { BUNDLED_WESTERN_RULE_PACKAGE } from './western-rule-package'
 
 export type StandardDeckStatus = 'problem' | 'review' | 'checks-passed'
 
@@ -14,8 +15,8 @@ export interface StandardDeckEvaluation {
   problems: string[]
   toReview: string[]
   passed: string[]
-  /** A positive result covers only the checks enumerated in `passed`. */
-  legality: 'indeterminate'
+  /** A positive result concerns this versioned list and rule snapshot, not physical card checks. */
+  legality: 'supported' | 'invalid' | 'indeterminate'
 }
 
 /** Combine only proven local checks. Unknowns and historical reprints never become a legality verdict. */
@@ -28,10 +29,25 @@ export function evaluateStandardDeck(baseline: DeckBaseline, catalog: CatalogVie
   const problems: string[] = []
   const toReview: string[] = []
   const passed: string[] = []
+  const rules = catalog?.rulePackage ?? BUNDLED_WESTERN_RULE_PACKAGE
   if (catalog?.rulePackageError) toReview.push(catalog.rulePackageError)
   if (audit && (audit.status === 'changed' ||
     audit.packageVersion !== (catalog?.rulePackage?.version ?? STANDARD_RULE_PACKAGE_VERSION)))
     toReview.push('Le fonti ufficiali non confermano il pacchetto di regole locale: ricontrollare nel Catalogo.')
+  if (asOf < rules.standardBans.checkedAt) {
+    toReview.push(`Elenco delle carte vietate verificato solo dal ${rules.standardBans.checkedAt}: data storica da verificare.`)
+  } else {
+    const banned = new Set(rules.standardBans.cardNames.map((name) =>
+      name.normalize('NFKC').trim().toLocaleLowerCase()))
+    let bannedHits = 0
+    for (const line of baseline.lines.filter((item) => item.kind === 'card')) {
+      if (banned.has((line.name ?? '').normalize('NFKC').trim().toLocaleLowerCase())) {
+        bannedHits += 1
+        problems.push(`Riga ${line.lineNumber} — ${line.name}: carta vietata nel pacchetto Standard ${rules.version}.`)
+      }
+    }
+    if (bannedHits === 0) passed.push(`Nessuna carta vietata nello snapshot ${rules.standardBans.checkedAt}`)
+  }
 
   for (const [name, check] of [
     ['60 carte', construction.cardCount], ['Almeno un Pokémon Base', construction.basicPokemon],
@@ -63,6 +79,8 @@ export function evaluateStandardDeck(baseline: DeckBaseline, catalog: CatalogVie
     (promoByLine.get(line.lineNumber) ?? line).status === 'admitted')) {
     passed.push('Date di ammissione delle stampe identificate')
   }
-  return { status: problems.length ? 'problem' : toReview.length ? 'review' : 'checks-passed',
-    asOf, problems, toReview, passed, legality: 'indeterminate' }
+  const status = problems.length ? 'problem' : toReview.length ? 'review' : 'checks-passed'
+  return { status, asOf, problems, toReview, passed,
+    legality: status === 'problem' ? 'invalid' : status === 'checks-passed' &&
+      catalog?.scope.kind === 'standard-marks' ? 'supported' : 'indeterminate' }
 }

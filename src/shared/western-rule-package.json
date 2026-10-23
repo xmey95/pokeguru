@@ -1,8 +1,18 @@
 {
   "schema": 1,
-  "version": "2026-10-23.1",
+  "version": "2026-10-24.1",
   "circuit": "WESTERN",
-  "checkedAt": "2026-10-23",
+  "checkedAt": "2026-10-24",
+  "standardBans": {
+    "checkedAt": "2026-10-24",
+    "sourceUrl": "https://www.pokemon.com/fr/play-pokemon/a-propos/jcc-pokemon-liste-des-cartes-bannies",
+    "cardNames": []
+  },
+  "errata": {
+    "checkedAt": "2026-10-24",
+    "sourceUrl": "https://play.pokemon.com/en-us/resources/documents/tcg-errata/",
+    "lastUpdated": "2024-11-07"
+  },
   "rotations": [
     {
       "version": "play-2025-01-09",

@@ -29,6 +29,7 @@ import { PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { OFFICIAL_SET_RELEASE_SOURCE } from './official-set-releases'
 import { SET_ADMISSION_OLDER_RULE_SOURCE, SET_ADMISSION_RULE_SOURCE } from '../shared/standard-admission'
 import { ACE_SPEC_SOURCE, DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
+import { BUNDLED_WESTERN_RULE_PACKAGE } from '../shared/western-rule-package'
 import { TournamentStore } from './tournament-store'
 import { fetchRecentWesternTournament } from './limitless-event'
 import type { TournamentSnapshot } from '../shared/tournament'
@@ -209,6 +210,8 @@ function registerProjectHandlers(): void {
       : sourceId === 'set-releases' ? OFFICIAL_SET_RELEASE_SOURCE
       : sourceId === 'set-admission' ? SET_ADMISSION_RULE_SOURCE
       : sourceId === 'set-admission-older' ? SET_ADMISSION_OLDER_RULE_SOURCE
+      : sourceId === 'standard-bans' ? BUNDLED_WESTERN_RULE_PACKAGE.standardBans.sourceUrl
+      : sourceId === 'errata' ? BUNDLED_WESTERN_RULE_PACKAGE.errata.sourceUrl
       : WESTERN_ROTATION_RULES.find((item) => item.version === sourceId)?.sourceUrl
     if (!sourceUrl) return { ok: false, error: 'Fonte non valida.' }
     try {

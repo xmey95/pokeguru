@@ -2,6 +2,7 @@ import type { CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
 import { suggestPrints } from './reconciliation'
 import { BUNDLED_WESTERN_RULE_PACKAGE, type RulePeriod, type WesternRulePackage } from './western-rule-package'
+import { currentBasicEnergy } from './standard-basic-energy'
 
 export type RotationRule = RulePeriod
 
@@ -40,12 +41,16 @@ export function westernRotationRule(asOf: string, rules: WesternRulePackage = BU
   return [...rules.rotations].reverse().find((rule) => rule.effectiveFrom <= asOf && asOf <= rule.effectiveUntil) ?? null
 }
 
-function evaluateLine(line: DeckLine, catalog: CatalogView | null, rule: RotationRule | null): RotationLineResult {
+function evaluateLine(line: DeckLine, catalog: CatalogView | null, rule: RotationRule | null,
+  asOf: string): RotationLineResult {
   const base = { lineNumber: line.lineNumber, quantity: line.quantity ?? 0 }
   if (!rule) return { ...base, status: 'indeterminate', regulationMark: null, printId: null,
     message: 'Nessuna regola di rotazione versionata per questa data.' }
   if (!catalog?.syncedAt) return { ...base, status: 'indeterminate', regulationMark: null, printId: null,
     message: 'Catalogo locale non sincronizzato.' }
+  const basicEnergy = currentBasicEnergy(line, catalog, asOf)
+  if (basicEnergy) return { ...base, status: 'mark-accepted', regulationMark: null,
+    printId: basicEnergy.id, message: 'Energia Base corrente identificata: eccezione al marchio di regolamentazione.' }
   const matches = suggestPrints(line, catalog).filter((candidate) => candidate.reason === 'same-print')
   if (matches.length !== 1) return { ...base, status: 'indeterminate', regulationMark: null, printId: null,
     message: 'Stampa non identificata univocamente da nome, codice e numero nel catalogo locale.' }
@@ -65,7 +70,7 @@ export function evaluateWesternRotation(baseline: DeckBaseline, catalog: Catalog
   asOf: string): RotationEvaluation {
   const packageUsed = catalog?.rulePackage ?? BUNDLED_WESTERN_RULE_PACKAGE
   const rule = westernRotationRule(asOf, packageUsed)
-  const lines = baseline.lines.filter((line) => line.kind === 'card').map((line) => evaluateLine(line, catalog, rule))
+  const lines = baseline.lines.filter((line) => line.kind === 'card').map((line) => evaluateLine(line, catalog, rule, asOf))
   const counts: RotationEvaluation['counts'] = { 'mark-accepted': 0, 'mark-rotated': 0, indeterminate: 0 }
   for (const line of lines) counts[line.status] += line.quantity
   return { circuit: 'WESTERN', asOf, rule, sourceChecked: packageUsed.checkedAt,

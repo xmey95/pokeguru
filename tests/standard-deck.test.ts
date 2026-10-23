@@ -3,6 +3,7 @@ import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { evaluateStandardDeck } from '../src/shared/standard-deck'
 import type { StandardRuleAudit } from '../src/shared/standard-rule-audit'
+import { BUNDLED_WESTERN_RULE_PACKAGE } from '../src/shared/western-rule-package'
 
 function print(id: string, name: string, options: Partial<CatalogPrint> = {}): CatalogPrint {
   const [setId, localId] = id.split('-')
@@ -34,8 +35,27 @@ function baseline(lines: string[]): DeckBaseline {
 }
 
 describe('Esito Standard aggregato, senza certificazione torneo', () => {
+  it('conferma una lista coperta dallo snapshot anche con Energia Base senza marchio', () => {
+    const energy = print('sve-005', 'Basic Psychic Energy', { category: 'Energy',
+      energyType: 'normal', regulationMark: null })
+    const coveredCatalog: CatalogView = { ...catalog,
+      scope: { ...catalog.scope, kind: 'standard-marks' }, prints: [...prints, energy],
+      rulePackage: BUNDLED_WESTERN_RULE_PACKAGE }
+    const deck = baseline([...raw.slice(0, 59), '1 Basic Psychic Energy SVE 005'])
+    const result = evaluateStandardDeck(deck, coveredCatalog, '2026-10-24')
+    expect(result.status).toBe('checks-passed')
+    expect(result.legality).toBe('supported')
+    expect(result.passed).toContain('Date di ammissione delle stampe identificate')
+    expect(evaluateStandardDeck(deck, coveredCatalog, '2026-10-22').legality).toBe('indeterminate')
+    const withBan: CatalogView = { ...coveredCatalog, rulePackage: {
+      ...coveredCatalog.rulePackage!, standardBans: { ...coveredCatalog.rulePackage!.standardBans,
+        cardNames: ['Trainer 1'] }
+    } }
+    expect(evaluateStandardDeck(deck, withBan, '2026-10-24').legality).toBe('invalid')
+  })
+
   it('elenca esattamente i controlli superati e conserva i limiti', () => {
-    const result = evaluateStandardDeck(baseline(raw), catalog, '2026-10-23')
+    const result = evaluateStandardDeck(baseline(raw), catalog, '2026-10-24')
     expect(result.status).toBe('checks-passed')
     expect(result.problems).toEqual([])
     expect(result.toReview).toEqual([])
@@ -71,7 +91,9 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
   it('ricalcola l’ammissione quando la data supera il confine', () => {
     const deck = baseline([...raw.slice(0, 59), '1 Future Trainer ME03 200'])
     expect(evaluateStandardDeck(deck, catalog, '2026-04-09').status).toBe('problem')
-    expect(evaluateStandardDeck(deck, catalog, '2026-04-10').status).toBe('checks-passed')
+    expect(evaluateStandardDeck(deck, catalog, '2026-04-10').problems).toEqual([])
+    expect(evaluateStandardDeck(deck, catalog, '2026-04-10').toReview.some((item) =>
+      item.includes('data storica'))).toBe(true)
     expect(deck.rawText).toContain('Future Trainer')
   })
 
