@@ -30,7 +30,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     const url = String(input)
     if (url.includes('promo-status-western.json')) {
       if (officialUnavailable) return new Response('', { status: 503 })
-      return Response.json({ schema: 1, version: 2, checkedAt: '2026-10-23T12:00:00.000Z',
+      return Response.json({ schema: 1, version: 3, checkedAt: '2026-10-23T12:00:00.000Z',
         sourceUrl: 'https://www.pokemon.com/us/play-pokemon/about/pokemon-tcg-promo-card-legality-status',
         complete: true, entries: [
           { code: 'NVP', number: '001', state: 'upcoming', legalDate: '2026-11-20', dateNote: null },

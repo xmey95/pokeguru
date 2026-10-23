@@ -1,10 +1,24 @@
 {
   "schema": 1,
-  "version": 1,
-  "checkedAt": "2026-10-23T00:00:00.000Z",
-  "sourceUrl": "https://www.pokemon.com/us/play-pokemon/about/pokemon-tcg-promo-card-legality-status",
-  "complete": false,
+  "version": 2,
+  "checkedAt": "2026-10-23T19:50:00.000Z",
+  "sourceUrl": "https://www.pokemon.com/uk/play-pokemon/about/pokemon-tcg-promo-card-legality-status",
+  "complete": true,
+  "availableRanges": [
+    { "code": "MEP", "first": 1, "last": 110 },
+    { "code": "SVP", "first": 1, "last": 225 }
+  ],
   "entries": [
-    { "code": "MEP", "number": "051", "state": "available", "legalDate": null, "dateNote": null }
+    { "code": "SWSH", "number": "146", "state": "available", "legalDate": null, "dateNote": null },
+    { "code": "SWSH", "number": "152", "state": "available", "legalDate": null, "dateNote": null },
+    { "code": "SWSH", "number": "178", "state": "available", "legalDate": null, "dateNote": null },
+    { "code": "SWSH", "number": "251", "state": "available", "legalDate": null, "dateNote": null },
+    { "code": "MEP", "number": "111", "state": "upcoming", "legalDate": "2026-11-20", "dateNote": null },
+    { "code": "MEP", "number": "112", "state": "upcoming", "legalDate": "2026-11-20", "dateNote": null },
+    { "code": "MEP", "number": "113", "state": "upcoming", "legalDate": "2026-11-20", "dateNote": null },
+    { "code": "MEP", "number": "114", "state": "upcoming", "legalDate": "2026-11-20", "dateNote": null },
+    { "code": "MEP", "number": "115", "state": "upcoming", "legalDate": null, "dateNote": "Upon Release" },
+    { "code": "MEP", "number": "116", "state": "upcoming", "legalDate": null, "dateNote": "Upon Release" },
+    { "code": "MEP", "number": "117", "state": "upcoming", "legalDate": "2026-11-20", "dateNote": null }
   ]
 }

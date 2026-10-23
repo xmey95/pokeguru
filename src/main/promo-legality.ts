@@ -1,7 +1,7 @@
 import { load } from 'cheerio'
 
 export const PROMO_LEGALITY_SOURCE =
-  'https://www.pokemon.com/us/play-pokemon/about/pokemon-tcg-promo-card-legality-status'
+  'https://www.pokemon.com/uk/play-pokemon/about/pokemon-tcg-promo-card-legality-status'
 
 export interface PromoRegistryEntry {
   code: string
