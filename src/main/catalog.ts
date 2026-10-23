@@ -12,11 +12,11 @@ import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
 
 type SetResponse = {
-  id: string; name: string; cardCount: { total: number }
+  id: string; name: string; cardCount: { total: number }; releaseDate?: string
   cards: CardBrief[]
 }
 type CardBrief = { id: string; localId: string; name: string; image?: string }
-type SetBrief = { id: string; name: string; cardCount: { total: number } }
+type SetBrief = { id: string; name: string; cardCount: { total: number }; releaseDate?: string }
 type CardResponse = {
   id: string; localId: string; name: string; category?: string; rarity?: string
   regulationMark?: string
@@ -72,6 +72,12 @@ function validateSet(value: SetResponse, id: string): void {
     value.cards.some((card) => !validateBrief(card))) {
     throw new Error(`Indice TCGdex non valido per ${id}.`)
   }
+}
+
+function setReleaseDate(value: unknown): string | null {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
+  const date = new Date(`${value}T00:00:00Z`)
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : null
 }
 
 function identity(card: CardResponse): Pick<CatalogPrint, 'identityId' | 'identityBasis'> {
@@ -157,7 +163,7 @@ export async function fetchCatalogSample(): Promise<{ sets: CatalogSet[]; prints
   const sets = responses.map((set) => ({
     id: set.id, name: set.name, sourceTotal: set.cardCount.total,
     sampleTotal: set.cards.filter((card) => selectedNames.has(card.name)).length,
-    fetchedAt
+    fetchedAt, releaseDate: setReleaseDate(set.releaseDate)
   }))
   const selected = responses.flatMap((set) => set.cards.filter((card) => selectedNames.has(card.name)).map((card) => ({ set, card })))
   const prints = await mapLimited(selected, 5, ({ set, card }) => details(card, set, fetchedAt))
@@ -201,11 +207,19 @@ export async function fetchStandardManifest(promoFetcher: typeof fetch = fetch, 
     group.push(card)
     groups.set(setId, group)
   }
+  // The short set index has counts but omits releaseDate. Read each selected
+  // set once so the date is available without inferring tournament legality.
+  const detailedSets = new Map((await mapLimited([...groups.keys()], 4, async (id) => {
+    const value = id === 'sve' ? scarletEnergy : id === 'mee' ? megaEnergy
+      : await json<SetResponse>(`${apiOrigin}/sets/${encodeURIComponent(id)}`)
+    validateSet(value, id)
+    return value
+  })).map((set) => [set.id, set]))
   const sets = [...groups].map(([id, group]) => {
-    const set = summaries.get(id)!
+    const set = detailedSets.get(id)!
     if (group.length > set.cardCount.total) throw new Error(`Indice TCGdex incoerente per ${id}.`)
     return { id, name: set.name, sourceTotal: set.cardCount.total,
-      sampleTotal: group.length, fetchedAt }
+      sampleTotal: group.length, fetchedAt, releaseDate: setReleaseDate(set.releaseDate) }
   }).sort((a, b) => a.id.localeCompare(b.id))
   const officialSeries = new Set(promoResult.registry?.series ?? [])
   const prints = sets.flatMap((set) => {
@@ -282,7 +296,7 @@ export class CatalogStore {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS catalog_sets (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, source_total INTEGER NOT NULL,
-        sample_total INTEGER NOT NULL, fetched_at TEXT NOT NULL
+        sample_total INTEGER NOT NULL, fetched_at TEXT NOT NULL, release_date TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS catalog_prints (
         id TEXT PRIMARY KEY, set_id TEXT NOT NULL REFERENCES catalog_sets(id), payload TEXT NOT NULL
@@ -313,6 +327,9 @@ export class CatalogStore {
         print_id TEXT PRIMARY KEY
       ) STRICT;
     `)
+    const setColumns = this.db.prepare('PRAGMA table_info(catalog_sets)').all()
+      .map((row) => (row as { name: string }).name)
+    if (!setColumns.includes('release_date')) this.db.exec('ALTER TABLE catalog_sets ADD COLUMN release_date TEXT')
     // A process killed during a batch leaves only committed targets completed.
     this.db.prepare("UPDATE catalog_job SET state = 'paused', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
   }
@@ -425,10 +442,10 @@ export class CatalogStore {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       for (const set of sample.sets) {
-        this.db.prepare(`INSERT INTO catalog_sets VALUES (?, ?, ?, ?, ?)
+        this.db.prepare(`INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date) VALUES (?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET name=excluded.name, source_total=excluded.source_total,
-          sample_total=excluded.sample_total, fetched_at=excluded.fetched_at`)
-          .run(set.id, set.name, set.sourceTotal, set.sampleTotal, set.fetchedAt)
+          sample_total=excluded.sample_total, fetched_at=excluded.fetched_at, release_date=excluded.release_date`)
+          .run(set.id, set.name, set.sourceTotal, set.sampleTotal, set.fetchedAt, set.releaseDate ?? null)
       }
       for (const print of sample.prints) this.upsertPrint(print)
       if (kind === 'standard-marks') {
@@ -489,10 +506,11 @@ export class CatalogStore {
   }
 
   view(): CatalogView {
-    const sets = this.db.prepare('SELECT id, name, source_total, sample_total, fetched_at FROM catalog_sets ORDER BY id')
+    const sets = this.db.prepare('SELECT id, name, source_total, sample_total, fetched_at, release_date FROM catalog_sets ORDER BY id')
       .all().map((row) => {
-        const item = row as { id: string; name: string; source_total: number; sample_total: number; fetched_at: string }
-        return { id: item.id, name: item.name, sourceTotal: item.source_total, sampleTotal: item.sample_total, fetchedAt: item.fetched_at }
+        const item = row as { id: string; name: string; source_total: number; sample_total: number; fetched_at: string; release_date: string | null }
+        return { id: item.id, name: item.name, sourceTotal: item.source_total, sampleTotal: item.sample_total,
+          fetchedAt: item.fetched_at, releaseDate: item.release_date }
       })
     const prints = this.db.prepare('SELECT payload FROM catalog_prints ORDER BY id')
       .all().map((row) => JSON.parse((row as { payload: string }).payload) as CatalogPrint)
@@ -519,7 +537,7 @@ export class CatalogStore {
       const group = printsBySet.get(set.id)!
       const acquired = group.filter((print) => print.detailAt !== null).length
       const promos = group.filter((print) => print.isPromo)
-      return { setId: set.id, name: set.name, sourceTotal: set.sourceTotal,
+      return { setId: set.id, name: set.name, sourceTotal: set.sourceTotal, releaseDate: set.releaseDate,
         expected: group.length, acquired, missing: group.length - acquired,
         promo: promos.length > 0, promoVerified: promos.filter((print) => !!print.promoStatus).length,
         promoUnchecked: promos.filter((print) => !print.promoStatus).length }

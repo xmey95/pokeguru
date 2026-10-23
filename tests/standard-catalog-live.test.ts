@@ -9,6 +9,7 @@ it.skipIf(process.env.POKEGURU_CATALOG_LIVE !== '1')('legge l’inventario reale
   expect(manifest.prints.length).toBeGreaterThan(3000)
   expect(new Set(manifest.prints.map((print) => print.id)).size).toBe(manifest.prints.length)
   expect(manifest.sets.some((set) => set.id === 'sv05')).toBe(true)
+  expect(manifest.sets.find((set) => set.id === 'me02.5')?.releaseDate).toBe('2026-01-30')
   expect(manifest.sets.some((set) => set.id === 'mep')).toBe(true)
   expect(manifest.prints.some((print) => print.id === 'mep-051')).toBe(true)
   expect(manifest.sets.some((set) => set.id === 'sve')).toBe(true)

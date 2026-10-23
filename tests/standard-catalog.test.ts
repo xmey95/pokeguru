@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { afterEach, expect, it, vi } from 'vitest'
 import { CatalogStore, fetchStandardManifest, syncStandardCatalog } from '../src/main/catalog'
 
@@ -21,7 +22,8 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     { id: 'nvp-001', localId: '001', name: 'Nuova promo' }
   ]
   const sets = ['sv05', 'me01', 'mep', 'nvp', 'sve', 'mee'].map((id) =>
-    ({ id, name: id.toUpperCase(), cardCount: { total: 1 } }))
+    ({ id, name: id.toUpperCase(), cardCount: { total: 1 },
+      releaseDate: id === 'sv05' ? '2024-03-22' : id === 'me01' ? '2026-02-30' : undefined }))
   let failPromo = true
   let officialUnavailable = false
   let updatedRarity = false
@@ -39,10 +41,12 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     }    if (url.includes('/cards?regulationMark=eq:h')) return Response.json([briefs[2]])
     if (url.includes('/cards?')) return Response.json([briefs[0], briefs[1], briefs[3]])
     if (url.endsWith('/sets')) return Response.json(sets)
-    if (url.endsWith('/sets/sve') || url.endsWith('/sets/mee')) {
-      const id = url.slice(-3)
-      return Response.json({ id, name: id.toUpperCase(), cardCount: { total: 1 },
-        cards: [{ id: `${id}-001`, localId: '001', name: 'Basic Energy' }] })
+    if (url.includes('/sets/')) {
+      const actualId = url.split('/').at(-1)!
+      const set = sets.find((candidate) => candidate.id === actualId)!
+      return Response.json({ ...set, cards: actualId === 'sve' || actualId === 'mee'
+        ? [{ id: `${actualId}-001`, localId: '001', name: 'Basic Energy' }]
+        : briefs.filter((card) => card.id.startsWith(`${actualId}-`)) })
     }
     const id = url.split('/').at(-1)!
     details.set(id, (details.get(id) ?? 0) + 1)
@@ -55,6 +59,8 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
 
   const manifest = await fetchStandardManifest()
   expect(manifest.prints).toHaveLength(6)
+  expect(manifest.sets.find((set) => set.id === 'sv05')?.releaseDate).toBe('2024-03-22')
+  expect(manifest.sets.find((set) => set.id === 'me01')?.releaseDate).toBeNull()
   expect(manifest.prints.find((print) => print.id === 'nvp-001')?.promoStatus).toMatchObject({
     state: 'upcoming', legalDate: '2026-11-20'
   })
@@ -78,6 +84,8 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   const view = await syncStandardCatalog(reopened)
   expect(reopened.jobStatus()).toMatchObject({ mode: 'new', state: 'done', expected: 6, acquired: 6 })
   expect(view.standardCoverage).toMatchObject({ expected: 6, acquired: 6, missing: 0 })
+  expect(view.standardCoverage?.bySet.find((set) => set.setId === 'sv05')?.releaseDate).toBe('2024-03-22')
+  expect(view.standardCoverage?.bySet.find((set) => set.setId === 'me01')?.releaseDate).toBeNull()
   expect(view.standardCoverage?.promos).toMatchObject({ expected: 2, acquired: 2, missing: 0 })
   expect(details.get('sv05-001')).toBe(1)
   expect(details.get('mep-001')).toBe(5)
@@ -105,3 +113,26 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   expect(reopened.getPrint('mep-001')?.detailAt).toBe(unchangedDetailAt)
   reopened.close()
 }, 20_000)
+
+it('migra un archivio catalogo precedente senza perdere i set e salva la data nuova', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-standard-legacy-'))
+  folders.push(folder)
+  const database = join(folder, 'catalog.sqlite')
+  const legacy = new DatabaseSync(database)
+  legacy.exec(`CREATE TABLE catalog_sets (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, source_total INTEGER NOT NULL,
+    sample_total INTEGER NOT NULL, fetched_at TEXT NOT NULL
+  ) STRICT`)
+  legacy.prepare('INSERT INTO catalog_sets VALUES (?, ?, ?, ?, ?)')
+    .run('me01', 'Mega Evolution', 188, 180, '2026-10-01T00:00:00.000Z')
+  legacy.close()
+
+  const store = new CatalogStore(database)
+  expect(store.view().sets).toMatchObject([{ id: 'me01', sourceTotal: 188, releaseDate: null }])
+  store.save({ fetchedAt: '2026-10-23T00:00:00.000Z', prints: [], sets: [{ id: 'me01', name: 'Mega Evolution',
+    sourceTotal: 188, sampleTotal: 180, fetchedAt: '2026-10-23T00:00:00.000Z', releaseDate: '2025-09-26' }] })
+  store.close()
+  const reopened = new CatalogStore(database)
+  expect(reopened.view().sets[0].releaseDate).toBe('2025-09-26')
+  reopened.close()
+})

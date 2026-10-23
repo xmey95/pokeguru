@@ -6,7 +6,7 @@ Pokéguru è un'applicazione locale pianificata per costruire e migliorare mazzi
 
 APP-033 offre due operazioni globali: **Aggiorna nuove carte** scopre i nuovi set e scarica solo i dettagli mancanti; **Scansione completa** ricontrolla anche i dettagli esistenti. Il lavoro procede a lotti persistenti e riprende dopo interruzioni. APP-035 include uno snapshot datato del registro promo Play! Pokémon: 339 promo disponibili e sette future al controllo del 23 ottobre 2026. Le promo non elencate restano non verificate; la classificazione non è un verdetto di legalità Standard e il registro non prova che TCGdex contenga ogni stampa.
 
-APP-034 aggiunge nella stessa schermata la copertura per set: stampe nel perimetro TCGdex, dettagli acquisiti e mancanti, promo classificate. Un clic sul nome del set filtra le carte. Il totale del set TCGdex è mostrato separatamente dal sottoinsieme nel manifest Standard.
+APP-034 aggiunge nella stessa schermata la copertura per set: stampe nel perimetro TCGdex, dettagli acquisiti e mancanti, promo classificate. Un clic sul nome del set filtra le carte. Il totale del set TCGdex è mostrato separatamente dal sottoinsieme nel manifest Standard. APP-037 mostra anche la data del set nella fonte TCGdex; non va confusa con la data ufficiale di ammissione ai tornei.
 
 ## Avvio per sviluppo
 
@@ -21,7 +21,7 @@ npm run dev
 
 La prova reale del catalogo è separata dai test locali: su Linux `POKEGURU_CATALOG_LIVE=1 npx vitest run tests/catalog-live.test.ts tests/standard-catalog-live.test.ts`; in PowerShell impostare prima `$env:POKEGURU_CATALOG_LIVE='1'`. `POKEGURU_PROMO_AUDIT_LIVE=1 npx vitest run tests/promo-audit-live.test.ts --reporter=verbose` confronta le promo del pacchetto con gli indici TCGdex e i marchi G esclusi. La prova grafica `npm run test:e2e` sincronizza il campione TCGdex e carica il metagame Limitless, quindi richiede rete. Il test opzionale `POKEGURU_CATALOG_BULK_LIVE=1 npx vitest run tests/standard-catalog-live.test.ts` scarica migliaia di dettagli in un archivio temporaneo e può richiedere diversi minuti.
 
-La CI in `.github/workflows/ci.yml` verifica ogni PR verso `dev` o `main` e i push su `task/*` e `dev`, su Ubuntu e Windows, con `npm ci`, typecheck, test locali, build e prova Electron offline. Per sviluppare: creare un ramo `task/<nome>` da `dev`, aprire una PR verso `dev` e controllare entrambi i job **Verify**. La protezione dei branch deve richiedere quei job prima del merge; il workflow da solo non imposta la regola su GitHub. Le prove live restano comandi manuali perché richiedono rete e/o accesso Codex personale.
+La CI in `.github/workflows/ci.yml` verifica ogni PR verso `dev` o `main` e i push su `task/*` e `dev`, su Ubuntu e Windows, con `npm ci`, typecheck, test locali, build e prova Electron offline. Per sviluppare: creare un ramo `task/<nome>` da `dev`, aprire una PR verso `dev` e controllare entrambi i job **Verify**. La protezione dei branch deve richiedere quei job prima del merge; GitHub segnala che sul repository privato personale attuale le regole non sono applicate. Finché non cambia la configurazione del repository, non eseguire un merge se uno dei due job fallisce. Le prove live restano comandi manuali perché richiedono rete e/o accesso Codex personale.
 
 `npm run test:reconciliation-live` prova in Electron la lista integrata, le varianti, la riapertura e l'isolamento usando un catalogo locale di test, senza rete. `npm run test:reconciliation-ai-live` esegue anche una guida Codex reale e richiede Codex CLI autenticato; può consumare parte del limite.
 

@@ -32,7 +32,8 @@ try {
   try {
     const timestamp = '2026-10-23T12:00:00.000Z'
     for (const [id, name] of [['sv05', 'Set A'], ['nvp', 'New Promos']]) {
-      db.prepare('INSERT INTO catalog_sets VALUES (?, ?, 10, 1, ?)').run(id, name, timestamp)
+      db.prepare('INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date) VALUES (?, ?, 10, 1, ?, ?)')
+        .run(id, name, timestamp, id === 'sv05' ? '2024-03-22' : null)
     }
     for (const [id, setId, name, detailAt, isPromo] of [
       ['sv05-001', 'sv05', 'Carta A', timestamp, false],
@@ -55,6 +56,8 @@ try {
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
   const table = page.getByRole('table', { name: 'Copertura Standard per set' })
   await table.waitFor()
+  assert.match(await table.textContent(), /Data set \(TCGdex\)/)
+  assert.match(await table.getByRole('row').filter({ hasText: 'Set A' }).textContent(), /22 mar 2024/)
   assert.match(await table.textContent(), /Set A.*1.*1.*0/s)
   assert.match(await table.textContent(), /New Promos.*1.*0.*1/s)
   await table.getByRole('button', { name: /New Promos/ }).click()

@@ -167,11 +167,12 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
       </div>
       {standard && catalog.standardCoverage && <details className="catalog-set-coverage" open>
         <summary>Copertura per set · {catalog.standardCoverage.bySet.filter((set) => set.missing > 0).length} con dettagli mancanti</summary>
-        <p className="content-note">«Nel perimetro» conta le stampe presenti nel manifest TCGdex; «Totale set» include anche stampe fuori dal filtro e non rappresenta le carte Standard legali.</p>
+        <p className="content-note">«Nel perimetro» conta le stampe presenti nel manifest TCGdex; «Totale set» include anche stampe fuori dal filtro. La data del set proviene da TCGdex e non è la data di ammissione ai tornei.</p>
         <div className="catalog-set-table-wrap"><table aria-label="Copertura Standard per set">
-          <thead><tr><th>Set</th><th>Nel perimetro</th><th>Acquisiti</th><th>Mancanti</th><th>Promo classificate</th><th>Totale set</th></tr></thead>
+          <thead><tr><th>Set</th><th>Data set (TCGdex)</th><th>Nel perimetro</th><th>Acquisiti</th><th>Mancanti</th><th>Promo classificate</th><th>Totale set</th></tr></thead>
           <tbody>{catalog.standardCoverage.bySet.map((set) => <tr key={set.setId}>
             <th scope="row"><button type="button" className="text-button" onClick={() => setSetFilter(set.setId)}>{set.name} ({set.setId})</button></th>
+            <td>{set.releaseDate ? legalDate(set.releaseDate) : '—'}</td>
             <td>{set.expected}</td><td>{set.acquired}</td><td>{set.missing}</td>
             <td>{set.promo ? `${set.promoVerified}/${set.promoVerified + set.promoUnchecked}` : '—'}</td>
             <td>{set.sourceTotal}</td>
@@ -180,7 +181,7 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
       </details>}
       {standard ? <>
         <p className="content-note">Denominatore: stampe TCGdex con marchio H–Z (anche minuscolo) più Energie Base `sve`/`mee`, rilevate il {catalog.syncedAt ? date(catalog.syncedAt) : '—'}. Aggiorna nuove carte scarica soltanto i dettagli mancanti; Scansione completa ricontrolla tutti i dettagli. I dati validi restano conservati se una richiesta fallisce. Miniature non scaricate in massa.</p>
-        <p className="content-note">Promo: {catalog.standardCoverage?.promos.available ?? 0} disponibili nel pacchetto verificato · {catalog.standardCoverage?.promos.upcoming ?? 0} future · {catalog.standardCoverage?.promos.unlisted ?? 0} non elencate · {catalog.standardCoverage?.promos.unchecked ?? 0} non verificate. Pacchetto v{catalog.promoAudit?.packageVersion ?? '—'} {catalog.promoAudit?.complete ? 'completo' : 'parziale'}, controllato il {catalog.promoAudit?.checkedAt ? date(catalog.promoAudit.checkedAt) : 'mai'}.
+        <p className="content-note">Promo: {catalog.standardCoverage?.promos.available ?? 0} disponibili nel pacchetto verificato · {catalog.standardCoverage?.promos.upcoming ?? 0} future · {catalog.standardCoverage?.promos.unlisted ?? 0} non elencate · {catalog.standardCoverage?.promos.unchecked ?? 0} non verificate. Pacchetto v{catalog.promoAudit?.packageVersion ?? '—'} {catalog.promoAudit?.complete ? 'con tutte le righe del registro osservato' : 'parziale'}, controllato il {catalog.promoAudit?.checkedAt ? date(catalog.promoAudit.checkedAt) : 'mai'}.
           {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('promo')}>Registro promo ufficiale ↗</button>
         </p>
         {catalog.promoAudit?.error && <p className="diagnostics" role="status">Pacchetto promo online non aggiornato: {catalog.promoAudit.error}. Resta disponibile la versione locale datata; le promo non coperte rimangono da verificare.</p>}
