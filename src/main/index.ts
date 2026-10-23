@@ -23,6 +23,7 @@ import { prepareDeckExport, type DeckExportPreview, type DeckExportRequest } fro
 import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
 import { PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { OFFICIAL_SET_RELEASE_SOURCE } from './official-set-releases'
+import { SET_ADMISSION_OLDER_RULE_SOURCE, SET_ADMISSION_RULE_SOURCE } from '../shared/standard-admission'
 import { DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
 import { TournamentStore } from './tournament-store'
 import { fetchRecentWesternTournament } from './limitless-event'
@@ -201,6 +202,8 @@ function registerProjectHandlers(): void {
     const sourceUrl = sourceId === 'construction' ? DECK_CONSTRUCTION_SOURCE
       : sourceId === 'promo' ? PROMO_LEGALITY_SOURCE
       : sourceId === 'set-releases' ? OFFICIAL_SET_RELEASE_SOURCE
+      : sourceId === 'set-admission' ? SET_ADMISSION_RULE_SOURCE
+      : sourceId === 'set-admission-older' ? SET_ADMISSION_OLDER_RULE_SOURCE
       : WESTERN_ROTATION_RULES.find((item) => item.version === sourceId)?.sourceUrl
     if (!sourceUrl) return { ok: false, error: 'Fonte non valida.' }
     try {

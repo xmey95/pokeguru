@@ -4,6 +4,7 @@ import type { CatalogView } from '../../shared/catalog'
 import { buildDeckCards, type DeckReconciliation } from '../../shared/reconciliation'
 import { evaluateWesternRotation } from '../../shared/standard-rotation'
 import { evaluateDeckConstruction } from '../../shared/deck-construction'
+import { evaluateSetAdmission } from '../../shared/standard-admission'
 
 function localDate(): string {
   const now = new Date()
@@ -53,6 +54,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   const rotation = useMemo(() => evaluateWesternRotation(baseline, catalog, asOf), [baseline, catalog, asOf])
   const construction = useMemo(() => evaluateDeckConstruction(baseline, catalog), [baseline, catalog])
   const rotationByLine = new Map(rotation.lines.map((line) => [line.lineNumber, line]))
+  const admission = useMemo(() => evaluateSetAdmission(baseline, catalog, asOf), [baseline, catalog, asOf])
+  const admissionByLine = new Map(admission.lines.map((line) => [line.lineNumber, line]))
 
   async function confirmIdentity(lineNumber: number, printId: string): Promise<void> {
     const line = baseline.lines.find((item) => item.lineNumber === lineNumber)
@@ -96,9 +99,14 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       <p>{rotation.rule ? `Regole ${rotation.rule.version}: marchio ${rotation.rule.firstAllowedMark} o successivo, tra quelli documentati. ` : 'Nessuna regola locale verificata per questa data. '}
         Marchio ammesso: {rotation.counts['mark-accepted']} copie · marchio ruotato: {rotation.counts['mark-rotated']} · da chiarire: {rotation.counts.indeterminate}.
       </p>
-      <p>La legalità completa resta <strong>indeterminata</strong>: il catalogo è parziale; promo, date di rilascio, errata e stampe storiche richiedono verifica. Fonte controllata il {rotation.sourceChecked}; aggiornamento online delle regole non ancora disponibile.
+      <p>La legalità completa resta <strong>indeterminata</strong>: copertura del catalogo, promo, date non confermate, errata e stampe storiche richiedono verifica. Fonte controllata il {rotation.sourceChecked}; aggiornamento online delle regole non ancora disponibile.
         {rotation.rule && <> <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(rotation.rule!.version)}>Fonte Play! Pokémon ↗</button></>}
       </p>
+    </section>
+    <section className="rotation-panel" aria-label="Ammissione dei set Standard occidentali">
+      <strong>Ammissione dei set ai tornei</strong>
+      <p>Attesa superata: {admission.counts.admitted} copie · prima della data: {admission.counts.waiting} · data da chiarire: {admission.counts.indeterminate}. Pacchetto {admission.version}, controllato il {admission.checkedAt}.</p>
+      <p>La data del set non vale per le promo. I set speciali senza data confermata restano da chiarire. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-admission')}>Regola 2026 ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-admission-older')}>Regola precedente ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti ↗</button></p>
     </section>
     <section className="construction-panel" aria-label="Controlli di costruzione del mazzo">
       <strong>Costruzione del mazzo</strong>
@@ -110,7 +118,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       </ul>
       <p>Questi controlli sono necessari, ma non bastano a confermare la legalità Standard. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('construction')}>Fonte Pokémon ↗</button></p>
     </section>
-    <p className="content-note">Una riga per carta di gioco riconosciuta. Aprila per vedere tutte le stampe note, la rarità, le varianti e le righe originali. Il catalogo è un campione parziale.</p>
+    <p className="content-note">Una riga per carta di gioco riconosciuta. Aprila per vedere tutte le stampe note, la rarità, le varianti e le righe originali. {catalog?.scope.kind === 'standard-marks' ? 'La copertura del manifest TCGdex è indicata nel Catalogo.' : 'Il catalogo è un campione parziale.'}</p>
     {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-list" aria-label="Carte della lista corrente">
       {cards.map((card) => {
         const open = expanded === card.key
@@ -130,7 +138,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
                 'Il catalogo non consente di stabilire con certezza la carta di gioco. Le righe restano distinte.'}</p>
             <div className="deck-source-lines"><strong>Nel testo importato</strong>{card.lines.map((line) => {
               const result = rotationByLine.get(line.lineNumber)
-              return <div key={line.lineNumber}><span>Riga {line.lineNumber}: {line.raw}{line.setCode ? '' : ' · stampa non indicata'} · {result?.message}</span></div>
+              const setResult = admissionByLine.get(line.lineNumber)
+              return <div key={line.lineNumber}><span>Riga {line.lineNumber}: {line.raw}{line.setCode ? '' : ' · stampa non indicata'} · {result?.message} {setResult?.message}</span></div>
             })}</div>
             {card.prints.length > 0 && <><h3>Stampe e varianti note ({card.prints.length})</h3>
               <div className="catalog-print-grid">{card.prints.map((print) => <article className="catalog-print" key={print.id}>

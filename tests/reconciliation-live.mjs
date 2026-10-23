@@ -16,7 +16,7 @@ function seedCatalog() {
   const now = '2026-10-23T00:00:00.000Z'
   for (const [id, name] of [['sv02', 'Paldea Evolved'], ['sv04.5', 'Paldean Fates'],
     ['me01', 'Mega Evolution'], ['me02.5', 'Ascended Heroes']]) {
-    db.prepare('INSERT INTO catalog_sets VALUES (?, ?, ?, ?, ?)').run(id, name, 300, 2, now)
+    db.prepare('INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at) VALUES (?, ?, ?, ?, ?)').run(id, name, 300, 2, now)
   }
   for (const [id, setId, setName, localId, name, rarity, identityId, mark] of [
     ['sv02-185', 'sv02', 'Paldea Evolved', '185', 'Iono', 'Uncommon', 'trainer-iono', 'G'],
@@ -71,6 +71,9 @@ try {
   await rotation.getByLabel('Data di riferimento').fill('2026-04-10')
   assert.match(await rotation.textContent(), /marchio ruotato: 4/)
   assert.match(await rotation.textContent(), /legalità completa resta indeterminata/)
+  const admission = page.getByRole('region', { name: 'Ammissione dei set Standard occidentali' })
+  assert.match(await admission.textContent(), /Pacchetto western-sets-2026-10-23-v1/)
+  assert.match(await admission.textContent(), /data da chiarire:/)
   await rotation.getByRole('button', { name: 'Torna a oggi' }).click()
   assert.equal(await card.count(), 1)
   assert.match(await card.locator('.deck-card-toggle').textContent(), /3×\s*Iono/)
