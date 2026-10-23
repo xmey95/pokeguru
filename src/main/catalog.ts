@@ -10,6 +10,8 @@ import {
 } from '../shared/catalog'
 import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
+import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
+  OFFICIAL_SET_RELEASE_VERSION, officialSetRelease } from './official-set-releases'
 
 type SetResponse = {
   id: string; name: string; cardCount: { total: number }; releaseDate?: string
@@ -538,6 +540,7 @@ export class CatalogStore {
       const acquired = group.filter((print) => print.detailAt !== null).length
       const promos = group.filter((print) => print.isPromo)
       return { setId: set.id, name: set.name, sourceTotal: set.sourceTotal, releaseDate: set.releaseDate,
+        officialReleaseDate: officialSetRelease(set.id),
         expected: group.length, acquired, missing: group.length - acquired,
         promo: promos.length > 0, promoVerified: promos.filter((print) => !!print.promoStatus).length,
         promoUnchecked: promos.filter((print) => !print.promoStatus).length }
@@ -550,6 +553,8 @@ export class CatalogStore {
       standardCoverage: targetIds
         ? { expected: targetIds.size, acquired: acquiredTargets,
           missing: targetIds.size - acquiredTargets, marks: candidateMarks, bySet,
+          releaseSource: { url: OFFICIAL_SET_RELEASE_SOURCE, version: OFFICIAL_SET_RELEASE_VERSION,
+            checkedAt: OFFICIAL_SET_RELEASE_CHECKED_AT },
           promos: { expected: promoTargets.length, acquired: acquiredPromos,
             missing: promoTargets.length - acquiredPromos,
             series: new Set(promoTargets.map((print) => print.setId)).size,

@@ -20,6 +20,7 @@ import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from 
 import { prepareDeckExport, type DeckExportPreview, type DeckExportRequest } from '../shared/deck-export'
 import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
 import { PROMO_LEGALITY_SOURCE } from './promo-legality'
+import { OFFICIAL_SET_RELEASE_SOURCE } from './official-set-releases'
 import { DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
 import { TournamentStore } from './tournament-store'
 import { fetchRecentWesternTournament } from './limitless-event'
@@ -196,6 +197,7 @@ function registerProjectHandlers(): void {
     if (!isMainFrame(event) || typeof sourceId !== 'string') return { ok: false, error: 'Fonte non valida.' }
     const sourceUrl = sourceId === 'construction' ? DECK_CONSTRUCTION_SOURCE
       : sourceId === 'promo' ? PROMO_LEGALITY_SOURCE
+      : sourceId === 'set-releases' ? OFFICIAL_SET_RELEASE_SOURCE
       : WESTERN_ROTATION_RULES.find((item) => item.version === sourceId)?.sourceUrl
     if (!sourceUrl) return { ok: false, error: 'Fonte non valida.' }
     try {

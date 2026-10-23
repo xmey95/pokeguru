@@ -70,7 +70,9 @@ export interface CatalogView {
   sourceLanguage: 'en'
   scope: { setIds: readonly string[]; names: readonly string[]; kind?: 'sample' | 'standard-marks' }
   standardCoverage?: { expected: number; acquired: number; missing: number; marks: readonly string[];
-    bySet: { setId: string; name: string; sourceTotal: number; releaseDate?: string | null; expected: number;
+    releaseSource: { url: string; version: number; checkedAt: string };
+    bySet: { setId: string; name: string; sourceTotal: number; releaseDate?: string | null;
+      officialReleaseDate: string | null; expected: number;
       acquired: number; missing: number; promo: boolean; promoVerified: number; promoUnchecked: number }[];
     promos: { expected: number; acquired: number; missing: number; series: number;
       available: number; upcoming: number; unlisted: number; unchecked: number } }

@@ -6,7 +6,7 @@ Pokéguru è un'applicazione locale pianificata per costruire e migliorare mazzi
 
 APP-033 offre due operazioni globali: **Aggiorna nuove carte** scopre i nuovi set e scarica solo i dettagli mancanti; **Scansione completa** ricontrolla anche i dettagli esistenti. Il lavoro procede a lotti persistenti e riprende dopo interruzioni. APP-035 include uno snapshot datato del registro promo Play! Pokémon: 339 promo disponibili e sette future al controllo del 23 ottobre 2026. Le promo non elencate restano non verificate; la classificazione non è un verdetto di legalità Standard e il registro non prova che TCGdex contenga ogni stampa.
 
-APP-034 aggiunge nella stessa schermata la copertura per set: stampe nel perimetro TCGdex, dettagli acquisiti e mancanti, promo classificate. Un clic sul nome del set filtra le carte. Il totale del set TCGdex è mostrato separatamente dal sottoinsieme nel manifest Standard. APP-037 mostra anche la data del set nella fonte TCGdex; non va confusa con la data ufficiale di ammissione ai tornei.
+APP-034 aggiunge nella stessa schermata la copertura per set: stampe nel perimetro TCGdex, dettagli acquisiti e mancanti, promo classificate. Un clic sul nome del set filtra le carte. Il totale del set TCGdex è mostrato separatamente dal sottoinsieme nel manifest Standard. APP-037 mostra la data del set in TCGdex; APP-039 la confronta con la data di uscita ufficiale per 17 set occidentali, indicando differenze e set ancora da verificare. Nessuna delle due date è automaticamente la data di ammissione ai tornei.
 
 ## Avvio per sviluppo
 

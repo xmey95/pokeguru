@@ -45,6 +45,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-036** | Audit live delle promo rispetto al manifest TCGdex | Ricerca/verifica | R-02 / I3, parte di APP-030 | P0 / S | APP-035; indici TCGdex accessibili | Done |
 | **APP-037** | Date dei set e tracciabilità del perimetro Standard | Funzionalità | R-02 / I3, parte di APP-030 | P0 / S | APP-034/036; campo `releaseDate` TCGdex verificato | Done |
 | **APP-038** | Audit delle stampe senza marchio nei set recenti | Ricerca/verifica | R-02 / I3, parte di APP-030 | P0 / S | APP-037; filtro `null:` TCGdex documentato | Done |
+| **APP-039** | Confronto delle date di uscita dei set con la fonte ufficiale | Dati/funzionalità | R-02 / I3, parte di APP-030 | P0 / S | APP-037; calendario prodotti Play! Pokémon accessibile | Done |
 
 ## Task dettagliati I0–I2
 
@@ -227,6 +228,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Ambito / risultato:** usare il filtro `regulationMark=null:` documentato da TCGdex per misurare le stampe recenti che il manifest H–Z potrebbe omettere, distinguendo Energie Base, promo non elencate e altri casi da esaminare.
 - **Accettazione:** audit live ripetibile con conteggi, codici e confronto con il manifest; nessuna stampa senza marchio viene dichiarata legale per inferenza. Un risultato diverso in futuro fa fallire il controllo opzionale e richiede nuovo esame.
 - **Evidenza e verifica il 23-10-2026:** `POKEGURU_MARKLESS_AUDIT_LIVE=1 npx vitest run tests/markless-audit-live.test.ts --reporter=verbose` passato contro TCGdex. Nei prefissi Scarlet & Violet/Mega: 40 Energie `sve`/`mee` senza marchio, tutte nel manifest; altre otto Energie Base in vecchi set SV fuori perimetro; due promo senza marchio (`svp-500`, `mep-Museum`) fuori manifest e non elencate nel registro ufficiale osservato. Non sono emerse altre stampe recenti senza marchio in quel filtro al controllo. Il risultato riguarda i dati TCGdex in quel momento; non certifica che il provider contenga ogni stampa fisica o che le Energie storiche siano legalmente equivalenti.
+
+### APP-039 — Date di uscita ufficiali dei set
+
+- **Ambito / risultato:** includere uno snapshot versionato delle date di uscita pubblicate nel calendario prodotti ufficiale per i set occidentali H–J attualmente nel manifest TCGdex; mostrare nel Catalogo la data ufficiale accanto a quella del provider, evidenziando assenze o differenze. Le serie promo e le Energie Base restano su fonti e regole separate.
+- **Accettazione:** mapping ID set ↔ prodotto documentato, fonte e data di controllo visibili; un set nuovo o senza corrispondenza ufficiale è indicato come non verificato; un disaccordo non è silenziosamente risolto né trasformato in data di ammissione ai tornei. Nessun `releaseDate + 14 giorni` automatico.
+- **Verifica prevista:** fixture su corrispondenza, disaccordo e set ignoto; confronto delle 17 date incluse con il calendario ufficiale, build e percorso Catalogo Electron. La successiva verifica di legalità resta APP-018.
+- **Evidenza e verifica il 23-10-2026:** il pacchetto v1 in `official-set-releases.json` mappa 17 set SV/Mega/30th al [calendario ufficiale dei prodotti Pokémon](https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3), consultato il 23-10-2026. Nella tabella Catalogo le due date sono distinte; un set non mappato indica «Da verificare», una discordanza «Date diverse», mentre promo ed Energie restano senza data di set ufficiale in questa tabella. Lo snapshot porta fonte e data di controllo ed è consultabile offline. `npm run typecheck`, `npm test` (57 passati, 6 live ignorati) e `npm run test:catalog-ui` (build e finestra Electron su Windows) passati; il test grafico copre corrispondenza, discordanza e set ignoto. **Limite:** il calendario riporta l'uscita del prodotto, non la data di ammissione in torneo; Ascended Heroes ne è un esempio. Set futuri richiedono nuova versione verificata del pacchetto; APP-018 resta aperto.
 
 ### APP-009 — Primo evento Limitless
 

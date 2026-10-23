@@ -31,15 +31,17 @@ try {
   const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
   try {
     const timestamp = '2026-10-23T12:00:00.000Z'
-    for (const [id, name] of [['sv05', 'Set A'], ['nvp', 'New Promos']]) {
+    for (const [id, name] of [['sv05', 'Set A'], ['me01', 'Set B'], ['sv99', 'Set C'], ['nvp', 'New Promos']]) {
       db.prepare('INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date) VALUES (?, ?, 10, 1, ?, ?)')
-        .run(id, name, timestamp, id === 'sv05' ? '2024-03-22' : null)
+        .run(id, name, timestamp, id === 'sv05' ? '2024-03-22' : id === 'me01' ? '2025-09-27' : null)
     }
     for (const [id, setId, name, detailAt, isPromo] of [
       ['sv05-001', 'sv05', 'Carta A', timestamp, false],
+      ['me01-001', 'me01', 'Carta B', timestamp, false],
+      ['sv99-001', 'sv99', 'Carta C', timestamp, false],
       ['nvp-001', 'nvp', 'Promo nuova', null, true]
     ]) {
-      const print = { id, setId, setName: setId === 'sv05' ? 'Set A' : 'New Promos',
+      const print = { id, setId, setName: setId === 'sv05' ? 'Set A' : setId === 'me01' ? 'Set B' : setId === 'sv99' ? 'Set C' : 'New Promos',
         localId: '001', name, category: null, rarity: null, variants: null,
         identityId: null, identityBasis: null, imageBase: null, thumbnail: null,
         highImageAvailable: null, sourceUpdated: null,
@@ -57,7 +59,10 @@ try {
   const table = page.getByRole('table', { name: 'Copertura Standard per set' })
   await table.waitFor()
   assert.match(await table.textContent(), /Data set \(TCGdex\)/)
+  assert.match(await table.textContent(), /Uscita ufficiale/)
   assert.match(await table.getByRole('row').filter({ hasText: 'Set A' }).textContent(), /22 mar 2024/)
+  assert.match(await table.getByRole('row').filter({ hasText: 'Set B' }).textContent(), /Date diverse/)
+  assert.match(await table.getByRole('row').filter({ hasText: 'Set C' }).textContent(), /Da verificare/)
   assert.match(await table.textContent(), /Set A.*1.*1.*0/s)
   assert.match(await table.textContent(), /New Promos.*1.*0.*1/s)
   await table.getByRole('button', { name: /New Promos/ }).click()

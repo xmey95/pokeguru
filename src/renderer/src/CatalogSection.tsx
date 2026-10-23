@@ -167,12 +167,17 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
       </div>
       {standard && catalog.standardCoverage && <details className="catalog-set-coverage" open>
         <summary>Copertura per set · {catalog.standardCoverage.bySet.filter((set) => set.missing > 0).length} con dettagli mancanti</summary>
-        <p className="content-note">«Nel perimetro» conta le stampe presenti nel manifest TCGdex; «Totale set» include anche stampe fuori dal filtro. La data del set proviene da TCGdex e non è la data di ammissione ai tornei.</p>
+        <p className="content-note">«Nel perimetro» conta le stampe presenti nel manifest TCGdex; «Totale set» include anche stampe fuori dal filtro. Date di uscita ufficiali: pacchetto v{catalog.standardCoverage.releaseSource.version}, controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}.
+          {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti Pokémon ↗</button> Le date di uscita non sono date di ammissione ai tornei.</p>
         <div className="catalog-set-table-wrap"><table aria-label="Copertura Standard per set">
-          <thead><tr><th>Set</th><th>Data set (TCGdex)</th><th>Nel perimetro</th><th>Acquisiti</th><th>Mancanti</th><th>Promo classificate</th><th>Totale set</th></tr></thead>
+          <thead><tr><th>Set</th><th>Data set (TCGdex)</th><th>Uscita ufficiale</th><th>Nel perimetro</th><th>Acquisiti</th><th>Mancanti</th><th>Promo classificate</th><th>Totale set</th></tr></thead>
           <tbody>{catalog.standardCoverage.bySet.map((set) => <tr key={set.setId}>
             <th scope="row"><button type="button" className="text-button" onClick={() => setSetFilter(set.setId)}>{set.name} ({set.setId})</button></th>
             <td>{set.releaseDate ? legalDate(set.releaseDate) : '—'}</td>
+            <td>{set.officialReleaseDate ? legalDate(set.officialReleaseDate)
+              : set.promo || set.setId === 'sve' || set.setId === 'mee' ? '—' : 'Da verificare'}
+              {set.officialReleaseDate && set.releaseDate && set.officialReleaseDate !== set.releaseDate ? ' · Date diverse' : ''}
+              {set.officialReleaseDate && !set.releaseDate ? ' · Data TCGdex assente' : ''}</td>
             <td>{set.expected}</td><td>{set.acquired}</td><td>{set.missing}</td>
             <td>{set.promo ? `${set.promoVerified}/${set.promoVerified + set.promoUnchecked}` : '—'}</td>
             <td>{set.sourceTotal}</td>
