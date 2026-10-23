@@ -21,6 +21,7 @@ import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
 import { CatalogStore, fetchCatalogSample, syncStandardCatalog } from './catalog'
 import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
 import { matchupDeckContext, snapshotPrint, type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
+import { matchupTournamentEvidence } from '../shared/matchup-evidence'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
 import { prepareDeckExport, type DeckExportPreview, type DeckExportRequest } from '../shared/deck-export'
 import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
@@ -561,7 +562,9 @@ function registerProjectHandlers(): void {
       const config = await runConfig(override)
       const sample = await fetchOpponentSample(opponent)
       const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(projectId), catalogStore?.view())
-      const report = await generateMatchup(projectId, hash, deckContext, snapshot, opponent, sample, config)
+      const evidence = matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null,
+        catalogStore?.view() ?? null)
+      const report = await generateMatchup(projectId, hash, deckContext, snapshot, opponent, sample, config, evidence)
       projectStore.saveMatchupReport(report)
       return { ok: true, value: report }
     } catch (error) {
@@ -596,7 +599,9 @@ function registerProjectHandlers(): void {
       const context = await prepareMatchupHistory(pending, config)
       const sample = await fetchOpponentSample(opponent)
       const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(discussion.projectId), catalogStore?.view())
-      const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot, opponent, sample, config)
+      const evidence = [...context.turns].reverse().find((turn) => turn.report)?.report?.tournamentEvidence ??
+        matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null, catalogStore?.view() ?? null)
+      const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot, opponent, sample, config, evidence)
       return { ok: true, value: projectStore.completeMatchupFeedback(discussion.id, target.id, revised.report, revised.changeSummary) }
     } catch (error) {
       return { ok: false, error: aiError(error) }
@@ -639,8 +644,10 @@ function registerProjectHandlers(): void {
       const context = await prepareMatchupHistory(parent, config)
       const sample = await fetchOpponentSample(opponent)
       const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(parent.projectId), catalogStore?.view())
+      const evidence = matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null,
+        catalogStore?.view() ?? null)
       const report = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
-        config, matchupHistoryContext(context))
+        config, evidence, matchupHistoryContext(context))
       return { ok: true, value: projectStore.saveContinuedMatchupReport(report, parent.id) }
     } catch (error) {
       return { ok: false, error: aiError(error) }
@@ -653,7 +660,10 @@ function registerProjectHandlers(): void {
     if (!isMainFrame(event) || typeof input !== 'string' || input.length > 500) return { ok: false, error: 'URL non valido.' }
     try {
       const url = new URL(input)
-      if (url.protocol !== 'https:' || url.hostname !== 'limitlesstcg.com' || !url.pathname.startsWith('/decks')) {
+      const mainDeck = url.hostname === 'limitlesstcg.com' && url.pathname.startsWith('/decks')
+      const playList = url.hostname === 'play.limitlesstcg.com' && !url.search && !url.hash &&
+        /^\/tournament\/[a-f0-9]{24}(?:\/player\/[^/]+\/decklist)?\/?$/.test(url.pathname)
+      if (url.protocol !== 'https:' || url.username || url.password || (!mainDeck && !playList)) {
         return { ok: false, error: 'URL non valido.' }
       }
       await shell.openExternal(url.toString())

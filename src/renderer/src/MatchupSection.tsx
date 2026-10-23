@@ -3,16 +3,32 @@ import type { DeckBaseline } from '../../shared/deck-import'
 import type { AiConnection, AiPreferences } from '../../shared/ai'
 import type { CatalogView } from '../../shared/catalog'
 import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
-import { matchupDeckContext, type DeckReconciliation } from '../../shared/reconciliation'
+import type { TournamentSnapshot } from '../../shared/tournament'
+import { matchupTournamentEvidence } from '../../shared/matchup-evidence'
+import { buildDeckCards, matchupDeckContext, type DeckReconciliation } from '../../shared/reconciliation'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 
-export function MatchupSection({ projectId, baseline, onOpenAiSettings }: {
+function mentioned(name: string, analysis: string): boolean {
+  const source = analysis.toLocaleLowerCase()
+  const target = name.toLocaleLowerCase()
+  let index = source.indexOf(target)
+  while (index >= 0) {
+    const before = source[index - 1] ?? ' '
+    const after = source[index + target.length] ?? ' '
+    if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after)) return true
+    index = source.indexOf(target, index + target.length)
+  }
+  return false
+}
+
+export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCatalogCard }: {
   projectId: string
   baseline: DeckBaseline | null
   onOpenAiSettings(): void
+  onOpenCatalogCard(identityId: string): void
 }) {
   const hasBaseline = baseline !== null
   const baselineKey = baseline?.rawText ?? null
@@ -31,6 +47,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings }: {
   const [connection, setConnection] = useState<AiConnection | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
+  const [tournament, setTournament] = useState<TournamentSnapshot | null>(null)
   const [overrideModel, setOverrideModel] = useState('')
   const [overrideEffort, setOverrideEffort] = useState('')
 
@@ -41,6 +58,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings }: {
     })
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    let active = true
+    void window.projectsApi.getTournament().then((result) => {
+      if (active && result.ok) setTournament(result.value)
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [projectId])
 
   useEffect(() => {
     if (!baseline) { setReconciliation(null); return }
@@ -194,6 +219,11 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings }: {
   const pendingTurn = discussion?.turns.find((turn) => !turn.report)
   const model = connection?.models.find((item) => item.id === overrideModel)
   const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog) : null
+  const previewEvidence = snapshot && selected ? matchupTournamentEvidence(snapshot, selected, tournament, catalog) : null
+  const ourCatalogCards = baseline && (!discussion || discussion.current) ? buildDeckCards(baseline, catalog, reconciliation)
+    .filter((card) => card.status === 'recognized' && card.identityId && report && mentioned(card.name, report.ourKeyCards)) : []
+  const theirCatalogCards = report?.tournamentEvidence?.observedCards.filter((card) =>
+    card.catalogIdentityId && mentioned(card.name, report.theirKeyCards)) ?? []
 
   return <section className="matchup-section" aria-label="Matchup del progetto">
     <div className="panel-heading">
@@ -231,15 +261,42 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings }: {
             </div>}
             {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p> : report ? <>
               {discussion && !discussion.current && <p className="stale-discussion">Questa discussione riguarda una lista o uno snapshot precedente. La guida resta consultabile come storico.</p>}
-              <p className="content-note">Analisi Codex generata il {date(report.generatedAt)} per questa lista e questo snapshot del meta. {report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p>
+              <p className="content-note">Analisi Codex generata il {date(report.generatedAt)} · Standard occidentale · lista {report.deckHash.slice(0, 12)} · snapshot Meta {report.metaId.slice(0, 12)}{report.metaPeriod ? ` · ${report.metaPeriod}` : ''}{report.metaFetchedAt ? ` · acquisito ${date(report.metaFetchedAt)}` : ''}. {report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p>
+              {report.metaSourceUrl && <button type="button" className="text-button"
+                onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}
               <div className="matchup-fields">
                 <div><strong>Punti forti del nostro mazzo</strong><p>{report.strengths}</p></div>
                 <div><strong>Debolezze del nostro mazzo</strong><p>{report.weaknesses}</p></div>
-                <div><strong>Le nostre carte chiave</strong><p>{report.ourKeyCards}</p></div>
-                <div><strong>Le loro carte chiave</strong><p>{report.theirKeyCards}</p></div>
+                <div><strong>Le nostre carte chiave</strong><p>{report.ourKeyCards}</p>
+                  {ourCatalogCards.map((card) => <button key={card.identityId} type="button" className="text-button"
+                    onClick={() => onOpenCatalogCard(card.identityId!)}>Apri {card.name} nel Catalogo ↗</button>)}
+                </div>
+                <div><strong>Le loro carte chiave</strong><p>{report.theirKeyCards}</p>
+                  {theirCatalogCards.map((card) => <button key={card.catalogIdentityId} type="button" className="text-button"
+                    onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri {card.name} nel Catalogo ↗</button>)}
+                </div>
                 <div className="strategy-field"><strong>Come giocare il matchup</strong><p>{report.strategy}</p></div>
                 <div className="strategy-field"><strong>Limiti dell’analisi</strong><p>{report.limitations}</p></div>
               </div>
+              {report.tournamentEvidence && <section className="rotation-panel" aria-label="Evidenze torneo del matchup">
+                <strong>Liste osservate in un evento online</strong>
+                <p>{report.tournamentEvidence.status === 'matched'
+                  ? `${report.tournamentEvidence.matchedCompleteLists} liste complete dell’archetipo in ${report.tournamentEvidence.eventName} (${report.tournamentEvidence.eventDate ? date(report.tournamentEvidence.eventDate) : 'data non indicata'}); ${report.tournamentEvidence.eventLists}/${report.tournamentEvidence.eventParticipants} liste complete nell’intero evento. Sono osservazioni di un singolo torneo Limitless Play, non statistiche del matchup né del meta in presenza.`
+                  : report.tournamentEvidence.detail}</p>
+                {report.tournamentEvidence.status === 'matched' && <>
+                  <p>Carte osservate nelle liste collegate (presenza, non copie):</p>
+                  <ul>{report.tournamentEvidence.observedCards.slice(0, 18).map((card) => <li key={card.name}>
+                    {card.name} · {card.lists}/{report.tournamentEvidence!.matchedCompleteLists} liste · {card.catalogStatus === 'recognized'
+                      ? 'identità catalogo riconosciuta' : card.catalogStatus === 'ambiguous' ? 'identità da verificare' : 'non nel catalogo locale'}
+                    {card.catalogIdentityId && <button type="button" className="text-button"
+                      onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo ↗</button>}
+                  </li>)}</ul>
+                  {report.tournamentEvidence.eventUrl && <button type="button" className="text-button"
+                    onClick={() => void window.projectsApi.openLimitless(report.tournamentEvidence!.eventUrl!)}>Apri evento online ↗</button>}
+                  {report.tournamentEvidence.sampleLists.map((list, index) => <button type="button" className="text-button" key={list.url}
+                    onClick={() => void window.projectsApi.openLimitless(list.url)}>Lista osservata {index + 1} ↗</button>)}
+                </>}
+              </section>}
               {report.sampleDeckUrl && <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.sampleDeckUrl!)}>Apri la lista avversaria usata ↗</button>}
               {discussion && <div className="matchup-discussion">
                 <h4>Discussione dell’analisi</h4>
@@ -294,6 +351,9 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings }: {
               <details className="ai-data-preview"><summary>Dati inviati a Codex per questa analisi</summary>
                 <p>La richiesta include le righe interpretate e, se presenti, le stampe scelte e i totali per identità di gioco:</p>
                 <pre>{deckContext ?? 'Caricamento corrispondenze…'}</pre>
+                <p>Per una nuova analisi, evento online salvato: {previewEvidence?.status === 'matched'
+                  ? `${previewEvidence.eventName}: ${previewEvidence.matchedCompleteLists} liste complete dell’archetipo su ${previewEvidence.eventLists} liste complete dell’evento. Pokéguru invia a Codex i nomi delle carte osservate, il numero di liste in cui compaiono e i link alle liste pubbliche; non invia risultati di match del nostro mazzo.`
+                  : previewEvidence?.detail ?? 'Nessun dato evento disponibile.'} Le revisioni riutilizzano le evidenze salvate nella guida precedente.</p>
                 <p>Include l’archetipo {selected.name}, la quota e i punti del metagame, il periodo {snapshot.period} e le fonti Limitless {snapshot.sourceUrl} e {selected.url}. Pokéguru cercherà una lista avversaria pubblica di esempio su Limitless e, se la trova, ne invierà i nomi e le quantità delle carte. Per una revisione invia anche il nuovo commento, la guida precedente e un contesto delle revisioni passate; per «Continua sulla nuova base» invia il contesto della discussione collegata. Non invia il testo grezzo dell’import né altri progetti.</p>
               </details>
             </div>}

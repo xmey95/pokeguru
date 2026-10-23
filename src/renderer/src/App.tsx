@@ -46,6 +46,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'deck' | 'threads' | 'matchups'>('deck')
   const [view, setView] = useState<'project' | 'ai' | 'catalog' | 'tournament'>('project')
+  const [catalogFocusIdentityId, setCatalogFocusIdentityId] = useState<string | null>(null)
   const [constraintTargetId, setConstraintTargetId] = useState<string | null>(null)
   const [constraintSelectionVersion, setConstraintSelectionVersion] = useState(0)
   const selectionVersion = useRef(0)
@@ -209,7 +210,7 @@ export function App() {
           </div>
         </div>
         <div className="topbar-actions"><span className="local-indicator"><span aria-hidden="true" /> Archivio locale</span>
-          <button type="button" className="secondary-button" onClick={() => setView('catalog')}>Catalogo</button>
+          <button type="button" className="secondary-button" onClick={() => { setCatalogFocusIdentityId(null); setView('catalog') }}>Catalogo</button>
           <button type="button" className="secondary-button" onClick={() => setView('tournament')}>Eventi</button>
           <button type="button" className="secondary-button" onClick={() => setView('ai')}>Impostazioni AI</button></div>
       </header>
@@ -274,7 +275,7 @@ export function App() {
 
         <main className="main-content">
           {error && <div className="error-banner" role="alert">{error}</div>}
-          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection onConstrain={selected ? (identityId) => { setView('project'); selectConstraintTarget(identityId) } : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
+          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? (identityId) => { setView('project'); selectConstraintTarget(identityId) } : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-kicker">Progetto di mazzo</div>
               <div className="detail-headline">
@@ -354,7 +355,8 @@ export function App() {
                   setFileName(adopted.fileName)
                   setSelected(updated)
                   setProjects((current) => current.map((project) => project.id === selected.id ? updated : project))
-                }} /> : <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')} />}
+                }} /> : <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')}
+                  onOpenCatalogCard={(identityId) => { setCatalogFocusIdentityId(identityId); setView('catalog') }} />}
             </section>
           ) : (
             <section className="welcome" aria-label="Benvenuto">

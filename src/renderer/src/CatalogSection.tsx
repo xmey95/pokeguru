@@ -24,7 +24,10 @@ function groupPrints(prints: CatalogPrint[]): Group[] {
   return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name) || a.key.localeCompare(b.key))
 }
 
-export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: string) => void }) {
+export function CatalogSection({ onConstrain, focusIdentityId }: {
+  onConstrain?: (identityId: string) => void
+  focusIdentityId?: string | null
+}) {
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -35,6 +38,15 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [checkingRules, setCheckingRules] = useState(false)
+
+  useEffect(() => {
+    if (!focusIdentityId || !catalog) return
+    const print = catalog.prints.find((item) => item.identityId === focusIdentityId)
+    if (!print) return
+    setQuery(print.name)
+    setSetFilter('all')
+    setSelectedKey(focusIdentityId)
+  }, [focusIdentityId, catalog?.syncedAt])
 
   useEffect(() => {
     let active = true

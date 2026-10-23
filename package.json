@@ -30,6 +30,7 @@
     "test:ai:offline": "npm run build && node tests/ai-settings-offline.mjs",
     "test:codex-app-server-live": "node tests/codex-app-server-live.mjs",
     "test:matchup-live": "npm run build && node tests/matchup-live.mjs",
+    "test:matchup-evidence-live": "npm run build && node tests/matchup-evidence-live.mjs",
     "test:standard-catalog-live": "npm run build && node tests/standard-catalog-electron-live.mjs",
     "test:catalog-ui": "npm run build && node tests/catalog-ui-live.mjs",
     "test:tournament-ui-live": "npm run build && node tests/tournament-ui-live.mjs",
