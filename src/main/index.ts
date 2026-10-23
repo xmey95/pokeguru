@@ -24,7 +24,7 @@ import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
 import { PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { OFFICIAL_SET_RELEASE_SOURCE } from './official-set-releases'
 import { SET_ADMISSION_OLDER_RULE_SOURCE, SET_ADMISSION_RULE_SOURCE } from '../shared/standard-admission'
-import { DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
+import { ACE_SPEC_SOURCE, DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
 import { TournamentStore } from './tournament-store'
 import { fetchRecentWesternTournament } from './limitless-event'
 import type { TournamentSnapshot } from '../shared/tournament'
@@ -201,6 +201,7 @@ function registerProjectHandlers(): void {
     if (!isMainFrame(event) || typeof sourceId !== 'string') return { ok: false, error: 'Fonte non valida.' }
     const sourceUrl = sourceId === 'construction' ? DECK_CONSTRUCTION_SOURCE
       : sourceId === 'promo' ? PROMO_LEGALITY_SOURCE
+      : sourceId === 'ace-spec' ? ACE_SPEC_SOURCE
       : sourceId === 'set-releases' ? OFFICIAL_SET_RELEASE_SOURCE
       : sourceId === 'set-admission' ? SET_ADMISSION_RULE_SOURCE
       : sourceId === 'set-admission-older' ? SET_ADMISSION_OLDER_RULE_SOURCE

@@ -138,6 +138,13 @@ it('salva una candidata AI atomica solo con 60 carte, stampe e fonti verificabil
     .toThrow('lista allegata')
   expect(() => validateDeckProposal({ outcome: 'candidate', rawText: '60 Psychic Energy SVE 005',
     rationale: 'Viola il vincolo', sourceIds: ['base'] }, project.id, catalog, [constraint], sources)).toThrow('costruzione')
+  const aceCatalog: CatalogView = { ...catalog, prints: [...catalog.prints,
+    { ...print('sv05-154', 'Maximum Belt', 'Trainer'), rarity: 'ACE SPEC Rare' },
+    { ...print('sv05-157', 'Prime Catcher', 'Trainer'), rarity: 'ACE SPEC Rare' }] }
+  expect(() => validateDeckProposal({ outcome: 'candidate',
+    rawText: '1 Mew ex SV04.5 216\n1 Maximum Belt SV05 154\n1 Prime Catcher SV05 157\n57 Psychic Energy SVE 005',
+    rationale: 'Troppe ACE SPEC', sourceIds: ['base'] }, project.id, aceCatalog, [], sources))
+    .toThrow('costruzione')
   const rotated: CatalogView = { ...catalog, prints: catalog.prints.map((item) =>
     item.id === 'sv04.5-216' ? { ...item, regulationMark: 'G' } : item) }
   expect(() => validateDeckProposal({ outcome: 'candidate', rawText,

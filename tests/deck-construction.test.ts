@@ -4,10 +4,10 @@ import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { evaluateDeckConstruction } from '../src/shared/deck-construction'
 
 function print(id: string, name: string, category: string, stage: string | null = null,
-  energyType: string | null = null): CatalogPrint {
+  energyType: string | null = null, rarity: string | null = null): CatalogPrint {
   const [setId, localId] = id.split('-')
   return { id, setId, setName: setId, localId, name, category, stage, energyType,
-    rarity: null, regulationMark: 'G', variants: null, identityId: id,
+    rarity, regulationMark: 'G', variants: null, identityId: id,
     identityBasis: 'unverified', imageBase: null, thumbnail: null,
     highImageAvailable: null, sourceUpdated: null,
     sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`,
@@ -21,7 +21,9 @@ const catalog: CatalogView = {
     print('sv02-185', 'Iono', 'Trainer'), print('sv02-254', 'Iono', 'Trainer'),
     print('sv04.5-216', 'Mew ex', 'Pokemon', 'Basic'),
     print('sv02-001', 'Floragato', 'Pokemon', 'Stage1'),
-    print('sv02-002', 'Psychic Energy', 'Energy', null, 'Normal')
+    print('sv02-002', 'Psychic Energy', 'Energy', null, 'Normal'),
+    print('sv05-154', 'Maximum Belt', 'Trainer', null, null, 'ACE SPEC Rare'),
+    print('sv05-157', 'Prime Catcher', 'Trainer', null, null, 'ACE SPEC Rare')
   ]
 }
 
@@ -73,5 +75,15 @@ describe('Costruzione generale del mazzo', () => {
     expect(result.copyLimit.status).toBe('met')
     expect(result.basicPokemon.status).toBe('problem')
     expect(result.cardCount.status).toBe('met')
+  })
+
+  it('limita a una sola carta ACE SPEC totale, anche con nomi diversi', () => {
+    const two = evaluateDeckConstruction(baseline('1 Maximum Belt SV05 154\n1 Prime Catcher SV05 157'), catalog)
+    expect(two.aceSpec.status).toBe('problem')
+    expect(two.aceSpec.message).toContain('2 copie ACE SPEC')
+    const one = evaluateDeckConstruction(baseline('1 Prime Catcher SV05 157'), catalog)
+    expect(one.aceSpec.status).toBe('met')
+    const unknown = evaluateDeckConstruction(baseline('1 Prime Catcher SV05 157\n1 Unknown XYZ 001'), catalog)
+    expect(unknown.aceSpec.status).toBe('indeterminate')
   })
 })

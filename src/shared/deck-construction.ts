@@ -4,6 +4,8 @@ import { suggestPrints } from './reconciliation'
 
 export const DECK_CONSTRUCTION_SOURCE =
   'https://www.pokemon.com/uk/strategy/designing-a-deck-from-scratch'
+export const ACE_SPEC_SOURCE =
+  'https://press.pokemon.com/en-CA/MEDIA-ALERT-Pokemon-Trading-Card-Game-Scarlet-VioletTemporal-Forces-Ex'
 
 export type ConstructionStatus = 'met' | 'problem' | 'indeterminate'
 
@@ -16,6 +18,7 @@ export interface DeckConstructionEvaluation {
   cardCount: ConstructionCheck
   copyLimit: ConstructionCheck
   basicPokemon: ConstructionCheck
+  aceSpec: ConstructionCheck
   exceedingNames: { name: string; quantity: number }[]
   /** These checks are necessary, but not sufficient, for Standard legality. */
   legality: 'indeterminate'
@@ -89,5 +92,21 @@ export function evaluateDeckConstruction(baseline: DeckBaseline, catalog: Catalo
     : hasUnparsed || basicEvidence.includes('unknown')
       ? { status: 'indeterminate', message: 'Non è possibile stabilire se la lista contiene un Pokémon Base.' }
       : { status: 'problem', message: 'Nessun Pokémon Base nella lista riconosciuta.' }
-  return { cardCount, copyLimit, basicPokemon, exceedingNames, legality: 'indeterminate' }
+  let aceSpecCopies = 0
+  let aceSpecUnknown = hasUnparsed
+  for (const line of cards) {
+    if (isBasicEnergy(line, catalog)) continue
+    const exact = catalog?.syncedAt ? suggestPrints(line, catalog).filter((candidate) => candidate.reason === 'same-print') : []
+    if (exact.length !== 1 || exact[0].print.rarity === null) {
+      aceSpecUnknown = true
+    } else if (/ACE SPEC/i.test(exact[0].print.rarity)) {
+      aceSpecCopies += line.quantity ?? 0
+    }
+  }
+  const aceSpec: ConstructionCheck = aceSpecCopies > 1
+    ? { status: 'problem', message: `${aceSpecCopies} copie ACE SPEC riconosciute: è ammessa una sola carta ACE SPEC in tutto il mazzo.` }
+    : aceSpecUnknown
+      ? { status: 'indeterminate', message: `${aceSpecCopies} copie ACE SPEC riconosciute; alcune stampe o rarità non sono verificabili.` }
+      : { status: 'met', message: `${aceSpecCopies} copie ACE SPEC riconosciute su tutte le stampe indicate.` }
+  return { cardCount, copyLimit, basicPokemon, aceSpec, exceedingNames, legality: 'indeterminate' }
 }

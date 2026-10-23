@@ -51,6 +51,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-042** | Audit dei set ufficiali presenti nell'inventario Standard | Dati/funzionalità | R-02 / I3, parte di APP-030 | P0 / S | APP-039, manifest TCGdex e calendario ufficiale | Done |
 | **APP-043** | Date di ammissione dei set Standard con fonte e casi ignoti | Dati/funzionalità | R-02 / I3, parte di APP-018 | P0 / M | APP-039/042, regola di attesa Play! Pokémon e fonti dei prodotti | Done |
 | **APP-044** | Ammissione temporale delle promo dal registro ufficiale | Funzionalità | R-02 / I3, parte di APP-018 | P0 / S | APP-035/036, snapshot promo e date | Done |
+| **APP-045** | Vincolo ACE SPEC nella costruzione del mazzo | Funzionalità | R-02 / I3, parte di APP-018 | P0 / S | APP-028, rarità nel Catalogo e fonte ufficiale | Done |
 
 ## Task dettagliati I0–I2
 
@@ -285,6 +286,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Accettazione:** nessuna data storica è inventata per le promo già disponibili; il 19-11-2026 MEP 111 risulta in attesa rispetto al 20-11; il 20-11 un vecchio pacchetto `upcoming` non basta a confermare l'ammissione; la Lista corrente mostra conteggi, motivi, fonte e versione, mentre la proposta Codex rifiuta promo sicuramente in attesa.
 - **Verifica prevista:** test delle transizioni, promo disponibile, sconosciuta e senza data, vista Electron, build e suite. Il controllo di rotazione e di costruzione resta separato; il verdetto completo è APP-018.
 - **Evidenza e verifica il 23-10-2026:** `evaluatePromoAdmission` distingue disponibile, in attesa e indeterminata usando lo stato del pacchetto Play! Pokémon salvato: una promo già disponibile è attestata solo dalla data di osservazione, una futura con data esplicita resta in attesa prima di essa e torna indeterminata dopo finché non viene pubblicato un pacchetto aggiornato. La UI mostra conteggi, versione/data, motivo per riga e collegamento alla fonte; le candidate Codex includono il controllo e non accettano una promo sicuramente in attesa. Test MEP 051/111/117, non elencata e non classificata, build e percorso Electron Windows con data storica e corrente passati. La pagina ufficiale osservata non fornisce date storiche delle promo già disponibili: nessuna è stata inventata. Restano regole complessive, aggiornamento verificato del pacchetto e legalità APP-018.
+
+### APP-045 — Vincolo ACE SPEC
+
+- **Ambito / risultato:** applicare il limite di una carta ACE SPEC totale per mazzo, indipendentemente dal nome, usando le stampe esatte del Catalogo e la rarità ACE SPEC rilevata dal provider. Mostrare il controllo nella Lista corrente e rifiutare candidate Codex che lo violano.
+- **Accettazione:** due ACE SPEC diverse danno problema, una copia è ammessa dal controllo, una stampa non identificata lascia l'esito indeterminato. La regola non trasforma gli altri controlli parziali in legalità completa; citare la fonte ufficiale.
+- **Verifica prevista:** test di due nomi diversi e stampa ignota, prova Electron del pannello costruzione, build e suite.
+- **Evidenza e verifica il 23-10-2026:** `evaluateDeckConstruction` somma le copie delle stampe esatte classificate `ACE SPEC` dalla rarità TCGdex, segnala problema oltre una copia totale e resta indeterminato se una stampa o la rarità non è verificabile. La Lista corrente mostra il quarto controllo e la fonte ufficiale; il validatore delle candidate Codex rifiuta due ACE SPEC anche con nomi diversi. Dettagli live TCGdex verificati per Maximum Belt `sv05-154` e Prime Catcher `sv05-157`, entrambi `ACE SPEC Rare`. Test di due/una copia e stampa ignota, build e percorso Electron Windows passati. **Limite:** una stampa con classificazione errata o rarità diversa può sfuggire al riconoscimento; il catalogo deve essere aggiornato e il controllo non attesta da solo la legalità Standard.
 
 ### APP-011 — Confronto e adozione
 

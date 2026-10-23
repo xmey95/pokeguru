@@ -120,11 +120,11 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       <strong>Costruzione del mazzo</strong>
       <ul>
         {([['60 carte', construction.cardCount], ['Quattro copie per nome', construction.copyLimit],
-          ['Pokémon Base', construction.basicPokemon]] as const).map(([name, check]) =>
+          ['Pokémon Base', construction.basicPokemon], ['ACE SPEC', construction.aceSpec]] as const).map(([name, check]) =>
           <li key={name}><span className={`construction-status ${check.status}`}>{check.status === 'met' ? 'Verificato' : check.status === 'problem' ? 'Controlla' : 'Da chiarire'}</span>
             <span><strong>{name}:</strong> {check.message}</span></li>)}
       </ul>
-      <p>Questi controlli sono necessari, ma non bastano a confermare la legalità Standard. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('construction')}>Fonte Pokémon ↗</button></p>
+      <p>Questi controlli sono necessari, ma non bastano a confermare la legalità Standard. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('construction')}>Regole del mazzo ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('ace-spec')}>Regola ACE SPEC ↗</button></p>
     </section>
     <p className="content-note">Una riga per carta di gioco riconosciuta. Aprila per vedere tutte le stampe note, la rarità, le varianti e le righe originali. {catalog?.scope.kind === 'standard-marks' ? 'La copertura del manifest TCGdex è indicata nel Catalogo.' : 'Il catalogo è un campione parziale.'}</p>
     {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-list" aria-label="Carte della lista corrente">

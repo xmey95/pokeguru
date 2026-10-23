@@ -154,7 +154,8 @@ export function validateDeckProposal(value: unknown, projectId: string, catalog:
     importedAt: new Date().toISOString(), ...parsed }
   const construction = evaluateDeckConstruction(baseline, catalog)
   if (construction.cardCount.status === 'problem' || construction.copyLimit.status === 'problem' ||
-    construction.basicPokemon.status === 'problem') throw new Error('La proposta non supera i controlli di costruzione del mazzo.')
+    construction.basicPokemon.status === 'problem' || construction.aceSpec.status === 'problem')
+    throw new Error('La proposta non supera i controlli di costruzione del mazzo.')
   const rotation = evaluateWesternRotation(baseline, catalog, referenceDate)
   if (rotation.counts['mark-rotated'] > 0) throw new Error('La proposta contiene stampe con marchio ruotato.')
   const admission = evaluateSetAdmission(baseline, catalog, referenceDate)
@@ -166,7 +167,7 @@ export function validateDeckProposal(value: unknown, projectId: string, catalog:
     result.status === 'conflict' || result.status === 'unmet'))
     throw new Error('La proposta non soddisfa i vincoli verificabili del progetto.')
   const checks = [construction.cardCount.message, construction.copyLimit.message,
-    construction.basicPokemon.message,
+    construction.basicPokemon.message, construction.aceSpec.message,
     `Rotazione al ${referenceDate}: ${rotation.counts['mark-accepted']} copie con marchio ammesso, ${rotation.counts.indeterminate} da chiarire.`,
     `Ammissione set ${admission.version}: ${admission.counts.admitted} copie dopo la data, ${admission.counts.indeterminate} con data da chiarire.`,
     `Promo pacchetto v${promoAdmission.packageVersion ?? '—'}: ${promoAdmission.counts.admitted} copie disponibili alla data osservata, ${promoAdmission.counts.indeterminate} da chiarire.`,

@@ -68,6 +68,7 @@ try {
   const construction = page.getByRole('region', { name: 'Controlli di costruzione del mazzo' })
   assert.match(await construction.textContent(), /7 copie: ne servono esattamente 60/)
   assert.match(await construction.textContent(), /Pokémon Base.*Non è possibile stabilire/s)
+  assert.match(await construction.textContent(), /ACE SPEC.*stampe o rarità non sono verificabili/s)
   const rotation = page.getByRole('region', { name: 'Controllo della rotazione Standard occidentale' })
   await rotation.getByLabel('Data di riferimento').fill('2026-04-09')
   assert.match(await rotation.textContent(), /Marchio ammesso: 4 copie/)
