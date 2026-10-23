@@ -8,7 +8,7 @@ import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot, MatchupT
 import type { CreateProjectInput, Project } from '../shared/projects'
 import type { ClearLineMappingInput, DeckLineMapping, DeckReconciliation, IdentityTotal, MappedPrint, SaveLineMappingInput } from '../shared/reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
-import type { CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import type { AiRunConfig } from '../shared/ai'
 
 interface ProjectRow {
@@ -213,6 +213,12 @@ export class ProjectStore {
         UNIQUE(thread_id, sequence),
         UNIQUE(thread_id, ai_turn_id)
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_adoptions (
+        version_id TEXT PRIMARY KEY REFERENCES deck_versions(id) ON DELETE CASCADE,
+        thread_id TEXT NOT NULL REFERENCES deck_threads(id) ON DELETE CASCADE,
+        candidate_id TEXT NOT NULL,
+        adopted_at TEXT NOT NULL
+      ) STRICT;
     `)
     const messageColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[]).map((row) => row.name))
     if (!messageColumns.has('ai_config_json') || !messageColumns.has('ai_turn_id')) {
@@ -401,17 +407,75 @@ export class ProjectStore {
 
   listDeckVersions(projectId: string): DeckVersion[] {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    const rows = this.db.prepare(`SELECT id, project_id, sequence, source, file_name,
-      raw_text, parsed_json, created_at FROM deck_versions WHERE project_id = ? ORDER BY sequence DESC`)
+    const rows = this.db.prepare(`SELECT v.id, v.project_id, v.sequence, v.source, v.file_name,
+      v.raw_text, v.parsed_json, v.created_at, a.thread_id, a.candidate_id
+      FROM deck_versions v LEFT JOIN deck_adoptions a ON a.version_id = v.id
+      WHERE v.project_id = ? ORDER BY v.sequence DESC`)
       .all(projectId) as {
         id: string; project_id: string; sequence: number; source: 'paste' | 'file'
         file_name: string | null; raw_text: string; parsed_json: string; created_at: string
+        thread_id: string | null; candidate_id: string | null
       }[]
     return rows.map((row) => ({
       id: row.id, projectId: row.project_id, sequence: row.sequence, source: row.source,
       fileName: row.file_name, rawText: row.raw_text,
-      parsed: JSON.parse(row.parsed_json) as ParsedDeck, createdAt: row.created_at
+      parsed: JSON.parse(row.parsed_json) as ParsedDeck, createdAt: row.created_at,
+      adoption: row.thread_id && row.candidate_id ? { threadId: row.thread_id, candidateId: row.candidate_id } : null
     }))
+  }
+
+  adoptDeckCandidate(input: AdoptDeckCandidateInput): DeckBaseline {
+    if (!input || !this.get(input.projectId) || typeof input.threadId !== 'string' ||
+      typeof input.candidateId !== 'string' || typeof input.expectedHeadId !== 'string')
+      throw new Error('Richiesta di adozione non valida.')
+    const now = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const head = this.db.prepare('SELECT version_id FROM deck_main_heads WHERE project_id = ?')
+        .get(input.projectId) as { version_id: string } | undefined
+      const thread = this.db.prepare('SELECT base_version_id FROM deck_threads WHERE project_id = ? AND id = ?')
+        .get(input.projectId, input.threadId) as { base_version_id: string | null } | undefined
+      if (!head || !thread) throw new Error('Lista principale o thread non trovato nel progetto.')
+      if (head.version_id !== input.expectedHeadId || thread.base_version_id !== head.version_id)
+        throw new Error('La lista principale è cambiata: confronta la candidata con la versione corrente prima di adottarla.')
+      const candidate = this.db.prepare(`SELECT raw_text FROM deck_thread_candidates WHERE thread_id = ? AND id = ?
+        UNION ALL SELECT raw_text FROM deck_ai_candidates WHERE thread_id = ? AND id = ?`)
+        .get(input.threadId, input.candidateId, input.threadId, input.candidateId) as { raw_text: string } | undefined
+      if (!candidate) throw new Error('Candidata non trovata in questo thread.')
+      const parsed = parseDeck(candidate.raw_text)
+      if (parsed.interpretedTotal !== 60 || parsed.lines.some((line) => line.kind === 'unparsed') ||
+        parsed.diagnostics.some((item) => item.code === 'TOTAL_MISMATCH'))
+        throw new Error('La candidata deve contenere 60 carte e nessuna riga o totale incoerente.')
+      if (parsed.lines.some((line) => line.kind === 'card' && line.setCode?.includes('.')))
+        throw new Error('I codici set con punto non sono ancora verificati nell’export Limitless.')
+      if (parsed.diagnostics.some((item) => item.code === 'ALT_PRINT'))
+        throw new Error('Le stampe ALT non sono riconosciute in modo affidabile da Limitless.')
+      const previous = this.db.prepare('SELECT raw_text FROM deck_baselines WHERE project_id = ?')
+        .get(input.projectId) as { raw_text: string } | undefined
+      if (previous?.raw_text === candidate.raw_text) throw new Error('La candidata coincide già con la lista principale.')
+      const latest = this.db.prepare('SELECT COALESCE(MAX(sequence), 0) AS sequence FROM deck_versions WHERE project_id = ?')
+        .get(input.projectId) as { sequence: number }
+      const versionId = randomUUID()
+      this.db.prepare(`INSERT INTO deck_versions
+        (id, project_id, sequence, source, file_name, raw_text, parsed_json, created_at)
+        VALUES (?, ?, ?, 'paste', NULL, ?, ?, ?)`)
+        .run(versionId, input.projectId, latest.sequence + 1, candidate.raw_text, JSON.stringify(parsed), now)
+      this.db.prepare('INSERT INTO deck_adoptions (version_id, thread_id, candidate_id, adopted_at) VALUES (?, ?, ?, ?)')
+        .run(versionId, input.threadId, input.candidateId, now)
+      this.db.prepare('DELETE FROM deck_line_mappings WHERE project_id = ?').run(input.projectId)
+      this.db.prepare(`INSERT INTO deck_baselines
+        (project_id, source, file_name, raw_text, parsed_json, interpreted_total, problem_count, imported_at)
+        VALUES (?, 'paste', NULL, ?, ?, 60, 0, ?)
+        ON CONFLICT(project_id) DO UPDATE SET source = excluded.source, file_name = NULL,
+        raw_text = excluded.raw_text, parsed_json = excluded.parsed_json,
+        interpreted_total = 60, problem_count = 0, imported_at = excluded.imported_at`)
+        .run(input.projectId, candidate.raw_text, JSON.stringify(parsed), now)
+      this.db.prepare('UPDATE deck_main_heads SET version_id = ? WHERE project_id = ?').run(versionId, input.projectId)
+      this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(now, input.projectId)
+      this.db.exec('COMMIT')
+      return { projectId: input.projectId, rawText: candidate.raw_text,
+        source: 'paste', fileName: null, importedAt: now, ...parsed }
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
   listDeckThreads(projectId: string): DeckThread[] {

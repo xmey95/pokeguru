@@ -21,6 +21,7 @@ const api: ProjectsApi = {
   proposeDeckThread: (projectId, threadId, request, override) => ipcRenderer.invoke('deck:propose-thread', projectId, threadId, request, override),
   openDeckSource: (url) => ipcRenderer.invoke('deck:open-source', url),
   saveDeckCandidate: (input) => ipcRenderer.invoke('deck:save-candidate', input),
+  adoptDeckCandidate: (input) => ipcRenderer.invoke('deck:adopt-candidate', input),
   copyDeckExport: (input) => ipcRenderer.invoke('deck:copy-export', input),
   getReconciliation: (projectId) => ipcRenderer.invoke('deck:get-reconciliation', projectId),
   saveLineMapping: (input) => ipcRenderer.invoke('deck:save-line-mapping', input),

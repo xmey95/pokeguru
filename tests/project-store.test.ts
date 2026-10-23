@@ -147,6 +147,39 @@ describe('ProjectStore', () => {
     reopened.close()
   })
 
+  it('adotta una candidata intera in modo atomico e mantiene l’altro thread', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Adozione', format: 'STANDARD' })
+    const other = store.create({ name: 'Altro', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id, rawText: '60 Carta A MEG 1', source: 'paste' })
+    const original = store.listDeckVersions(project.id)[0]
+    const first = store.createDeckThread({ projectId: project.id, title: 'Piano A' })
+    const second = store.createDeckThread({ projectId: project.id, title: 'Piano B' })
+    const a = store.saveDeckCandidate({ projectId: project.id, threadId: first.id,
+      rawText: '59 Carta A MEG 1\n1 Carta B MEG 2' }).candidates[0]
+    const b = store.saveDeckCandidate({ projectId: project.id, threadId: second.id,
+      rawText: '58 Carta A MEG 1\n2 Carta C MEG 3' }).candidates[0]
+    const request = { projectId: project.id, threadId: first.id, candidateId: a.id, expectedHeadId: original.id }
+    expect(() => store.adoptDeckCandidate({ ...request, projectId: other.id })).toThrow()
+    expect(store.getBaseline(project.id)?.rawText).toBe('60 Carta A MEG 1')
+    const adopted = store.adoptDeckCandidate(request)
+    expect(adopted.rawText).toBe(a.rawText)
+    expect(store.listDeckVersions(project.id)[0]).toMatchObject({ sequence: 2,
+      adoption: { threadId: first.id, candidateId: a.id } })
+    expect(store.listDeckThreads(project.id).find((thread) => thread.id === second.id)).toMatchObject({
+      stale: true, candidates: [{ id: b.id, rawText: b.rawText }]
+    })
+    expect(() => store.adoptDeckCandidate(request)).toThrow('lista principale è cambiata')
+    expect(store.listDeckVersions(project.id)).toHaveLength(2)
+    store.close()
+    const reopened = new ProjectStore(path)
+    expect(reopened.getBaseline(project.id)?.rawText).toBe(a.rawText)
+    expect(reopened.listDeckVersions(project.id)[0].adoption?.candidateId).toBe(a.id)
+    expect(reopened.listDeckThreads(project.id).find((thread) => thread.id === second.id)?.candidates[0].id).toBe(b.id)
+    reopened.close()
+  })
+
   it('mantiene schede Matchup separate e segnala il cambio di lista', () => {
     const path = databasePath()
     const store = new ProjectStore(path)

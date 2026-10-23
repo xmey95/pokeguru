@@ -10,6 +10,7 @@ export interface DeckVersion {
   rawText: string
   parsed: ParsedDeck
   createdAt: string
+  adoption: { threadId: string; candidateId: string } | null
 }
 
 export interface DeckThreadMessage {
@@ -61,4 +62,11 @@ export interface SaveDeckCandidateInput {
   threadId: string
   rawText: string
   note?: string
+}
+
+export interface AdoptDeckCandidateInput {
+  projectId: string
+  threadId: string
+  candidateId: string
+  expectedHeadId: string
 }

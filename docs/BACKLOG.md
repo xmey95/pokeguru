@@ -53,6 +53,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-044** | Ammissione temporale delle promo dal registro ufficiale | Funzionalità | R-02 / I3, parte di APP-018 | P0 / S | APP-035/036, snapshot promo e date | Done |
 | **APP-045** | Vincolo ACE SPEC nella costruzione del mazzo | Funzionalità | R-02 / I3, parte di APP-018 | P0 / S | APP-028, rarità nel Catalogo e fonte ufficiale | Done |
 | **APP-046** | Esito Standard aggregato e conservativo | Funzionalità | R-02 / I3, parte di APP-018 | P0 / M | APP-027/028/043/044/045, perimetro APP-030 | Done |
+| **APP-047** | Diff e adozione atomica dell'intera candidata | Funzionalità | R-08, R-05 / I3, parte di APP-011 | P1 / M | APP-010/019/046, versioni SQLite e controlli locali | Done |
 
 ## Task dettagliati I0–I2
 
@@ -305,6 +306,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 ### APP-011 — Confronto e adozione
 
 - **Ambito / risultato:** versione principale, candidate complete nei thread e versioni adottate persistenti; diff per valutare l'intera lista, controlli deterministici e azione esplicita dell'utente. **Accettazione:** entrate/uscite/quantità/motivi/fonti visibili; l'adozione è atomica e sostituisce l'intera lista, senza selezione di singole carte; un conflitto o una base superata blocca adozione o richiede confronto e risoluzione visibile rispetto alla versione principale attuale; la versione corrente resta invariata fino al comando utente; il thread non adottato conserva la candidata; niente claim di winrate non osservati. **Verifica prevista:** percorso MVP con due thread, adozione di uno, altro ancora consultabile, base superata, conflitto e rifiuto; riapertura del progetto. **Evidenza:** non avviato. Da scomporre.
+
+### APP-047 — Diff e adozione atomica
+
+- **Ambito / risultato:** mostrare per ogni candidata dell'intera lista le quantità aggiunte, tolte e cambiate rispetto alla versione principale corrente e alla base del thread; mostrare note, fonti e controlli. L'adozione esplicita crea una nuova versione principale in una transazione e non modifica la candidata o l'altro thread.
+- **Accettazione:** solo una candidata da 60 carte interpretate, senza righe illeggibili né errori certi dei controlli locali può essere adottata. I casi incerti restano visibili e richiedono decisione consapevole, senza dichiarare legalità torneo. Una base superata o una testa cambiata nel frattempo blocca l'adozione; il confronto con la versione attuale rimane visibile. Codici con punto o ALT sono conservati nella candidata ma bloccano l'adozione finché l'export Limitless non è verificato. Il risultato è ritrovato dopo riavvio e i vincoli del progetto restano applicati.
+- **Verifica prevista:** test del diff quantità, due thread, adozione e rollback su base superata, controllo di vincoli ed errori, riapertura e prova Electron. APP-018 mantiene il pacchetto di regole e l'esito legale fuori da questo task.
+- **Evidenza e verifica il 23-10-2026:** `compareDecks` mostra quantità per nome e per stampa rispetto alla base e alla lista attuale; la vista della candidata conserva nota, fonti e controlli Codex, segnala blocchi e incertezze e offre «Adotta l'intera lista candidata». `reviewCandidate` controlla costruzione, rotazione/ammissione nota, vincoli del progetto, diagnostica e codici non provati; l'IPC ricontrolla prima del salvataggio. `ProjectStore.adoptDeckCandidate` verifica testa attesa e base del thread in transazione, crea una versione immutabile con provenienza, sostituisce baseline e testa, elimina i mapping legati alle vecchie righe e mantiene le candidate degli altri thread. Test del diff, vincoli e archivio con base superata e riapertura passati; `npm test` (77 passati, 9 live esclusi), build e `node tests/deck-adoption-live.mjs` passati su Windows. CI Linux/Windows aggiunta, esito da osservare dopo il push. **Limiti:** i casi di legalità indeterminata possono essere adottati dopo lettura dell'avviso; non equivalgono a un mazzo certificato per i tornei. Le stampe con codice puntato o ALT devono essere corrette e risalvate come nuova candidata prima dell'adozione.
 
 ### APP-012 — Percorso da zero
 

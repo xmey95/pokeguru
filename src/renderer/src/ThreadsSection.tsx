@@ -1,19 +1,70 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { DeckThread, DeckVersion } from '../../shared/deck-threads'
+import type { DeckCandidate } from '../../shared/deck-threads'
 import type { AiModel, AiPreferences } from '../../shared/ai'
+import type { DeckBaseline } from '../../shared/deck-import'
+import type { CatalogView } from '../../shared/catalog'
+import type { DeckConstraint } from '../../shared/constraints'
+import { compareDecks, type DeckDiff } from '../../shared/deck-diff'
+import { reviewCandidate } from '../../shared/candidate-review'
 
 interface Props {
   projectId: string
   mainImportedAt: string | null
+  onAdopt(baseline: DeckBaseline): void
+}
+
+function DiffView({ title, diff }: { title: string; diff: DeckDiff }) {
+  return <div className="thread-diff"><strong>{title}: {diff.beforeTotal} → {diff.afterTotal} carte</strong>
+    {diff.byName.length === 0 ? <p>Nessuna variazione nelle quantità per nome.</p> : <ul>{diff.byName.map((item) =>
+      <li key={item.name}>{item.name}: {item.before} → {item.after} ({item.delta > 0 ? '+' : ''}{item.delta})</li>)}</ul>}
+    {diff.byPrint.length > 0 && <details><summary>Stampe indicate ({diff.byPrint.length} variazioni)</summary><ul>{diff.byPrint.map((item) =>
+      <li key={item.name}>{item.name}: {item.before} → {item.after}</li>)}</ul></details>}
+  </div>
+}
+
+function CandidateDetail({ candidate, thread, versions, catalog, constraints, working, onAdopt }: {
+  candidate: DeckCandidate; thread: DeckThread; versions: DeckVersion[]; catalog: CatalogView | null
+  constraints: DeckConstraint[]; working: boolean; onAdopt(candidate: DeckCandidate): void
+}) {
+  const base = versions.find((version) => version.id === thread.baseVersionId)
+  const current = versions[0]
+  const adopted = versions.find((version) => version.adoption?.candidateId === candidate.id)
+  const review = catalog ? reviewCandidate(thread.projectId, candidate, catalog, constraints,
+    new Date().toLocaleDateString('sv-SE')) : null
+  return <details className="thread-candidate">
+    <summary>Candidata {candidate.sequence} · {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {candidate.parsed.interpretedTotal} carte · {displayDate(candidate.createdAt)}{adopted ? ` · adottata in v${adopted.sequence}` : ''}</summary>
+    {candidate.note && <p>{candidate.note}</p>}
+    {candidate.aiConfig && <p className="content-note">AI: {candidate.aiConfig.model ?? 'Automatico'} / {candidate.aiConfig.reasoningEffort ?? 'predefinito'}</p>}
+    {candidate.sources.length > 0 && <div className="content-note">Fonti: {candidate.sources.map((source) =>
+      source.url ? <button key={source.id} type="button" className="text-button"
+        onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
+        : <span key={source.id}>{source.label}; </span>)}</div>}
+    {candidate.checks.length > 0 && <ul>{candidate.checks.map((check, index) => <li key={index}>{check}</li>)}</ul>}
+    {candidate.parsed.diagnostics.length > 0 && <p className="content-note">{candidate.parsed.diagnostics.length} note di importazione da controllare.</p>}
+    {base && <DiffView title={`Rispetto alla base v${base.sequence}`} diff={compareDecks(base.parsed, candidate.parsed)} />}
+    {current && <DiffView title={`Rispetto alla lista corrente v${current.sequence}`} diff={compareDecks(current.parsed, candidate.parsed)} />}
+    {review && <div className="thread-review"><strong>Controlli prima dell'adozione</strong>
+      {review.blockers.length > 0 && <ul className="thread-blockers">{review.blockers.map((item, index) => <li key={index}>{item}</li>)}</ul>}
+      {review.toReview.length > 0 && <details><summary>Da verificare ({review.toReview.length})</summary><ul>{review.toReview.map((item, index) => <li key={index}>{item}</li>)}</ul></details>}
+      <p>Legalità torneo indeterminata. I vincoli e i controlli si ricalcolano sulla candidata completa.</p>
+    </div>}
+    {thread.stale && <p className="diagnostics">Base del thread superata: la candidata resta salvata, ma l'adozione è bloccata. Confrontala con la lista corrente e crea un nuovo thread dalla versione attuale.</p>}
+    {!adopted && <button type="button" className="primary-button" disabled={working || thread.stale || !current || !review || review.blockers.length > 0}
+      onClick={() => onAdopt(candidate)}>Adotta l'intera lista candidata</button>}
+    <pre>{candidate.rawText}</pre>
+  </details>
 }
 
 function displayDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
 }
 
-export function ThreadsSection({ projectId, mainImportedAt }: Props) {
+export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [versions, setVersions] = useState<DeckVersion[]>([])
   const [threads, setThreads] = useState<DeckThread[]>([])
+  const [catalog, setCatalog] = useState<CatalogView | null>(null)
+  const [constraints, setConstraints] = useState<DeckConstraint[]>([])
   const [aiModels, setAiModels] = useState<AiModel[]>([])
   const [overrides, setOverrides] = useState<Record<string, AiPreferences>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -40,15 +91,21 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
     let active = true
     setLoading(true)
     setError(null)
-    void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId)])
-      .then(([versionResult, threadResult]) => {
+    void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId),
+      window.projectsApi.getCatalog(), window.projectsApi.listConstraints(projectId)])
+      .then(([versionResult, threadResult, catalogResult, constraintResult]) => {
         if (!active) return
         if (!versionResult.ok) throw new Error(versionResult.error)
         if (!threadResult.ok) throw new Error(threadResult.error)
+        if (!catalogResult.ok) throw new Error(catalogResult.error)
+        if (!constraintResult.ok) throw new Error(constraintResult.error)
         setVersions(versionResult.value)
         setThreads(threadResult.value)
+        setCatalog(catalogResult.value)
+        setConstraints(constraintResult.value)
+        setSelectedId((current) => threadResult.value.some((thread) => thread.id === current)
+          ? current : threadResult.value[0]?.id ?? null)
         const first = threadResult.value[0]
-        setSelectedId(first?.id ?? null)
         setCandidateText(first?.candidates.at(-1)?.rawText ??
           versionResult.value.find((version) => version.id === first?.baseVersionId)?.rawText ?? '')
       })
@@ -160,9 +217,27 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
     finally { setWorking(false); setProposing(false) }
   }
 
+  async function adopt(candidate: DeckCandidate): Promise<void> {
+    if (!selected || !selected.currentVersionId || working) return
+    setWorking(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.adoptDeckCandidate({ projectId, threadId: selected.id,
+        candidateId: candidate.id, expectedHeadId: selected.currentVersionId })
+      if (!result.ok) throw new Error(result.error)
+      onAdopt(result.value)
+      const [newVersions, newThreads] = await Promise.all([
+        window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId)
+      ])
+      if (newVersions.ok) setVersions(newVersions.value)
+      if (newThreads.ok) setThreads(newThreads.value)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Adozione non riuscita.') }
+    finally { setWorking(false) }
+  }
+
   return <section className="threads-section" aria-label="Thread del mazzo">
     <div className="panel-heading"><div><span className="eyebrow">Esplora in parallelo</span><h2>Thread del mazzo</h2></div></div>
-    <p className="content-note">Ogni thread parte dalla versione corrente al momento della creazione. Messaggi e liste candidate restano nel thread; la lista principale cambia solo dalla sezione Lista.</p>
+    <p className="content-note">Ogni thread parte dalla versione corrente al momento della creazione. Messaggi e liste candidate restano nel thread; la lista principale cambia solo con «Adotta l'intera lista candidata».</p>
     {error && <div className="error-banner" role="alert">{error}</div>}
     {loading ? <p className="content-note">Caricamento thread…</p> : <>
       <div className="threads-layout">
@@ -207,18 +282,8 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
               </select>
             </div>
             <div className="thread-timeline">
-              {timeline.map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}{entry.item.aiConfig ? ` · ${entry.item.aiConfig.model ?? 'Automatico'} / ${entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · ${entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}` : ''}</small><p>{entry.item.text}</p></div> : <details className="thread-candidate" key={entry.item.id}>
-                <summary>Candidata {entry.item.sequence} · {entry.item.origin === 'ai' ? 'Codex' : 'manuale'} · {entry.item.parsed.interpretedTotal} carte · {displayDate(entry.item.createdAt)}</summary>
-                {entry.item.note && <p>{entry.item.note}</p>}
-                {entry.item.aiConfig && <p className="content-note">AI: {entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'}</p>}
-                {entry.item.sources.length > 0 && <div className="content-note">Fonti: {entry.item.sources.map((source) =>
-                  source.url ? <button key={source.id} type="button" className="text-button"
-                    onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
-                    : <span key={source.id}>{source.label}; </span>)}</div>}
-                {entry.item.checks.length > 0 && <ul>{entry.item.checks.map((check, index) => <li key={index}>{check}</li>)}</ul>}
-                {entry.item.parsed.diagnostics.length > 0 && <p className="content-note">{entry.item.parsed.diagnostics.length} note di importazione da controllare.</p>}
-                <pre>{entry.item.rawText}</pre>
-              </details>)}
+              {timeline.map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}{entry.item.aiConfig ? ` · ${entry.item.aiConfig.model ?? 'Automatico'} / ${entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · ${entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}` : ''}</small><p>{entry.item.text}</p></div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
+                catalog={catalog} constraints={constraints} working={working} onAdopt={(candidate) => void adopt(candidate)} />)}
             </div>
             <form className="thread-form" onSubmit={(event) => void ask(event)}>
               <label htmlFor="thread-message">Scrivi nel thread</label>
@@ -251,7 +316,7 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
       </div>
       <details className="thread-versions"><summary>Versioni principali ({versions.length})</summary>
         {versions.length === 0 ? <p className="content-note">Ancora nessuna lista principale.</p> : versions.map((version, index) =>
-          <details key={version.id}><summary>v{version.sequence}{index === 0 ? ' · corrente' : ''} · {version.parsed.interpretedTotal} carte · {displayDate(version.createdAt)}</summary><pre>{version.rawText}</pre></details>)}
+          <details key={version.id}><summary>v{version.sequence}{index === 0 ? ' · corrente' : ''}{version.adoption ? ' · adottata da un thread' : ''} · {version.parsed.interpretedTotal} carte · {displayDate(version.createdAt)}</summary><pre>{version.rawText}</pre></details>)}
       </details>
     </>}
   </section>

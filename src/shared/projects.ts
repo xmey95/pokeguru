@@ -5,7 +5,7 @@ import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from './catalog'
 import type { ClearLineMappingInput, DeckReconciliation, SaveLineMappingInput } from './reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from './constraints'
 import type { DeckExportRequest } from './deck-export'
-import type { CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
 import type { TournamentSnapshot } from './tournament'
 
 export type ProjectFormat = 'STANDARD'
@@ -52,6 +52,7 @@ export interface ProjectsApi {
   proposeDeckThread(projectId: string, threadId: string, request: string, override?: AiPreferences | null): Promise<OperationResult<DeckThread>>
   openDeckSource(url: string): Promise<OperationResult<boolean>>
   saveDeckCandidate(input: SaveDeckCandidateInput): Promise<OperationResult<DeckThread>>
+  adoptDeckCandidate(input: AdoptDeckCandidateInput): Promise<OperationResult<DeckBaseline>>
   copyDeckExport(input: DeckExportRequest): Promise<OperationResult<boolean>>
   getReconciliation(projectId: string): Promise<OperationResult<DeckReconciliation>>
   saveLineMapping(input: SaveLineMappingInput): Promise<OperationResult<DeckReconciliation>>

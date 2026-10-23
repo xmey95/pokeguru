@@ -345,7 +345,16 @@ export function App() {
                   <button className="primary-button" type="submit" disabled={importing || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
                 </div>
               </form>
-              </> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null} /> : <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')} />}
+              </> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
+                onAdopt={(adopted) => {
+                  const updated = projectWithBaseline(selected, adopted)
+                  setBaseline(adopted)
+                  setDraft(adopted.rawText)
+                  setSource(adopted.source)
+                  setFileName(adopted.fileName)
+                  setSelected(updated)
+                  setProjects((current) => current.map((project) => project.id === selected.id ? updated : project))
+                }} /> : <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')} />}
             </section>
           ) : (
             <section className="welcome" aria-label="Benvenuto">

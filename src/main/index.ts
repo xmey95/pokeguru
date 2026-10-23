@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { ProjectStore } from './project-store'
 import type { DeckBaseline, ImportDeckInput } from '../shared/deck-import'
-import type { CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import { reviewCandidate } from '../shared/candidate-review'
 import type { OperationResult, Project } from '../shared/projects'
 import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
 import type { AiConnection, AiPreferences, AiRunConfig } from '../shared/ai'
@@ -400,6 +401,22 @@ function registerProjectHandlers(): void {
   ipcMain.handle('deck:save-candidate', (event, input: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.saveDeckCandidate(input as SaveDeckCandidateInput))
+  })
+
+  ipcMain.handle('deck:adopt-candidate', (event, input: unknown): OperationResult<DeckBaseline> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => {
+      if (!catalogStore || !input || typeof input !== 'object') throw new Error('Catalogo o richiesta non disponibile.')
+      const request = input as AdoptDeckCandidateInput
+      const thread = projectStore!.listDeckThreads(request.projectId).find((item) => item.id === request.threadId)
+      const candidate = thread?.candidates.find((item) => item.id === request.candidateId)
+      if (!thread || !candidate) throw new Error('Candidata non trovata in questo progetto.')
+      const today = new Date().toLocaleDateString('sv-SE')
+      const review = reviewCandidate(request.projectId, candidate, catalogStore.view(),
+        projectStore!.listConstraints(request.projectId), today)
+      if (review.blockers.length) throw new Error(`Adozione bloccata: ${review.blockers.join(' ')}`)
+      return projectStore!.adoptDeckCandidate(request)
+    })
   })
 
   function exportFor(input: unknown): DeckExportPreview {
