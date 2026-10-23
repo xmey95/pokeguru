@@ -20,6 +20,7 @@
     "test:threads-live": "npm run build && node tests/threads-live.mjs",
     "test:reconciliation-ai-live": "npm run build && node tests/reconciliation-ai-live.mjs",
     "test:ai-live": "npm run build && node tests/ai-settings-live.mjs",
+    "test:ai:offline": "npm run build && node tests/ai-settings-offline.mjs",
     "test:codex-app-server-live": "node tests/codex-app-server-live.mjs",
     "test:matchup-live": "npm run build && node tests/matchup-live.mjs",
     "test:standard-catalog-live": "npm run build && node tests/standard-catalog-electron-live.mjs",

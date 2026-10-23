@@ -143,8 +143,11 @@ export class CodexControl {
     await this.request('account/logout')
   }
 
-  stop(): void {
-    this.child?.kill()
+  stop(): Promise<void> {
+    const child = this.child
+    const closed = child ? new Promise<void>((resolve) => child.once('close', () => resolve())) : Promise.resolve()
+    child?.kill()
     this.fail(new Error('Codex App Server arrestato.'))
+    return closed
   }
 }

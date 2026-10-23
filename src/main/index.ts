@@ -592,7 +592,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
-  codexControl.stop()
+  void codexControl.stop()
   projectStore?.close()
   catalogStore?.close()
   tournamentStore?.close()

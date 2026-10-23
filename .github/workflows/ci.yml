@@ -55,3 +55,18 @@ jobs:
       - name: Exercise saved tournament on Windows
         if: runner.os == 'Windows'
         run: node tests/tournament-ui-live.mjs --offline
+      - name: Exercise AI settings without Codex on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/ai-settings-offline.mjs
+      - name: Exercise AI settings without Codex on Windows
+        if: runner.os == 'Windows'
+        run: node tests/ai-settings-offline.mjs
+      - name: Install Codex CLI for isolated Linux protocol check
+        if: runner.os == 'Linux'
+        run: npm install --prefix "$RUNNER_TEMP/pokeguru-codex" --no-audit --no-fund @openai/codex@0.164.0
+      - name: Check Codex login protocol with an isolated profile on Linux
+        if: runner.os == 'Linux'
+        env:
+          POKEGURU_CODEX_LOGIN_LIVE: '1'
+          POKEGURU_CODEX_BIN: ${{ runner.temp }}/pokeguru-codex/node_modules/.bin/codex
+        run: npx vitest run tests/codex-login-live.test.ts

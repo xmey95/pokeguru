@@ -30,15 +30,23 @@ try {
     await page.getByText('Prova riuscita: Codex ha completato').waitFor({ timeout: 180000 })
   }
   const chosen = connection.value.models.find((model) => model.isDefault) ?? connection.value.models[0]
+  const chosenEffort = chosen.reasoningEfforts.find((effort) => effort.id !== chosen.defaultReasoningEffort)
   await page.getByLabel('Modello', { exact: true }).selectOption(chosen.id)
+  if (chosenEffort) await page.getByLabel('Livello di ragionamento').selectOption(chosenEffort.id)
   await page.getByRole('button', { name: 'Salva preferenze' }).click()
   await page.getByText('Preferenze salvate.').waitFor()
+  if (process.env.POKEGURU_SKIP_AI_TEST !== '1') {
+    await page.getByRole('button', { name: 'Esegui prova AI' }).click()
+    await page.getByText('Prova riuscita: Codex ha completato').waitFor({ timeout: 180000 })
+  }
   await page.screenshot({ path: join(workspace, 'out', 'ai-settings.png'), fullPage: true })
   await application.close()
   application = await launch()
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Impostazioni AI' }).click()
+  if (chosenEffort) await page.getByLabel('Livello di ragionamento').locator(`option[value="${chosenEffort.id}"]`).waitFor({ state: 'attached' })
   assert.equal(await page.getByLabel('Modello', { exact: true }).inputValue(), chosen.id)
+  assert.equal(await page.getByLabel('Livello di ragionamento').inputValue(), chosenEffort?.id ?? '')
   await application.close()
   application = await launch({ POKEGURU_CODEX_BIN: join(workspace, 'codex-non-presente.exe') })
   page = await application.firstWindow()
