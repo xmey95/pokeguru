@@ -6,6 +6,7 @@ import type { ClearLineMappingInput, DeckReconciliation, SaveLineMappingInput } 
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from './constraints'
 import type { DeckExportRequest } from './deck-export'
 import type { CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
+import type { TournamentSnapshot } from './tournament'
 
 export type ProjectFormat = 'STANDARD'
 export type CompetitiveCircuit = 'WESTERN' | 'JAPAN'
@@ -64,6 +65,9 @@ export interface ProjectsApi {
   retryMatchupTurn(discussionId: string, turnId: string, override?: AiPreferences | null): Promise<OperationResult<MatchupDiscussion>>
   continueMatchup(discussionId: string, metaId: string, override?: AiPreferences | null): Promise<OperationResult<MatchupDiscussion>>
   openLimitless(url: string): Promise<OperationResult<boolean>>
+  getTournament(): Promise<OperationResult<TournamentSnapshot | null>>
+  refreshTournament(): Promise<OperationResult<TournamentSnapshot>>
+  openTournament(url: string): Promise<OperationResult<boolean>>
   getAiPreferences(): Promise<OperationResult<AiPreferences>>
   saveAiPreferences(value: AiPreferences): Promise<OperationResult<AiPreferences>>
   getAiConnection(): Promise<OperationResult<AiConnection>>

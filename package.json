@@ -23,7 +23,9 @@
     "test:codex-app-server-live": "node tests/codex-app-server-live.mjs",
     "test:matchup-live": "npm run build && node tests/matchup-live.mjs",
     "test:standard-catalog-live": "npm run build && node tests/standard-catalog-electron-live.mjs",
-    "test:catalog-ui": "npm run build && node tests/catalog-ui-live.mjs"
+    "test:catalog-ui": "npm run build && node tests/catalog-ui-live.mjs",
+    "test:tournament-ui-live": "npm run build && node tests/tournament-ui-live.mjs",
+    "test:tournament-ui:offline": "npm run build && node tests/tournament-ui-live.mjs --offline"
   },
   "dependencies": {
     "cheerio": "^1.1.2",

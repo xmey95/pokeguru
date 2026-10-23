@@ -49,3 +49,9 @@ jobs:
       - name: Exercise catalog set coverage on Windows
         if: runner.os == 'Windows'
         run: node tests/catalog-ui-live.mjs
+      - name: Exercise saved tournament on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/tournament-ui-live.mjs --offline
+      - name: Exercise saved tournament on Windows
+        if: runner.os == 'Windows'
+        run: node tests/tournament-ui-live.mjs --offline

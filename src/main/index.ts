@@ -21,12 +21,16 @@ import { prepareDeckExport, type DeckExportPreview, type DeckExportRequest } fro
 import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
 import { PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
+import { TournamentStore } from './tournament-store'
+import { fetchRecentWesternTournament } from './limitless-event'
+import type { TournamentSnapshot } from '../shared/tournament'
 
 app.setName('Pokeguru')
 
 let mainWindow: BrowserWindow | null = null
 let projectStore: ProjectStore | null = null
 let catalogStore: CatalogStore | null = null
+let tournamentStore: TournamentStore | null = null
 let storageError: string | null = null
 let aiPreferencesStore: AiPreferencesStore | null = null
 const codexControl = new CodexControl()
@@ -111,6 +115,35 @@ function withStore<T>(operation: () => T): OperationResult<T> {
 function registerProjectHandlers(): void {
   const isMainFrame = (event: Electron.IpcMainInvokeEvent): boolean =>
     mainWindow !== null && event.sender === mainWindow.webContents && event.senderFrame === mainWindow.webContents.mainFrame
+
+  ipcMain.handle('tournament:get', (event): OperationResult<TournamentSnapshot | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: tournamentStore.latest() } }
+    catch { return { ok: false, error: 'Evento salvato non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:refresh', async (event): Promise<OperationResult<TournamentSnapshot>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: tournamentStore.save(await fetchRecentWesternTournament()) } }
+    catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Evento Limitless Play non disponibile.' }
+    }
+  })
+
+  ipcMain.handle('tournament:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event) || typeof input !== 'string' || input.length > 300)
+      return { ok: false, error: 'URL evento non valido.' }
+    try {
+      const url = new URL(input)
+      if (url.protocol !== 'https:' || url.hostname !== 'play.limitlesstcg.com' ||
+        !/^\/tournament\/[a-f0-9]{24}$/.test(url.pathname) || url.search || url.hash)
+        return { ok: false, error: 'URL evento non valido.' }
+      await shell.openExternal(url.toString())
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Impossibile aprire l’evento nel browser.' } }
+  })
 
   ipcMain.handle('catalog:get', (event): OperationResult<CatalogView> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
@@ -536,6 +569,7 @@ app.whenReady().then(() => {
     const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
     projectStore = new ProjectStore(databasePath)
     catalogStore = new CatalogStore(databasePath)
+    tournamentStore = new TournamentStore(databasePath)
     const previousJob = catalogStore.jobStatus()
     if (previousJob.state === 'paused' && previousJob.mode) {
       setTimeout(() => runCatalogJob(previousJob.mode!), 2_000)
@@ -559,6 +593,7 @@ app.on('before-quit', () => {
   codexControl.stop()
   projectStore?.close()
   catalogStore?.close()
+  tournamentStore?.close()
   projectStore = null
 })
 

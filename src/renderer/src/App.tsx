@@ -8,6 +8,7 @@ import { DeckList } from './DeckList'
 import { ConstraintsSection } from './ConstraintsSection'
 import { ExportButton } from './ExportButton'
 import { ThreadsSection } from './ThreadsSection'
+import { TournamentSection } from './TournamentSection'
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
@@ -44,7 +45,7 @@ export function App() {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'deck' | 'threads' | 'matchups'>('deck')
-  const [view, setView] = useState<'project' | 'ai' | 'catalog'>('project')
+  const [view, setView] = useState<'project' | 'ai' | 'catalog' | 'tournament'>('project')
   const [constraintTargetId, setConstraintTargetId] = useState<string | null>(null)
   const [constraintSelectionVersion, setConstraintSelectionVersion] = useState(0)
   const selectionVersion = useRef(0)
@@ -209,6 +210,7 @@ export function App() {
         </div>
         <div className="topbar-actions"><span className="local-indicator"><span aria-hidden="true" /> Archivio locale</span>
           <button type="button" className="secondary-button" onClick={() => setView('catalog')}>Catalogo</button>
+          <button type="button" className="secondary-button" onClick={() => setView('tournament')}>Eventi</button>
           <button type="button" className="secondary-button" onClick={() => setView('ai')}>Impostazioni AI</button></div>
       </header>
 
@@ -272,7 +274,7 @@ export function App() {
 
         <main className="main-content">
           {error && <div className="error-banner" role="alert">{error}</div>}
-          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection onConstrain={selected ? (identityId) => { setView('project'); selectConstraintTarget(identityId) } : undefined} /> : selected ? (
+          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection onConstrain={selected ? (identityId) => { setView('project'); selectConstraintTarget(identityId) } : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-kicker">Progetto di mazzo</div>
               <div className="detail-headline">
