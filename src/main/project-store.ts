@@ -198,6 +198,21 @@ export class ProjectStore {
         created_at TEXT NOT NULL,
         UNIQUE(thread_id, sequence)
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_ai_candidates (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL REFERENCES deck_threads(id) ON DELETE CASCADE,
+        sequence INTEGER NOT NULL,
+        raw_text TEXT NOT NULL,
+        parsed_json TEXT NOT NULL,
+        note TEXT NOT NULL,
+        sources_json TEXT NOT NULL,
+        checks_json TEXT NOT NULL,
+        ai_config_json TEXT NOT NULL,
+        ai_turn_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(thread_id, sequence),
+        UNIQUE(thread_id, ai_turn_id)
+      ) STRICT;
     `)
     const messageColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[]).map((row) => row.name))
     if (!messageColumns.has('ai_config_json') || !messageColumns.has('ai_turn_id')) {
@@ -414,6 +429,8 @@ export class ProjectStore {
       WHERE thread_id = ? ORDER BY created_at, rowid`)
     const candidates = this.db.prepare(`SELECT id, sequence, raw_text, parsed_json, note, origin, created_at
       FROM deck_thread_candidates WHERE thread_id = ? ORDER BY sequence`)
+    const aiCandidates = this.db.prepare(`SELECT id, sequence, raw_text, parsed_json, note, sources_json,
+      checks_json, ai_config_json, ai_turn_id, created_at FROM deck_ai_candidates WHERE thread_id = ? ORDER BY sequence`)
     return rows.map((row) => ({
       id: row.id, projectId: row.project_id, title: row.title,
       baseVersionId: row.base_version_id, baseVersionNumber: row.base_sequence,
@@ -427,14 +444,25 @@ export class ProjectStore {
         aiConfig: message.ai_config_json ? JSON.parse(message.ai_config_json) as AiRunConfig : null,
         aiTurnId: message.ai_turn_id
       })),
-      candidates: (candidates.all(row.id) as {
+      candidates: [...(candidates.all(row.id) as {
         id: string; sequence: number; raw_text: string; parsed_json: string
         note: string; origin: 'manual'; created_at: string
       }[]).map((candidate): DeckCandidate => ({
         id: candidate.id, sequence: candidate.sequence, rawText: candidate.raw_text,
         parsed: JSON.parse(candidate.parsed_json) as ParsedDeck,
-        note: candidate.note, origin: candidate.origin, createdAt: candidate.created_at
-      }))
+        note: candidate.note, origin: candidate.origin, createdAt: candidate.created_at,
+        aiConfig: null, aiTurnId: null, sources: [], checks: []
+      })), ...(aiCandidates.all(row.id) as {
+        id: string; sequence: number; raw_text: string; parsed_json: string; note: string
+        sources_json: string; checks_json: string; ai_config_json: string; ai_turn_id: string; created_at: string
+      }[]).map((candidate): DeckCandidate => ({
+        id: candidate.id, sequence: candidate.sequence, rawText: candidate.raw_text,
+        parsed: JSON.parse(candidate.parsed_json) as ParsedDeck,
+        note: candidate.note, origin: 'ai', createdAt: candidate.created_at,
+        aiConfig: JSON.parse(candidate.ai_config_json) as AiRunConfig, aiTurnId: candidate.ai_turn_id,
+        sources: JSON.parse(candidate.sources_json) as DeckCandidate['sources'],
+        checks: JSON.parse(candidate.checks_json) as string[]
+      }))].sort((a, b) => a.sequence - b.sequence)
     }))
   }
 
@@ -491,7 +519,8 @@ export class ProjectStore {
   }
 
   saveDeckAiExchange(projectId: string, threadId: string, sessionId: string,
-    question: string, answer: string, turnId: string, config: AiRunConfig): DeckThread {
+    question: string, answer: string, turnId: string, config: AiRunConfig,
+    proposal?: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] }): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
     if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questo thread.')
@@ -500,6 +529,14 @@ export class ProjectStore {
     if (!userText || userText.length > 5000 || userText.includes('\0')) throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
     if (!aiText || aiText.length > 10000 || aiText.includes('\0')) throw new Error('Risposta Codex non valida.')
     if (!turnId || turnId.length > 200) throw new Error('Turno Codex non valido.')
+    if (proposal && (!proposal.rawText || proposal.rawText.length > 200_000 ||
+      !proposal.note || proposal.note.length > 5000 || proposal.sources.length > 100))
+      throw new Error('Proposta Codex non valida.')
+    const parsedProposal = proposal ? parseDeck(proposal.rawText) : null
+    if (parsedProposal && (parsedProposal.interpretedTotal !== 60 ||
+      parsedProposal.lines.some((line) => line.kind === 'unparsed') ||
+      parsedProposal.diagnostics.some((item) => item.code === 'TOTAL_MISMATCH')))
+      throw new Error('La proposta Codex non contiene una lista completa di 60 carte.')
     const now = new Date().toISOString()
     this.db.exec('BEGIN IMMEDIATE')
     try {
@@ -509,10 +546,26 @@ export class ProjectStore {
         (id, thread_id, author, text, created_at, ai_config_json, ai_turn_id)
         VALUES (?, ?, 'assistant', ?, ?, ?, ?)`)
         .run(randomUUID(), threadId, aiText, now, JSON.stringify(config), turnId)
+      if (proposal && parsedProposal) {
+        const next = this.nextCandidateSequence(threadId)
+        this.db.prepare(`INSERT INTO deck_ai_candidates
+          (id, thread_id, sequence, raw_text, parsed_json, note, sources_json, checks_json,
+            ai_config_json, ai_turn_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(randomUUID(), threadId, next, proposal.rawText, JSON.stringify(parsedProposal), proposal.note,
+            JSON.stringify(proposal.sources), JSON.stringify(proposal.checks), JSON.stringify(config), turnId, now)
+      }
       this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
     return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+  }
+
+  private nextCandidateSequence(threadId: string): number {
+    const row = this.db.prepare(`SELECT MAX(sequence) AS n FROM (
+      SELECT sequence FROM deck_thread_candidates WHERE thread_id = ?
+      UNION ALL SELECT sequence FROM deck_ai_candidates WHERE thread_id = ?)`)
+      .get(threadId, threadId) as { n: number | null }
+    return (row.n ?? 0) + 1
   }
 
   saveDeckCandidate(input: SaveDeckCandidateInput): DeckThread {
@@ -532,7 +585,7 @@ export class ProjectStore {
       this.db.prepare(`INSERT INTO deck_thread_candidates
         (id, thread_id, sequence, raw_text, parsed_json, note, origin, created_at)
         VALUES (?, ?, ?, ?, ?, ?, 'manual', ?)`)
-        .run(randomUUID(), thread.id, thread.candidates.length + 1, input.rawText, JSON.stringify(parsed), note, now)
+        .run(randomUUID(), thread.id, this.nextCandidateSequence(thread.id), input.rawText, JSON.stringify(parsed), note, now)
       this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, thread.id)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }

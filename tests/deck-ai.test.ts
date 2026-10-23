@@ -4,8 +4,11 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
-import { deckDiscussionPrompt, readDeckDiscussionReply } from '../src/main/deck-ai'
+import { deckDiscussionPrompt, deckProposalPrompt, readDeckDiscussionReply, validateDeckProposal } from '../src/main/deck-ai'
 import type { AiRunConfig } from '../src/shared/ai'
+import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
+import type { DeckConstraint } from '../src/shared/constraints'
+import type { TournamentSnapshot } from '../src/shared/tournament'
 
 const directories: string[] = []
 const config: AiRunConfig = { provider: 'codex', source: 'global', model: 'sample-model', reasoningEffort: 'medium' }
@@ -89,4 +92,97 @@ it('migra i messaggi esistenti senza perdere le osservazioni manuali', () => {
   migrated.saveDeckAiExchange(project.id, thread.id, 'session', 'Domanda', 'Risposta', 'turn', config)
   expect(migrated.listDeckThreads(project.id).find((item) => item.id === thread.id)?.messages).toHaveLength(3)
   migrated.close()
+})
+
+it('salva una candidata AI atomica solo con 60 carte, stampe e fonti verificabili', () => {
+  const { store, path } = openStore()
+  const project = store.create({ name: 'Proposta', format: 'STANDARD' })
+  store.importDeck({ projectId: project.id, rawText: '1 Mew ex SV04.5 216\n59 Psychic Energy SVE 005', source: 'paste' })
+  const thread = store.createDeckThread({ projectId: project.id, title: 'Nuovo piano' })
+  store.assignDeckAiSession(project.id, thread.id, 'session')
+  function print(id: string, name: string, category: string, stage: string | null = null): CatalogPrint {
+    const [setId, localId] = id.split('-')
+    return { id, setId, localId, name, setName: setId, category, stage,
+      energyType: category === 'Energy' ? 'Normal' : null,
+      rarity: null, regulationMark: 'H', variants: null, identityId: name,
+      identityBasis: 'unverified', imageBase: null, thumbnail: null, highImageAvailable: null,
+      sourceUpdated: null, sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`,
+      detailAt: '2026-10-23T00:00:00.000Z', error: null }
+  }
+  const catalog: CatalogView = { circuit: 'WESTERN', source: 'TCGdex REST v2/en',
+    sourceLanguage: 'en', scope: { setIds: ['sv04.5', 'sve'], names: [] },
+    syncedAt: '2026-10-23T00:00:00.000Z', sets: [],
+    prints: [print('sv04.5-216', 'Mew ex', 'Pokemon', 'Basic'),
+      print('sve-005', 'Psychic Energy', 'Energy')] }
+  const sources = [{ id: 'base', label: 'Lista iniziale', url: null },
+    { id: 'catalog', label: 'TCGdex', url: 'https://api.tcgdex.net/v2/en' }]
+  const constraint: DeckConstraint = { id: 'c', projectId: project.id, identityId: 'Mew ex',
+    identityName: 'Mew ex', printId: null, kind: 'required', quantity: 1,
+    createdAt: '2026-10-23T00:00:00.000Z', updatedAt: '2026-10-23T00:00:00.000Z' }
+  const rawText = '1 Mew ex SV04.5 216\n59 Psychic Energy SVE 005'
+  const parsed = validateDeckProposal({ outcome: 'candidate', rawText,
+    rationale: 'Mantieni la carta Base.', sourceIds: ['base', 'catalog'] }, project.id, catalog,
+  [constraint], sources)
+  expect(parsed.checks.some((check) => check.includes('Legalità Standard'))).toBe(true)
+  expect(() => validateDeckProposal({ outcome: 'candidate', rawText: '59 Psychic Energy SVE 005',
+    rationale: 'Incompleto', sourceIds: ['catalog'] }, project.id, catalog, [], sources)).toThrow('60 carte')
+  expect(() => validateDeckProposal({ outcome: 'candidate', rawText: '1 Carta inventata XXX 1\n59 Psychic Energy SVE 005',
+    rationale: 'Inventata', sourceIds: ['catalog'] }, project.id, catalog, [], sources)).toThrow('Stampa non verificabile')
+  expect(() => validateDeckProposal({ outcome: 'candidate', rawText,
+    rationale: 'Fonti inventate', sourceIds: ['event'] }, project.id, catalog, [], sources)).toThrow('fonte non presente')
+  expect(validateDeckProposal({ outcome: 'no_change', rawText: '',
+    rationale: 'Dati insufficienti.', sourceIds: ['base'] }, project.id, catalog, [], sources))
+    .toMatchObject({ outcome: 'no_change', rawText: '', rationale: 'Dati insufficienti.' })
+  expect(() => validateDeckProposal({ outcome: 'no_change', rawText,
+    rationale: 'Contraddittorio.', sourceIds: ['base'] }, project.id, catalog, [], sources))
+    .toThrow('lista allegata')
+  expect(() => validateDeckProposal({ outcome: 'candidate', rawText: '60 Psychic Energy SVE 005',
+    rationale: 'Viola il vincolo', sourceIds: ['base'] }, project.id, catalog, [constraint], sources)).toThrow('costruzione')
+  const rotated: CatalogView = { ...catalog, prints: catalog.prints.map((item) =>
+    item.id === 'sv04.5-216' ? { ...item, regulationMark: 'G' } : item) }
+  expect(() => validateDeckProposal({ outcome: 'candidate', rawText,
+    rationale: 'Vecchio marchio', sourceIds: ['base'] }, project.id, rotated, [], sources))
+    .toThrow('marchio ruotato')
+  const future: CatalogView = { ...catalog, sets: [{ id: 'sv04.5', name: 'Futuro',
+    sourceTotal: 1, sampleTotal: 1, fetchedAt: '2026-10-23T00:00:00.000Z', releaseDate: '2099-01-01' }] }
+  expect(() => validateDeckProposal({ outcome: 'candidate', rawText,
+    rationale: 'Futuro', sourceIds: ['base'] }, project.id, future, [], sources))
+    .toThrow('non ancora rilasciato')
+  const saved = store.saveDeckAiExchange(project.id, thread.id, 'session', 'Proponi', parsed.rationale,
+    'turn-proposal', config, { rawText: parsed.rawText, note: parsed.rationale,
+      sources: parsed.sources, checks: parsed.checks })
+  expect(saved.candidates).toMatchObject([{ origin: 'ai', sequence: 1, aiTurnId: 'turn-proposal', rawText }])
+  expect(saved.candidates[0].sources).toEqual(expect.arrayContaining(sources))
+  expect(saved.candidates[0].sources.some((source) => source.url?.endsWith('/cards/sv04.5-216'))).toBe(true)
+  expect(saved.messages).toHaveLength(2)
+  store.saveDeckCandidate({ projectId: project.id, threadId: thread.id, rawText,
+    note: 'Bozza manuale' })
+  expect(store.listDeckThreads(project.id).find((item) => item.id === thread.id)?.candidates
+    .map((item) => item.sequence)).toEqual([1, 2])
+  expect(store.getBaseline(project.id)?.rawText).toBe(rawText)
+  store.close()
+  const reopened = new ProjectStore(path)
+  expect(reopened.listDeckThreads(project.id).find((item) => item.id === thread.id)?.candidates)
+    .toMatchObject([{ origin: 'ai', aiTurnId: 'turn-proposal' }, { origin: 'manual' }])
+  reopened.close()
+})
+
+it('inserisce dati e link soltanto per un evento realmente presente nel contesto', () => {
+  const { store } = openStore()
+  const project = store.create({ name: 'Evento', format: 'STANDARD' })
+  store.importDeck({ projectId: project.id, rawText: '60 Psychic Energy SVE 005', source: 'paste' })
+  const thread = store.createDeckThread({ projectId: project.id, title: 'Con evento' })
+  const base = store.listDeckVersions(project.id)[0]
+  const catalog: CatalogView = { circuit: 'WESTERN', source: 'TCGdex REST v2/en',
+    sourceLanguage: 'en', scope: { setIds: [], names: [] }, syncedAt: null, sets: [], prints: [] }
+  const event = { name: 'Campione Limitless', date: '2026-10-22', platform: 'PTCGL',
+    publicUrl: 'https://play.limitlesstcg.com/tournament/0123456789abcdef01234567',
+    participations: [{ listStatus: 'available', cardTotal: 60, placing: 1,
+      deck: { id: 'a', name: 'Archetipo A' }, cards: [{ count: 2, name: 'Mega Absol ex',
+        set: 'ME01', number: '086', category: 'pokemon' }] }] } as TournamentSnapshot
+  const context = deckProposalPrompt(thread, base, 'Valuta il mazzo', [], catalog, event)
+  expect(context.sources.find((item) => item.id === 'event')?.url).toBe(event.publicUrl)
+  expect(context.prompt).toContain('2 Mega Absol ex ME01 086')
+  expect(context.prompt).toContain('PTCGL')
+  store.close()
 })

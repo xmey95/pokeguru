@@ -43,8 +43,8 @@ export interface ImportDeckInput {
 
 const sectionPattern = /^(?:Pok[eé]mon(?: Cards)?|Trainers?(?: Cards)?|Energy(?: Cards)?|Energies|Energie|Allenatori)\s*(?:(?:[:\-–]\s*|\(\s*)(\d+)\s*\)?)?$/i
 const summaryPattern = /^(?:Total(?:\s+Cards?|\s+Carte)?|Totale(?:\s+Carte)?)\s*:\s*(\d+)$/i
-const bracketedPrintPattern = /^(.+?)\s+\(([A-Z0-9-]{2,12})-([A-Za-z0-9/.-]{1,12})\)$/
-const trailingPrintPattern = /^(.+?)\s+([A-Z0-9-]{2,12})\s+([A-Za-z]{0,3}\d[A-Za-z0-9/.-]{0,11})(?:\s+(PH))?$/
+const bracketedPrintPattern = /^(.+?)\s+\(([A-Z0-9.-]{2,12})-([A-Za-z0-9/.-]{1,12})\)$/
+const trailingPrintPattern = /^(.+?)\s+([A-Z0-9.-]{2,12})\s+([A-Za-z]{0,3}\d[A-Za-z0-9/.-]{0,11})(?:\s+(PH))?$/
 
 export function parseDeck(rawText: string): ParsedDeck {
   const lines: DeckLine[] = []

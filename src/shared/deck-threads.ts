@@ -28,7 +28,11 @@ export interface DeckCandidate {
   parsed: ParsedDeck
   note: string
   createdAt: string
-  origin: 'manual'
+  origin: 'manual' | 'ai'
+  aiConfig: AiRunConfig | null
+  aiTurnId: string | null
+  sources: { id: string; label: string; url: string | null }[]
+  checks: string[]
 }
 
 export interface DeckThread {

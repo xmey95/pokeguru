@@ -13,7 +13,8 @@ import { fetchMeta, fetchOpponentSample } from './limitless-meta'
 import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
-import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply } from './deck-ai'
+import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
+  deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from './deck-ai'
 import { CatalogStore, fetchCatalogSample, syncStandardCatalog } from './catalog'
 import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
 import { matchupDeckContext, snapshotPrint, type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
@@ -304,7 +305,9 @@ function registerProjectHandlers(): void {
     if (!projectStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
       typeof message !== 'string' || !message.trim() || message.trim().length > 5000 || message.includes('\0'))
       return { ok: false, error: 'Scrivi una domanda da 1 a 5.000 caratteri.' }
-    if (!projectStore.get(projectId)) return { ok: false, error: 'Progetto non trovato.' }
+    const project = projectStore.get(projectId)
+    if (!project) return { ok: false, error: 'Progetto non trovato.' }
+    if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le sessioni Codex sono disponibili solo per il circuito occidentale.' }
     const thread = projectStore.listDeckThreads(projectId).find((item) => item.id === threadId)
     if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
     if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questo thread.' }
@@ -329,6 +332,65 @@ function registerProjectHandlers(): void {
     } finally {
       generatingDeckThreads.delete(threadId)
     }
+  })
+
+  ipcMain.handle('deck:propose-thread', async (event, projectId: unknown, threadId: unknown,
+    request: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || !catalogStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+      typeof request !== 'string' || !request.trim() || request.trim().length > 5000 || request.includes('\0'))
+      return { ok: false, error: 'Descrivi una modifica da valutare (massimo 5.000 caratteri).' }
+    const project = projectStore.get(projectId)
+    if (!project) return { ok: false, error: 'Progetto non trovato.' }
+    if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le proposte Codex sono disponibili solo per il circuito occidentale.' }
+    const thread = projectStore.listDeckThreads(projectId).find((item) => item.id === threadId)
+    if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
+    if (!thread.baseVersionId) return { ok: false, error: 'Importa una lista prima di chiedere una proposta completa.' }
+    if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Codex sta già lavorando su questo thread.' }
+    generatingDeckThreads.add(threadId)
+    try {
+      const base = projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId)
+      if (!base) throw new Error('Versione di partenza del thread non disponibile.')
+      const config = await runConfig(override)
+      const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
+      mkdirSync(cwd, { recursive: true })
+      const catalog = catalogStore.view()
+      const constraints = projectStore.listConstraints(projectId)
+      const context = deckProposalPrompt(thread, base, request.trim(), constraints, catalog,
+        tournamentStore?.latest() ?? null)
+      const sessionId = thread.aiSessionRef ?? await codexControl.startThread(cwd, config)
+      if (thread.aiSessionRef) await codexControl.resumeThread(sessionId, cwd)
+      else projectStore.assignDeckAiSession(projectId, threadId, sessionId)
+      const result = await codexControl.jsonTurn(sessionId, cwd, context.prompt, config, DECK_PROPOSAL_SCHEMA)
+      const proposal = validateDeckProposal(result.value, projectId, catalog, constraints, context.sources)
+      const citedSources = proposal.sources.filter((source) => !source.id.startsWith('print:'))
+      const answer = proposal.rationale + (citedSources.length
+        ? `\n\nFonti: ${citedSources.map((source) => source.label).join('; ')}.` : '')
+      return { ok: true, value: projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
+        request.trim(), answer, result.turnId, config,
+        proposal.outcome === 'candidate' ? { rawText: proposal.rawText, note: proposal.rationale,
+          sources: proposal.sources, checks: proposal.checks } : undefined) }
+    } catch (error) {
+      return { ok: false, error: aiError(error) }
+    } finally {
+      generatingDeckThreads.delete(threadId)
+    }
+  })
+
+  ipcMain.handle('deck:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event) || typeof input !== 'string' || input.length > 300)
+      return { ok: false, error: 'URL fonte non valido.' }
+    try {
+      const url = new URL(input)
+      const tcgdex = url.hostname === 'api.tcgdex.net' &&
+        /^\/v2\/en(?:\/(?:cards|sets)\/[a-zA-Z0-9.-]+)?$/.test(url.pathname)
+      const limitless = url.hostname === 'play.limitlesstcg.com' &&
+        /^\/tournament\/[a-f0-9]{24}$/.test(url.pathname)
+      if (url.protocol !== 'https:' || (!tcgdex && !limitless) || url.search || url.hash)
+        return { ok: false, error: 'URL fonte non valido.' }
+      await shell.openExternal(url.toString())
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Impossibile aprire la fonte.' } }
   })
 
   ipcMain.handle('deck:save-candidate', (event, input: unknown): OperationResult<DeckThread> => {

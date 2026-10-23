@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { DeckThread, DeckVersion } from '../../shared/deck-threads'
+import type { AiModel, AiPreferences } from '../../shared/ai'
 
 interface Props {
   projectId: string
@@ -13,17 +14,23 @@ function displayDate(value: string): string {
 export function ThreadsSection({ projectId, mainImportedAt }: Props) {
   const [versions, setVersions] = useState<DeckVersion[]>([])
   const [threads, setThreads] = useState<DeckThread[]>([])
+  const [aiModels, setAiModels] = useState<AiModel[]>([])
+  const [overrides, setOverrides] = useState<Record<string, AiPreferences>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [openingNote, setOpeningNote] = useState('')
   const [message, setMessage] = useState('')
+  const [proposalRequest, setProposalRequest] = useState('')
   const [candidateText, setCandidateText] = useState('')
   const [candidateNote, setCandidateNote] = useState('')
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
   const [asking, setAsking] = useState(false)
+  const [proposing, setProposing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const selected = threads.find((thread) => thread.id === selectedId) ?? null
+  const selectedOverride = selected ? overrides[selected.id] ?? { model: null, reasoningEffort: null } : null
+  const selectedModel = aiModels.find((model) => model.id === selectedOverride?.model)
   const timeline = selected ? [
     ...selected.messages.map((item) => ({ kind: 'message' as const, item })),
     ...selected.candidates.map((item) => ({ kind: 'candidate' as const, item }))
@@ -50,12 +57,21 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
     return () => { active = false }
   }, [projectId, mainImportedAt])
 
+  useEffect(() => {
+    let active = true
+    void window.projectsApi.getAiConnection().then((result) => {
+      if (active && result.ok) setAiModels(result.value.models)
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [])
+
   function selectThread(thread: DeckThread): void {
     setSelectedId(thread.id)
     setCandidateText(thread.candidates.at(-1)?.rawText ??
       versions.find((version) => version.id === thread.baseVersionId)?.rawText ?? '')
     setCandidateNote('')
     setMessage('')
+    setProposalRequest('')
   }
 
   async function create(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -94,11 +110,16 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
     setAsking(true)
     setError(null)
     try {
-      const result = await window.projectsApi.askDeckThread(projectId, selected.id, message)
+      const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
+        selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setMessage('')
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.') }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
+      const current = await window.projectsApi.listDeckThreads(projectId)
+      if (current.ok) setThreads(current.value)
+    }
     finally { setWorking(false); setAsking(false) }
   }
 
@@ -116,6 +137,27 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
       setCandidateNote('')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Candidata non salvata.') }
     finally { setWorking(false) }
+  }
+
+  async function propose(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    if (!selected || working) return
+    setWorking(true)
+    setProposing(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, proposalRequest,
+        selectedOverride?.model ? selectedOverride : null)
+      if (!result.ok) throw new Error(result.error)
+      setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
+      setCandidateText(result.value.candidates.at(-1)?.rawText ?? candidateText)
+      setProposalRequest('')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
+      const current = await window.projectsApi.listDeckThreads(projectId)
+      if (current.ok) setThreads(current.value)
+    }
+    finally { setWorking(false); setProposing(false) }
   }
 
   return <section className="threads-section" aria-label="Thread del mazzo">
@@ -147,10 +189,33 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
             <div className="thread-heading"><div><h3>{selected.title}</h3><p className="content-note">Creato il {displayDate(selected.createdAt)} · {selected.baseVersionNumber === null ? 'Senza lista iniziale' : `Versione di partenza: v${selected.baseVersionNumber}`} · {selected.aiSessionRef ? 'Sessione Codex collegata' : 'Nessuna sessione Codex'}</p></div>
               {selected.stale && <span className="matchup-freshness stale">Base da confrontare</span>}</div>
             {selected.stale && <p className="stale-discussion">La lista principale è cambiata dopo la creazione di questo thread. Confronta le versioni prima di usare una candidata.</p>}
+            <div className="thread-form">
+              <label htmlFor="thread-ai-model">Modello Codex per questo thread</label>
+              <select id="thread-ai-model" value={selectedOverride?.model ?? ''} disabled={working}
+                onChange={(event) => setOverrides((current) => ({ ...current, [selected.id]: {
+                  model: event.target.value || null, reasoningEffort: null } }))}>
+                <option value="">Usa preferenze globali</option>
+                {aiModels.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}
+              </select>
+              <label htmlFor="thread-ai-effort">Ragionamento per questo thread</label>
+              <select id="thread-ai-effort" value={selectedOverride?.reasoningEffort ?? ''}
+                disabled={working || !selectedModel}
+                onChange={(event) => setOverrides((current) => ({ ...current, [selected.id]: {
+                  model: selectedOverride?.model ?? null, reasoningEffort: event.target.value || null } }))}>
+                <option value="">Predefinito</option>
+                {selectedModel?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
+              </select>
+            </div>
             <div className="thread-timeline">
-              {timeline.map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}{entry.item.aiConfig ? ` · ${entry.item.aiConfig.model ?? 'Automatico'} / ${entry.item.aiConfig.reasoningEffort ?? 'predefinito'}` : ''}</small><p>{entry.item.text}</p></div> : <details className="thread-candidate" key={entry.item.id}>
-                <summary>Candidata {entry.item.sequence} · {entry.item.parsed.interpretedTotal} carte · {displayDate(entry.item.createdAt)}</summary>
+              {timeline.map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}{entry.item.aiConfig ? ` · ${entry.item.aiConfig.model ?? 'Automatico'} / ${entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · ${entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}` : ''}</small><p>{entry.item.text}</p></div> : <details className="thread-candidate" key={entry.item.id}>
+                <summary>Candidata {entry.item.sequence} · {entry.item.origin === 'ai' ? 'Codex' : 'manuale'} · {entry.item.parsed.interpretedTotal} carte · {displayDate(entry.item.createdAt)}</summary>
                 {entry.item.note && <p>{entry.item.note}</p>}
+                {entry.item.aiConfig && <p className="content-note">AI: {entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'}</p>}
+                {entry.item.sources.length > 0 && <div className="content-note">Fonti: {entry.item.sources.map((source) =>
+                  source.url ? <button key={source.id} type="button" className="text-button"
+                    onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
+                    : <span key={source.id}>{source.label}; </span>)}</div>}
+                {entry.item.checks.length > 0 && <ul>{entry.item.checks.map((check, index) => <li key={index}>{check}</li>)}</ul>}
                 {entry.item.parsed.diagnostics.length > 0 && <p className="content-note">{entry.item.parsed.diagnostics.length} note di importazione da controllare.</p>}
                 <pre>{entry.item.rawText}</pre>
               </details>)}
@@ -161,6 +226,16 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
               <p className="content-note">Codex risponde usando la lista di partenza e la cronologia del thread. La lista principale non cambia. Se la richiesta fallisce, il testo resta qui per riprovare.</p>
               <button className="primary-button" disabled={working || !message.trim()}>{asking ? 'Codex sta rispondendo…' : 'Chiedi a Codex'}</button>
               <button type="button" className="secondary-button" disabled={working || !message.trim()} onClick={() => void addMessage()}>Salva osservazione</button>
+            </form>
+            <form className="thread-form candidate-form" onSubmit={(event) => void propose(event)}>
+              <h4>Proposta completa con Codex</h4>
+              <p className="content-note">Descrivi cosa vuoi migliorare. Codex usa la base del thread, i vincoli, le stampe locali e l'ultimo evento disponibile. Salva una candidata solo se restituisce 60 carte verificabili; la legalità Standard completa resta da accertare.</p>
+              <label htmlFor="thread-proposal-request">Modifica da valutare</label>
+              <textarea id="thread-proposal-request" value={proposalRequest} maxLength={5000}
+                onChange={(event) => setProposalRequest(event.target.value)} />
+              <button className="primary-button" disabled={working || !selected.baseVersionId || !proposalRequest.trim()}>
+                {proposing ? 'Codex sta preparando la proposta…' : 'Genera proposta Codex'}
+              </button>
             </form>
             <form className="thread-form candidate-form" onSubmit={(event) => void saveCandidate(event)}>
               <h4>Nuova candidata</h4>
