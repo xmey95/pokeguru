@@ -48,6 +48,7 @@ export interface ProjectsApi {
   listDeckThreads(projectId: string): Promise<OperationResult<DeckThread[]>>
   createDeckThread(input: CreateDeckThreadInput): Promise<OperationResult<DeckThread>>
   addDeckThreadMessage(projectId: string, threadId: string, text: string): Promise<OperationResult<DeckThread>>
+  askDeckThread(projectId: string, threadId: string, text: string, override?: AiPreferences | null): Promise<OperationResult<DeckThread>>
   saveDeckCandidate(input: SaveDeckCandidateInput): Promise<OperationResult<DeckThread>>
   copyDeckExport(input: DeckExportRequest): Promise<OperationResult<boolean>>
   getReconciliation(projectId: string): Promise<OperationResult<DeckReconciliation>>

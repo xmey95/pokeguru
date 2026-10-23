@@ -18,6 +18,8 @@
     "test:reconciliation-live": "npm run build && node tests/reconciliation-live.mjs",
     "test:export-live": "npm run build && node tests/export-live.mjs",
     "test:threads-live": "npm run build && node tests/threads-live.mjs",
+    "test:threads-ai:offline": "npm run build && node tests/threads-ai-live.mjs --offline",
+    "test:threads-ai-live": "npm run build && node tests/threads-ai-live.mjs",
     "test:reconciliation-ai-live": "npm run build && node tests/reconciliation-ai-live.mjs",
     "test:ai-live": "npm run build && node tests/ai-settings-live.mjs",
     "test:ai:offline": "npm run build && node tests/ai-settings-offline.mjs",

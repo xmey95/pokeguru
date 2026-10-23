@@ -21,6 +21,7 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
   const [candidateNote, setCandidateNote] = useState('')
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
+  const [asking, setAsking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const selected = threads.find((thread) => thread.id === selectedId) ?? null
   const timeline = selected ? [
@@ -73,8 +74,7 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
     finally { setWorking(false) }
   }
 
-  async function addMessage(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault()
+  async function addMessage(): Promise<void> {
     if (!selected || working) return
     setWorking(true)
     setError(null)
@@ -85,6 +85,21 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
       setMessage('')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Messaggio non salvato.') }
     finally { setWorking(false) }
+  }
+
+  async function ask(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    if (!selected || working) return
+    setWorking(true)
+    setAsking(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.askDeckThread(projectId, selected.id, message)
+      if (!result.ok) throw new Error(result.error)
+      setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
+      setMessage('')
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.') }
+    finally { setWorking(false); setAsking(false) }
   }
 
   async function saveCandidate(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -129,21 +144,23 @@ export function ThreadsSection({ projectId, mainImportedAt }: Props) {
         </aside>
         <div className="thread-detail">
           {selected ? <>
-            <div className="thread-heading"><div><h3>{selected.title}</h3><p className="content-note">Creato il {displayDate(selected.createdAt)} · {selected.baseVersionNumber === null ? 'Senza lista iniziale' : `Versione di partenza: v${selected.baseVersionNumber}`}</p></div>
+            <div className="thread-heading"><div><h3>{selected.title}</h3><p className="content-note">Creato il {displayDate(selected.createdAt)} · {selected.baseVersionNumber === null ? 'Senza lista iniziale' : `Versione di partenza: v${selected.baseVersionNumber}`} · {selected.aiSessionRef ? 'Sessione Codex collegata' : 'Nessuna sessione Codex'}</p></div>
               {selected.stale && <span className="matchup-freshness stale">Base da confrontare</span>}</div>
             {selected.stale && <p className="stale-discussion">La lista principale è cambiata dopo la creazione di questo thread. Confronta le versioni prima di usare una candidata.</p>}
             <div className="thread-timeline">
-              {timeline.map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'AI'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p></div> : <details className="thread-candidate" key={entry.item.id}>
+              {timeline.map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}{entry.item.aiConfig ? ` · ${entry.item.aiConfig.model ?? 'Automatico'} / ${entry.item.aiConfig.reasoningEffort ?? 'predefinito'}` : ''}</small><p>{entry.item.text}</p></div> : <details className="thread-candidate" key={entry.item.id}>
                 <summary>Candidata {entry.item.sequence} · {entry.item.parsed.interpretedTotal} carte · {displayDate(entry.item.createdAt)}</summary>
                 {entry.item.note && <p>{entry.item.note}</p>}
                 {entry.item.parsed.diagnostics.length > 0 && <p className="content-note">{entry.item.parsed.diagnostics.length} note di importazione da controllare.</p>}
                 <pre>{entry.item.rawText}</pre>
               </details>)}
             </div>
-            <form className="thread-form" onSubmit={(event) => void addMessage(event)}>
-              <label htmlFor="thread-message">Aggiungi un'osservazione</label>
+            <form className="thread-form" onSubmit={(event) => void ask(event)}>
+              <label htmlFor="thread-message">Scrivi nel thread</label>
               <textarea id="thread-message" value={message} maxLength={5000} onChange={(event) => setMessage(event.target.value)} />
-              <button className="secondary-button" disabled={working || !message.trim()}>Salva osservazione</button>
+              <p className="content-note">Codex risponde usando la lista di partenza e la cronologia del thread. La lista principale non cambia. Se la richiesta fallisce, il testo resta qui per riprovare.</p>
+              <button className="primary-button" disabled={working || !message.trim()}>{asking ? 'Codex sta rispondendo…' : 'Chiedi a Codex'}</button>
+              <button type="button" className="secondary-button" disabled={working || !message.trim()} onClick={() => void addMessage()}>Salva osservazione</button>
             </form>
             <form className="thread-form candidate-form" onSubmit={(event) => void saveCandidate(event)}>
               <h4>Nuova candidata</h4>

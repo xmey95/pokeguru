@@ -46,6 +46,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-037** | Date dei set e tracciabilità del perimetro Standard | Funzionalità | R-02 / I3, parte di APP-030 | P0 / S | APP-034/036; campo `releaseDate` TCGdex verificato | Done |
 | **APP-038** | Audit delle stampe senza marchio nei set recenti | Ricerca/verifica | R-02 / I3, parte di APP-030 | P0 / S | APP-037; filtro `null:` TCGdex documentato | Done |
 | **APP-039** | Confronto delle date di uscita dei set con la fonte ufficiale | Dati/funzionalità | R-02 / I3, parte di APP-030 | P0 / S | APP-037; calendario prodotti Play! Pokémon accessibile | Done |
+| **APP-040** | Sessioni Codex persistenti e isolate per i thread del mazzo | Funzionalità | R-07, R-11 / I3, parte di APP-010 | P1 / M | APP-004, APP-019, APP-023; protocollo App Server verificato | Done |
+| **APP-041** | Proposte complete Codex e contesto di valutazione nei thread | Funzionalità | R-05, R-07, R-08 / I3, parte di APP-010 | P1 / M | APP-040, APP-009, APP-007, schema di output e fonti | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -244,6 +246,19 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 ### APP-010 — Proposte Codex in thread indipendenti
 
 - **Ambito / risultato:** aprire e continuare più sessioni Codex indipendenti nello stesso progetto, ognuna collegata a un thread APP-019 con propria base e contesto minimo (lista completa, vincoli, catalogo, snapshot, circuito/data); applicare le preferenze APP-023 o un override esplicito per thread, conservando la configurazione effettiva di ciascuna esecuzione; ottenere una candidata completa o «nessuna modifica» con motivi e fonti. Codex resta l'unico motore selezionabile in I3. **Accettazione:** due sessioni reali partono dalla stessa versione principale, possono usare configurazioni Codex diverse supportate e producono output strutturati riconducibili ai rispettivi thread senza alterare né il mazzo principale né l'altro thread; cambi successivi delle preferenze globali non riscrivono la provenienza delle analisi; fallimenti auth/limiti e output malformati sono gestiti senza modificare il mazzo. **Verifica prevista:** prova end-to-end reale con due thread e configurazioni, riapertura e caso di errore controllato; mock non sufficiente. **Evidenza:** non avviato. Da scomporre per auth/sessioni, strumenti e output.
+
+### APP-040 — Sessioni Codex per thread del mazzo
+
+- **Ambito / risultato:** estendere il client App Server per turni con eventi di completamento, creare/riprendere una sessione distinta per ogni thread locale e salvare l'identificatore remoto e la configurazione effettiva del turno. Il contesto inviato si limita alla base del thread e alla domanda dell'utente; la lista principale non cambia. APP-041 aggiungerà proposta completa, vincoli e fonti.
+- **Accettazione:** due thread locali hanno ID Codex diversi e possono continuare ciascuno la propria conversazione anche dopo riavvio dell'app; un turno fallito o interrotto conserva l'ultimo stato valido senza creare una candidata fittizia; nessun tool di scrittura o accesso al repository è necessario al turno di discussione. Stato, errori e provenienza sono visibili nel thread.
+- **Verifica prevista:** fixture di eventi asincroni, errore e ripresa; prova reale Codex con due sessioni isolate e secondo turno dopo riavvio; test UI Electron su archivio isolato.
+- **Evidenza e verifica il 23-10-2026:** App Server riceve `item/completed` e `turn/completed`, apre e riprende sessioni persistenti con sandbox in sola lettura, approvazioni disabilitate e rete disabilitata per il turno. Ogni thread locale conserva il proprio ID Codex; la migrazione SQLite aggiunge configurazione effettiva e ID del turno ai messaggi AI. La domanda e la risposta sono salvate insieme solo dopo un JSON valido; un fallimento lascia il testo nel campo e non crea messaggi o candidate. La UI distingue osservazione locale, domanda e risposta Codex con modello/livello. `npm test` 61 passati, 8 live esclusi; `npm run test:threads-live` e `npm run test:threads-ai:offline` superati su Windows; `npm run test:threads-ai-live` superato con Codex autenticato: due sessioni con ID diversi, ripresa di una dopo riavvio, messaggi e configurazione conservati, lista principale invariata. Il test protocollo `POKEGURU_CODEX_DECK_LIVE=1 npx vitest run tests/codex-deck-session-live.test.ts` ha verificato in modo indipendente due turni paralleli e ripresa. La prova di migrazione delle osservazioni precedenti è passata. La UI Linux è affidata alla CI; sessioni autenticate Linux e recupero avanzato di un turno completato da Codex ma non salvato localmente restano APP-013/pre-release. APP-041 aggiungerà proposte complete, vincoli, evento e fonti.
+
+### APP-041 — Proposte complete Codex nel thread
+
+- **Ambito / risultato:** dare a Codex la lista completa, i vincoli, catalogo e snapshot torneo pertinenti e chiedere output strutturato «candidata completa» o «nessuna modifica» con motivi e fonti. Salvare nel thread senza cambiare la versione principale, verificando formato e vincoli prima di mostrare la proposta. Confronto e adozione manuale restano APP-011.
+- **Accettazione:** una risposta valida contiene tutte le 60 carte o dichiara nessuna modifica; output malformato, ambiguo o con fonti inventate non diventa candidata; due thread mantengono proposte indipendenti. La provenienza include configurazione e base.
+- **Verifica prevista:** test su schema/validatore e fallimento, due sessioni reali, riapertura Electron e confronto con evento/catalogo acquisiti.
 
 ### APP-011 — Confronto e adozione
 

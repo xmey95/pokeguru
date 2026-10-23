@@ -1,4 +1,5 @@
 import type { ParsedDeck } from './deck-import'
+import type { AiRunConfig } from './ai'
 
 export interface DeckVersion {
   id: string
@@ -16,6 +17,8 @@ export interface DeckThreadMessage {
   text: string
   createdAt: string
   author: 'user' | 'assistant'
+  aiConfig: AiRunConfig | null
+  aiTurnId: string | null
 }
 
 export interface DeckCandidate {

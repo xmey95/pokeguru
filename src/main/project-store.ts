@@ -9,6 +9,7 @@ import type { CreateProjectInput, Project } from '../shared/projects'
 import type { ClearLineMappingInput, DeckLineMapping, DeckReconciliation, IdentityTotal, MappedPrint, SaveLineMappingInput } from '../shared/reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
 import type { CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AiRunConfig } from '../shared/ai'
 
 interface ProjectRow {
   id: string
@@ -198,6 +199,16 @@ export class ProjectStore {
         UNIQUE(thread_id, sequence)
       ) STRICT;
     `)
+    const messageColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[]).map((row) => row.name))
+    if (!messageColumns.has('ai_config_json') || !messageColumns.has('ai_turn_id')) {
+      this.db.exec('BEGIN IMMEDIATE')
+      try {
+        if (!messageColumns.has('ai_config_json')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN ai_config_json TEXT')
+        if (!messageColumns.has('ai_turn_id')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN ai_turn_id TEXT')
+        this.db.exec('COMMIT')
+      } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    }
+    this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS deck_thread_messages_ai_turn ON deck_thread_messages(thread_id, ai_turn_id) WHERE ai_turn_id IS NOT NULL')
     this.migrateDeckVersions()
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS matchup_notes (
@@ -399,7 +410,7 @@ export class ProjectStore {
         id: string; project_id: string; title: string; base_version_id: string | null
         ai_session_ref: string | null; created_at: string; updated_at: string; base_sequence: number | null
       }[]
-    const messages = this.db.prepare(`SELECT id, text, created_at, author FROM deck_thread_messages
+    const messages = this.db.prepare(`SELECT id, text, created_at, author, ai_config_json, ai_turn_id FROM deck_thread_messages
       WHERE thread_id = ? ORDER BY created_at, rowid`)
     const candidates = this.db.prepare(`SELECT id, sequence, raw_text, parsed_json, note, origin, created_at
       FROM deck_thread_candidates WHERE thread_id = ? ORDER BY sequence`)
@@ -410,9 +421,11 @@ export class ProjectStore {
       stale: row.base_version_id !== (current?.version_id ?? null),
       aiSessionRef: row.ai_session_ref, createdAt: row.created_at, updatedAt: row.updated_at,
       messages: (messages.all(row.id) as {
-        id: string; text: string; created_at: string; author: DeckThreadMessage['author']
+        id: string; text: string; created_at: string; author: DeckThreadMessage['author']; ai_config_json: string | null; ai_turn_id: string | null
       }[]).map((message): DeckThreadMessage => ({
-        id: message.id, text: message.text, createdAt: message.created_at, author: message.author
+        id: message.id, text: message.text, createdAt: message.created_at, author: message.author,
+        aiConfig: message.ai_config_json ? JSON.parse(message.ai_config_json) as AiRunConfig : null,
+        aiTurnId: message.ai_turn_id
       })),
       candidates: (candidates.all(row.id) as {
         id: string; sequence: number; raw_text: string; parsed_json: string
@@ -459,6 +472,43 @@ export class ProjectStore {
     try {
       this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
         VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), threadId, message, now)
+      this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+  }
+
+  assignDeckAiSession(projectId: string, threadId: string, sessionId: string): DeckThread {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    if (!sessionId || sessionId.length > 200) throw new Error('Sessione Codex non valida.')
+    const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
+    if (!thread) throw new Error('Thread non trovato in questo progetto.')
+    if (thread.aiSessionRef && thread.aiSessionRef !== sessionId) throw new Error('Il thread ha già una sessione Codex diversa.')
+    this.db.prepare(`UPDATE deck_threads SET ai_session_ref = ?, updated_at = ?
+      WHERE id = ? AND project_id = ? AND (ai_session_ref IS NULL OR ai_session_ref = ?)`)
+      .run(sessionId, new Date().toISOString(), threadId, projectId, sessionId)
+    return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+  }
+
+  saveDeckAiExchange(projectId: string, threadId: string, sessionId: string,
+    question: string, answer: string, turnId: string, config: AiRunConfig): DeckThread {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
+    if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questo thread.')
+    const userText = typeof question === 'string' ? question.trim() : ''
+    const aiText = typeof answer === 'string' ? answer.trim() : ''
+    if (!userText || userText.length > 5000 || userText.includes('\0')) throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
+    if (!aiText || aiText.length > 10000 || aiText.includes('\0')) throw new Error('Risposta Codex non valida.')
+    if (!turnId || turnId.length > 200) throw new Error('Turno Codex non valido.')
+    const now = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
+        VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), threadId, userText, now)
+      this.db.prepare(`INSERT INTO deck_thread_messages
+        (id, thread_id, author, text, created_at, ai_config_json, ai_turn_id)
+        VALUES (?, ?, 'assistant', ?, ?, ?, ?)`)
+        .run(randomUUID(), threadId, aiText, now, JSON.stringify(config), turnId)
       this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }

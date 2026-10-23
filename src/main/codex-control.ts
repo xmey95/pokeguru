@@ -1,8 +1,19 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { createInterface, type Interface } from 'node:readline'
-import type { AiConnection, AiModel } from '../shared/ai'
+import type { AiConnection, AiModel, AiRunConfig } from '../shared/ai'
 
 type RpcResponse = { id?: number; result?: unknown; error?: { message?: string } }
+type AgentMessage = { type?: string; text?: string; phase?: string | null }
+type TurnNotification = { method?: string; params?: {
+  threadId?: string; item?: AgentMessage; turn?: {
+    id?: string; status?: string; error?: { message?: string } | null; items?: AgentMessage[]
+  }
+} }
+type ActiveTurn = {
+  finalText: string | null; latestText: string | null
+  resolve(value: { turnId: string; text: string }): void; reject(error: Error): void
+  timer: NodeJS.Timeout
+}
 
 export class CodexControl {
   private child: ChildProcessWithoutNullStreams | null = null
@@ -10,12 +21,18 @@ export class CodexControl {
   private starting: Promise<void> | null = null
   private nextId = 1
   private readonly pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: NodeJS.Timeout }>()
+  private readonly activeTurns = new Map<string, ActiveTurn>()
 
   private fail(error: Error): void {
     for (const [id, entry] of this.pending) {
       clearTimeout(entry.timer)
       entry.reject(error)
       this.pending.delete(id)
+    }
+    for (const [threadId, entry] of this.activeTurns) {
+      clearTimeout(entry.timer)
+      entry.reject(error)
+      this.activeTurns.delete(threadId)
     }
     this.child = null
     this.starting = null
@@ -40,9 +57,12 @@ export class CodexControl {
       })
       this.lines = createInterface({ input: child.stdout })
       this.lines.on('line', (line) => {
-        let message: RpcResponse
-        try { message = JSON.parse(line) as RpcResponse } catch { return }
-        if (typeof message.id !== 'number') return
+        let message: RpcResponse & TurnNotification
+        try { message = JSON.parse(line) as RpcResponse & TurnNotification } catch { return }
+        if (typeof message.id !== 'number') {
+          this.receiveNotification(message)
+          return
+        }
         const entry = this.pending.get(message.id)
         if (!entry) return
         clearTimeout(entry.timer)
@@ -141,6 +161,89 @@ export class CodexControl {
 
   async logout(): Promise<void> {
     await this.request('account/logout')
+  }
+
+  private receiveNotification(message: TurnNotification): void {
+    const threadId = message.params?.threadId
+    if (!threadId) return
+    const active = this.activeTurns.get(threadId)
+    if (!active) return
+    if (message.method === 'item/completed' && message.params?.item?.type === 'agentMessage') {
+      const item = message.params.item
+      if (typeof item.text === 'string') {
+        active.latestText = item.text
+        if (item.phase === 'final_answer') active.finalText = item.text
+      }
+    }
+    if (message.method !== 'turn/completed') return
+    clearTimeout(active.timer)
+    this.activeTurns.delete(threadId)
+    const turn = message.params?.turn
+    if (turn?.status !== 'completed') {
+      active.reject(new Error(turn?.error?.message ||
+        (turn?.status === 'interrupted' ? 'La risposta Codex è stata interrotta.' : 'Codex non ha completato la risposta.')))
+      return
+    }
+    const fromTurn = [...(turn.items ?? [])].reverse().find((item) =>
+      item.type === 'agentMessage' && item.phase === 'final_answer' && typeof item.text === 'string')?.text
+    const text = active.finalText ?? fromTurn ?? active.latestText
+    if (!turn.id || !text) active.reject(new Error('Codex non ha restituito una risposta completa.'))
+    else active.resolve({ turnId: turn.id, text })
+  }
+
+  async startThread(cwd: string, config: AiRunConfig): Promise<string> {
+    const response = await this.request('thread/start', {
+      cwd, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: false,
+      ...(config.model ? { model: config.model } : {}), serviceName: 'pokeguru'
+    }) as { thread?: { id?: string } }
+    if (!response.thread?.id) throw new Error('Codex non ha creato una sessione.')
+    return response.thread.id
+  }
+
+  async resumeThread(threadId: string, cwd: string): Promise<void> {
+    const response = await this.request('thread/resume', {
+      threadId, cwd, approvalPolicy: 'never', sandbox: 'read-only', excludeTurns: true
+    }) as { thread?: { id?: string } }
+    if (response.thread?.id !== threadId) throw new Error('La sessione Codex salvata non è disponibile.')
+  }
+
+  async jsonTurn(threadId: string, cwd: string, prompt: string, config: AiRunConfig,
+    outputSchema: Record<string, unknown>): Promise<{ turnId: string; value: unknown }> {
+    if (this.activeTurns.has(threadId)) throw new Error('Questo thread Codex è già in elaborazione.')
+    let resolveTurn!: ActiveTurn['resolve']
+    let rejectTurn!: ActiveTurn['reject']
+    const completed = new Promise<{ turnId: string; text: string }>((resolve, reject) => {
+      resolveTurn = resolve; rejectTurn = reject
+    })
+    void completed.catch(() => undefined)
+    const timer = setTimeout(() => {
+      this.activeTurns.delete(threadId)
+      rejectTurn(new Error('Codex non ha completato il turno entro quattro minuti.'))
+    }, 240_000)
+    this.activeTurns.set(threadId, { finalText: null, latestText: null, resolve: resolveTurn, reject: rejectTurn, timer })
+    try {
+      const response = await this.request('turn/start', {
+        threadId, input: [{ type: 'text', text: prompt }], cwd,
+        approvalPolicy: 'never', sandboxPolicy: { type: 'readOnly', networkAccess: false },
+        ...(config.model ? { model: config.model } : {}),
+        ...(config.reasoningEffort ? { effort: config.reasoningEffort } : {}), outputSchema
+      }) as { turn?: { id?: string } }
+      if (!response.turn?.id) throw new Error('Codex non ha avviato il turno.')
+      const done = await completed
+      if (done.turnId !== response.turn.id) throw new Error('Risposta Codex associata a un turno diverso.')
+      if (done.text.length > 100_000) throw new Error('Risposta Codex troppo lunga.')
+      try { return { turnId: done.turnId, value: JSON.parse(done.text) as unknown } }
+      catch { throw new Error('Codex ha restituito una risposta JSON non valida.') }
+    } catch (error) {
+      // A request failure can occur before turn/completed; release its waiter.
+      const active = this.activeTurns.get(threadId)
+      if (active) {
+        clearTimeout(active.timer)
+        this.activeTurns.delete(threadId)
+        active.reject(error instanceof Error ? error : new Error('Turno Codex non riuscito.'))
+      }
+      throw error
+    }
   }
 
   stop(): Promise<void> {

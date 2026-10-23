@@ -61,6 +61,12 @@ jobs:
       - name: Exercise AI settings without Codex on Windows
         if: runner.os == 'Windows'
         run: node tests/ai-settings-offline.mjs
+      - name: Exercise deck threads without Codex on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/threads-ai-live.mjs --offline
+      - name: Exercise deck threads without Codex on Windows
+        if: runner.os == 'Windows'
+        run: node tests/threads-ai-live.mjs --offline
       - name: Install Codex CLI for isolated Linux protocol check
         if: runner.os == 'Linux'
         run: npm install --prefix "$RUNNER_TEMP/pokeguru-codex" --no-audit --no-fund @openai/codex@0.164.0

@@ -13,6 +13,7 @@ import { fetchMeta, fetchOpponentSample } from './limitless-meta'
 import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
+import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply } from './deck-ai'
 import { CatalogStore, fetchCatalogSample, syncStandardCatalog } from './catalog'
 import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
 import { matchupDeckContext, snapshotPrint, type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
@@ -36,6 +37,7 @@ let storageError: string | null = null
 let aiPreferencesStore: AiPreferencesStore | null = null
 const codexControl = new CodexControl()
 const generatingProjects = new Set<string>()
+const generatingDeckThreads = new Set<string>()
 let catalogSyncing = false
 let catalogRetryTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -294,6 +296,39 @@ function registerProjectHandlers(): void {
   ipcMain.handle('deck:add-thread-message', (event, projectId: unknown, threadId: unknown, message: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.addDeckThreadMessage(projectId as string, threadId as string, message as string))
+  })
+
+  ipcMain.handle('deck:ask-thread', async (event, projectId: unknown, threadId: unknown,
+    message: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+      typeof message !== 'string' || !message.trim() || message.trim().length > 5000 || message.includes('\0'))
+      return { ok: false, error: 'Scrivi una domanda da 1 a 5.000 caratteri.' }
+    if (!projectStore.get(projectId)) return { ok: false, error: 'Progetto non trovato.' }
+    const thread = projectStore.listDeckThreads(projectId).find((item) => item.id === threadId)
+    if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
+    if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questo thread.' }
+    generatingDeckThreads.add(threadId)
+    try {
+      const config = await runConfig(override)
+      const base = thread.baseVersionId
+        ? projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null
+        : null
+      const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
+      mkdirSync(cwd, { recursive: true })
+      const prompt = deckDiscussionPrompt(thread, base, message.trim())
+      const sessionId = thread.aiSessionRef ?? await codexControl.startThread(cwd, config)
+      if (thread.aiSessionRef) await codexControl.resumeThread(sessionId, cwd)
+      else projectStore.assignDeckAiSession(projectId, threadId, sessionId)
+      const result = await codexControl.jsonTurn(sessionId, cwd, prompt, config, DECK_DISCUSSION_SCHEMA)
+      const answer = readDeckDiscussionReply(result.value)
+      return { ok: true, value: projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
+        message.trim(), answer, result.turnId, config) }
+    } catch (error) {
+      return { ok: false, error: aiError(error) }
+    } finally {
+      generatingDeckThreads.delete(threadId)
+    }
   })
 
   ipcMain.handle('deck:save-candidate', (event, input: unknown): OperationResult<DeckThread> => {
