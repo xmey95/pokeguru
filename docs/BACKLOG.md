@@ -56,6 +56,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-047** | Diff e adozione atomica dell'intera candidata | Funzionalità | R-08, R-05 / I3, parte di APP-011 | P1 / M | APP-010/019/046, versioni SQLite e controlli locali | Done |
 | **APP-048** | Conversione verificata dei codici set puntati per Limitless | Integrazione | R-01, R-08 / I3, parte di APP-011 | P1 / S | APP-047, prova reale Deck Builder e mappa versionata | Done |
 | **APP-049** | Audit online delle fonti del pacchetto Standard | Dati/funzionalità | R-02 / I3, parte di APP-018 | P0 / M | APP-043/044/046, fonti Play! Pokémon | Done |
+| **APP-050** | Pacchetti nativi e workflow release main | Infrastruttura | R-01, R-12 / I3, parte di APP-025 | P1 / L | CI Linux/Windows operativa, scelta formati e versione | In progress |
 
 ## Task dettagliati I0–I2
 
@@ -392,6 +393,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Accettazione:** il merge in `main` con versione nuova produce una release scaricabile con almeno un pacchetto Linux e uno Windows; artefatti e tag corrispondono al commit verificato. Se un job fallisce, la release non è presentata come riuscita; un nuovo run non duplica o sovrascrive artefatti di una versione esistente. Il processo non richiede credenziali personali nel repository.
 - **Verifica prevista:** rilascio di prova con installazione/avvio su ambienti puliti dei due sistemi, confronto checksum/tag/commit, riapertura di dati di una versione precedente, esecuzione fallita controllata e rerun. Separare la prima prova da una release stabile pubblica.
 - **Evidenza:** pianificato il 23-10-2026 su richiesta C-08; non implementato. Da scomporre dopo APP-024 e verifica della destinazione GitHub.
+
+### APP-050 — Pacchetti e workflow di release
+
+- **Ambito / risultato:** configurare pacchetto AppImage x64 Linux e installer NSIS x64 Windows; workflow `main` con verifica ripetuta, build su entrambi i sistemi, smoke test del pacchetto, artefatti e checksum, quindi GitHub Release draft pubblicata solo a lavori riusciti. Versione `package.json` e tag `vX.Y.Z` devono corrispondere al commit esatto; un tag già usato non viene riscritto.
+- **Accettazione:** una PR può provare il packaging senza credenziali di pubblicazione; su `main` i job non pubblicano una release se verifica, pacchetto o smoke falliscono. La release usa permessi di scrittura solo nel job finale e non sostituisce versioni esistenti. I file installabili non contengono il database dell'utente o credenziali Codex. Sono visibili note, checksum e limiti di firma.
+- **Verifica prevista:** `npm ci`, build e package Windows locale isolato, job CI Linux/Windows con smoke; controllo del workflow e dei permessi; rilascio reale soltanto dopo merge approvato in `main`, con prova download/installazione e migrazione dei dati. APP-024 conserva il blocco della protezione dei branch privati personali.
+- **Avanzamento il 23-10-2026:** `electron-builder` 26.15.3 prepara AppImage x64 e installer NSIS x64 con whitelist dei file compilati. La PR prova packaging, binario estratto, contenuto AppImage/installazione NSIS e migrazione su entrambe le piattaforme. Il workflow `main` ripete test/package/smoke, scarica i due artefatti, produce SHA-256 e crea una draft prima di pubblicarla, con `contents: write` solo nel job finale; rifiuta versioni/tag già usati. `npm run package:win`, `npm test` (81 passati) e lo smoke del binario confezionato (salva, riapre, migra I1) sono riusciti localmente. L'ASAR ha 1155 voci e nessun file `.sqlite`, `.env` o `auth.json`; l'installer Windows è privo di firma Authenticode. Restano i check CI Linux/Windows, la prova dell'installer e la prima release reale su `main`.
 
 ### APP-026 — Discussione e revisioni successive delle guide Matchup
 

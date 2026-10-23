@@ -37,6 +37,12 @@ La CI in `.github/workflows/ci.yml` verifica ogni PR verso `dev` o `main` e i pu
 
 `npm run test:tournament-ui:offline` prova in Electron la vista Evento e la riapertura di uno snapshot locale, senza rete. `npm run test:tournament-ui-live` acquisisce un evento reale dall'API Limitless Play in un archivio temporaneo; `POKEGURU_EVENT_LIVE=1 npx vitest run tests/limitless-event-live.test.ts` ripete il controllo del torneo campione del 23 ottobre 2026. L'API pubblica non richiede chiave ma applica un rate limit: non ripetere di continuo gli aggiornamenti.
 
+## Pacchetti e release
+
+`npm run package:linux` crea un AppImage x64 in `release/` su Linux; `npm run package:win` crea un installer NSIS x64 su Windows. `node tests/package-smoke.mjs <binario-estratto>` prova avvio, salvataggio, riapertura e migrazione usando cartelle temporanee. La CI ripete la prova anche sul contenuto dell'AppImage e dopo installazione NSIS. I pacchetti includono solo `out/`, `package.json` e dipendenze di produzione; l'archivio utente e le credenziali Codex restano nel profilo locale. I pacchetti iniziali non sono firmati.
+
+La PR verso `dev` verifica Linux e Windows senza permessi di pubblicazione. Per una release, incrementare `version` in `package.json` nella PR da `dev` a `main`. Il push del merge su `main` ripete test, build e prove dei pacchetti; solo dopo il successo di entrambi i sistemi crea il tag `vX.Y.Z` sul commit verificato e pubblica una GitHub Release con AppImage, installer, note automatiche e `SHA256SUMS.txt`. Un tag già esistente interrompe il rilascio senza sovrascriverlo. Una pubblicazione interrotta dopo la creazione lascia una draft da esaminare manualmente. La prima release e l'installazione sui due sistemi restano da verificare dopo il merge approvato.
+
 ## Prova rapida
 
 1. Crea un progetto Standard.

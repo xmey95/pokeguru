@@ -73,6 +73,37 @@ jobs:
       - name: Exercise candidate adoption on Windows
         if: runner.os == 'Windows'
         run: node tests/deck-adoption-live.mjs
+      - name: Package Linux AppImage
+        if: runner.os == 'Linux'
+        run: npm run package:linux
+      - name: Smoke packaged Linux app
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/package-smoke.mjs release/linux-unpacked/pokeguru
+      - name: Smoke AppImage payload
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          "$GITHUB_WORKSPACE"/release/*.AppImage --appimage-extract >/dev/null
+          xvfb-run -a node "$GITHUB_WORKSPACE/tests/package-smoke.mjs" "$RUNNER_TEMP/squashfs-root/AppRun"
+      - name: Package Windows installer
+        if: runner.os == 'Windows'
+        run: npm run package:win
+      - name: Smoke packaged Windows app
+        if: runner.os == 'Windows'
+        run: node tests/package-smoke.mjs release/win-unpacked/Pokeguru.exe
+      - name: Smoke installed Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem -LiteralPath release -Filter '*-setup.exe' | Select-Object -First 1).FullName
+          $target = Join-Path $env:RUNNER_TEMP 'pokeguru-test-install'
+          $install = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$target" -WindowStyle Hidden -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer exited $($install.ExitCode)" }
+          node tests/package-smoke.mjs (Join-Path $target 'Pokeguru.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'Installed app smoke failed' }
+          $uninstall = Start-Process -FilePath (Join-Path $target 'Uninstall Pokeguru.exe') -ArgumentList '/S' -WindowStyle Hidden -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited $($uninstall.ExitCode)" }
       - name: Install Codex CLI for isolated Linux protocol check
         if: runner.os == 'Linux'
         run: npm install --prefix "$RUNNER_TEMP/pokeguru-codex" --no-audit --no-fund @openai/codex@0.164.0
