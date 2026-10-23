@@ -5,6 +5,7 @@ import { buildDeckCards, type DeckReconciliation } from '../../shared/reconcilia
 import { evaluateWesternRotation } from '../../shared/standard-rotation'
 import { evaluateDeckConstruction } from '../../shared/deck-construction'
 import { evaluateSetAdmission } from '../../shared/standard-admission'
+import { evaluatePromoAdmission } from '../../shared/promo-admission'
 
 function localDate(): string {
   const now = new Date()
@@ -56,6 +57,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   const rotationByLine = new Map(rotation.lines.map((line) => [line.lineNumber, line]))
   const admission = useMemo(() => evaluateSetAdmission(baseline, catalog, asOf), [baseline, catalog, asOf])
   const admissionByLine = new Map(admission.lines.map((line) => [line.lineNumber, line]))
+  const promoAdmission = useMemo(() => evaluatePromoAdmission(baseline, catalog, asOf), [baseline, catalog, asOf])
+  const promoByLine = new Map(promoAdmission.lines.map((line) => [line.lineNumber, line]))
 
   async function confirmIdentity(lineNumber: number, printId: string): Promise<void> {
     const line = baseline.lines.find((item) => item.lineNumber === lineNumber)
@@ -108,6 +111,11 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       <p>Attesa superata: {admission.counts.admitted} copie · prima della data: {admission.counts.waiting} · data da chiarire: {admission.counts.indeterminate}. Pacchetto {admission.version}, controllato il {admission.checkedAt}.</p>
       <p>La data del set non vale per le promo. I set speciali senza data confermata restano da chiarire. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-admission')}>Regola 2026 ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-admission-older')}>Regola precedente ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti ↗</button></p>
     </section>
+    {promoAdmission.lines.length > 0 && <section className="rotation-panel" aria-label="Ammissione delle promo Standard occidentali">
+      <strong>Ammissione delle promo</strong>
+      <p>Disponibili nel registro alla data osservata: {promoAdmission.counts.admitted} copie · in attesa: {promoAdmission.counts.waiting} · da chiarire: {promoAdmission.counts.indeterminate}. Pacchetto v{promoAdmission.packageVersion ?? '—'}, controllato il {promoAdmission.checkedAt?.slice(0, 10) ?? 'mai'}.</p>
+      <p>Per le promo già disponibili il registro non pubblica la data storica di ammissione. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('promo')}>Registro Play! Pokémon ↗</button></p>
+    </section>}
     <section className="construction-panel" aria-label="Controlli di costruzione del mazzo">
       <strong>Costruzione del mazzo</strong>
       <ul>
@@ -139,7 +147,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
             <div className="deck-source-lines"><strong>Nel testo importato</strong>{card.lines.map((line) => {
               const result = rotationByLine.get(line.lineNumber)
               const setResult = admissionByLine.get(line.lineNumber)
-              return <div key={line.lineNumber}><span>Riga {line.lineNumber}: {line.raw}{line.setCode ? '' : ' · stampa non indicata'} · {result?.message} {setResult?.message}</span></div>
+              const promoResult = promoByLine.get(line.lineNumber)
+              return <div key={line.lineNumber}><span>Riga {line.lineNumber}: {line.raw}{line.setCode ? '' : ' · stampa non indicata'} · {result?.message} {promoResult?.message ?? setResult?.message}</span></div>
             })}</div>
             {card.prints.length > 0 && <><h3>Stampe e varianti note ({card.prints.length})</h3>
               <div className="catalog-print-grid">{card.prints.map((print) => <article className="catalog-print" key={print.id}>

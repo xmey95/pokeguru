@@ -8,6 +8,7 @@ import { evaluateConstraints } from '../shared/constraints'
 import { suggestPrints } from '../shared/reconciliation'
 import { evaluateWesternRotation } from '../shared/standard-rotation'
 import { evaluateSetAdmission } from '../shared/standard-admission'
+import { evaluatePromoAdmission } from '../shared/promo-admission'
 import type { DeckCandidate } from '../shared/deck-threads'
 
 export const DECK_DISCUSSION_SCHEMA = {
@@ -158,6 +159,8 @@ export function validateDeckProposal(value: unknown, projectId: string, catalog:
   if (rotation.counts['mark-rotated'] > 0) throw new Error('La proposta contiene stampe con marchio ruotato.')
   const admission = evaluateSetAdmission(baseline, catalog, referenceDate)
   if (admission.counts.waiting > 0) throw new Error('La proposta contiene carte di un set non ancora ammesso ai tornei.')
+  const promoAdmission = evaluatePromoAdmission(baseline, catalog, referenceDate)
+  if (promoAdmission.counts.waiting > 0) throw new Error('La proposta contiene promo non ancora ammesse ai tornei.')
   const evaluated = evaluateConstraints(constraints, baseline, catalog)
   if (evaluated.conflicts.length || evaluated.results.some((result) =>
     result.status === 'conflict' || result.status === 'unmet'))
@@ -166,6 +169,7 @@ export function validateDeckProposal(value: unknown, projectId: string, catalog:
     construction.basicPokemon.message,
     `Rotazione al ${referenceDate}: ${rotation.counts['mark-accepted']} copie con marchio ammesso, ${rotation.counts.indeterminate} da chiarire.`,
     `Ammissione set ${admission.version}: ${admission.counts.admitted} copie dopo la data, ${admission.counts.indeterminate} con data da chiarire.`,
+    `Promo pacchetto v${promoAdmission.packageVersion ?? '—'}: ${promoAdmission.counts.admitted} copie disponibili alla data osservata, ${promoAdmission.counts.indeterminate} da chiarire.`,
     ...evaluated.results.map((result) => `${result.constraint.identityName}: ${result.status} — ${result.message}`),
     ...(parsed.lines.some((line) => line.kind === 'card' && line.setCode?.includes('.'))
       ? ['La lista usa codici set TCGdex con punto: verificare la compatibilità con Limitless prima dell’adozione.'] : []),

@@ -15,7 +15,7 @@ function seedCatalog() {
   const db = new DatabaseSync(join(temporary, 'profile', 'data', 'pokeguru.sqlite'))
   const now = '2026-10-23T00:00:00.000Z'
   for (const [id, name] of [['sv02', 'Paldea Evolved'], ['sv04.5', 'Paldean Fates'],
-    ['me01', 'Mega Evolution'], ['me02.5', 'Ascended Heroes']]) {
+    ['me01', 'Mega Evolution'], ['me02.5', 'Ascended Heroes'], ['mep', 'MEP Promos']]) {
     db.prepare('INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at) VALUES (?, ?, ?, ?, ?)').run(id, name, 300, 2, now)
   }
   for (const [id, setId, setName, localId, name, rarity, identityId, mark] of [
@@ -25,13 +25,16 @@ function seedCatalog() {
     ['sv04.5-089', 'sv04.5', 'Paldean Fates', '089', 'Rare Candy', 'Common', 'trainer-candy', 'G'],
     ['me01-125', 'me01', 'Mega Evolution', '125', 'Rare Candy', 'Common', 'trainer-candy', 'I'],
     ['me01-086', 'me01', 'Mega Evolution', '086', 'Mega Absol ex', 'Double rare', 'mega-absol', 'I'],
-    ['me02.5-172', 'me02.5', 'Ascended Heroes', '172', 'Mega Audino ex', 'Double rare', 'mega-audino', 'J']
+    ['me02.5-172', 'me02.5', 'Ascended Heroes', '172', 'Mega Audino ex', 'Double rare', 'mega-audino', 'J'],
+    ['mep-051', 'mep', 'MEP Promos', '051', 'Promo 051', 'Promo', 'promo-051', 'J']
   ]) {
     const print = { id, setId, setName, localId, name, category: name.startsWith('Mega ') ? 'Pokemon' : 'Trainer', rarity, regulationMark: mark,
       variants: { normal: true, reverse: true }, identityId,
       identityBasis: name.startsWith('Mega ') ? 'unverified' : 'trainer-text',
       imageBase: null, thumbnail: null, highImageAvailable: null, sourceUpdated: null,
-      sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`, detailAt: now, error: null }
+      sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`, detailAt: now, error: null,
+      isPromo: id === 'mep-051', promoStatus: id === 'mep-051'
+        ? { state: 'available', legalDate: null, dateNote: null, checkedAt: now } : null }
     db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(id, setId, JSON.stringify(print))
   }
   db.prepare('INSERT INTO catalog_sync VALUES (1, ?)').run(now)
@@ -40,7 +43,7 @@ function seedCatalog() {
 const rawText = [
   'Trainers: 7', '2 Iono PAL 185', '1 Iono PAL 254',
   '1 Rare Candy PAF 089', "1 Boss's Orders SWSHALT 127",
-  '1 Carta promo PR-SV 001a', '1 Basic Psychic Energy SVE 5', 'Total Cards: 7'
+  '1 Promo 051 MEP 051', '1 Basic Psychic Energy SVE 5', 'Total Cards: 7'
 ].join('\n')
 
 async function launch() {
@@ -74,7 +77,10 @@ try {
   const admission = page.getByRole('region', { name: 'Ammissione dei set Standard occidentali' })
   assert.match(await admission.textContent(), /Pacchetto western-sets-2026-10-23-v1/)
   assert.match(await admission.textContent(), /data da chiarire:/)
+  const promoAdmission = page.getByRole('region', { name: 'Ammissione delle promo Standard occidentali' })
+  assert.match(await promoAdmission.textContent(), /da chiarire: 1/)
   await rotation.getByRole('button', { name: 'Torna a oggi' }).click()
+  assert.match(await promoAdmission.textContent(), /Disponibili nel registro alla data osservata: 1 copie/)
   assert.equal(await card.count(), 1)
   assert.match(await card.locator('.deck-card-toggle').textContent(), /3×\s*Iono/)
   await card.locator('.deck-card-toggle').click()
