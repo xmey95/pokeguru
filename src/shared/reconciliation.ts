@@ -72,11 +72,12 @@ export interface DeckCardEntry {
   lines: DeckLine[]
   prints: CatalogPrint[]
   importedPrintIds: string[]
+  staleCorrection: boolean
   candidateIdentities: { identityId: string; name: string; printId: string; basis: CatalogPrint['identityBasis'] }[]
 }
 
 const officialCodes: Record<string, string> = {
-  sv01: 'SVI', sv02: 'PAL', 'sv04.5': 'PAF'
+  sv01: 'SVI', sv02: 'PAL', 'sv04.5': 'PAF', me01: 'MEG', 'me02.5': 'ASC'
 }
 
 function normalizedName(value: string): string {
@@ -155,22 +156,23 @@ export function buildDeckCards(baseline: DeckBaseline, catalog: CatalogView | nu
     const identityPrints = identityId ? byIdentity.get(identityId) ?? [] : []
     const status: DeckCardEntry['status'] = identityId
       ? identityPrints[0]?.identityBasis === 'trainer-text' ? 'recognized' : 'unverified'
-      : identities.length > 1 || exactIdentities.length > 1 ? 'ambiguous' : 'outside-catalog'
+      : identities.length > 0 ? 'ambiguous' : 'outside-catalog'
     const key = identityId ? `identity:${identityId}` : `line:${line.lineNumber}`
     const entry = entries.get(key) ?? {
       key, name: identityPrints[0]?.name ?? line.name ?? line.raw,
       quantity: 0, identityId, identityBasis: identityPrints[0]?.identityBasis ?? null,
       status, lines: [], prints: identityPrints,
-      importedPrintIds: [], candidateIdentities: []
+      importedPrintIds: [], staleCorrection: false, candidateIdentities: []
     }
     entry.quantity += line.quantity ?? 0
     entry.lines.push(line)
+    entry.staleCorrection ||= !!override && !overridePrint
     for (const print of exact) {
       if (!entry.importedPrintIds.includes(print.id)) entry.importedPrintIds.push(print.id)
     }
-    entry.candidateIdentities = [...new Map(sameName.map((print) =>
-      [print.identityId!, { identityId: print.identityId!, name: print.name,
-        printId: print.id, basis: print.identityBasis }])).values()]
+    entry.candidateIdentities = [...new Map([...entry.candidateIdentities, ...sameName.map((print) =>
+      ({ identityId: print.identityId!, name: print.name, printId: print.id,
+        basis: print.identityBasis }))].map((candidate) => [candidate.identityId, candidate])).values()]
     entries.set(key, entry)
   }
   return [...entries.values()]

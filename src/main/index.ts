@@ -1,8 +1,11 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
 import { mkdirSync } from 'node:fs'
+import { execFile } from 'node:child_process'
 import { join } from 'node:path'
+import { promisify } from 'node:util'
 import { ProjectStore } from './project-store'
 import type { DeckBaseline, ImportDeckInput } from '../shared/deck-import'
+import type { CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import type { OperationResult, Project } from '../shared/projects'
 import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
 import type { AiConnection, AiPreferences, AiRunConfig } from '../shared/ai'
@@ -10,9 +13,14 @@ import { fetchMeta, fetchOpponentSample } from './limitless-meta'
 import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
-import { CatalogStore, fetchCatalogSample } from './catalog'
-import type { CatalogView } from '../shared/catalog'
+import { CatalogStore, fetchCatalogSample, syncStandardCatalog } from './catalog'
+import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
 import { matchupDeckContext, snapshotPrint, type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
+import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
+import { prepareDeckExport, type DeckExportPreview, type DeckExportRequest } from '../shared/deck-export'
+import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
+import { PROMO_LEGALITY_SOURCE } from './promo-legality'
+import { DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
 
 app.setName('Pokeguru')
 
@@ -24,7 +32,22 @@ let aiPreferencesStore: AiPreferencesStore | null = null
 const codexControl = new CodexControl()
 const generatingProjects = new Set<string>()
 let catalogSyncing = false
+let catalogRetryTimer: ReturnType<typeof setTimeout> | null = null
 
+function runCatalogJob(mode: CatalogSyncMode): void {
+  const store = catalogStore
+  if (!store || catalogSyncing) return
+  catalogSyncing = true
+  void syncStandardCatalog(store, undefined, mode).then(() => {
+    catalogSyncing = false
+  }).catch((error: unknown) => {
+    catalogSyncing = false
+    const message = error instanceof Error ? error.message : 'Aggiornamento interrotto.'
+    if (/HTTP 429|HTTP 503|limitato temporaneamente/.test(message)) {
+      catalogRetryTimer = setTimeout(() => runCatalogJob(mode), 60_000)
+    }
+  })
+}
 async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig): Promise<MatchupDiscussion> {
   if (!projectStore) throw new Error(unavailableMessage())
   let current = discussion
@@ -100,10 +123,27 @@ function registerProjectHandlers(): void {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!catalogStore) return { ok: false, error: unavailableMessage() }
     if (catalogSyncing) return { ok: false, error: 'Sincronizzazione già in corso.' }
+    if (catalogStore.scopeKind() === 'standard-marks') return { ok: false, error: 'Usa Aggiorna catalogo Standard.' }
     catalogSyncing = true
     try { return { ok: true, value: catalogStore.save(await fetchCatalogSample()) } }
     catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Sincronizzazione non riuscita.' } }
     finally { catalogSyncing = false }
+  })
+
+  ipcMain.handle('catalog:sync-status', (event): OperationResult<CatalogSyncStatus> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    return { ok: true, value: catalogStore.jobStatus() }
+  })
+
+  ipcMain.handle('catalog:sync-standard', (event, mode: unknown): OperationResult<CatalogSyncStatus> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità catalogo non valida.' }
+    if (catalogSyncing) return { ok: false, error: 'Sincronizzazione già in corso.' }
+    if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
+    runCatalogJob(mode)
+    return { ok: true, value: catalogStore.jobStatus() }
   })
 
   ipcMain.handle('catalog:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
@@ -117,6 +157,18 @@ function registerProjectHandlers(): void {
       await shell.openExternal(url.toString())
       return { ok: true, value: true }
     } catch { return { ok: false, error: 'Impossibile aprire TCGdex nel browser.' } }
+  })
+
+  ipcMain.handle('standard:open-source', async (event, sourceId: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event) || typeof sourceId !== 'string') return { ok: false, error: 'Fonte non valida.' }
+    const sourceUrl = sourceId === 'construction' ? DECK_CONSTRUCTION_SOURCE
+      : sourceId === 'promo' ? PROMO_LEGALITY_SOURCE
+      : WESTERN_ROTATION_RULES.find((item) => item.version === sourceId)?.sourceUrl
+    if (!sourceUrl) return { ok: false, error: 'Fonte non valida.' }
+    try {
+      await shell.openExternal(sourceUrl)
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Impossibile aprire la fonte Play! Pokémon.' } }
   })
 
   ipcMain.handle('ai:get-preferences', (event): OperationResult<AiPreferences> => {
@@ -189,6 +241,52 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.importDeck(input as ImportDeckInput))
   })
 
+  ipcMain.handle('deck:list-versions', (event, projectId: unknown): OperationResult<DeckVersion[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listDeckVersions(projectId as string))
+  })
+
+  ipcMain.handle('deck:list-threads', (event, projectId: unknown): OperationResult<DeckThread[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listDeckThreads(projectId as string))
+  })
+
+  ipcMain.handle('deck:create-thread', (event, input: unknown): OperationResult<DeckThread> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.createDeckThread(input as CreateDeckThreadInput))
+  })
+
+  ipcMain.handle('deck:add-thread-message', (event, projectId: unknown, threadId: unknown, message: unknown): OperationResult<DeckThread> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.addDeckThreadMessage(projectId as string, threadId as string, message as string))
+  })
+
+  ipcMain.handle('deck:save-candidate', (event, input: unknown): OperationResult<DeckThread> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.saveDeckCandidate(input as SaveDeckCandidateInput))
+  })
+
+  function exportFor(input: unknown): DeckExportPreview {
+    if (!projectStore || !input || typeof input !== 'object') throw new Error(unavailableMessage())
+    const request = input as Partial<DeckExportRequest>
+    if (typeof request.projectId !== 'string' || typeof request.importedAt !== 'string') throw new Error('Richiesta export non valida.')
+    const project = projectStore.get(request.projectId)
+    const baseline = projectStore.getBaseline(request.projectId)
+    if (!project || !baseline) throw new Error('Lista corrente non disponibile.')
+    if (baseline.importedAt !== request.importedAt) throw new Error('La lista è cambiata. Riapri il progetto prima di esportare.')
+    return prepareDeckExport(baseline)
+  }
+
+  ipcMain.handle('deck:copy-export', (event, input: unknown): OperationResult<boolean> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try {
+      const preview = exportFor(input)
+      if (!preview.canExport) throw new Error('Correggi le righe non interpretate prima di esportare.')
+      clipboard.writeText(preview.text)
+      return { ok: true, value: true }
+    } catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
   ipcMain.handle('deck:get-reconciliation', (event, projectId: unknown): OperationResult<DeckReconciliation> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.getReconciliation(projectId as string))
@@ -215,6 +313,35 @@ function registerProjectHandlers(): void {
     if (!projectStore) return { ok: false, error: unavailableMessage() }
     try { return { ok: true, value: projectStore.clearLineMapping(input as ClearLineMappingInput) } }
     catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Scelta della stampa non rimossa.' } }
+  })
+
+  ipcMain.handle('constraints:list', (event, projectId: unknown): OperationResult<DeckConstraint[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listConstraints(projectId as string))
+  })
+
+  ipcMain.handle('constraints:save', (event, input: unknown): OperationResult<DeckConstraint> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || !catalogStore) return { ok: false, error: unavailableMessage() }
+    try {
+      const value = input as SaveConstraintInput
+      if (projectStore.get(value?.projectId)?.circuit !== 'WESTERN')
+        throw new Error('Il catalogo disponibile copre soltanto il circuito occidentale.')
+      const prints = catalogStore.view().prints.filter((print) =>
+        print.identityId === value?.identityId && print.detailAt)
+      if (!prints.length || (value.printId && !prints.some((print) => print.id === value.printId)))
+        throw new Error('Carta o stampa non presente nel catalogo locale.')
+      return { ok: true, value: projectStore.saveConstraint(value, prints[0].name) }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Vincolo non salvato.' }
+    }
+  })
+
+  ipcMain.handle('constraints:delete', (event, input: unknown): OperationResult<DeckConstraint[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: projectStore.deleteConstraint(input as DeleteConstraintInput) } }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Vincolo non eliminato.' } }
   })
 
   ipcMain.handle('matchups:get-meta', async (event): Promise<OperationResult<MetaSnapshot>> => {
@@ -409,6 +536,10 @@ app.whenReady().then(() => {
     const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
     projectStore = new ProjectStore(databasePath)
     catalogStore = new CatalogStore(databasePath)
+    const previousJob = catalogStore.jobStatus()
+    if (previousJob.state === 'paused' && previousJob.mode) {
+      setTimeout(() => runCatalogJob(previousJob.mode!), 2_000)
+    }
     aiPreferencesStore = new AiPreferencesStore(app.getPath('userData'))
   } catch (error) {
     console.error('Impossibile aprire l’archivio locale:', error)
@@ -424,6 +555,7 @@ app.whenReady().then(() => {
 })
 
 app.on('before-quit', () => {
+  if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
   codexControl.stop()
   projectStore?.close()
   catalogStore?.close()

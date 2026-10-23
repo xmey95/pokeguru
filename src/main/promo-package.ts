@@ -1,0 +1,68 @@
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import bundled from './promo-status-western.json'
+import { promoKey, type PromoRegistry, type PromoRegistryEntry } from './promo-legality'
+
+export const PROMO_PACKAGE_URL =
+  'https://raw.githubusercontent.com/xmey95/pokeguru/main/src/main/promo-status-western.json'
+
+interface PromoPackage {
+  schema: 1
+  version: number
+  checkedAt: string
+  sourceUrl: string
+  complete: boolean
+  entries: PromoRegistryEntry[]
+}
+
+function parsePackage(value: unknown): PromoPackage {
+  if (!value || typeof value !== 'object') throw new Error('Pacchetto promo non valido.')
+  const pkg = value as PromoPackage
+  if (pkg.schema !== 1 || !Number.isSafeInteger(pkg.version) || pkg.version < 1 ||
+    !Number.isFinite(Date.parse(pkg.checkedAt)) ||
+    pkg.sourceUrl !== bundled.sourceUrl || typeof pkg.complete !== 'boolean' ||
+    !Array.isArray(pkg.entries) || pkg.entries.length > 10_000) throw new Error('Pacchetto promo non valido.')
+  const seen = new Set<string>()
+  for (const entry of pkg.entries) {
+    if (!/^[A-Z-]{2,12}$/.test(entry.code) || !/^\d+[A-Z]?$/.test(entry.number) ||
+      !['available', 'upcoming'].includes(entry.state) ||
+      (entry.legalDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(entry.legalDate)) ||
+      (entry.dateNote !== null && entry.dateNote !== 'Upon Release')) throw new Error('Voce promo non valida.')
+    const key = promoKey(entry.code, entry.number)
+    if (seen.has(key)) throw new Error('Codice promo duplicato.')
+    seen.add(key)
+  }
+  return pkg
+}
+
+export async function loadPromoPackage(dataDir?: string, fetcher: typeof fetch = fetch): Promise<{
+  registry: PromoRegistry & { complete: boolean; version: number }; error: string | null
+}> {
+  let selected = parsePackage(bundled)
+  const path = dataDir ? join(dataDir, 'promo-status-western.json') : null
+  if (path) {
+    try {
+      const cached = parsePackage(JSON.parse(readFileSync(path, 'utf8')))
+      if (cached.version > selected.version) selected = cached
+    } catch { /* A missing or invalid cache cannot replace the bundled package. */ }
+  }
+  let error: string | null = null
+  try {
+    const response = await fetcher(PROMO_PACKAGE_URL, { signal: AbortSignal.timeout(10_000), cache: 'no-store' })
+    if (!response.ok) throw new Error(`Pacchetto promo: HTTP ${response.status}.`)
+    if (Number(response.headers.get('content-length') ?? 0) > 500_000) throw new Error('Pacchetto promo troppo grande.')
+    const body = await response.text()
+    if (body.length > 500_000) throw new Error('Pacchetto promo troppo grande.')
+    const remote = parsePackage(JSON.parse(body))
+    if (remote.version > selected.version) {
+      selected = remote
+      if (path) writeFileSync(path, body, 'utf8')
+    }
+  } catch (cause) { error = cause instanceof Error ? cause.message : 'Pacchetto promo non disponibile.' }
+  return { registry: {
+    checkedAt: selected.checkedAt,
+    entries: new Map(selected.entries.map((entry) => [promoKey(entry.code, entry.number), entry])),
+    series: [...new Set(selected.entries.map((entry) => entry.code))].sort(),
+    complete: selected.complete, version: selected.version
+  }, error }
+}

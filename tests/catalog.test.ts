@@ -25,19 +25,39 @@ function fixtureFetch(): ReturnType<typeof vi.fn> {
     sv02: { name: 'Paldea Evolved', total: 279, cards: [
       { id: 'sv02-185', localId: '185', name: 'Iono' },
       { id: 'sv02-254', localId: '254', name: 'Iono' },
-      { id: 'sv02-999', localId: '999', name: 'Mew ex' }
+      { id: 'sv02-172', localId: '172', name: "Boss's Orders" },
+      { id: 'sv02-999', localId: '999', name: 'Mew ex' },
+      { id: 'sv02-998', localId: '998', name: 'Mew ex' }
     ] },
     'sv04.5': { name: 'Paldean Fates', total: 245, cards: [
       { id: 'sv04.5-080', localId: '080', name: 'Iono' }
+    ] },
+    me01: { name: 'Mega Evolution', total: 188, cards: [
+      { id: 'me01-125', localId: '125', name: 'Rare Candy' },
+      { id: 'me01-114', localId: '114', name: "Boss's Orders" },
+      { id: 'me01-086', localId: '086', name: 'Mega Absol ex' },
+      { id: 'me01-161', localId: '161', name: 'Mega Absol ex' }
+    ] },
+    'me02.5': { name: 'Ascended Heroes', total: 295, cards: [
+      { id: 'me02.5-172', localId: '172', name: 'Mega Audino ex' },
+      { id: 'me02.5-253', localId: '253', name: 'Mega Audino ex' }
     ] }
   }
   const effect = 'Each player draws a card.'
   const cards: Record<string, object> = {
     'sv01-191': { name: 'Rare Candy', category: 'Trainer', trainerType: 'Item', effect: 'Evolve a Pokémon.', rarity: 'Common' },
     'sv01-256': { name: 'Rare Candy', category: 'Trainer', trainerType: 'Item', effect: 'Evolve a Pokémon.', rarity: 'Hyper rare' },
-    'sv02-185': { name: 'Iono', category: 'Trainer', trainerType: 'Supporter', effect, rarity: 'Uncommon', image: 'https://assets.tcgdex.net/en/sv/sv02/185', variants: { normal: true, reverse: true } },
+    'sv02-185': { name: 'Iono', category: 'Trainer', trainerType: 'Supporter', effect, rarity: 'Uncommon', regulationMark: 'G', image: 'https://assets.tcgdex.net/en/sv/sv02/185', variants: { normal: true, reverse: true } },
     'sv02-254': { name: 'Iono', category: 'Trainer', trainerType: 'Supporter', effect, rarity: 'Ultra Rare' },
-    'sv04.5-080': { name: 'Iono', category: 'Trainer', trainerType: 'Supporter', effect: 'A different effect.', rarity: 'Uncommon' }
+    'sv02-172': { name: "Boss's Orders", category: 'Trainer', trainerType: 'Supporter', effect: 'Switch their Active Pokémon.', rarity: 'Rare', regulationMark: 'G' },
+    'sv02-999': { name: 'Mew ex', category: 'Pokemon', stage: 'Basic', rarity: 'Double rare' },
+    'sv04.5-080': { name: 'Iono', category: 'Trainer', trainerType: 'Supporter', effect: 'A different effect.', rarity: 'Uncommon' },
+    'me01-125': { name: 'Rare Candy', category: 'Trainer', trainerType: 'Item', effect: 'Evolve a Pokémon.', rarity: 'Common', regulationMark: 'I' },
+    'me01-114': { name: "Boss's Orders", category: 'Trainer', trainerType: 'Supporter', effect: 'Switch their Active Pokémon.', rarity: 'Uncommon', regulationMark: 'I' },
+    'me01-086': { name: 'Mega Absol ex', category: 'Pokemon', stage: 'Basic', rarity: 'Double rare', regulationMark: 'I' },
+    'me01-161': { name: 'Mega Absol ex', category: 'Pokemon', stage: 'Basic', rarity: 'Ultra Rare', regulationMark: 'I' },
+    'me02.5-172': { name: 'Mega Audino ex', category: 'Pokemon', stage: 'Basic', rarity: 'Double rare', regulationMark: 'J' },
+    'me02.5-253': { name: 'Mega Audino ex', category: 'Pokemon', stage: 'Basic', rarity: 'Ultra Rare', regulationMark: 'J' }
   }
   const mock = vi.fn(async (input: string | URL | Request, options?: RequestInit) => {
     const url = String(input)
@@ -62,15 +82,21 @@ describe('Catalogo occidentale', () => {
     fixtureFetch()
     const sample = await fetchCatalogSample()
     expect(sample.sets.map((set) => [set.id, set.sourceTotal, set.sampleTotal])).toEqual([
-      ['sv01', 258, 2], ['sv02', 279, 3], ['sv04.5', 245, 1]
+      ['sv01', 258, 2], ['sv02', 279, 5], ['sv04.5', 245, 1], ['me01', 188, 4], ['me02.5', 295, 2]
     ])
     const iono = sample.prints.filter((print) => print.name === 'Iono')
     expect(iono[0].identityId).toBe(iono[1].identityId)
     expect(iono[2].identityId).not.toBe(iono[0].identityId)
     expect(iono.map((print) => print.rarity)).toEqual(['Uncommon', 'Ultra Rare', 'Uncommon'])
-    expect(sample.prints.find((print) => print.id === 'sv02-999')).toMatchObject({ detailAt: null, error: expect.any(String) })
+    expect(iono[0].regulationMark).toBe('G')
+    expect(sample.prints.find((print) => print.id === 'sv02-998')).toMatchObject({ detailAt: null, error: expect.any(String) })
+    expect(sample.prints.find((print) => print.id === 'sv02-999')?.stage).toBe('Basic')
     expect(iono[0].thumbnail).toMatch(/^data:image\/webp;base64,/)
     expect(iono[0].highImageAvailable).toBe(true)
+    expect(sample.prints.find((print) => print.id === 'me01-086')).toMatchObject({ stage: 'Basic', regulationMark: 'I' })
+    expect(sample.prints.find((print) => print.id === 'me02.5-172')).toMatchObject({ stage: 'Basic', regulationMark: 'J' })
+    expect(sample.prints.find((print) => print.id === 'sv01-191')?.identityId)
+      .toBe(sample.prints.find((print) => print.id === 'me01-125')?.identityId)
   })
 
   it('sincronizza senza duplicati e conserva la ricerca locale dopo la riapertura', async () => {
@@ -80,15 +106,16 @@ describe('Catalogo occidentale', () => {
     const first = await fetchCatalogSample()
     store.save(first)
     store.save(await fetchCatalogSample())
-    expect(store.view().prints).toHaveLength(6)
+    expect(store.view().prints).toHaveLength(14)
     mock.mockImplementation(async () => { throw new Error('offline') })
     await expect(fetchCatalogSample()).rejects.toThrow('offline')
     store.close()
     const reopened = new CatalogStore(database)
     const view = reopened.view()
-    expect(view.prints.filter((print) => print.name === 'Rare Candy')).toHaveLength(2)
+    expect(view.prints.filter((print) => print.name === 'Rare Candy')).toHaveLength(3)
     expect(view.prints.find((print) => print.id === 'sv02-185')?.thumbnail).toMatch(/^data:image\/webp;base64,/)
-    expect(view.sets.reduce((total, set) => total + set.sourceTotal, 0)).toBe(782)
+    expect(view.prints.find((print) => print.id === 'sv02-185')?.regulationMark).toBe('G')
+    expect(view.sets.reduce((total, set) => total + set.sourceTotal, 0)).toBe(1265)
     reopened.close()
   })
 

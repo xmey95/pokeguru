@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "version": 1,
+  "checkedAt": "2026-10-23T00:00:00.000Z",
+  "sourceUrl": "https://www.pokemon.com/us/play-pokemon/about/pokemon-tcg-promo-card-legality-status",
+  "complete": false,
+  "entries": [
+    { "code": "MEP", "number": "051", "state": "available", "legalDate": null, "dateNote": null }
+  ]
+}
