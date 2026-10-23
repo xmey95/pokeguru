@@ -29,7 +29,7 @@ try {
     }
     for (const [id, setId, localId, name, category, stage, energyType, mark] of [
       ['me01-086', 'me01', '086', 'Mega Absol ex', 'Pokemon', 'Basic', null, 'I'],
-      ['sve-005', 'sve', '005', 'Basic Psychic Energy', 'Energy', null, 'Normal', null]
+      ['sve-005', 'sve', '005', 'Psychic Energy', 'Energy', null, 'Normal', null]
     ]) {
       const print = { id, setId, setName: setId, localId, name, category, stage, energyType,
         rarity: 'Common', regulationMark: mark, variants: null, identityId: id,
@@ -47,7 +47,7 @@ try {
   let page = await application.firstWindow()
   await page.getByLabel('Nome progetto').fill('Conformità Standard')
   await page.getByRole('button', { name: 'Crea progetto' }).click()
-  await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 086\n59 Basic Psychic Energy SVE 005')
+  await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 086\n59 Psychic Energy SVE 005')
   await page.getByRole('button', { name: 'Salva lista' }).click()
   const rotation = page.getByRole('region', { name: 'Controllo della rotazione Standard occidentale' })
   await rotation.getByLabel('Data di riferimento').fill('2026-10-24')
@@ -62,7 +62,8 @@ try {
 
   application = await launch()
   page = await application.firstWindow()
-  assert.match(await page.getByLabel('Testo lista').inputValue(), /59 Basic Psychic Energy SVE 005/)
+  await page.getByRole('heading', { name: 'Conformità Standard' }).waitFor()
+  assert.match(await page.getByLabel('Testo lista').inputValue(), /59 Psychic Energy SVE 005/)
   await application.close()
   application = undefined
   console.log('Standard Electron OK: lista coperta, Energie Base, data fuori regole e riapertura.')

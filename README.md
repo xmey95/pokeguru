@@ -73,7 +73,7 @@ Nel **Catalogo** completa **Aggiorna nuove carte** e verifica che Mega Absol ex 
 
 ```text
 1 Mega Absol ex MEG 086
-59 Basic Psychic Energy SVE 005
+59 Psychic Energy SVE 005
 ```
 
 Imposta **Data di riferimento** al `2026-10-24`. La Lista corrente deve mostrare «controlli disponibili superati» e «conforme ai controlli Standard coperti». È un esempio strutturale, non un mazzo competitivo. Cambia la data al `2027-01-01`: l'esito deve diventare «da verificare» perché lo snapshot della rotazione finisce nel 2026. Una stampa assente, un set speciale senza data verificata o una vecchia ristampa restano da verificare. Le nuove regole richiedono una release dell'app; **Aggiorna nuove carte** modifica soltanto il Catalogo.

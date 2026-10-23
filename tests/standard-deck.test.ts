@@ -36,12 +36,12 @@ function baseline(lines: string[]): DeckBaseline {
 
 describe('Esito Standard aggregato, senza certificazione torneo', () => {
   it('conferma una lista coperta dallo snapshot anche con Energia Base senza marchio', () => {
-    const energy = print('sve-005', 'Basic Psychic Energy', { category: 'Energy',
+    const energy = print('sve-005', 'Psychic Energy', { category: 'Energy',
       energyType: 'normal', regulationMark: null })
     const coveredCatalog: CatalogView = { ...catalog,
       scope: { ...catalog.scope, kind: 'standard-marks' }, prints: [...prints, energy],
       rulePackage: BUNDLED_WESTERN_RULE_PACKAGE }
-    const deck = baseline([...raw.slice(0, 59), '1 Basic Psychic Energy SVE 005'])
+    const deck = baseline([...raw.slice(0, 59), '1 Psychic Energy SVE 005'])
     const result = evaluateStandardDeck(deck, coveredCatalog, '2026-10-24')
     expect(result.status).toBe('checks-passed')
     expect(result.legality).toBe('supported')
