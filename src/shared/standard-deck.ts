@@ -28,7 +28,9 @@ export function evaluateStandardDeck(baseline: DeckBaseline, catalog: CatalogVie
   const problems: string[] = []
   const toReview: string[] = []
   const passed: string[] = []
-  if (audit && (audit.status === 'changed' || audit.packageVersion !== STANDARD_RULE_PACKAGE_VERSION))
+  if (catalog?.rulePackageError) toReview.push(catalog.rulePackageError)
+  if (audit && (audit.status === 'changed' ||
+    audit.packageVersion !== (catalog?.rulePackage?.version ?? STANDARD_RULE_PACKAGE_VERSION)))
     toReview.push('Le fonti ufficiali non confermano il pacchetto di regole locale: ricontrollare nel Catalogo.')
 
   for (const [name, check] of [

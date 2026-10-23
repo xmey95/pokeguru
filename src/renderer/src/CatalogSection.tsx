@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
-import { STANDARD_RULE_PACKAGE_VERSION } from '../../shared/standard-rule-audit'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -164,7 +163,8 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
     {standard ? <p className="content-note">Inventario TCGdex occidentale con marchi H e successivi, serie promo individuate dinamicamente ed Energie Base. I marchi successivi a J sono candidati di catalogo: richiedono regole di legalità aggiornate. I dati sono condivisi fra progetti.</p>
       : <p className="content-note">Campione dichiarato: {catalog?.scope.setIds.join(', ') ?? 'sv01, sv02, sv04.5, me01, me02.5'}; Arven, Boss’s Orders, Iono, Mew ex, Nest Ball, Professor’s Research, Rare Candy, Ultra Ball, Mega Absol ex e Mega Audino ex. Fonte TCGdex in inglese (metadato tecnico), circuito occidentale. Il catalogo è identico in tutti i progetti.</p>}
     <section className="rotation-panel" aria-label="Fonti delle regole Standard">
-      <strong>Regole Standard occidentali · pacchetto {STANDARD_RULE_PACKAGE_VERSION}</strong>
+      <strong>Regole Standard occidentali · pacchetto {catalog?.rulePackage?.version ?? 'in caricamento'}</strong>
+      {catalog?.rulePackageError && <p role="alert">{catalog.rulePackageError}</p>}
       <p>{!ruleAudit ? 'Fonti online non ancora ricontrollate da questa installazione.'
         : ruleAudit.status === 'matching' ? `Fonti coerenti con il pacchetto locale al ${date(ruleAudit.checkedAt)}.`
           : ruleAudit.status === 'changed' ? `Fonte cambiata o non interpretabile al ${date(ruleAudit.checkedAt)}: revisione delle regole necessaria.`

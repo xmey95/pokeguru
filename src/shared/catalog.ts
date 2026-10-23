@@ -1,4 +1,5 @@
 export const CATALOG_SOURCE = 'TCGdex REST v2/en'
+import type { WesternRulePackage } from './western-rule-package'
 export type CatalogSyncMode = 'new' | 'full'
 export interface CatalogSyncStatus {
   running: boolean
@@ -66,6 +67,8 @@ export interface CatalogPrint {
 
 export interface CatalogView {
   circuit: 'WESTERN'
+  rulePackage?: WesternRulePackage
+  rulePackageError?: string | null
   source: typeof CATALOG_SOURCE
   sourceLanguage: 'en'
   scope: { setIds: readonly string[]; names: readonly string[]; kind?: 'sample' | 'standard-marks' }

@@ -80,7 +80,7 @@ try {
   assert.match(await standardDeck.textContent(), /Riga 2 — rotazione: Marchio G ruotato/)
   assert.match(await rotation.textContent(), /legalità completa resta indeterminata/)
   const admission = page.getByRole('region', { name: 'Ammissione dei set Standard occidentali' })
-  assert.match(await admission.textContent(), /Pacchetto western-sets-2026-10-23-v1/)
+  assert.match(await admission.textContent(), /Pacchetto 2026-10-23\.1/)
   assert.match(await admission.textContent(), /data da chiarire:/)
   const promoAdmission = page.getByRole('region', { name: 'Ammissione delle promo Standard occidentali' })
   assert.match(await promoAdmission.textContent(), /da chiarire: 1/)

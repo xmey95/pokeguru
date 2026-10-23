@@ -1,32 +1,15 @@
 import type { CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
 import { suggestPrints } from './reconciliation'
+import { BUNDLED_WESTERN_RULE_PACKAGE, type RulePeriod, type WesternRulePackage } from './western-rule-package'
 
-export interface RotationRule {
-  version: string
-  effectiveFrom: string
-  effectiveUntil: string
-  firstAllowedMark: string
-  lastConfirmedMark: string
-  sourceUrl: string
-}
+export type RotationRule = RulePeriod
 
 // Play! Pokémon in-person Western Standard. These snapshots do not cover
 // release waiting periods, reprint equivalence, errata or deck construction.
-export const WESTERN_ROTATION_RULES: readonly RotationRule[] = [
-  {
-    version: 'play-2025-01-09', effectiveFrom: '2025-04-11', effectiveUntil: '2026-04-09',
-    firstAllowedMark: 'G', lastConfirmedMark: 'H',
-    sourceUrl: 'https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement'
-  },
-  {
-    version: 'play-2026-01-09', effectiveFrom: '2026-04-10', effectiveUntil: '2026-12-31',
-    firstAllowedMark: 'H', lastConfirmedMark: 'J',
-    sourceUrl: 'https://www.pokemon.com/us/pokemon-news/2026-pokemon-tcg-standard-format-rotation-announcement'
-  }
-]
+export const WESTERN_ROTATION_RULES: readonly RotationRule[] = BUNDLED_WESTERN_RULE_PACKAGE.rotations
 
-export const ROTATION_SOURCE_CHECKED = '2026-10-23'
+export const ROTATION_SOURCE_CHECKED = BUNDLED_WESTERN_RULE_PACKAGE.checkedAt
 
 export type RotationLineStatus = 'mark-accepted' | 'mark-rotated' | 'indeterminate'
 
@@ -50,11 +33,11 @@ export interface RotationEvaluation {
   legality: 'indeterminate'
 }
 
-export function westernRotationRule(asOf: string): RotationRule | null {
+export function westernRotationRule(asOf: string, rules: WesternRulePackage = BUNDLED_WESTERN_RULE_PACKAGE): RotationRule | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) return null
   const date = new Date(`${asOf}T00:00:00Z`)
   if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== asOf) return null
-  return [...WESTERN_ROTATION_RULES].reverse().find((rule) => rule.effectiveFrom <= asOf && asOf <= rule.effectiveUntil) ?? null
+  return [...rules.rotations].reverse().find((rule) => rule.effectiveFrom <= asOf && asOf <= rule.effectiveUntil) ?? null
 }
 
 function evaluateLine(line: DeckLine, catalog: CatalogView | null, rule: RotationRule | null): RotationLineResult {
@@ -80,10 +63,11 @@ function evaluateLine(line: DeckLine, catalog: CatalogView | null, rule: Rotatio
 
 export function evaluateWesternRotation(baseline: DeckBaseline, catalog: CatalogView | null,
   asOf: string): RotationEvaluation {
-  const rule = westernRotationRule(asOf)
+  const packageUsed = catalog?.rulePackage ?? BUNDLED_WESTERN_RULE_PACKAGE
+  const rule = westernRotationRule(asOf, packageUsed)
   const lines = baseline.lines.filter((line) => line.kind === 'card').map((line) => evaluateLine(line, catalog, rule))
   const counts: RotationEvaluation['counts'] = { 'mark-accepted': 0, 'mark-rotated': 0, indeterminate: 0 }
   for (const line of lines) counts[line.status] += line.quantity
-  return { circuit: 'WESTERN', asOf, rule, sourceChecked: ROTATION_SOURCE_CHECKED,
+  return { circuit: 'WESTERN', asOf, rule, sourceChecked: packageUsed.checkedAt,
     lines, counts, legality: 'indeterminate' }
 }

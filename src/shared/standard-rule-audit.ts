@@ -1,4 +1,6 @@
-export const STANDARD_RULE_PACKAGE_VERSION = 'western-2026-10-23-v1'
+import { BUNDLED_WESTERN_RULE_PACKAGE } from './western-rule-package'
+
+export const STANDARD_RULE_PACKAGE_VERSION = BUNDLED_WESTERN_RULE_PACKAGE.version
 
 export type RuleSourceStatus = 'matching' | 'changed' | 'unavailable'
 

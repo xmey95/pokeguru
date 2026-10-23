@@ -12,6 +12,8 @@ import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
 import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
   OFFICIAL_SET_RELEASE_VERSION, officialSetRelease, officialSetReleases } from './official-set-releases'
+import { BUNDLED_WESTERN_RULE_PACKAGE, newerRulePackage, parseWesternRulePackage,
+  type WesternRulePackage } from '../shared/western-rule-package'
 
 type SetResponse = {
   id: string; name: string; cardCount: { total: number }; releaseDate?: string
@@ -328,6 +330,10 @@ export class CatalogStore {
       CREATE TABLE IF NOT EXISTS catalog_job_targets (
         print_id TEXT PRIMARY KEY
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS catalog_rule_package (
+        id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL,
+        installed_at TEXT NOT NULL
+      ) STRICT;
     `)
     const setColumns = this.db.prepare('PRAGMA table_info(catalog_sets)').all()
       .map((row) => (row as { name: string }).name)
@@ -507,7 +513,35 @@ export class CatalogStore {
     return row?.kind === 'standard-marks' ? 'standard-marks' : 'sample'
   }
 
+  rulePackage(): { value: WesternRulePackage; error: string | null } {
+    const row = this.db.prepare('SELECT payload FROM catalog_rule_package WHERE id = 1')
+      .get() as { payload: string } | undefined
+    if (!row) return { value: BUNDLED_WESTERN_RULE_PACKAGE, error: null }
+    try {
+      const installed = parseWesternRulePackage(JSON.parse(row.payload) as unknown)
+      return { value: newerRulePackage(installed, BUNDLED_WESTERN_RULE_PACKAGE)
+        ? installed : BUNDLED_WESTERN_RULE_PACKAGE, error: null }
+    } catch {
+      return { value: BUNDLED_WESTERN_RULE_PACKAGE,
+        error: 'Pacchetto di regole salvato non valido: in uso il pacchetto incluso nell’app.' }
+    }
+  }
+
+  installRulePackage(input: unknown): WesternRulePackage {
+    const candidate = parseWesternRulePackage(input)
+    const current = this.rulePackage()
+    if (current.error) throw new Error(current.error)
+    if (!newerRulePackage(candidate, current.value)) {
+      throw new Error('Il pacchetto di regole non è più recente di quello in uso.')
+    }
+    this.db.prepare(`INSERT INTO catalog_rule_package VALUES (1, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET payload=excluded.payload, installed_at=excluded.installed_at`)
+      .run(JSON.stringify(candidate), new Date().toISOString())
+    return candidate
+  }
+
   view(): CatalogView {
+    const rules = this.rulePackage()
     const sets = this.db.prepare('SELECT id, name, source_total, sample_total, fetched_at, release_date FROM catalog_sets ORDER BY id')
       .all().map((row) => {
         const item = row as { id: string; name: string; source_total: number; sample_total: number; fetched_at: string; release_date: string | null }
@@ -550,6 +584,7 @@ export class CatalogStore {
     })
     return {
       circuit: 'WESTERN', source: CATALOG_SOURCE, sourceLanguage: 'en',
+      rulePackage: rules.value, rulePackageError: rules.error,
       scope: kind === 'sample'
         ? { setIds: CATALOG_SET_IDS, names: CATALOG_NAMES, kind }
         : { setIds: targetSetIds, names: [], kind },

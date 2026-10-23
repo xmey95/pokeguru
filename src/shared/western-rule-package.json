@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "version": "2026-10-23.1",
+  "circuit": "WESTERN",
+  "checkedAt": "2026-10-23",
+  "rotations": [
+    {
+      "version": "play-2025-01-09",
+      "effectiveFrom": "2025-04-11",
+      "effectiveUntil": "2026-04-09",
+      "firstAllowedMark": "G",
+      "lastConfirmedMark": "H",
+      "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement"
+    },
+    {
+      "version": "play-2026-01-09",
+      "effectiveFrom": "2026-04-10",
+      "effectiveUntil": "2026-12-31",
+      "firstAllowedMark": "H",
+      "lastConfirmedMark": "J",
+      "sourceUrl": "https://www.pokemon.com/us/pokemon-news/2026-pokemon-tcg-standard-format-rotation-announcement"
+    }
+  ],
+  "setAdmissions": [
+    { "setId": "sv05", "legalDate": "2024-04-05", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
+    { "setId": "sv06", "legalDate": "2024-06-07", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
+    { "setId": "sv07", "legalDate": "2024-09-27", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
+    { "setId": "sv08", "legalDate": "2024-11-22", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
+    { "setId": "sv09", "legalDate": "2025-04-11", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
+    { "setId": "sv10", "legalDate": "2025-06-13", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
+    { "setId": "me01", "legalDate": "2025-10-10", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
+    { "setId": "me02", "legalDate": "2025-11-28", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
+    { "setId": "me02.5", "legalDate": "2026-03-06", "method": "explicit", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
+    { "setId": "me03", "legalDate": "2026-04-10", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
+    { "setId": "me04", "legalDate": "2026-06-05", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
+    { "setId": "me05", "legalDate": "2026-07-31", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" }
+  ]
+}
