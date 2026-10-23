@@ -54,6 +54,20 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
     expect(evaluateStandardDeck(deck, withBan, '2026-10-24').legality).toBe('invalid')
   })
 
+  it('conferma solo promo disponibili nel registro incluso e lascia incerte quelle non elencate', () => {
+    const promo = print('mep-051', 'Promo Included', { isPromo: true,
+      regulationMark: 'J', promoStatus: { state: 'available', legalDate: null,
+        dateNote: null, checkedAt: '2026-10-23T00:00:00.000Z' } })
+    const coveredCatalog: CatalogView = { ...catalog,
+      scope: { ...catalog.scope, kind: 'standard-marks' },
+      rulePackage: BUNDLED_WESTERN_RULE_PACKAGE, prints: [...prints, promo] }
+    const deck = baseline([...raw.slice(0, 59), '1 Promo Included MEP 051'])
+    expect(evaluateStandardDeck(deck, coveredCatalog, '2026-10-24').legality).toBe('supported')
+    const unlisted: CatalogView = { ...coveredCatalog, prints: [...prints, { ...promo,
+      promoStatus: { ...promo.promoStatus!, state: 'unlisted' as const } }] }
+    expect(evaluateStandardDeck(deck, unlisted, '2026-10-24').legality).toBe('indeterminate')
+  })
+
   it('elenca esattamente i controlli superati e conserva i limiti', () => {
     const result = evaluateStandardDeck(baseline(raw), catalog, '2026-10-24')
     expect(result.status).toBe('checks-passed')
