@@ -4,6 +4,7 @@ import { evaluateDeckConstruction } from './deck-construction'
 import { evaluateWesternRotation } from './standard-rotation'
 import { evaluateSetAdmission } from './standard-admission'
 import { evaluatePromoAdmission } from './promo-admission'
+import { STANDARD_RULE_PACKAGE_VERSION, type StandardRuleAudit } from './standard-rule-audit'
 
 export type StandardDeckStatus = 'problem' | 'review' | 'checks-passed'
 
@@ -19,7 +20,7 @@ export interface StandardDeckEvaluation {
 
 /** Combine only proven local checks. Unknowns and historical reprints never become a legality verdict. */
 export function evaluateStandardDeck(baseline: DeckBaseline, catalog: CatalogView | null,
-  asOf: string): StandardDeckEvaluation {
+  asOf: string, audit: StandardRuleAudit | null = null): StandardDeckEvaluation {
   const construction = evaluateDeckConstruction(baseline, catalog)
   const rotation = evaluateWesternRotation(baseline, catalog, asOf)
   const setAdmission = evaluateSetAdmission(baseline, catalog, asOf)
@@ -27,6 +28,8 @@ export function evaluateStandardDeck(baseline: DeckBaseline, catalog: CatalogVie
   const problems: string[] = []
   const toReview: string[] = []
   const passed: string[] = []
+  if (audit && (audit.status === 'changed' || audit.packageVersion !== STANDARD_RULE_PACKAGE_VERSION))
+    toReview.push('Le fonti ufficiali non confermano il pacchetto di regole locale: ricontrollare nel Catalogo.')
 
   for (const [name, check] of [
     ['60 carte', construction.cardCount], ['Almeno un Pokémon Base', construction.basicPokemon],

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
+import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
+import { STANDARD_RULE_PACKAGE_VERSION } from '../../shared/standard-rule-audit'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -32,6 +34,8 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
   const [setFilter, setSetFilter] = useState('all')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null)
+  const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
+  const [checkingRules, setCheckingRules] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -43,6 +47,26 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    let active = true
+    void window.projectsApi.getStandardRuleAudit().then((result) => {
+      if (active && result.ok) setRuleAudit(result.value)
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [])
+
+  async function checkRules(): Promise<void> {
+    if (checkingRules) return
+    setCheckingRules(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.checkStandardRuleSources()
+      if (!result.ok) throw new Error(result.error)
+      setRuleAudit(result.value)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Controllo delle fonti non riuscito.') }
+    finally { setCheckingRules(false) }
+  }
 
   useEffect(() => {
     let active = true
@@ -139,6 +163,17 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
     </div>
     {standard ? <p className="content-note">Inventario TCGdex occidentale con marchi H e successivi, serie promo individuate dinamicamente ed Energie Base. I marchi successivi a J sono candidati di catalogo: richiedono regole di legalità aggiornate. I dati sono condivisi fra progetti.</p>
       : <p className="content-note">Campione dichiarato: {catalog?.scope.setIds.join(', ') ?? 'sv01, sv02, sv04.5, me01, me02.5'}; Arven, Boss’s Orders, Iono, Mew ex, Nest Ball, Professor’s Research, Rare Candy, Ultra Ball, Mega Absol ex e Mega Audino ex. Fonte TCGdex in inglese (metadato tecnico), circuito occidentale. Il catalogo è identico in tutti i progetti.</p>}
+    <section className="rotation-panel" aria-label="Fonti delle regole Standard">
+      <strong>Regole Standard occidentali · pacchetto {STANDARD_RULE_PACKAGE_VERSION}</strong>
+      <p>{!ruleAudit ? 'Fonti online non ancora ricontrollate da questa installazione.'
+        : ruleAudit.status === 'matching' ? `Fonti coerenti con il pacchetto locale al ${date(ruleAudit.checkedAt)}.`
+          : ruleAudit.status === 'changed' ? `Fonte cambiata o non interpretabile al ${date(ruleAudit.checkedAt)}: revisione delle regole necessaria.`
+            : `Fonti non raggiungibili al ${date(ruleAudit.checkedAt)}; ultima verifica riuscita ${ruleAudit.verifiedAt ? date(ruleAudit.verifiedAt) : 'mai'}.`}</p>
+      <p>Rotazione e ammissione dei set sono controllate sulle pagine ufficiali; le promo si aggiornano con il registro del Catalogo. Una variazione non modifica automaticamente il pacchetto locale.</p>
+      {ruleAudit?.sources.map((source) => <p key={source.id}>{source.id === 'rotation-2026' ? 'Rotazione 2026' : 'Attesa dei prodotti'}: {source.status === 'matching' ? 'coerente' : source.status === 'changed' ? 'da rivedere' : 'non raggiungibile'} · {source.detail}{' '}
+        <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(source.id === 'rotation-2026' ? 'play-2026-01-09' : 'set-admission')}>Fonte ↗</button></p>)}
+      <button type="button" className="secondary-button" disabled={checkingRules} onClick={() => void checkRules()}>{checkingRules ? 'Controllo in corso…' : 'Controlla fonti Standard'}</button>
+    </section>
     {catalog?.syncedAt && <p className="content-note">Ultimo aggiornamento: {date(catalog.syncedAt)}. Ricerca e miniature già scaricate funzionano offline. Le nuove acquisizioni richiedono rete.</p>}
     {syncStatus && syncStatus.state !== 'idle' && <p className="content-note" role="status">{syncStatus.phase}: {syncStatus.acquired}/{syncStatus.expected || '?'} dettagli controllati. {syncStatus.running ? 'Puoi usare le altre sezioni mentre il lavoro prosegue.' : syncStatus.state === 'paused' ? 'Il lavoro riprenderà senza riscaricare i lotti completati.' : ''}</p>}
     {syncStatus?.error && <p className="diagnostics" role="status">{syncStatus.error}</p>}

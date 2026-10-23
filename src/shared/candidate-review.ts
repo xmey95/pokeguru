@@ -6,6 +6,7 @@ import type { DeckCandidate } from './deck-threads'
 import { evaluateStandardDeck } from './standard-deck'
 import { normalizeDeckCodes } from './deck-code-normalization'
 import { parseDeck } from './deck-import'
+import type { StandardRuleAudit } from './standard-rule-audit'
 
 export interface CandidateReview {
   blockers: string[]
@@ -22,10 +23,11 @@ export function candidateBaseline(projectId: string, candidate: DeckCandidate, r
 }
 
 export function reviewCandidate(projectId: string, candidate: DeckCandidate,
-  catalog: CatalogView, constraints: DeckConstraint[], asOf: string): CandidateReview {
+  catalog: CatalogView, constraints: DeckConstraint[], asOf: string,
+  audit: StandardRuleAudit | null = null): CandidateReview {
   const normalization = normalizeDeckCodes(candidate.rawText)
   const baseline = candidateBaseline(projectId, candidate, normalization.rawText)
-  const standard = evaluateStandardDeck(baseline, catalog, asOf)
+  const standard = evaluateStandardDeck(baseline, catalog, asOf, audit)
   const blockers = [...standard.problems]
   if (baseline.lines.some((line) => line.kind === 'unparsed')) blockers.push('La candidata contiene righe non interpretate.')
   if (normalization.unsupported.length)

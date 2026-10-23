@@ -11,6 +11,7 @@ import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from 
 import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import type { AiRunConfig } from '../shared/ai'
 import { normalizeDeckCodes } from '../shared/deck-code-normalization'
+import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 
 interface ProjectRow {
   id: string
@@ -220,6 +221,10 @@ export class ProjectStore {
         candidate_id TEXT NOT NULL,
         adopted_at TEXT NOT NULL
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS standard_rule_audit (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        payload_json TEXT NOT NULL
+      ) STRICT;
     `)
     const messageColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[]).map((row) => row.name))
     if (!messageColumns.has('ai_config_json') || !messageColumns.has('ai_turn_id')) {
@@ -423,6 +428,17 @@ export class ProjectStore {
       parsed: JSON.parse(row.parsed_json) as ParsedDeck, createdAt: row.created_at,
       adoption: row.thread_id && row.candidate_id ? { threadId: row.thread_id, candidateId: row.candidate_id } : null
     }))
+  }
+
+  getStandardRuleAudit(): StandardRuleAudit | null {
+    const row = this.db.prepare('SELECT payload_json FROM standard_rule_audit WHERE id = 1')
+      .get() as { payload_json: string } | undefined
+    return row ? JSON.parse(row.payload_json) as StandardRuleAudit : null
+  }
+
+  saveStandardRuleAudit(audit: StandardRuleAudit): void {
+    this.db.prepare(`INSERT INTO standard_rule_audit (id, payload_json) VALUES (1, ?)
+      ON CONFLICT(id) DO UPDATE SET payload_json = excluded.payload_json`).run(JSON.stringify(audit))
   }
 
   adoptDeckCandidate(input: AdoptDeckCandidateInput): DeckBaseline {

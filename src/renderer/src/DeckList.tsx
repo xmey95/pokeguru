@@ -7,6 +7,7 @@ import { evaluateDeckConstruction } from '../../shared/deck-construction'
 import { evaluateSetAdmission } from '../../shared/standard-admission'
 import { evaluatePromoAdmission } from '../../shared/promo-admission'
 import { evaluateStandardDeck } from '../../shared/standard-deck'
+import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 
 function localDate(): string {
   const now = new Date()
@@ -22,6 +23,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onConstrain(identityId: string): void
 }) {
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
+  const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -38,13 +40,16 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   useEffect(() => {
     let active = true
     setLoading(true)
-    void Promise.all([window.projectsApi.getCatalog(), window.projectsApi.getReconciliation(projectId)])
-      .then(([catalogResult, reconciliationResult]) => {
+    void Promise.all([window.projectsApi.getCatalog(), window.projectsApi.getReconciliation(projectId),
+      window.projectsApi.getStandardRuleAudit()])
+      .then(([catalogResult, reconciliationResult, auditResult]) => {
         if (!active) return
         if (!catalogResult.ok) throw new Error(catalogResult.error)
         if (!reconciliationResult.ok) throw new Error(reconciliationResult.error)
+        if (!auditResult.ok) throw new Error(auditResult.error)
         setCatalog(catalogResult.value)
         setReconciliation(reconciliationResult.value)
+        setRuleAudit(auditResult.value)
       })
       .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Lista non disponibile.') })
       .finally(() => { if (active) setLoading(false) })
@@ -60,7 +65,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   const admissionByLine = new Map(admission.lines.map((line) => [line.lineNumber, line]))
   const promoAdmission = useMemo(() => evaluatePromoAdmission(baseline, catalog, asOf), [baseline, catalog, asOf])
   const promoByLine = new Map(promoAdmission.lines.map((line) => [line.lineNumber, line]))
-  const standardDeck = useMemo(() => evaluateStandardDeck(baseline, catalog, asOf), [baseline, catalog, asOf])
+  const standardDeck = useMemo(() => evaluateStandardDeck(baseline, catalog, asOf, ruleAudit), [baseline, catalog, asOf, ruleAudit])
 
   async function confirmIdentity(lineNumber: number, printId: string): Promise<void> {
     const line = baseline.lines.find((item) => item.lineNumber === lineNumber)
@@ -100,7 +105,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
     <section className={`standard-deck-panel ${standardDeck.status}`} aria-label="Esito Standard occidentale">
       <strong>Esito Standard occidentale: {standardDeck.status === 'problem' ? 'errore certo nei controlli' :
         standardDeck.status === 'review' ? 'da verificare' : 'controlli disponibili superati'}</strong>
-      <p>Data {asOf}. La legalità per i tornei resta indeterminata: errata, carte vietate, eccezioni e completezza delle stampe non sono verificate automaticamente.</p>
+      <p>Data {asOf}. Fonti del pacchetto: {ruleAudit?.status === 'matching' ? `coerenti al ${ruleAudit.checkedAt.slice(0, 10)}` : ruleAudit?.status === 'changed' ? 'da rivedere' : ruleAudit?.status === 'unavailable' ? 'non raggiungibili all’ultimo controllo' : 'non ricontrollate da questa installazione'}. La legalità per i tornei resta indeterminata: errata, carte vietate, eccezioni e completezza delle stampe non sono verificate automaticamente.</p>
       {standardDeck.problems.length > 0 && <div><b>Problemi accertati</b><ul>{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
       {standardDeck.toReview.length > 0 && <details><summary>Da verificare ({standardDeck.toReview.length})</summary><ul>{standardDeck.toReview.map((reason, index) => <li key={index}>{reason}</li>)}</ul></details>}
       {standardDeck.passed.length > 0 && <details><summary>Controlli superati ({standardDeck.passed.length})</summary><ul>{standardDeck.passed.map((item) => <li key={item}>{item}</li>)}</ul></details>}

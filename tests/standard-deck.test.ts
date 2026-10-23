@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { evaluateStandardDeck } from '../src/shared/standard-deck'
+import type { StandardRuleAudit } from '../src/shared/standard-rule-audit'
 
 function print(id: string, name: string, options: Partial<CatalogPrint> = {}): CatalogPrint {
   const [setId, localId] = id.split('-')
@@ -72,5 +73,13 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
     expect(evaluateStandardDeck(deck, catalog, '2026-04-09').status).toBe('problem')
     expect(evaluateStandardDeck(deck, catalog, '2026-04-10').status).toBe('checks-passed')
     expect(deck.rawText).toContain('Future Trainer')
+  })
+
+  it('riporta da verificare una fonte ufficiale cambiata', () => {
+    const audit: StandardRuleAudit = { packageVersion: 'western-2026-10-23-v1', checkedAt: '2026-10-23T12:00:00.000Z',
+      verifiedAt: null, status: 'changed', sources: [] }
+    const result = evaluateStandardDeck(baseline(raw), catalog, '2026-10-23', audit)
+    expect(result.status).toBe('review')
+    expect(result.toReview[0]).toContain('fonti ufficiali')
   })
 })

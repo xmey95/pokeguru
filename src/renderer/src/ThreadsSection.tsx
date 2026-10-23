@@ -8,6 +8,7 @@ import type { CatalogView } from '../../shared/catalog'
 import type { DeckConstraint } from '../../shared/constraints'
 import { compareDecks, type DeckDiff } from '../../shared/deck-diff'
 import { reviewCandidate } from '../../shared/candidate-review'
+import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 
 interface Props {
   projectId: string
@@ -24,15 +25,15 @@ function DiffView({ title, diff }: { title: string; diff: DeckDiff }) {
   </div>
 }
 
-function CandidateDetail({ candidate, thread, versions, catalog, constraints, working, onAdopt }: {
+function CandidateDetail({ candidate, thread, versions, catalog, constraints, audit, working, onAdopt }: {
   candidate: DeckCandidate; thread: DeckThread; versions: DeckVersion[]; catalog: CatalogView | null
-  constraints: DeckConstraint[]; working: boolean; onAdopt(candidate: DeckCandidate): void
+  constraints: DeckConstraint[]; audit: StandardRuleAudit | null; working: boolean; onAdopt(candidate: DeckCandidate): void
 }) {
   const base = versions.find((version) => version.id === thread.baseVersionId)
   const current = versions[0]
   const adopted = versions.find((version) => version.adoption?.candidateId === candidate.id)
   const review = catalog ? reviewCandidate(thread.projectId, candidate, catalog, constraints,
-    new Date().toLocaleDateString('sv-SE')) : null
+    new Date().toLocaleDateString('sv-SE'), audit) : null
   const comparisonDeck = review ? parseDeck(review.normalizedRawText) : candidate.parsed
   return <details className="thread-candidate">
     <summary>Candidata {candidate.sequence} · {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {candidate.parsed.interpretedTotal} carte · {displayDate(candidate.createdAt)}{adopted ? ` · adottata in v${adopted.sequence}` : ''}</summary>
@@ -71,6 +72,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [threads, setThreads] = useState<DeckThread[]>([])
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [constraints, setConstraints] = useState<DeckConstraint[]>([])
+  const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [aiModels, setAiModels] = useState<AiModel[]>([])
   const [overrides, setOverrides] = useState<Record<string, AiPreferences>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -98,17 +100,19 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     setLoading(true)
     setError(null)
     void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId),
-      window.projectsApi.getCatalog(), window.projectsApi.listConstraints(projectId)])
-      .then(([versionResult, threadResult, catalogResult, constraintResult]) => {
+      window.projectsApi.getCatalog(), window.projectsApi.listConstraints(projectId), window.projectsApi.getStandardRuleAudit()])
+      .then(([versionResult, threadResult, catalogResult, constraintResult, auditResult]) => {
         if (!active) return
         if (!versionResult.ok) throw new Error(versionResult.error)
         if (!threadResult.ok) throw new Error(threadResult.error)
         if (!catalogResult.ok) throw new Error(catalogResult.error)
         if (!constraintResult.ok) throw new Error(constraintResult.error)
+        if (!auditResult.ok) throw new Error(auditResult.error)
         setVersions(versionResult.value)
         setThreads(threadResult.value)
         setCatalog(catalogResult.value)
         setConstraints(constraintResult.value)
+        setRuleAudit(auditResult.value)
         setSelectedId((current) => threadResult.value.some((thread) => thread.id === current)
           ? current : threadResult.value[0]?.id ?? null)
         const first = threadResult.value[0]
@@ -289,7 +293,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
             </div>
             <div className="thread-timeline">
               {timeline.map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}{entry.item.aiConfig ? ` · ${entry.item.aiConfig.model ?? 'Automatico'} / ${entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · ${entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}` : ''}</small><p>{entry.item.text}</p></div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
-                catalog={catalog} constraints={constraints} working={working} onAdopt={(candidate) => void adopt(candidate)} />)}
+                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={(candidate) => void adopt(candidate)} />)}
             </div>
             <form className="thread-form" onSubmit={(event) => void ask(event)}>
               <label htmlFor="thread-message">Scrivi nel thread</label>

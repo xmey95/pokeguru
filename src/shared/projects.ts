@@ -7,6 +7,7 @@ import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from 
 import type { DeckExportRequest } from './deck-export'
 import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
 import type { TournamentSnapshot } from './tournament'
+import type { StandardRuleAudit } from './standard-rule-audit'
 
 export type ProjectFormat = 'STANDARD'
 export type CompetitiveCircuit = 'WESTERN' | 'JAPAN'
@@ -39,6 +40,8 @@ export interface ProjectsApi {
   getCatalogSyncStatus(): Promise<OperationResult<CatalogSyncStatus>>
   openCatalogSource(url: string): Promise<OperationResult<boolean>>
   openStandardSource(sourceId: string): Promise<OperationResult<boolean>>
+  getStandardRuleAudit(): Promise<OperationResult<StandardRuleAudit | null>>
+  checkStandardRuleSources(): Promise<OperationResult<StandardRuleAudit>>
   list(): Promise<OperationResult<Project[]>>
   get(id: string): Promise<OperationResult<Project | null>>
   create(input: CreateProjectInput): Promise<OperationResult<Project>>

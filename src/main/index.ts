@@ -7,6 +7,8 @@ import { ProjectStore } from './project-store'
 import type { DeckBaseline, ImportDeckInput } from '../shared/deck-import'
 import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import { reviewCandidate } from '../shared/candidate-review'
+import { auditStandardRuleSources } from './standard-rule-audit'
+import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 import type { OperationResult, Project } from '../shared/projects'
 import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
 import type { AiConnection, AiPreferences, AiRunConfig } from '../shared/ai'
@@ -214,6 +216,19 @@ function registerProjectHandlers(): void {
     } catch { return { ok: false, error: 'Impossibile aprire la fonte Play! Pokémon.' } }
   })
 
+  ipcMain.handle('standard:get-rule-audit', (event): OperationResult<StandardRuleAudit | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getStandardRuleAudit())
+  })
+
+  ipcMain.handle('standard:check-rule-sources', async (event): Promise<OperationResult<StandardRuleAudit>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    const previous = withStore(() => projectStore!.getStandardRuleAudit())
+    if (!previous.ok) return previous
+    const audit = await auditStandardRuleSources(previous.value)
+    return withStore(() => { projectStore!.saveStandardRuleAudit(audit); return audit })
+  })
+
   ipcMain.handle('ai:get-preferences', (event): OperationResult<AiPreferences> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!aiPreferencesStore) return { ok: false, error: unavailableMessage() }
@@ -413,7 +428,7 @@ function registerProjectHandlers(): void {
       if (!thread || !candidate) throw new Error('Candidata non trovata in questo progetto.')
       const today = new Date().toLocaleDateString('sv-SE')
       const review = reviewCandidate(request.projectId, candidate, catalogStore.view(),
-        projectStore!.listConstraints(request.projectId), today)
+        projectStore!.listConstraints(request.projectId), today, projectStore!.getStandardRuleAudit())
       if (review.blockers.length) throw new Error(`Adozione bloccata: ${review.blockers.join(' ')}`)
       return projectStore!.adoptDeckCandidate(request)
     })

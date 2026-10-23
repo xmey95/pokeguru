@@ -189,6 +189,19 @@ describe('ProjectStore', () => {
     reopened.close()
   })
 
+  it('conserva globalmente l’ultimo audit delle regole tra riavvii', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    expect(store.getStandardRuleAudit()).toBeNull()
+    const audit = { packageVersion: 'western-2026-10-23-v1', checkedAt: '2026-10-23T10:00:00.000Z',
+      verifiedAt: '2026-10-23T10:00:00.000Z', status: 'matching' as const, sources: [] }
+    store.saveStandardRuleAudit(audit)
+    store.close()
+    const reopened = new ProjectStore(path)
+    expect(reopened.getStandardRuleAudit()).toEqual(audit)
+    reopened.close()
+  })
+
   it('mantiene schede Matchup separate e segnala il cambio di lista', () => {
     const path = databasePath()
     const store = new ProjectStore(path)
