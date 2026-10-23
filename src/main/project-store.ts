@@ -10,6 +10,7 @@ import type { ClearLineMappingInput, DeckLineMapping, DeckReconciliation, Identi
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
 import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import type { AiRunConfig } from '../shared/ai'
+import { normalizeDeckCodes } from '../shared/deck-code-normalization'
 
 interface ProjectRow {
   id: string
@@ -442,24 +443,25 @@ export class ProjectStore {
         UNION ALL SELECT raw_text FROM deck_ai_candidates WHERE thread_id = ? AND id = ?`)
         .get(input.threadId, input.candidateId, input.threadId, input.candidateId) as { raw_text: string } | undefined
       if (!candidate) throw new Error('Candidata non trovata in questo thread.')
-      const parsed = parseDeck(candidate.raw_text)
+      const normalized = normalizeDeckCodes(candidate.raw_text)
+      const parsed = parseDeck(normalized.rawText)
       if (parsed.interpretedTotal !== 60 || parsed.lines.some((line) => line.kind === 'unparsed') ||
         parsed.diagnostics.some((item) => item.code === 'TOTAL_MISMATCH'))
         throw new Error('La candidata deve contenere 60 carte e nessuna riga o totale incoerente.')
-      if (parsed.lines.some((line) => line.kind === 'card' && line.setCode?.includes('.')))
-        throw new Error('I codici set con punto non sono ancora verificati nell’export Limitless.')
+      if (normalized.unsupported.length)
+        throw new Error('Alcuni codici set con punto non sono ancora verificati nell’export Limitless.')
       if (parsed.diagnostics.some((item) => item.code === 'ALT_PRINT'))
         throw new Error('Le stampe ALT non sono riconosciute in modo affidabile da Limitless.')
       const previous = this.db.prepare('SELECT raw_text FROM deck_baselines WHERE project_id = ?')
         .get(input.projectId) as { raw_text: string } | undefined
-      if (previous?.raw_text === candidate.raw_text) throw new Error('La candidata coincide già con la lista principale.')
+      if (previous?.raw_text === normalized.rawText) throw new Error('La candidata coincide già con la lista principale.')
       const latest = this.db.prepare('SELECT COALESCE(MAX(sequence), 0) AS sequence FROM deck_versions WHERE project_id = ?')
         .get(input.projectId) as { sequence: number }
       const versionId = randomUUID()
       this.db.prepare(`INSERT INTO deck_versions
         (id, project_id, sequence, source, file_name, raw_text, parsed_json, created_at)
         VALUES (?, ?, ?, 'paste', NULL, ?, ?, ?)`)
-        .run(versionId, input.projectId, latest.sequence + 1, candidate.raw_text, JSON.stringify(parsed), now)
+        .run(versionId, input.projectId, latest.sequence + 1, normalized.rawText, JSON.stringify(parsed), now)
       this.db.prepare('INSERT INTO deck_adoptions (version_id, thread_id, candidate_id, adopted_at) VALUES (?, ?, ?, ?)')
         .run(versionId, input.threadId, input.candidateId, now)
       this.db.prepare('DELETE FROM deck_line_mappings WHERE project_id = ?').run(input.projectId)
@@ -469,11 +471,11 @@ export class ProjectStore {
         ON CONFLICT(project_id) DO UPDATE SET source = excluded.source, file_name = NULL,
         raw_text = excluded.raw_text, parsed_json = excluded.parsed_json,
         interpreted_total = 60, problem_count = 0, imported_at = excluded.imported_at`)
-        .run(input.projectId, candidate.raw_text, JSON.stringify(parsed), now)
+        .run(input.projectId, normalized.rawText, JSON.stringify(parsed), now)
       this.db.prepare('UPDATE deck_main_heads SET version_id = ? WHERE project_id = ?').run(versionId, input.projectId)
       this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(now, input.projectId)
       this.db.exec('COMMIT')
-      return { projectId: input.projectId, rawText: candidate.raw_text,
+      return { projectId: input.projectId, rawText: normalized.rawText,
         source: 'paste', fileName: null, importedAt: now, ...parsed }
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }

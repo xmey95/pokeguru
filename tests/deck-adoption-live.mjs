@@ -22,6 +22,7 @@ function seedCatalog() {
   const now = '2026-10-23T00:00:00.000Z'
   for (const [id, name, category, stage, mark] of [
     ['me01-086', 'Mega Absol ex', 'Pokemon', 'Basic', 'I'],
+    ['me02.5-172', 'Mega Audino ex', 'Pokemon', 'Basic', 'J'],
     ['sv02-185', 'Iono', 'Trainer', null, 'G']
   ]) {
     const setId = id.split('-')[0]
@@ -38,7 +39,8 @@ function seedCatalog() {
 }
 
 const original = '1 Mega Absol ex MEG 86\n59 Basic Psychic Energy'
-const firstCandidate = '1 Mega Absol ex MEG 86\n58 Basic Psychic Energy\n1 Iono PAL 185'
+const firstCandidate = '1 Mega Absol ex MEG 86\n58 Basic Psychic Energy\n1 Mega Audino ex ME02.5 172'
+const adoptedText = '1 Mega Absol ex MEG 86\n58 Basic Psychic Energy\n1 Mega Audino ex ASC 172'
 const secondCandidate = '1 Mega Absol ex MEG 86\n57 Basic Psychic Energy\n2 Iono PAL 185'
 
 try {
@@ -62,7 +64,8 @@ try {
   await page.locator('.thread-candidate > summary').click()
   const candidate = page.locator('.thread-candidate')
   assert.match(await candidate.textContent(), /Rispetto alla base v1: 60 → 60 carte/)
-  assert.match(await candidate.textContent(), /Iono: 0 → 1/)
+  assert.match(await candidate.textContent(), /Mega Audino ex: 0 → 1/)
+  assert.match(await candidate.textContent(), /ME02\.5 → ASC/)
   assert.match(await candidate.textContent(), /Legalità torneo indeterminata/)
   await candidate.getByRole('button', { name: "Adotta l'intera lista candidata" }).click()
   await page.locator('.thread-versions summary').first().click()
@@ -72,14 +75,14 @@ try {
   await page.locator('.thread-candidate > summary').click()
   assert.equal(await page.locator('.thread-candidate').getByRole('button', { name: "Adotta l'intera lista candidata" }).isDisabled(), true)
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), firstCandidate)
+  assert.equal(await page.getByLabel('Testo lista').inputValue(), adoptedText)
   await application.close()
   application = undefined
 
   application = await launch()
   page = await application.firstWindow()
   await page.getByRole('heading', { name: 'Adozione test' }).waitFor()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), firstCandidate)
+  assert.equal(await page.getByLabel('Testo lista').inputValue(), adoptedText)
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.locator('.thread-picker').getByRole('button', { name: /Piano B/ }).click()
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)

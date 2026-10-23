@@ -41,7 +41,7 @@ it('blocca vincoli mancanti e righe illeggibili, ma non trasforma l’incertezza
   const unreadable = reviewCandidate('p', candidate('1 Mega Absol ex MEG 86\n58 Basic Psychic Energy\n?'),
     catalog, [], '2026-10-23')
   expect(unreadable.blockers.some((item) => item.includes('righe non interpretate'))).toBe(true)
-  const dotted = reviewCandidate('p', candidate('1 Mega Absol ex ME02.5 86\n59 Basic Psychic Energy'),
+  const dotted = reviewCandidate('p', candidate('1 Mega Absol ex ME99.5 86\n59 Basic Psychic Energy'),
     catalog, [], '2026-10-23')
-  expect(dotted.blockers.some((item) => item.includes('codici set con punto'))).toBe(true)
+  expect(dotted.blockers.some((item) => item.includes('Codici set con punto'))).toBe(true)
 })

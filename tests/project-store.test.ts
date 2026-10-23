@@ -177,6 +177,15 @@ describe('ProjectStore', () => {
     expect(reopened.getBaseline(project.id)?.rawText).toBe(a.rawText)
     expect(reopened.listDeckVersions(project.id)[0].adoption?.candidateId).toBe(a.id)
     expect(reopened.listDeckThreads(project.id).find((thread) => thread.id === second.id)?.candidates[0].id).toBe(b.id)
+    const fresh = reopened.createDeckThread({ projectId: project.id, title: 'ASC' })
+    const dotted = reopened.saveDeckCandidate({ projectId: project.id, threadId: fresh.id,
+      rawText: '59 Carta A MEG 1\n1 Mega Audino ex ME02.5 172' }).candidates[0]
+    const beforeDotted = reopened.listDeckVersions(project.id)[0].id
+    const converted = reopened.adoptDeckCandidate({ projectId: project.id, threadId: fresh.id,
+      candidateId: dotted.id, expectedHeadId: beforeDotted })
+    expect(converted.rawText).toBe('59 Carta A MEG 1\n1 Mega Audino ex ASC 172')
+    expect(reopened.listDeckThreads(project.id).find((thread) => thread.id === fresh.id)?.candidates[0].rawText)
+      .toBe(dotted.rawText)
     reopened.close()
   })
 

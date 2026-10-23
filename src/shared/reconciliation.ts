@@ -1,5 +1,6 @@
 import type { CatalogPrint, CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
+import { OFFICIAL_SET_CODES } from './set-codes'
 
 export interface MappedPrint {
   id: string
@@ -76,10 +77,6 @@ export interface DeckCardEntry {
   candidateIdentities: { identityId: string; name: string; printId: string; basis: CatalogPrint['identityBasis'] }[]
 }
 
-const officialCodes: Record<string, string> = {
-  sv01: 'SVI', sv02: 'PAL', 'sv04.5': 'PAF', me01: 'MEG', 'me02.5': 'ASC'
-}
-
 function normalizedName(value: string): string {
   return value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase()
 }
@@ -91,7 +88,7 @@ function normalizedNumber(value: string): string {
 function sameCode(line: DeckLine, print: CatalogPrint): boolean {
   if (!line.setCode || !line.cardNumber || /ALT/i.test(line.setCode)) return false
   const code = line.setCode.toUpperCase()
-  return (code === print.setId.toUpperCase() || code === officialCodes[print.setId]) &&
+  return (code === print.setId.toUpperCase() || code === OFFICIAL_SET_CODES[print.setId]) &&
     normalizedNumber(line.cardNumber) === normalizedNumber(print.localId)
 }
 

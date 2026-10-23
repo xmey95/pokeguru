@@ -3,6 +3,7 @@ import type { DeckThread, DeckVersion } from '../../shared/deck-threads'
 import type { DeckCandidate } from '../../shared/deck-threads'
 import type { AiModel, AiPreferences } from '../../shared/ai'
 import type { DeckBaseline } from '../../shared/deck-import'
+import { parseDeck } from '../../shared/deck-import'
 import type { CatalogView } from '../../shared/catalog'
 import type { DeckConstraint } from '../../shared/constraints'
 import { compareDecks, type DeckDiff } from '../../shared/deck-diff'
@@ -32,6 +33,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, wo
   const adopted = versions.find((version) => version.adoption?.candidateId === candidate.id)
   const review = catalog ? reviewCandidate(thread.projectId, candidate, catalog, constraints,
     new Date().toLocaleDateString('sv-SE')) : null
+  const comparisonDeck = review ? parseDeck(review.normalizedRawText) : candidate.parsed
   return <details className="thread-candidate">
     <summary>Candidata {candidate.sequence} · {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {candidate.parsed.interpretedTotal} carte · {displayDate(candidate.createdAt)}{adopted ? ` · adottata in v${adopted.sequence}` : ''}</summary>
     {candidate.note && <p>{candidate.note}</p>}
@@ -42,13 +44,17 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, wo
         : <span key={source.id}>{source.label}; </span>)}</div>}
     {candidate.checks.length > 0 && <ul>{candidate.checks.map((check, index) => <li key={index}>{check}</li>)}</ul>}
     {candidate.parsed.diagnostics.length > 0 && <p className="content-note">{candidate.parsed.diagnostics.length} note di importazione da controllare.</p>}
-    {base && <DiffView title={`Rispetto alla base v${base.sequence}`} diff={compareDecks(base.parsed, candidate.parsed)} />}
-    {current && <DiffView title={`Rispetto alla lista corrente v${current.sequence}`} diff={compareDecks(current.parsed, candidate.parsed)} />}
+    {base && <DiffView title={`Rispetto alla base v${base.sequence}`} diff={compareDecks(base.parsed, comparisonDeck)} />}
+    {current && <DiffView title={`Rispetto alla lista corrente v${current.sequence}`} diff={compareDecks(current.parsed, comparisonDeck)} />}
     {review && <div className="thread-review"><strong>Controlli prima dell'adozione</strong>
       {review.blockers.length > 0 && <ul className="thread-blockers">{review.blockers.map((item, index) => <li key={index}>{item}</li>)}</ul>}
       {review.toReview.length > 0 && <details><summary>Da verificare ({review.toReview.length})</summary><ul>{review.toReview.map((item, index) => <li key={index}>{item}</li>)}</ul></details>}
       <p>Legalità torneo indeterminata. I vincoli e i controlli si ricalcolano sulla candidata completa.</p>
     </div>}
+    {review && review.conversions.length > 0 && <div className="thread-review"><strong>Testo che sarà adottato</strong>
+      <p>Codici verificati in Limitless: {review.conversions.map((item) =>
+        `riga ${item.lineNumber} ${item.from} → ${item.to}`).join('; ')}. La candidata originale resta nel thread.</p>
+      <pre>{review.normalizedRawText}</pre></div>}
     {thread.stale && <p className="diagnostics">Base del thread superata: la candidata resta salvata, ma l'adozione è bloccata. Confrontala con la lista corrente e crea un nuovo thread dalla versione attuale.</p>}
     {!adopted && <button type="button" className="primary-button" disabled={working || thread.stale || !current || !review || review.blockers.length > 0}
       onClick={() => onAdopt(candidate)}>Adotta l'intera lista candidata</button>}
