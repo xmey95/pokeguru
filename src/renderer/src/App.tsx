@@ -5,6 +5,10 @@ import { MatchupSection } from './MatchupSection'
 import { AiSettings } from './AiSettings'
 import { CatalogSection } from './CatalogSection'
 import { DeckList } from './DeckList'
+import { ConstraintsSection } from './ConstraintsSection'
+import { ExportButton } from './ExportButton'
+import { ThreadsSection } from './ThreadsSection'
+import { TournamentSection } from './TournamentSection'
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
@@ -40,12 +44,16 @@ export function App() {
   const [fileName, setFileName] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'deck' | 'matchups' | 'catalog'>('deck')
-  const [view, setView] = useState<'project' | 'ai'>('project')
+  const [activeTab, setActiveTab] = useState<'deck' | 'threads' | 'matchups'>('deck')
+  const [view, setView] = useState<'project' | 'ai' | 'catalog' | 'tournament'>('project')
+  const [catalogFocusIdentityId, setCatalogFocusIdentityId] = useState<string | null>(null)
+  const [constraintTargetId, setConstraintTargetId] = useState<string | null>(null)
+  const [constraintSelectionVersion, setConstraintSelectionVersion] = useState(0)
   const selectionVersion = useRef(0)
 
   async function selectProject(id: string, known?: Project): Promise<void> {
     const version = ++selectionVersion.current
+    setConstraintTargetId(null)
     setError(null)
     setBaselineLoading(true)
     setBaseline(null)
@@ -104,6 +112,12 @@ export function App() {
   async function openProject(id: string): Promise<void> {
     setView('project')
     await selectProject(id)
+  }
+
+  function selectConstraintTarget(identityId: string): void {
+    setConstraintTargetId(identityId)
+    setConstraintSelectionVersion((version) => version + 1)
+    setActiveTab('deck')
   }
 
   async function createProject(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -196,6 +210,8 @@ export function App() {
           </div>
         </div>
         <div className="topbar-actions"><span className="local-indicator"><span aria-hidden="true" /> Archivio locale</span>
+          <button type="button" className="secondary-button" onClick={() => { setCatalogFocusIdentityId(null); setView('catalog') }}>Catalogo</button>
+          <button type="button" className="secondary-button" onClick={() => setView('tournament')}>Eventi</button>
           <button type="button" className="secondary-button" onClick={() => setView('ai')}>Impostazioni AI</button></div>
       </header>
 
@@ -259,7 +275,7 @@ export function App() {
 
         <main className="main-content">
           {error && <div className="error-banner" role="alert">{error}</div>}
-          {view === 'ai' ? <AiSettings /> : selected ? (
+          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? (identityId) => { setView('project'); selectConstraintTarget(identityId) } : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-kicker">Progetto di mazzo</div>
               <div className="detail-headline">
@@ -278,8 +294,8 @@ export function App() {
               {selected.circuitAssignment === 'MIGRATED' && <p className="migration-note">Profilo occidentale assegnato a questo progetto esistente. La lista è rimasta invariata.</p>}
               <nav className="detail-tabs" aria-label="Sezioni progetto">
                 <button type="button" className={activeTab === 'deck' ? 'active' : ''} aria-current={activeTab === 'deck' ? 'page' : undefined} onClick={() => setActiveTab('deck')}>Lista</button>
+                <button type="button" className={activeTab === 'threads' ? 'active' : ''} aria-current={activeTab === 'threads' ? 'page' : undefined} onClick={() => setActiveTab('threads')}>Thread</button>
                 <button type="button" className={activeTab === 'matchups' ? 'active' : ''} aria-current={activeTab === 'matchups' ? 'page' : undefined} onClick={() => setActiveTab('matchups')}>Matchup</button>
-                <button type="button" className={activeTab === 'catalog' ? 'active' : ''} aria-current={activeTab === 'catalog' ? 'page' : undefined} onClick={() => setActiveTab('catalog')}>Catalogo</button>
               </nav>
               {activeTab === 'deck' ? <>
               {baselineLoading ? <p className="content-note">Caricamento lista…</p> : baseline ? (
@@ -289,7 +305,10 @@ export function App() {
                       <span className="eyebrow">Baseline salvata</span>
                       <h2>Lista corrente</h2>
                     </div>
-                    <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
+                    <div className="deck-heading-actions">
+                      <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
+                      <ExportButton key={`${selected.id}:${baseline.importedAt}`} baseline={baseline} />
+                    </div>
                   </div>
                   <p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Origine: testo incollato'} · salvata il {formatDate(baseline.importedAt)}. La legalità Standard non è ancora verificata.</p>
                   {baseline.declaredTotal !== null && <p className="content-note">Totale dichiarato nel testo: {baseline.declaredTotal}. Il totale mostrato deriva dalle righe interpretate.</p>}
@@ -300,7 +319,7 @@ export function App() {
                       <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
                     </div>
                   )}
-                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setActiveTab('catalog')} />
+                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onConstrain={selectConstraintTarget} />
                   <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>
                 </div>
               ) : !error && (
@@ -310,6 +329,9 @@ export function App() {
                   <p>Incolla una lista o scegli un file .txt per iniziare. Puoi salvare anche una bozza incompleta.</p>
                 </div>
               )}
+              {!baselineLoading && <ConstraintsSection key={selected.id} projectId={selected.id} baseline={baseline}
+                selectedIdentityId={constraintTargetId} selectionVersion={constraintSelectionVersion}
+                onOpenCatalog={() => setView('catalog')} />}
               <form className="import-panel" onSubmit={(event) => void importDeck(event)}>
                 <div className="panel-heading">
                   <div><span className="eyebrow">Importazione</span><h2>{baseline ? 'Aggiorna la lista' : 'Aggiungi una lista'}</h2></div>
@@ -324,7 +346,17 @@ export function App() {
                   <button className="primary-button" type="submit" disabled={importing || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
                 </div>
               </form>
-              </> : activeTab === 'matchups' ? <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')} /> : <CatalogSection />}
+              </> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
+                onAdopt={(adopted) => {
+                  const updated = projectWithBaseline(selected, adopted)
+                  setBaseline(adopted)
+                  setDraft(adopted.rawText)
+                  setSource(adopted.source)
+                  setFileName(adopted.fileName)
+                  setSelected(updated)
+                  setProjects((current) => current.map((project) => project.id === selected.id ? updated : project))
+                }} /> : <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')}
+                  onOpenCatalogCard={(identityId) => { setCatalogFocusIdentityId(identityId); setView('catalog') }} />}
             </section>
           ) : (
             <section className="welcome" aria-label="Benvenuto">

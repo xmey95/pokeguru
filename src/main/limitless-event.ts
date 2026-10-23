@@ -1,0 +1,157 @@
+import { createHash } from 'node:crypto'
+import type { TournamentCard, TournamentParticipation, TournamentSnapshot } from '../shared/tournament'
+
+const API = 'https://play.limitlesstcg.com/api'
+const EVENT_ID = /^[a-f0-9]{24}$/
+const cardCategories = ['pokemon', 'trainer', 'energy'] as const
+
+function object(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown> : null
+}
+
+function text(value: unknown, max = 160): string | null {
+  return typeof value === 'string' && value.trim() && value.length <= max
+    ? value.trim() : null
+}
+
+function whole(value: unknown, min = 0, max = 100_000): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max ? value : null
+}
+
+function validDate(value: unknown): value is string {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value)) &&
+    /^\d{4}-\d{2}-\d{2}T/.test(value)
+}
+
+async function getJson(path: string, fetcher: typeof fetch): Promise<unknown> {
+  const url = `${API}${path}`
+  const response = await fetcher(url, { signal: AbortSignal.timeout(15_000) })
+  if (!response.ok) throw new Error(`Limitless Play: HTTP ${response.status}.`)
+  if (Number(response.headers.get('content-length') ?? 0) > 6_000_000)
+    throw new Error('Risposta Limitless Play troppo grande.')
+  const body = await response.text()
+  if (body.length > 6_000_000) throw new Error('Risposta Limitless Play troppo grande.')
+  try { return JSON.parse(body) as unknown }
+  catch { throw new Error('Risposta Limitless Play non valida.') }
+}
+
+function parseCards(value: unknown): { status: TournamentParticipation['listStatus']; cards: TournamentCard[]; total: number | null } {
+  if (value === null || value === undefined) return { status: 'missing', cards: [], total: null }
+  const list = object(value)
+  if (!list) return { status: 'invalid', cards: [], total: null }
+  const cards: TournamentCard[] = []
+  for (const category of cardCategories) {
+    const raw = list[category]
+    if (!Array.isArray(raw) || raw.length > 100) return { status: 'invalid', cards: [], total: null }
+    for (const entry of raw) {
+      const item = object(entry)
+      const count = whole(item?.count, 1, 60)
+      const name = text(item?.name)
+      const set = text(item?.set, 20)
+      const number = text(item?.number, 20)
+      if (!count || !name || !set || !number) return { status: 'invalid', cards: [], total: null }
+      cards.push({ category, count, name, set, number })
+    }
+  }
+  if (!cards.length) return { status: 'invalid', cards: [], total: null }
+  return { status: 'available', cards, total: cards.reduce((sum, card) => sum + card.count, 0) }
+}
+
+export function parseTournament(event: unknown, standings: unknown,
+  fetchedAt = new Date().toISOString()): TournamentSnapshot {
+  const detail = object(event)
+  const eventId = text(detail?.id, 24)
+  const name = text(detail?.name)
+  const date = detail?.date
+  const reportedPlayers = whole(detail?.players, 1, 100_000)
+  if (!eventId || !EVENT_ID.test(eventId) || detail?.game !== 'PTCG' || detail.format !== 'STANDARD' ||
+    detail.platform !== 'PTCGL' || detail.isOnline !== true || detail.isPublic !== true ||
+    detail.decklists !== true || !name || !validDate(date) || !reportedPlayers || !Array.isArray(standings) ||
+    standings.length > 100_000 || !Array.isArray(detail.phases)) {
+    throw new Error('Evento non pubblico, non occidentale Standard o risposta Limitless Play non valida.')
+  }
+  const phases = detail.phases.map((entry) => {
+    const phase = object(entry)
+    const number = whole(phase?.phase, 1, 100)
+    const type = text(phase?.type, 80)
+    const rounds = whole(phase?.rounds, 0, 100)
+    const mode = text(phase?.mode, 10)
+    if (!number || !type || rounds === null || !mode) throw new Error('Fasi dell’evento non leggibili.')
+    return { phase: number, type, rounds, mode }
+  })
+  const ids = new Set<string>()
+  const participations = standings.map((value): TournamentParticipation => {
+    const row = object(value)
+    const playerId = text(row?.player, 120)
+    const playerName = text(row?.name, 160)
+    if (!playerId || !playerName || ids.has(playerId)) throw new Error('Partecipazioni Limitless Play non univoche o incomplete.')
+    ids.add(playerId)
+    const parsed = parseCards(row?.decklist)
+    const record = object(row?.record)
+    const wins = whole(record?.wins)
+    const losses = whole(record?.losses)
+    const ties = whole(record?.ties)
+    const deck = object(row?.deck)
+    const deckId = text(deck?.id, 100)
+    const deckName = text(deck?.name, 160)
+    return {
+      playerId, playerName, country: text(row?.country, 2),
+      placing: whole(row?.placing, 1),
+      record: wins !== null && losses !== null && ties !== null ? { wins, losses, ties } : null,
+      deck: deckId && deckName ? { id: deckId, name: deckName } : null,
+      listStatus: parsed.status, cards: parsed.cards, cardTotal: parsed.total
+    }
+  })
+  if (!participations.length) throw new Error('Nessuna partecipazione restituita da Limitless Play.')
+  const coverage = {
+    returnedParticipants: participations.length,
+    availableLists: participations.filter((item) => item.listStatus === 'available').length,
+    invalidLists: participations.filter((item) => item.listStatus === 'invalid').length,
+    missingLists: participations.filter((item) => item.listStatus === 'missing').length,
+    complete60Lists: participations.filter((item) => item.cardTotal === 60).length
+  }
+  const id = createHash('sha256').update(JSON.stringify({ eventId, phases, participations, reportedPlayers })).digest('hex')
+  return {
+    id, eventId, fetchedAt, source: 'Limitless Play API',
+    sourceUrl: `${API}/tournaments/${eventId}/standings`,
+    publicUrl: `https://play.limitlesstcg.com/tournament/${eventId}`,
+    name, date, circuit: 'WESTERN', format: 'STANDARD', platform: 'PTCGL', isOnline: true,
+    reportedPlayers, phases, participations, coverage, cached: false
+  }
+}
+
+export async function fetchTournament(eventId: string, fetcher: typeof fetch = fetch): Promise<TournamentSnapshot> {
+  if (!EVENT_ID.test(eventId)) throw new Error('ID evento Limitless Play non valido.')
+  const [details, standings] = await Promise.all([
+    getJson(`/tournaments/${eventId}/details`, fetcher),
+    getJson(`/tournaments/${eventId}/standings`, fetcher)
+  ])
+  return parseTournament(details, standings)
+}
+
+export async function fetchRecentWesternTournament(fetcher: typeof fetch = fetch,
+  now = new Date()): Promise<TournamentSnapshot> {
+  const index = await getJson('/tournaments?game=PTCG&format=STANDARD&limit=50', fetcher)
+  if (!Array.isArray(index)) throw new Error('Indice tornei Limitless Play non valido.')
+  const candidates = index.filter((value) => {
+    const item = object(value)
+    return item?.game === 'PTCG' && item.format === 'STANDARD' &&
+      whole(item.players, 100) !== null && validDate(item.date) &&
+      Date.parse(item.date) < now.getTime() - 18 * 60 * 60 * 1000 &&
+      typeof item.id === 'string' && EVENT_ID.test(item.id)
+  }).slice(0, 8)
+  let limited = false
+  for (const item of candidates) {
+    try {
+      const snapshot = await fetchTournament((item as { id: string }).id, fetcher)
+      if (snapshot.participations.some((entry) => entry.placing !== null) && snapshot.coverage.availableLists > 0)
+        return snapshot
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('HTTP 429')) { limited = true; break }
+      // A candidate may be private, unfinished or outside the Western PTCGL circuit.
+    }
+  }
+  if (limited) throw new Error('Limitless Play ha limitato le richieste. Riprova più tardi; lo snapshot locale resta disponibile.')
+  throw new Error('Nessun evento Standard occidentale con piazzamenti e liste pubbliche nei tornei recenti di Limitless Play.')
+}

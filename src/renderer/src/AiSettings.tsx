@@ -128,7 +128,7 @@ export function AiSettings() {
           </select>
         </div>
       </div>
-      <p className="content-note">I modelli e i livelli disponibili arrivano da Codex. «Automatico» segue il modello predefinito al momento della prossima analisi.</p>
+      <p className="content-note">Modelli e livelli sono proposti dal catalogo Codex; l’accesso effettivo a un modello si conferma con una generazione riuscita. «Automatico» segue il modello predefinito al momento della prossima analisi.</p>
       <div className="settings-actions">
         <button type="button" className="primary-button" onClick={() => void save()} disabled={!dirty || busy}>Salva preferenze</button>
         <button type="button" className="secondary-button" onClick={() => void test()} disabled={busy || dirty || (connection?.account !== 'chatgpt' && connection?.account !== 'apiKey')}>Esegui prova AI</button>

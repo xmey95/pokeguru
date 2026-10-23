@@ -26,6 +26,10 @@ export interface MatchupReport {
   deckHash: string
   generatedAt: string
   sampleDeckUrl: string | null
+  metaSourceUrl?: string
+  metaPeriod?: string
+  metaFetchedAt?: string
+  opponentSourceUrl?: string
   strengths: string
   weaknesses: string
   ourKeyCards: string
@@ -33,6 +37,23 @@ export interface MatchupReport {
   strategy: string
   limitations: string
   ai?: AiRunConfig
+  tournamentEvidence?: MatchupTournamentEvidence
+}
+
+export interface MatchupTournamentEvidence {
+  status: 'matched' | 'unavailable' | 'incompatible'
+  detail: string
+  eventId: string | null
+  eventName: string | null
+  eventDate: string | null
+  eventUrl: string | null
+  eventLists: number | null
+  eventParticipants: number | null
+  matchedDeckId: string | null
+  matchedCompleteLists: number
+  observedCards: { name: string; lists: number; catalogIdentityId: string | null;
+    catalogStatus: 'recognized' | 'ambiguous' | 'not-in-catalog' }[]
+  sampleLists: { url: string; placing: number | null }[]
 }
 
 export interface MatchupTurn {

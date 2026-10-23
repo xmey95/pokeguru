@@ -16,16 +16,11 @@ try {
   await page.getByRole('button', { name: 'Crea progetto' }).click()
   await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
   await page.getByRole('button', { name: 'Sincronizza campione' }).click()
-  await page.getByText('28/28', { exact: true }).first().waitFor({ timeout: 90000 })
+  await page.getByText('5/5', { exact: true }).first().waitFor({ timeout: 120000 })
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByLabel('Testo lista').fill('2 Iono PAL 185\n1 Iono PAL 254\n1 Rare Candy PAF 089')
   await page.getByRole('button', { name: 'Salva lista' }).click()
-  for (const lineNumber of [1, 2]) {
-    const row = page.getByTestId(`reconcile-line-${lineNumber}`)
-    await row.getByRole('button', { name: 'Scegli carta e stampa' }).click()
-    await row.locator('.reconciliation-candidate').first().getByRole('button', { name: 'Usa questa stampa' }).click()
-    await row.locator('.mapped-print').waitFor()
-  }
+  await page.locator('.deck-card').filter({ hasText: 'Iono' }).first().waitFor()
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
@@ -39,7 +34,7 @@ try {
   }
   console.log(`Codex test model: ${fastModel?.id ?? 'automatico'}`)
   await page.locator('.ai-data-preview summary').click()
-  assert.match(await page.locator('.ai-data-preview pre').textContent(), /3 Iono \(sv02-185, sv02-254\)/)
+  assert.match(await page.locator('.ai-data-preview pre').textContent(), /3 Iono — identità Trainer/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([
     page.locator('.matchup-fields').getByText('Limiti dell’analisi').waitFor({ timeout: 200000 }),
@@ -48,11 +43,11 @@ try {
     })
   ])
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
-  await page.getByTestId('reconcile-line-2').getByRole('button', { name: 'Lascia irrisolta' }).click()
-  await page.getByTestId('reconcile-line-2').getByRole('button', { name: 'Scegli carta e stampa' }).waitFor()
+  await page.getByLabel('Testo lista').fill('2 Iono PAL 185\n2 Rare Candy PAF 089')
+  await page.getByRole('button', { name: 'Sostituisci lista' }).click()
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.getByText('Questa discussione riguarda una lista o uno snapshot precedente.').waitFor({ timeout: 30000 })
-  console.log('LIVE AI APP-006 OK: contesto riconciliato inviato a Codex; la guida diventa storica dopo cambio mapping.')
+  console.log('LIVE AI APP-006 OK: lista aggregata inviata a Codex; la guida diventa storica dopo cambio lista.')
 } finally {
   if (application) await application.close()
   if (realpathSync(dirname(directory)) !== realpathSync(tmpdir()) || !basename(directory).startsWith('pokeguru-reconcile-ai-')) {

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { parseDeck } from '../src/shared/deck-import'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
-import { matchupDeckContext, snapshotPrint, suggestPrints } from '../src/shared/reconciliation'
+import { buildDeckCards, matchupDeckContext, snapshotPrint, suggestPrints } from '../src/shared/reconciliation'
 
 const folders: string[] = []
 afterEach(() => {
@@ -41,6 +41,33 @@ const catalog: CatalogView = {
 }
 
 describe('Riconciliazione APP-006', () => {
+  it('mostra una sola carta di gioco per due rarità e tutte le varianti al clic, senza scelta di stampa', () => {
+    const baseline = {
+      projectId: 'project', importedAt: '2026-10-23T00:00:00.000Z', rawText: '2 Iono PAL 185\n1 Iono PAL 254',
+      source: 'paste' as const, fileName: null, ...parseDeck('2 Iono PAL 185\n1 Iono PAL 254')
+    }
+    const cards = buildDeckCards(baseline, { ...catalog, prints: [ionoA, ionoB, candy] })
+    expect(cards).toHaveLength(1)
+    expect(cards[0]).toMatchObject({ name: 'Iono', quantity: 3, status: 'recognized',
+      importedPrintIds: ['sv02-185', 'sv02-254'] })
+    expect(cards[0].prints.map((print) => print.id)).toEqual(['sv02-185', 'sv02-254'])
+    expect(cards[0].lines.map((line) => line.raw)).toEqual(['2 Iono PAL 185', '1 Iono PAL 254'])
+  })
+
+  it('non fonde omonimi con effetto differente e lascia ALT ambiguo', () => {
+    const baseline = {
+      projectId: 'project', importedAt: '2026-10-23T00:00:00.000Z',
+      rawText: '2 Iono PAL 185\n1 Iono PAF 080\n1 Iono SWSHALT 12A',
+      source: 'paste' as const, fileName: null,
+      ...parseDeck('2 Iono PAL 185\n1 Iono PAF 080\n1 Iono SWSHALT 12A')
+    }
+    const cards = buildDeckCards(baseline, catalog)
+    expect(cards).toHaveLength(3)
+    expect(cards.map((card) => card.status)).toEqual(['recognized', 'recognized', 'ambiguous'])
+    expect(cards.map((card) => card.quantity)).toEqual([2, 1, 1])
+    expect(cards[2].candidateIdentities).toHaveLength(2)
+  })
+
   it('mantiene una lista pubblica Limitless senza codice stampa come proposta, non come mapping', () => {
     // Sottoinsieme delle righe pubblicate su play.limitlesstcg.com/tournament/69a8a849f39e6e70969fbeb7/player/juic3b0i/decklist
     const deck = parseDeck("2 Arven\n2 Iono\n2 Boss's Orders\n3 Ultra Ball\n7 Psychic Energy")
@@ -68,6 +95,18 @@ describe('Riconciliazione APP-006', () => {
     expect(suggestPrints({ lineNumber: 4, raw: '1 Energia Base', kind: 'card', name: 'Energia Base' }, catalog)).toEqual([])
     expect(suggestPrints({ lineNumber: 5, raw: '1 Carta promo PR-SV 001a', kind: 'card',
       name: 'Carta promo', setCode: 'PR-SV', cardNumber: '001a' }, catalog)).toEqual([])
+  })
+
+  it('riconosce i codici occidentali MEG e ASC senza selezionare una rarità', () => {
+    const absol: CatalogPrint = { ...ionoA, id: 'me01-086', setId: 'me01', setName: 'Mega Evolution',
+      localId: '086', name: 'Mega Absol ex', category: 'Pokemon', identityId: 'absol', identityBasis: 'unverified' }
+    const audino: CatalogPrint = { ...ionoA, id: 'me02.5-172', setId: 'me02.5', setName: 'Ascended Heroes',
+      localId: '172', name: 'Mega Audino ex', category: 'Pokemon', identityId: 'audino', identityBasis: 'unverified' }
+    const cards = buildDeckCards({ projectId: 'project', importedAt: '2026-10-23T00:00:00.000Z',
+      source: 'paste', fileName: null, rawText: '2 Mega Absol ex MEG 86\n2 Mega Audino ex ASC 172',
+      ...parseDeck('2 Mega Absol ex MEG 86\n2 Mega Audino ex ASC 172') },
+    { ...catalog, prints: [absol, audino] })
+    expect(cards.map((card) => card.importedPrintIds)).toEqual([['me01-086'], ['me02.5-172']])
   })
 
   it('salva stampe distinte e aggrega copie per identità senza toccare testo o altri progetti', () => {

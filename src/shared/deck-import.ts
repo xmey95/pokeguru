@@ -10,6 +10,7 @@ export interface DeckLine {
   name?: string
   setCode?: string
   cardNumber?: string
+  printVariant?: string
 }
 
 export interface DeckDiagnostic {
@@ -42,8 +43,8 @@ export interface ImportDeckInput {
 
 const sectionPattern = /^(?:Pok[eé]mon(?: Cards)?|Trainers?(?: Cards)?|Energy(?: Cards)?|Energies|Energie|Allenatori)\s*(?:(?:[:\-–]\s*|\(\s*)(\d+)\s*\)?)?$/i
 const summaryPattern = /^(?:Total(?:\s+Cards?|\s+Carte)?|Totale(?:\s+Carte)?)\s*:\s*(\d+)$/i
-const bracketedPrintPattern = /^(.+?)\s+\(([A-Z0-9-]{2,12})-([A-Za-z0-9/.-]{1,12})\)$/
-const trailingPrintPattern = /^(.+?)\s+([A-Z0-9-]{2,12})\s+([A-Za-z]{0,3}\d[A-Za-z0-9/.-]{0,11})$/
+const bracketedPrintPattern = /^(.+?)\s+\(([A-Z0-9.-]{2,12})-([A-Za-z0-9/.-]{1,12})\)$/
+const trailingPrintPattern = /^(.+?)\s+([A-Z0-9.-]{2,12})\s+([A-Za-z]{0,3}\d[A-Za-z0-9/.-]{0,11})(?:\s+(PH))?$/
 
 export function parseDeck(rawText: string): ParsedDeck {
   const lines: DeckLine[] = []
@@ -90,6 +91,7 @@ export function parseDeck(rawText: string): ParsedDeck {
     if (print) {
       parsedLine.setCode = print[2]
       parsedLine.cardNumber = print[3]
+      if (print[4]) parsedLine.printVariant = print[4]
       if (/ALT/i.test(print[2])) {
         diagnostics.push({ lineNumber, code: 'ALT_PRINT', message: 'Codice ALT conservato: la stampa va verificata prima di un export.' })
       }

@@ -10,6 +10,7 @@ const require = createRequire(import.meta.url)
 const electronPath = require('electron')
 const workspace = resolve(import.meta.dirname, '..')
 const temporary = mkdtempSync(join(tmpdir(), 'pokeguru-e2e-'))
+const offline = process.argv.includes('--offline') || process.env.POKEGURU_OFFLINE_E2E === '1'
 let application
 
 async function launch(dataDirectory) {
@@ -48,13 +49,19 @@ try {
   assert.match(await page.getByTestId('baseline-panel').textContent(), /Riga non interpretata/)
   assert.match(await page.getByTestId('baseline-panel').textContent(), /Totale dichiarato 60/)
   await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
+  assert.ok(await page.getByRole('button', { name: 'Aggiorna nuove carte' }).isVisible())
+  if (!offline) {
   await page.getByRole('button', { name: 'Sincronizza campione' }).click()
-  await page.getByText('28/28', { exact: true }).first().waitFor({ timeout: 90000 })
+  await page.getByText('5/5', { exact: true }).first().waitFor({ timeout: 120000 })
   await page.getByLabel('Ricerca carta, set, stampa o rarità').fill('Iono')
   assert.match(await page.locator('.catalog-detail').textContent(), /Paldea Evolved/)
   assert.match(await page.locator('.catalog-detail').textContent(), /Paldean Fates/)
   assert.match(await page.locator('.catalog-detail').textContent(), /Special illustration rare/)
   assert.ok(await page.locator('.catalog-print img').count() >= 2)
+  await page.getByLabel('Ricerca carta, set, stampa o rarità').fill('Mega Absol ex')
+  assert.match(await page.locator('.catalog-detail').textContent(), /Mega Evolution/)
+  await page.getByLabel('Ricerca carta, set, stampa o rarità').fill('Mega Audino ex')
+  assert.match(await page.locator('.catalog-detail').textContent(), /Ascended Heroes/)
   await page.screenshot({ path: join(temporary, 'catalog.png'), fullPage: true })
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
@@ -63,14 +70,17 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Genera analisi con Codex' }).count(), 1)
   assert.match(await page.locator('.meta-provenance').textContent(), /Limitless/)
   await page.screenshot({ path: join(temporary, 'matchup.png'), fullPage: true })
+  }
   await page.getByRole('button', { name: /Secondo mazzo/ }).click()
   await expectSelected(page, 'Secondo mazzo')
+  if (!offline) {
   await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
   await page.getByLabel('Ricerca carta, set, stampa o rarità').fill('Rare Candy')
   assert.match(await page.locator('.catalog-detail').textContent(), /Scarlet & Violet/)
   assert.match(await page.locator('.catalog-detail').textContent(), /Paldean Fates/)
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.getByText('Importa una lista nel progetto per generare').waitFor()
+  }
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByRole('heading', { name: 'Nessuna lista di carte' }).waitFor()
   await page.locator('#deck-file').setInputFiles({ name: 'secondo.txt', mimeType: 'text/plain', buffer: Buffer.from('60 Carta senza stampa') })
@@ -89,6 +99,7 @@ try {
   await page.getByRole('button', { name: /Mega Absol \/ Mega Audino/ }).click()
   await expectSelected(page, 'Mega Absol / Mega Audino')
   await page.getByTestId('card-total').filter({ hasText: '2 carte' }).waitFor()
+  if (!offline) {
   await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
   await page.getByLabel('Ricerca carta, set, stampa o rarità').fill('sv02-185')
   assert.match(await page.locator('.catalog-detail').textContent(), /Paldea Evolved/)
@@ -98,16 +109,19 @@ try {
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
   assert.equal(await page.getByLabel('Archetipo avversario').count(), 0)
+  }
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByLabel('Testo lista').fill('3 Mega Absol ex MEG 86')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
   await page.getByTestId('card-total').filter({ hasText: '3 carte' }).waitFor()
+  if (!offline) {
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
   assert.equal(await page.getByLabel('Archetipo avversario').count(), 0)
+  }
   await page.getByRole('button', { name: /Secondo mazzo/ }).click()
   await expectSelected(page, 'Secondo mazzo')
-  await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
+  if (!offline) await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByTestId('card-total').filter({ hasText: '60 carte' }).waitFor()
   assert.equal(await page.getByLabel('Testo lista').inputValue(), '60 Carta senza stampa')
@@ -141,7 +155,7 @@ try {
   await application.close()
   application = undefined
 
-  console.log('E2E OK: progetti, import, circuito, metagame Limitless, riapertura, isolamento ed errore di persistenza.')
+  console.log(`E2E OK: progetti, import, circuito, ${offline ? 'percorso offline' : 'metagame Limitless'}, riapertura, isolamento, migrazione ed errore di persistenza.`)
   console.log(`Screenshot: ${join(temporary, 'pokeguru.png')}`)
 } finally {
   if (application) await application.close()
