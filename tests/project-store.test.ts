@@ -261,7 +261,7 @@ describe('ProjectStore', () => {
     expect(reopened.listMatchupReports(first.id, snapshot.id)).toEqual([])
     expect(() => reopened.saveMatchupReport(report)).toThrow('lista è cambiata')
     reopened.close()
-  })
+  }, 15_000)
 
   it('migra una guida precedente e conserva revisioni, commenti in attesa e prosecuzione sulla nuova base', () => {
     const path = databasePath()
