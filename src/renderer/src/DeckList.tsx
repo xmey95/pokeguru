@@ -6,6 +6,7 @@ import { evaluateWesternRotation } from '../../shared/standard-rotation'
 import { evaluateDeckConstruction } from '../../shared/deck-construction'
 import { evaluateSetAdmission } from '../../shared/standard-admission'
 import { evaluatePromoAdmission } from '../../shared/promo-admission'
+import { evaluateStandardDeck } from '../../shared/standard-deck'
 
 function localDate(): string {
   const now = new Date()
@@ -59,6 +60,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   const admissionByLine = new Map(admission.lines.map((line) => [line.lineNumber, line]))
   const promoAdmission = useMemo(() => evaluatePromoAdmission(baseline, catalog, asOf), [baseline, catalog, asOf])
   const promoByLine = new Map(promoAdmission.lines.map((line) => [line.lineNumber, line]))
+  const standardDeck = useMemo(() => evaluateStandardDeck(baseline, catalog, asOf), [baseline, catalog, asOf])
 
   async function confirmIdentity(lineNumber: number, printId: string): Promise<void> {
     const line = baseline.lines.find((item) => item.lineNumber === lineNumber)
@@ -95,6 +97,14 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   return <>
     {error && <div className="error-banner" role="alert">{error}</div>}
     {!loading && !catalog?.syncedAt && <p className="diagnostics">Il catalogo campione non è ancora sincronizzato. <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button> per vedere le varianti disponibili.</p>}
+    <section className={`standard-deck-panel ${standardDeck.status}`} aria-label="Esito Standard occidentale">
+      <strong>Esito Standard occidentale: {standardDeck.status === 'problem' ? 'errore certo nei controlli' :
+        standardDeck.status === 'review' ? 'da verificare' : 'controlli disponibili superati'}</strong>
+      <p>Data {asOf}. La legalità per i tornei resta indeterminata: errata, carte vietate, eccezioni e completezza delle stampe non sono verificate automaticamente.</p>
+      {standardDeck.problems.length > 0 && <div><b>Problemi accertati</b><ul>{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
+      {standardDeck.toReview.length > 0 && <details><summary>Da verificare ({standardDeck.toReview.length})</summary><ul>{standardDeck.toReview.map((reason, index) => <li key={index}>{reason}</li>)}</ul></details>}
+      {standardDeck.passed.length > 0 && <details><summary>Controlli superati ({standardDeck.passed.length})</summary><ul>{standardDeck.passed.map((item) => <li key={item}>{item}</li>)}</ul></details>}
+    </section>
     <section className="rotation-panel" aria-label="Controllo della rotazione Standard occidentale">
       <strong>Rotazione Standard occidentale</strong>
       <label>Data di riferimento <input type="date" value={asOf} onChange={(event) => setReferenceDate(event.target.value || null)} /></label>

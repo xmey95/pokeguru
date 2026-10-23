@@ -85,6 +85,8 @@ Nella scheda **Lista**, importa `2 Iono PAL 185`, `1 Iono PAL 254` e `1 Rare Can
 
 ## Prova del controllo di rotazione APP-027
 
+In **Lista corrente** trovi ora l'**Esito Standard occidentale** per la data selezionata. Un mazzo di 59 carte mostra «errore certo nei controlli»; una vecchia stampa ruotata o una stampa senza fonte mostra «da verificare» se non ci sono errori certi. «Controlli disponibili superati» elenca i controlli conclusi senza certificare la legalità torneo: errata, carte vietate, eccezioni e completezza del catalogo restano fuori dal verdetto. Cambia la data di riferimento per vedere il ricalcolo automatico senza sostituire la lista.
+
 Apri una lista che contiene `2 Iono PAL 185` e `1 Iono PAL 254`. Dopo **Aggiorna campione** nel Catalogo, torna alla Lista corrente: il controllo mostra il marchio G sulle stampe riconosciute. Imposta **Data di riferimento** al 9 aprile 2026, poi al 10 aprile 2026: le tre copie passano da «marchio ammesso» a «marchio ruotato» senza cambiare la lista. Premi **Torna a oggi** per usare di nuovo la data automatica. Un codice `ALT`, una stampa non presente nel campione o una cache precedente senza marchi danno «da chiarire». Il controllo riguarda soltanto il marchio e le date Play! Pokémon 2025/2026 per eventi occidentali in presenza; la legalità completa resta indeterminata in attesa di APP-018.
 
 ## Prova dei controlli di costruzione APP-028

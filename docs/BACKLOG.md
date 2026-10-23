@@ -52,6 +52,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-043** | Date di ammissione dei set Standard con fonte e casi ignoti | Dati/funzionalità | R-02 / I3, parte di APP-018 | P0 / M | APP-039/042, regola di attesa Play! Pokémon e fonti dei prodotti | Done |
 | **APP-044** | Ammissione temporale delle promo dal registro ufficiale | Funzionalità | R-02 / I3, parte di APP-018 | P0 / S | APP-035/036, snapshot promo e date | Done |
 | **APP-045** | Vincolo ACE SPEC nella costruzione del mazzo | Funzionalità | R-02 / I3, parte di APP-018 | P0 / S | APP-028, rarità nel Catalogo e fonte ufficiale | Done |
+| **APP-046** | Esito Standard aggregato e conservativo | Funzionalità | R-02 / I3, parte di APP-018 | P0 / M | APP-027/028/043/044/045, perimetro APP-030 | Done |
 
 ## Task dettagliati I0–I2
 
@@ -293,6 +294,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Accettazione:** due ACE SPEC diverse danno problema, una copia è ammessa dal controllo, una stampa non identificata lascia l'esito indeterminato. La regola non trasforma gli altri controlli parziali in legalità completa; citare la fonte ufficiale.
 - **Verifica prevista:** test di due nomi diversi e stampa ignota, prova Electron del pannello costruzione, build e suite.
 - **Evidenza e verifica il 23-10-2026:** `evaluateDeckConstruction` somma le copie delle stampe esatte classificate `ACE SPEC` dalla rarità TCGdex, segnala problema oltre una copia totale e resta indeterminato se una stampa o la rarità non è verificabile. La Lista corrente mostra il quarto controllo e la fonte ufficiale; il validatore delle candidate Codex rifiuta due ACE SPEC anche con nomi diversi. Dettagli live TCGdex verificati per Maximum Belt `sv05-154` e Prime Catcher `sv05-157`, entrambi `ACE SPEC Rare`. Test di due/una copia e stampa ignota, build e percorso Electron Windows passati. **Limite:** una stampa con classificazione errata o rarità diversa può sfuggire al riconoscimento; il catalogo deve essere aggiornato e il controllo non attesta da solo la legalità Standard.
+
+### APP-046 — Esito Standard aggregato
+
+- **Ambito / risultato:** presentare un unico esito per la lista intera aggregando costruzione, marchio, ammissione set e promo e qualità della copertura. Distinguere errore certo, controllo ancora incerto e controlli disponibili superati; non chiamare legale una stampa storica o un caso senza fonte.
+- **Accettazione:** 59 copie, due ACE SPEC o set/promo sicuramente in attesa danno errore; marchio ruotato di stampa storica, stampa ignota, set speciale o data fuori regole danno da verificare; con tutti i controlli noti superati l'app mostra esattamente quali sono stati superati e i limiti, senza attribuire una certificazione torneo. Il risultato cambia automaticamente al cambio data o catalogo senza modificare la lista.
+- **Verifica prevista:** test dei tre esiti, confini temporali, vecchia stampa, catalogo assente; percorso Electron della Lista corrente e build.
+- **Evidenza e verifica il 23-10-2026:** `evaluateStandardDeck` aggrega costruzione, marchi e ammissione per ogni riga, scegliendo il registro promo per le promo identificate. Un errore certo prevale sulle verifiche mancanti: totale diverso da 60, assenza certa di Pokémon Base, più di una ACE SPEC o stampa sicuramente prima della propria data. Ristampe storiche, stampa ignota, set speciale, data fuori finestra e possibili eccezioni al limite di quattro copie restano da verificare. La UI mostra i motivi e l'elenco esplicito dei controlli superati; anche l'esito positivo mantiene `legality: indeterminate`. Il calcolo segue data e catalogo senza cambiare il testo importato. `npm test` (74 passati, 9 live esclusi), `npm run build` e percorso Electron Windows `node tests/reconciliation-live.mjs` passati. **Limiti:** errata, carte vietate, eccezioni testuali e completezza delle stampe non sono verificati; APP-018 resta aperto per pacchetto di regole aggiornabile e verifica delle fonti.
 
 ### APP-011 — Confronto e adozione
 

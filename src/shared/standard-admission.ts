@@ -62,7 +62,8 @@ function evaluateLine(line: DeckLine, catalog: CatalogView | null, asOf: string)
     message: 'Promo: usare la data del registro ufficiale; non eredita quella del set.' }
   const explicit = explicitAdmission.get(print.setId)
   const releaseDate = officialSetRelease(print.setId)
-  const legalDate = explicit?.legalDate ?? (regularSets.has(print.setId) && releaseDate
+  const regularFridayRelease = releaseDate && new Date(`${releaseDate}T00:00:00Z`).getUTCDay() === 5
+  const legalDate = explicit?.legalDate ?? (regularSets.has(print.setId) && regularFridayRelease
     ? plusTwoWeeks(releaseDate) : null)
   if (!legalDate) return { ...located, status: 'indeterminate',
     message: 'Data di ammissione di questo set non verificata nel pacchetto locale.' }
