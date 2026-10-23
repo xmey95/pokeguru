@@ -1,0 +1,729 @@
+import { createHash, randomUUID } from 'node:crypto'
+import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
+import { parseDeck, type DeckBaseline, type ImportDeckInput, type ParsedDeck } from '../shared/deck-import'
+import type { MatchupNote, SaveMatchupNoteInput } from '../shared/matchups'
+import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot, MatchupTurn } from '../shared/meta-matchups'
+import type { CreateProjectInput, Project } from '../shared/projects'
+import type { ClearLineMappingInput, DeckLineMapping, DeckReconciliation, IdentityTotal, MappedPrint, SaveLineMappingInput } from '../shared/reconciliation'
+
+interface ProjectRow {
+  id: string
+  name: string
+  format: 'STANDARD'
+  circuit: Project['circuit']
+  circuit_assignment: Project['circuitAssignment']
+  created_at: string
+  updated_at: string
+  baseline_total: number | null
+  baseline_problem_count: number | null
+}
+
+function toProject(row: ProjectRow): Project {
+  const status = row.baseline_total === null
+    ? 'DA_COSTRUIRE'
+    : row.baseline_total === 60 && row.baseline_problem_count === 0
+      ? 'PRONTA_PER_CONTROLLO'
+      : 'BOZZA'
+  return {
+    id: row.id,
+    name: row.name,
+    format: row.format,
+    circuit: row.circuit,
+    circuitAssignment: row.circuit_assignment,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    status,
+    cardTotal: row.baseline_total
+  }
+}
+
+const projectQuery = `
+  SELECT p.id, p.name, p.format, p.circuit, p.circuit_assignment, p.created_at, p.updated_at,
+         b.interpreted_total AS baseline_total, b.problem_count AS baseline_problem_count
+  FROM projects p LEFT JOIN deck_baselines b ON b.project_id = p.id
+`
+
+interface MatchupRow {
+  id: string
+  project_id: string
+  deck_hash: string
+  opponent: string
+  strengths: string
+  weaknesses: string
+  our_key_cards: string
+  their_key_cards: string
+  strategy: string
+  created_at: string
+  updated_at: string
+}
+
+function deckHash(rawText: string): string {
+  return createHash('sha256').update(rawText).digest('hex')
+}
+
+function toMatchupNote(row: MatchupRow, currentHash: string | null): MatchupNote {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    opponent: row.opponent,
+    strengths: row.strengths,
+    weaknesses: row.weaknesses,
+    ourKeyCards: row.our_key_cards,
+    theirKeyCards: row.their_key_cards,
+    strategy: row.strategy,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    linkedToCurrentList: currentHash !== null && row.deck_hash === currentHash
+  }
+}
+
+export class ProjectStore {
+  private readonly db: DatabaseSync
+
+  constructor(filePath: string) {
+    mkdirSync(dirname(filePath), { recursive: true })
+    this.db = new DatabaseSync(filePath)
+    this.db.exec('PRAGMA journal_mode = WAL')
+    this.db.exec('PRAGMA foreign_keys = ON')
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        format TEXT NOT NULL CHECK (format = 'STANDARD'),
+        circuit TEXT NOT NULL DEFAULT 'WESTERN' CHECK (circuit IN ('WESTERN', 'JAPAN')),
+        circuit_assignment TEXT NOT NULL DEFAULT 'CREATED' CHECK (circuit_assignment IN ('CREATED', 'MIGRATED')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_baselines (
+        project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+        source TEXT NOT NULL CHECK (source IN ('paste', 'file')),
+        file_name TEXT,
+        raw_text TEXT NOT NULL,
+        parsed_json TEXT NOT NULL,
+        interpreted_total INTEGER NOT NULL,
+        problem_count INTEGER NOT NULL,
+        imported_at TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS deck_line_mappings (
+        project_id TEXT NOT NULL REFERENCES deck_baselines(project_id) ON DELETE CASCADE,
+        line_number INTEGER NOT NULL,
+        baseline_imported_at TEXT NOT NULL,
+        raw_line TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        source_language TEXT,
+        print_snapshot TEXT NOT NULL,
+        selected_at TEXT NOT NULL,
+        PRIMARY KEY (project_id, line_number)
+      ) STRICT;
+    `)
+    const columns = new Set((this.db.prepare('PRAGMA table_info(projects)').all() as { name: string }[]).map((row) => row.name))
+    if (!columns.has('circuit') || !columns.has('circuit_assignment')) {
+      this.db.exec('BEGIN IMMEDIATE')
+      try {
+        if (!columns.has('circuit')) {
+          this.db.exec("ALTER TABLE projects ADD COLUMN circuit TEXT NOT NULL DEFAULT 'WESTERN' CHECK (circuit IN ('WESTERN', 'JAPAN'))")
+        }
+        if (!columns.has('circuit_assignment')) {
+          this.db.exec("ALTER TABLE projects ADD COLUMN circuit_assignment TEXT NOT NULL DEFAULT 'MIGRATED' CHECK (circuit_assignment IN ('CREATED', 'MIGRATED'))")
+        }
+        this.db.exec('COMMIT')
+      } catch (error) {
+        this.db.exec('ROLLBACK')
+        throw error
+      }
+    }
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS matchup_notes (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        deck_hash TEXT NOT NULL,
+        opponent TEXT NOT NULL,
+        strengths TEXT NOT NULL,
+        weaknesses TEXT NOT NULL,
+        our_key_cards TEXT NOT NULL,
+        their_key_cards TEXT NOT NULL,
+        strategy TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE UNIQUE INDEX IF NOT EXISTS matchup_notes_opponent
+        ON matchup_notes(project_id, opponent COLLATE NOCASE);
+      CREATE TABLE IF NOT EXISTS meta_snapshots (
+        id TEXT PRIMARY KEY,
+        fetched_at TEXT NOT NULL,
+        payload TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS matchup_reports (
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        meta_id TEXT NOT NULL REFERENCES meta_snapshots(id),
+        opponent_id TEXT NOT NULL,
+        deck_hash TEXT NOT NULL,
+        generated_at TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        PRIMARY KEY (project_id, meta_id, opponent_id, deck_hash)
+      ) STRICT;
+    `)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS matchup_discussions (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        meta_id TEXT NOT NULL REFERENCES meta_snapshots(id),
+        opponent_id TEXT NOT NULL,
+        deck_hash TEXT NOT NULL,
+        parent_id TEXT REFERENCES matchup_discussions(id),
+        created_at TEXT NOT NULL,
+        context_summary TEXT NOT NULL DEFAULT '',
+        summarized_through INTEGER NOT NULL DEFAULT -1,
+        UNIQUE(project_id, meta_id, opponent_id, deck_hash)
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS matchup_turns (
+        id TEXT PRIMARY KEY,
+        discussion_id TEXT NOT NULL REFERENCES matchup_discussions(id) ON DELETE CASCADE,
+        turn_no INTEGER NOT NULL,
+        feedback TEXT,
+        created_at TEXT NOT NULL,
+        report_payload TEXT,
+        change_summary TEXT,
+        UNIQUE(discussion_id, turn_no)
+      ) STRICT;
+    `)
+    this.migrateMatchupReports()
+  }
+
+  private migrateMatchupReports(): void {
+    const rows = this.db.prepare('SELECT project_id, meta_id, opponent_id, deck_hash, generated_at, payload FROM matchup_reports')
+      .all() as { project_id: string; meta_id: string; opponent_id: string; deck_hash: string; generated_at: string; payload: string }[]
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      for (const row of rows) {
+        this.db.prepare(`INSERT OR IGNORE INTO matchup_discussions
+          (id, project_id, meta_id, opponent_id, deck_hash, parent_id, created_at)
+          VALUES (?, ?, ?, ?, ?, NULL, ?)`).run(randomUUID(), row.project_id, row.meta_id, row.opponent_id, row.deck_hash, row.generated_at)
+        const discussion = this.db.prepare(`SELECT id FROM matchup_discussions
+          WHERE project_id = ? AND meta_id = ? AND opponent_id = ? AND deck_hash = ?`)
+          .get(row.project_id, row.meta_id, row.opponent_id, row.deck_hash) as { id: string }
+        this.db.prepare(`INSERT OR IGNORE INTO matchup_turns
+          (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary)
+          VALUES (?, ?, 0, NULL, ?, ?, NULL)`)
+          .run(randomUUID(), discussion.id, row.generated_at, row.payload)
+      }
+      this.db.exec('COMMIT')
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  list(): Project[] {
+    const rows = this.db
+      .prepare(`${projectQuery} ORDER BY p.created_at DESC, p.id DESC`)
+      .all() as unknown as ProjectRow[]
+    return rows.map(toProject)
+  }
+
+  get(id: string): Project | null {
+    if (typeof id !== 'string' || id.length > 100) {
+      return null
+    }
+    const row = this.db
+      .prepare(`${projectQuery} WHERE p.id = ?`)
+      .get(id) as ProjectRow | undefined
+    return row ? toProject(row) : null
+  }
+
+  create(input: CreateProjectInput): Project {
+    if (!input || typeof input.name !== 'string' || input.format !== 'STANDARD') {
+      throw new Error('Dati del progetto non validi.')
+    }
+    const name = input.name.trim()
+    if (!name || name.length > 120) {
+      throw new Error('Inserisci un nome da 1 a 120 caratteri.')
+    }
+
+    const now = new Date().toISOString()
+    const project: Project = {
+      id: randomUUID(),
+      name,
+      format: input.format,
+      circuit: 'WESTERN',
+      circuitAssignment: 'CREATED',
+      createdAt: now,
+      updatedAt: now,
+      status: 'DA_COSTRUIRE',
+      cardTotal: null
+    }
+    this.db
+      .prepare('INSERT INTO projects (id, name, format, circuit, circuit_assignment, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(project.id, project.name, project.format, project.circuit, project.circuitAssignment, project.createdAt, project.updatedAt)
+    return project
+  }
+
+  getBaseline(projectId: string): DeckBaseline | null {
+    if (typeof projectId !== 'string' || projectId.length > 100) return null
+    const row = this.db.prepare(`
+      SELECT project_id, source, file_name, raw_text, parsed_json, imported_at
+      FROM deck_baselines WHERE project_id = ?
+    `).get(projectId) as {
+      project_id: string
+      source: 'paste' | 'file'
+      file_name: string | null
+      raw_text: string
+      parsed_json: string
+      imported_at: string
+    } | undefined
+    if (!row) return null
+    return {
+      projectId: row.project_id,
+      source: row.source,
+      fileName: row.file_name,
+      rawText: row.raw_text,
+      importedAt: row.imported_at,
+      ...(JSON.parse(row.parsed_json) as ParsedDeck)
+    }
+  }
+
+  getReconciliation(projectId: string): DeckReconciliation {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const baseline = this.getBaseline(projectId)
+    if (!baseline) return {
+      projectId, importedAt: null, mappings: [], identityTotals: [],
+      resolvedLines: 0, unresolvedLines: 0, resolvedCopies: 0, unresolvedCopies: 0
+    }
+    const rows = this.db.prepare(`SELECT line_number, baseline_imported_at, raw_line, original_name,
+      source_language, print_snapshot, selected_at FROM deck_line_mappings WHERE project_id = ? ORDER BY line_number`)
+      .all(projectId) as {
+        line_number: number; baseline_imported_at: string; raw_line: string; original_name: string
+        source_language: string | null; print_snapshot: string; selected_at: string
+      }[]
+    const cardLines = baseline.lines.filter((line) => line.kind === 'card')
+    const mappingByLine = new Map<number, DeckLineMapping>()
+    for (const row of rows) {
+      const line = cardLines.find((item) => item.lineNumber === row.line_number)
+      if (!line || row.baseline_imported_at !== baseline.importedAt || row.raw_line !== line.raw) continue
+      mappingByLine.set(row.line_number, {
+        lineNumber: row.line_number, rawLine: row.raw_line, originalName: row.original_name,
+        sourceLanguage: row.source_language, print: JSON.parse(row.print_snapshot) as MappedPrint,
+        selectedAt: row.selected_at
+      })
+    }
+    const totals = new Map<string, IdentityTotal>()
+    let resolvedCopies = 0
+    let unresolvedCopies = 0
+    for (const line of cardLines) {
+      const mapping = mappingByLine.get(line.lineNumber)
+      if (!mapping) { unresolvedCopies += line.quantity ?? 0; continue }
+      resolvedCopies += line.quantity ?? 0
+      const key = mapping.print.identityId
+      const total = totals.get(key) ?? { identityId: key, name: mapping.print.name, quantity: 0, printIds: [] }
+      total.quantity += line.quantity ?? 0
+      if (!total.printIds.includes(mapping.print.id)) total.printIds.push(mapping.print.id)
+      totals.set(key, total)
+    }
+    return {
+      projectId, importedAt: baseline.importedAt, mappings: [...mappingByLine.values()],
+      identityTotals: [...totals.values()].sort((a, b) => a.name.localeCompare(b.name)),
+      resolvedLines: mappingByLine.size, unresolvedLines: cardLines.length - mappingByLine.size,
+      resolvedCopies, unresolvedCopies
+    }
+  }
+
+  saveLineMapping(input: SaveLineMappingInput, print: MappedPrint): DeckReconciliation {
+    const baseline = this.getBaseline(input?.projectId)
+    if (!baseline) throw new Error('Importa una lista prima di riconciliare le carte.')
+    const line = baseline.lines.find((item) => item.lineNumber === input.lineNumber && item.kind === 'card')
+    if (!line || input.importedAt !== baseline.importedAt || input.rawLine !== line.raw || !print?.identityId || !print.id) {
+      throw new Error('La lista è cambiata. Riapri il progetto e riprova.')
+    }
+    const language = input.sourceLanguage?.trim() || null
+    if (language !== null && (language.length > 35 || !/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(language))) {
+      throw new Error('Lingua del testo non valida. Usa un codice come it, en o ja.')
+    }
+    const now = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare(`INSERT INTO deck_line_mappings
+        (project_id, line_number, baseline_imported_at, raw_line, original_name, source_language, print_snapshot, selected_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(project_id, line_number) DO UPDATE SET
+          baseline_imported_at=excluded.baseline_imported_at, raw_line=excluded.raw_line,
+          original_name=excluded.original_name, source_language=excluded.source_language,
+          print_snapshot=excluded.print_snapshot, selected_at=excluded.selected_at`)
+        .run(input.projectId, input.lineNumber, baseline.importedAt, line.raw, line.name!, language, JSON.stringify(print), now)
+      this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(now, input.projectId)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return this.getReconciliation(input.projectId)
+  }
+
+  clearLineMapping(input: ClearLineMappingInput): DeckReconciliation {
+    const baseline = this.getBaseline(input?.projectId)
+    if (!baseline) throw new Error('Importa una lista prima di riconciliare le carte.')
+    if (input.importedAt !== baseline.importedAt ||
+      !baseline.lines.some((line) => line.kind === 'card' && line.lineNumber === input.lineNumber && line.raw === input.rawLine)) {
+      throw new Error('La lista è cambiata. Riapri il progetto e riprova.')
+    }
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare('DELETE FROM deck_line_mappings WHERE project_id = ? AND line_number = ?')
+        .run(input.projectId, input.lineNumber)
+      this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), input.projectId)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return this.getReconciliation(input.projectId)
+  }
+
+  importDeck(input: ImportDeckInput): DeckBaseline {
+    if (!input || typeof input.projectId !== 'string' || !this.get(input.projectId)) {
+      throw new Error('Progetto non trovato.')
+    }
+    if (typeof input.rawText !== 'string' || !input.rawText.trim() || input.rawText.length > 200_000 || input.rawText.includes('\0')) {
+      throw new Error('Inserisci una lista di testo non vuota, fino a 200.000 caratteri.')
+    }
+    if (input.source !== 'paste' && input.source !== 'file') {
+      throw new Error('Origine della lista non valida.')
+    }
+    const fileName = input.source === 'file' ? input.fileName : null
+    if (input.source === 'file' &&
+      (typeof fileName !== 'string' || fileName.length > 255 || !/^[^\\/]+\.txt$/i.test(fileName))) {
+      throw new Error('Seleziona un file .txt.')
+    }
+
+    const parsed = parseDeck(input.rawText)
+    if (parsed.lines.length > 5_000) {
+      throw new Error('La lista contiene troppe righe (massimo 5.000).')
+    }
+    const importedAt = new Date().toISOString()
+    const problemCount = parsed.diagnostics.filter((diagnostic) =>
+      diagnostic.code === 'UNPARSED' || diagnostic.code === 'TOTAL_MISMATCH').length
+
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const previous = this.db.prepare('SELECT raw_text FROM deck_baselines WHERE project_id = ?')
+        .get(input.projectId) as { raw_text: string } | undefined
+      if (previous && previous.raw_text !== input.rawText) {
+        this.db.prepare('DELETE FROM deck_line_mappings WHERE project_id = ?').run(input.projectId)
+      }
+      this.db.prepare(`
+        INSERT INTO deck_baselines
+          (project_id, source, file_name, raw_text, parsed_json, interpreted_total, problem_count, imported_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(project_id) DO UPDATE SET
+          source = excluded.source,
+          file_name = excluded.file_name,
+          raw_text = excluded.raw_text,
+          parsed_json = excluded.parsed_json,
+          interpreted_total = excluded.interpreted_total,
+          problem_count = excluded.problem_count,
+          imported_at = excluded.imported_at
+      `).run(input.projectId, input.source, fileName ?? null, input.rawText, JSON.stringify(parsed), parsed.interpretedTotal, problemCount, importedAt)
+      if (previous?.raw_text === input.rawText) {
+        this.db.prepare('UPDATE deck_line_mappings SET baseline_imported_at = ? WHERE project_id = ?')
+          .run(importedAt, input.projectId)
+      }
+      this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(importedAt, input.projectId)
+      this.db.exec('COMMIT')
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+    return {
+      projectId: input.projectId,
+      rawText: input.rawText,
+      source: input.source,
+      fileName: fileName ?? null,
+      importedAt,
+      ...parsed
+    }
+  }
+
+  private currentDeckHash(projectId: string): string | null {
+    const row = this.db.prepare('SELECT raw_text FROM deck_baselines WHERE project_id = ?')
+      .get(projectId) as { raw_text: string } | undefined
+    if (!row) return null
+    const mappings = this.db.prepare('SELECT line_number, print_snapshot FROM deck_line_mappings WHERE project_id = ? ORDER BY line_number')
+      .all(projectId) as { line_number: number; print_snapshot: string }[]
+    if (mappings.length === 0) return deckHash(row.raw_text)
+    const choices = mappings.map((mapping) => {
+      const print = JSON.parse(mapping.print_snapshot) as MappedPrint
+      return [mapping.line_number, print.identityId]
+    })
+    return deckHash(`${row.raw_text}\u0000${JSON.stringify(choices)}`)
+  }
+
+  getCurrentDeckHash(projectId: string): string | null {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    return this.currentDeckHash(projectId)
+  }
+
+  saveMetaSnapshot(snapshot: MetaSnapshot): void {
+    this.db.prepare(`INSERT INTO meta_snapshots (id, fetched_at, payload) VALUES (?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET fetched_at = excluded.fetched_at, payload = excluded.payload`)
+      .run(snapshot.id, snapshot.fetchedAt, JSON.stringify({ ...snapshot, cached: false }))
+  }
+
+  getLatestMetaSnapshot(): MetaSnapshot | null {
+    const row = this.db.prepare('SELECT payload FROM meta_snapshots ORDER BY fetched_at DESC LIMIT 1')
+      .get() as { payload: string } | undefined
+    return row ? { ...(JSON.parse(row.payload) as MetaSnapshot), cached: true } : null
+  }
+
+  listMatchupReports(projectId: string, metaId: string): MatchupReport[] {
+    const hash = this.getCurrentDeckHash(projectId)
+    if (!hash || typeof metaId !== 'string' || metaId.length !== 64) return []
+    const rows = this.db.prepare(`SELECT payload FROM matchup_reports
+      WHERE project_id = ? AND meta_id = ? AND deck_hash = ?`)
+      .all(projectId, metaId, hash) as { payload: string }[]
+    return rows.map((row) => JSON.parse(row.payload) as MatchupReport)
+  }
+
+  saveMatchupReport(report: MatchupReport): void {
+    const hash = this.getCurrentDeckHash(report.projectId)
+    if (!hash || hash !== report.deckHash) throw new Error('La lista è cambiata durante l’analisi. Riprova sulla lista corrente.')
+    const snapshot = this.db.prepare('SELECT payload FROM meta_snapshots WHERE id = ?')
+      .get(report.metaId) as { payload: string } | undefined
+    if (!snapshot || !(JSON.parse(snapshot.payload) as MetaSnapshot).decks.some((deck) => deck.id === report.opponentId)) {
+      throw new Error('Lo snapshot del metagame non è più disponibile.')
+    }
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const discussion = this.getOrCreateDiscussion(report)
+      if (discussion.turns.some((turn) => !turn.report)) throw new Error('Completa o riprova il commento già in attesa.')
+      const turnNo = discussion.turns.length
+      this.db.prepare(`INSERT INTO matchup_turns
+        (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary)
+        VALUES (?, ?, ?, NULL, ?, ?, NULL)`)
+        .run(randomUUID(), discussion.id, turnNo, report.generatedAt, JSON.stringify(report))
+      this.writeLatestReport(report)
+      this.db.exec('COMMIT')
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  private writeLatestReport(report: MatchupReport): void {
+    this.db.prepare(`INSERT INTO matchup_reports
+      (project_id, meta_id, opponent_id, deck_hash, generated_at, payload) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(project_id, meta_id, opponent_id, deck_hash) DO UPDATE SET
+      generated_at = excluded.generated_at, payload = excluded.payload`)
+      .run(report.projectId, report.metaId, report.opponentId, report.deckHash, report.generatedAt, JSON.stringify(report))
+  }
+
+  private getOrCreateDiscussion(report: MatchupReport, parentId: string | null = null): MatchupDiscussion {
+    const existing = this.db.prepare(`SELECT id FROM matchup_discussions
+      WHERE project_id = ? AND meta_id = ? AND opponent_id = ? AND deck_hash = ?`)
+      .get(report.projectId, report.metaId, report.opponentId, report.deckHash) as { id: string } | undefined
+    if (existing) return this.getMatchupDiscussion(existing.id)!
+    const id = randomUUID()
+    this.db.prepare(`INSERT INTO matchup_discussions
+      (id, project_id, meta_id, opponent_id, deck_hash, parent_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(id, report.projectId, report.metaId, report.opponentId, report.deckHash, parentId, report.generatedAt)
+    return this.getMatchupDiscussion(id)!
+  }
+
+  getMatchupDiscussion(id: string): MatchupDiscussion | null {
+    if (typeof id !== 'string' || id.length > 100) return null
+    const row = this.db.prepare('SELECT * FROM matchup_discussions WHERE id = ?').get(id) as {
+      id: string; project_id: string; meta_id: string; opponent_id: string; deck_hash: string
+      parent_id: string | null; created_at: string; context_summary: string; summarized_through: number
+    } | undefined
+    if (!row) return null
+    const turns = this.db.prepare(`SELECT id, feedback, created_at, report_payload, change_summary FROM matchup_turns
+      WHERE discussion_id = ? ORDER BY turn_no`).all(id) as {
+      id: string; feedback: string | null; created_at: string; report_payload: string | null; change_summary: string | null
+    }[]
+    return {
+      id: row.id, projectId: row.project_id, metaId: row.meta_id, opponentId: row.opponent_id,
+      deckHash: row.deck_hash, parentId: row.parent_id, createdAt: row.created_at,
+      current: this.currentDeckHash(row.project_id) === row.deck_hash &&
+        this.getLatestMetaSnapshot()?.id === row.meta_id,
+      contextSummary: row.context_summary, summarizedThrough: row.summarized_through,
+      turns: turns.map((turn): MatchupTurn => ({ id: turn.id, feedback: turn.feedback,
+        createdAt: turn.created_at, report: turn.report_payload ? JSON.parse(turn.report_payload) as MatchupReport : null,
+        changeSummary: turn.change_summary }))
+    }
+  }
+
+  listMatchupDiscussions(projectId: string, opponentId: string): MatchupDiscussion[] {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    if (typeof opponentId !== 'string' || !/^\d+$/.test(opponentId)) throw new Error('Archetipo non valido.')
+    const rows = this.db.prepare(`SELECT id FROM matchup_discussions WHERE project_id = ? AND opponent_id = ?
+      ORDER BY created_at DESC, rowid DESC`).all(projectId, opponentId) as { id: string }[]
+    return rows.map((row) => this.getMatchupDiscussion(row.id)!)
+  }
+
+  listHistoricalMatchupOpponents(projectId: string): MetaDeck[] {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const rows = this.db.prepare(`SELECT d.opponent_id, s.payload
+      FROM matchup_discussions d JOIN meta_snapshots s ON s.id = d.meta_id
+      WHERE d.project_id = ? ORDER BY d.created_at DESC, d.rowid DESC`).all(projectId) as {
+        opponent_id: string; payload: string
+      }[]
+    const decks = new Map<string, MetaDeck>()
+    for (const row of rows) {
+      if (decks.has(row.opponent_id)) continue
+      const snapshot = JSON.parse(row.payload) as MetaSnapshot
+      const deck = snapshot.decks.find((item) => item.id === row.opponent_id)
+      if (deck) decks.set(deck.id, deck)
+    }
+    return [...decks.values()]
+  }
+
+  addMatchupFeedback(discussionId: string, feedback: string): MatchupDiscussion {
+    const discussion = this.getMatchupDiscussion(discussionId)
+    if (!discussion) throw new Error('Discussione Matchup non trovata.')
+    const trimmed = typeof feedback === 'string' ? feedback.trim() : ''
+    if (!trimmed || trimmed.length > 5000 || trimmed.includes('\0')) throw new Error('Scrivi un commento da 1 a 5.000 caratteri.')
+    if (this.getCurrentDeckHash(discussion.projectId) !== discussion.deckHash ||
+      this.getLatestMetaSnapshot()?.id !== discussion.metaId) throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
+    if (discussion.turns.some((turn) => !turn.report)) throw new Error('Completa o riprova il commento già in attesa.')
+    if (!discussion.turns.some((turn) => turn.report)) throw new Error('Genera prima una guida Matchup.')
+    this.db.prepare(`INSERT INTO matchup_turns
+      (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary)
+      VALUES (?, ?, ?, ?, ?, NULL, NULL)`)
+      .run(randomUUID(), discussionId, discussion.turns.length, trimmed, new Date().toISOString())
+    return this.getMatchupDiscussion(discussionId)!
+  }
+
+  completeMatchupFeedback(discussionId: string, turnId: string, report: MatchupReport, changeSummary: string): MatchupDiscussion {
+    const discussion = this.getMatchupDiscussion(discussionId)
+    if (!discussion || !discussion.turns.some((turn) => turn.id === turnId && turn.feedback && !turn.report))
+      throw new Error('Commento Matchup in attesa non trovato.')
+    if (discussion.projectId !== report.projectId || discussion.metaId !== report.metaId ||
+      discussion.opponentId !== report.opponentId || discussion.deckHash !== report.deckHash ||
+      this.getCurrentDeckHash(report.projectId) !== report.deckHash || this.getLatestMetaSnapshot()?.id !== report.metaId)
+      throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare(`UPDATE matchup_turns SET report_payload = ?, change_summary = ?
+        WHERE id = ? AND discussion_id = ? AND report_payload IS NULL`)
+        .run(JSON.stringify(report), changeSummary, turnId, discussionId)
+      this.writeLatestReport(report)
+      this.db.exec('COMMIT')
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+    return this.getMatchupDiscussion(discussionId)!
+  }
+
+  saveContinuedMatchupReport(report: MatchupReport, parentId: string): MatchupDiscussion {
+    const parent = this.getMatchupDiscussion(parentId)
+    if (!parent || parent.projectId !== report.projectId || parent.opponentId !== report.opponentId)
+      throw new Error('Discussione di origine non valida.')
+    if (this.getCurrentDeckHash(report.projectId) !== report.deckHash || this.getLatestMetaSnapshot()?.id !== report.metaId)
+      throw new Error('La base dell’analisi è cambiata. Riprova.')
+    const current = this.listMatchupDiscussions(report.projectId, report.opponentId)
+      .find((item) => item.metaId === report.metaId && item.deckHash === report.deckHash)
+    if (current) throw new Error('Esiste già una discussione per la base corrente.')
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const discussion = this.getOrCreateDiscussion(report, parentId)
+      this.db.prepare(`INSERT INTO matchup_turns
+        (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary)
+        VALUES (?, ?, 0, NULL, ?, ?, ?)`)
+        .run(randomUUID(), discussion.id, report.generatedAt, JSON.stringify(report), 'Rivalutazione sulla nuova lista o sul nuovo snapshot del meta.')
+      this.writeLatestReport(report)
+      this.db.exec('COMMIT')
+      return this.getMatchupDiscussion(discussion.id)!
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  saveMatchupContextSummary(discussionId: string, summary: string, through: number): void {
+    if (typeof summary !== 'string' || summary.length > 8000 || !Number.isInteger(through)) throw new Error('Riepilogo non valido.')
+    const discussion = this.getMatchupDiscussion(discussionId)
+    if (!discussion || through < discussion.summarizedThrough || through >= discussion.turns.length ||
+      !discussion.turns[through].report) throw new Error('Riepilogo non valido.')
+    this.db.prepare('UPDATE matchup_discussions SET context_summary = ?, summarized_through = ? WHERE id = ?')
+      .run(summary, through, discussionId)
+  }
+
+  listMatchupNotes(projectId: string): MatchupNote[] {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const currentHash = this.currentDeckHash(projectId)
+    const rows = this.db.prepare(`
+      SELECT id, project_id, deck_hash, opponent, strengths, weaknesses,
+             our_key_cards, their_key_cards, strategy, created_at, updated_at
+      FROM matchup_notes WHERE project_id = ? ORDER BY opponent COLLATE NOCASE, id
+    `).all(projectId) as unknown as MatchupRow[]
+    return rows.map((row) => toMatchupNote(row, currentHash))
+  }
+
+  saveMatchupNote(input: SaveMatchupNoteInput): MatchupNote {
+    if (!input || !this.get(input.projectId)) throw new Error('Progetto non trovato.')
+    if (input.id !== undefined && (typeof input.id !== 'string' || input.id.length > 100)) {
+      throw new Error('Scheda Matchup non valida.')
+    }
+    const fields = ['opponent', 'strengths', 'weaknesses', 'ourKeyCards', 'theirKeyCards', 'strategy'] as const
+    if (fields.some((field) => typeof input[field] !== 'string')) throw new Error('Scheda Matchup non valida.')
+    const normalized = Object.fromEntries(fields.map((field) => [field, input[field].trim()])) as Record<typeof fields[number], string>
+    if (!normalized.opponent || normalized.opponent.length > 120 ||
+        fields.slice(1).some((field) => normalized[field].length > (field === 'strategy' ? 5_000 : 2_500)) ||
+        fields.slice(1).every((field) => !normalized[field])) {
+      throw new Error('Indica un archetipo e almeno una nota; rispetta i limiti dei campi.')
+    }
+    const currentHash = this.currentDeckHash(input.projectId)
+    if (!currentHash) throw new Error('Importa una lista prima di creare una scheda Matchup.')
+    const existing = input.id ? this.db.prepare('SELECT * FROM matchup_notes WHERE id = ? AND project_id = ?')
+      .get(input.id, input.projectId) as MatchupRow | undefined : undefined
+    if (input.id && !existing) throw new Error('Scheda Matchup non trovata in questo progetto.')
+    const duplicate = this.db.prepare('SELECT id FROM matchup_notes WHERE project_id = ? AND opponent = ? COLLATE NOCASE AND id <> ?')
+      .get(input.projectId, normalized.opponent, input.id ?? '')
+    if (duplicate) throw new Error('Esiste già una scheda per questo archetipo nel progetto.')
+
+    const now = new Date().toISOString()
+    const row: MatchupRow = {
+      id: input.id ?? randomUUID(),
+      project_id: input.projectId,
+      deck_hash: currentHash,
+      opponent: normalized.opponent,
+      strengths: normalized.strengths,
+      weaknesses: normalized.weaknesses,
+      our_key_cards: normalized.ourKeyCards,
+      their_key_cards: normalized.theirKeyCards,
+      strategy: normalized.strategy,
+      created_at: existing?.created_at ?? now,
+      updated_at: now
+    }
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare(`
+        INSERT INTO matchup_notes (id, project_id, deck_hash, opponent, strengths, weaknesses,
+          our_key_cards, their_key_cards, strategy, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          deck_hash = excluded.deck_hash, opponent = excluded.opponent,
+          strengths = excluded.strengths, weaknesses = excluded.weaknesses,
+          our_key_cards = excluded.our_key_cards, their_key_cards = excluded.their_key_cards,
+          strategy = excluded.strategy, updated_at = excluded.updated_at
+      `).run(row.id, row.project_id, row.deck_hash, row.opponent, row.strengths, row.weaknesses,
+        row.our_key_cards, row.their_key_cards, row.strategy, row.created_at, row.updated_at)
+      this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(now, input.projectId)
+      this.db.exec('COMMIT')
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+    return toMatchupNote(row, currentHash)
+  }
+
+  deleteMatchupNote(projectId: string, noteId: string): boolean {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    if (typeof noteId !== 'string' || noteId.length > 100) return false
+    const deleted = this.db.prepare('DELETE FROM matchup_notes WHERE project_id = ? AND id = ?')
+      .run(projectId, noteId).changes > 0
+    if (deleted) this.db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?')
+      .run(new Date().toISOString(), projectId)
+    return deleted
+  }
+
+  close(): void {
+    this.db.close()
+  }
+}

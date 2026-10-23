@@ -1,0 +1,435 @@
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { ProjectStore } from './project-store'
+import type { DeckBaseline, ImportDeckInput } from '../shared/deck-import'
+import type { OperationResult, Project } from '../shared/projects'
+import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
+import type { AiConnection, AiPreferences, AiRunConfig } from '../shared/ai'
+import { fetchMeta, fetchOpponentSample } from './limitless-meta'
+import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
+import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
+import { CodexControl } from './codex-control'
+import { CatalogStore, fetchCatalogSample } from './catalog'
+import type { CatalogView } from '../shared/catalog'
+import { matchupDeckContext, snapshotPrint, type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
+
+app.setName('Pokeguru')
+
+let mainWindow: BrowserWindow | null = null
+let projectStore: ProjectStore | null = null
+let catalogStore: CatalogStore | null = null
+let storageError: string | null = null
+let aiPreferencesStore: AiPreferencesStore | null = null
+const codexControl = new CodexControl()
+const generatingProjects = new Set<string>()
+let catalogSyncing = false
+
+async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig): Promise<MatchupDiscussion> {
+  if (!projectStore) throw new Error(unavailableMessage())
+  let current = discussion
+  const lastToSummarize = current.turns.length - 5
+  while (lastToSummarize > current.summarizedThrough) {
+    const through = Math.min(current.summarizedThrough + 5, lastToSummarize)
+    if (!current.turns[through]?.report) break
+    const summary = await summarizeMatchupContext(current, through, config)
+    projectStore.saveMatchupContextSummary(current.id, summary, through)
+    current = projectStore.getMatchupDiscussion(current.id)!
+  }
+  return current
+}
+
+function aiError(error: unknown): string {
+  return error instanceof Error ? error.message : 'Operazione Codex non riuscita.'
+}
+
+async function runConfig(override?: unknown): Promise<AiRunConfig> {
+  if (!aiPreferencesStore) throw new Error(unavailableMessage())
+  const connection = await codexControl.connection()
+  if (connection.account !== 'chatgpt' && connection.account !== 'apiKey') {
+    throw new Error('Accedi a Codex con ChatGPT o con una chiave API prima di generare analisi.')
+  }
+  const source = override === null || override === undefined ? 'global' : 'override'
+  const selected = resolveAiConfig(source === 'global' ? aiPreferencesStore.read() : override, connection.models, source)
+  if (!selected.model) selected.model = connection.models.find((model) => model.isDefault)?.id ?? null
+  return selected
+}
+
+function unavailableMessage(): string {
+  return storageError ?? 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
+}
+
+function withStore<T>(operation: () => T): OperationResult<T> {
+  if (!projectStore) {
+    return { ok: false, error: unavailableMessage() }
+  }
+  try {
+    return { ok: true, value: operation() }
+  } catch (error) {
+    console.error('Errore archivio progetti:', error)
+    const message = error instanceof Error ? error.message : ''
+    if ([
+      'Dati del progetto non validi.',
+      'Inserisci un nome da 1 a 120 caratteri.',
+      'Progetto non trovato.',
+      'Inserisci una lista di testo non vuota, fino a 200.000 caratteri.',
+      'Origine della lista non valida.',
+      'Seleziona un file .txt.',
+      'La lista contiene troppe righe (massimo 5.000).',
+      'La lista è cambiata durante l’analisi. Riprova sulla lista corrente.',
+      'Lo snapshot del metagame non è più disponibile.'
+    ].includes(message)) {
+      return { ok: false, error: message }
+    }
+    return { ok: false, error: 'Operazione non salvata. Controlla l’archivio locale e riprova.' }
+  }
+}
+
+function registerProjectHandlers(): void {
+  const isMainFrame = (event: Electron.IpcMainInvokeEvent): boolean =>
+    mainWindow !== null && event.sender === mainWindow.webContents && event.senderFrame === mainWindow.webContents.mainFrame
+
+  ipcMain.handle('catalog:get', (event): OperationResult<CatalogView> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: catalogStore.view() } }
+    catch { return { ok: false, error: 'Catalogo locale non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:sync', async (event): Promise<OperationResult<CatalogView>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (catalogSyncing) return { ok: false, error: 'Sincronizzazione già in corso.' }
+    catalogSyncing = true
+    try { return { ok: true, value: catalogStore.save(await fetchCatalogSample()) } }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Sincronizzazione non riuscita.' } }
+    finally { catalogSyncing = false }
+  })
+
+  ipcMain.handle('catalog:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event) || typeof input !== 'string') return { ok: false, error: 'URL non valido.' }
+    try {
+      const url = new URL(input)
+      if (url.protocol !== 'https:' || url.hostname !== 'api.tcgdex.net' ||
+        !/^\/v2\/en\/(cards|sets)\/[a-zA-Z0-9.-]+$/.test(url.pathname) || url.search || url.hash) {
+        return { ok: false, error: 'URL non valido.' }
+      }
+      await shell.openExternal(url.toString())
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Impossibile aprire TCGdex nel browser.' } }
+  })
+
+  ipcMain.handle('ai:get-preferences', (event): OperationResult<AiPreferences> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!aiPreferencesStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: aiPreferencesStore.read() } }
+    catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
+  ipcMain.handle('ai:get-connection', async (event): Promise<OperationResult<AiConnection>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try { return { ok: true, value: await codexControl.connection() } }
+    catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
+  ipcMain.handle('ai:save-preferences', async (event, value: unknown): Promise<OperationResult<AiPreferences>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!aiPreferencesStore) return { ok: false, error: unavailableMessage() }
+    try {
+      const models = value && typeof value === 'object' && (value as AiPreferences).model === null
+        ? [] : await codexControl.models()
+      const valid = resolveAiConfig(value, models, 'global')
+      return { ok: true, value: aiPreferencesStore.write({ model: valid.model, reasoningEffort: valid.reasoningEffort }) }
+    } catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
+  ipcMain.handle('ai:start-login', async (event): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try {
+      const url = await codexControl.startLogin()
+      await shell.openExternal(url)
+      return { ok: true, value: true }
+    } catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
+  ipcMain.handle('ai:logout', async (event): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try { await codexControl.logout(); return { ok: true, value: true } }
+    catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
+  ipcMain.handle('ai:test', async (event): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try { await testCodex(await runConfig()); return { ok: true, value: true } }
+    catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
+  ipcMain.handle('projects:list', (event): OperationResult<Project[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.list())
+  })
+
+  ipcMain.handle('projects:get', (event, id: unknown): OperationResult<Project | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.get(id as string))
+  })
+
+  ipcMain.handle('projects:create', (event, input: unknown): OperationResult<Project> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.create(input as Parameters<ProjectStore['create']>[0]))
+  })
+
+  ipcMain.handle('projects:get-baseline', (event, projectId: unknown): OperationResult<DeckBaseline | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getBaseline(projectId as string))
+  })
+
+  ipcMain.handle('projects:import-deck', (event, input: unknown): OperationResult<DeckBaseline> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.importDeck(input as ImportDeckInput))
+  })
+
+  ipcMain.handle('deck:get-reconciliation', (event, projectId: unknown): OperationResult<DeckReconciliation> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getReconciliation(projectId as string))
+  })
+
+  ipcMain.handle('deck:save-line-mapping', (event, input: unknown): OperationResult<DeckReconciliation> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || !catalogStore) return { ok: false, error: unavailableMessage() }
+    try {
+      const value = input as SaveLineMappingInput
+      if (projectStore.get(value?.projectId)?.circuit !== 'WESTERN') {
+        return { ok: false, error: 'Il catalogo disponibile copre soltanto il circuito occidentale.' }
+      }
+      const print = catalogStore.getPrint(value?.printId)
+      if (!print) return { ok: false, error: 'Stampa non presente nel catalogo locale.' }
+      return { ok: true, value: projectStore.saveLineMapping(value, snapshotPrint(print)) }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Scelta della stampa non salvata.' }
+    }
+  })
+
+  ipcMain.handle('deck:clear-line-mapping', (event, input: unknown): OperationResult<DeckReconciliation> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: projectStore.clearLineMapping(input as ClearLineMappingInput) } }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Scelta della stampa non rimossa.' } }
+  })
+
+  ipcMain.handle('matchups:get-meta', async (event): Promise<OperationResult<MetaSnapshot>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore) return { ok: false, error: unavailableMessage() }
+    try {
+      const snapshot = await fetchMeta()
+      projectStore.saveMetaSnapshot(snapshot)
+      return { ok: true, value: snapshot }
+    } catch (error) {
+      const cached = projectStore.getLatestMetaSnapshot()
+      if (cached) return { ok: true, value: cached }
+      return { ok: false, error: error instanceof Error ? error.message : 'Impossibile leggere il metagame Limitless.' }
+    }
+  })
+
+  ipcMain.handle('matchups:list-reports', (event, projectId: unknown, metaId: unknown): OperationResult<MatchupReport[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listMatchupReports(projectId as string, metaId as string))
+  })
+
+  ipcMain.handle('matchups:list-discussions', (event, projectId: unknown, opponentId: unknown): OperationResult<MatchupDiscussion[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listMatchupDiscussions(projectId as string, opponentId as string))
+  })
+
+  ipcMain.handle('matchups:list-historical-opponents', (event, projectId: unknown): OperationResult<MetaDeck[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listHistoricalMatchupOpponents(projectId as string))
+  })
+
+  ipcMain.handle('matchups:generate', async (event, projectId: unknown, metaId: unknown, opponentId: unknown, override: unknown): Promise<OperationResult<MatchupReport>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore) return { ok: false, error: unavailableMessage() }
+    if (typeof projectId !== 'string' || typeof metaId !== 'string' || typeof opponentId !== 'string' ||
+      !/^\d+$/.test(opponentId) || generatingProjects.has(projectId)) {
+      return { ok: false, error: 'Analisi già in corso o richiesta non valida.' }
+    }
+    const project = projectStore.get(projectId)
+    const baseline = projectStore.getBaseline(projectId)
+    const snapshot = projectStore.getLatestMetaSnapshot()
+    const opponent = snapshot?.decks.find((deck) => deck.id === opponentId)
+    if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot || snapshot.id !== metaId || !opponent) {
+      return { ok: false, error: 'Importa una lista e aggiorna il metagame prima di generare l’analisi.' }
+    }
+    const hash = projectStore.getCurrentDeckHash(projectId)!
+    generatingProjects.add(projectId)
+    try {
+      const config = await runConfig(override)
+      const sample = await fetchOpponentSample(opponent)
+      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(projectId), catalogStore?.view())
+      const report = await generateMatchup(projectId, hash, deckContext, snapshot, opponent, sample, config)
+      projectStore.saveMatchupReport(report)
+      return { ok: true, value: report }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Analisi non completata.' }
+    } finally {
+      generatingProjects.delete(projectId)
+    }
+  })
+
+  async function runRevision(discussionId: unknown, turnId: unknown, feedback: unknown,
+    override: unknown): Promise<OperationResult<MatchupDiscussion>> {
+    if (!projectStore || typeof discussionId !== 'string') return { ok: false, error: 'Discussione Matchup non valida.' }
+    const discussion = projectStore.getMatchupDiscussion(discussionId)
+    if (!discussion || generatingProjects.has(discussion.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
+    generatingProjects.add(discussion.projectId)
+    try {
+      const pending = turnId === null
+        ? projectStore.addMatchupFeedback(discussion.id, feedback as string)
+        : discussion
+      const target = pending.turns.find((turn) => turn.id === turnId) ??
+        (turnId === null ? pending.turns.at(-1) : undefined)
+      if (!target || !target.feedback || target.report || target !== pending.turns.at(-1))
+        throw new Error('Commento Matchup in attesa non trovato.')
+      const project = projectStore.get(discussion.projectId)
+      const baseline = projectStore.getBaseline(discussion.projectId)
+      const snapshot = projectStore.getLatestMetaSnapshot()
+      const opponent = snapshot?.decks.find((deck) => deck.id === discussion.opponentId)
+      if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot ||
+        snapshot.id !== discussion.metaId || projectStore.getCurrentDeckHash(discussion.projectId) !== discussion.deckHash || !opponent)
+        throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
+      const config = await runConfig(override)
+      const context = await prepareMatchupHistory(pending, config)
+      const sample = await fetchOpponentSample(opponent)
+      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(discussion.projectId), catalogStore?.view())
+      const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot, opponent, sample, config)
+      return { ok: true, value: projectStore.completeMatchupFeedback(discussion.id, target.id, revised.report, revised.changeSummary) }
+    } catch (error) {
+      return { ok: false, error: aiError(error) }
+    } finally {
+      generatingProjects.delete(discussion.projectId)
+    }
+  }
+
+  ipcMain.handle('matchups:revise', (event, discussionId: unknown, feedback: unknown, override: unknown): Promise<OperationResult<MatchupDiscussion>> => {
+    if (!isMainFrame(event)) return Promise.resolve({ ok: false, error: 'Richiesta non autorizzata.' })
+    return runRevision(discussionId, null, feedback, override)
+  })
+
+  ipcMain.handle('matchups:retry-turn', (event, discussionId: unknown, turnId: unknown, override: unknown): Promise<OperationResult<MatchupDiscussion>> => {
+    if (!isMainFrame(event)) return Promise.resolve({ ok: false, error: 'Richiesta non autorizzata.' })
+    return runRevision(discussionId, turnId, null, override)
+  })
+
+  ipcMain.handle('matchups:continue', async (event, discussionId: unknown, metaId: unknown,
+    override: unknown): Promise<OperationResult<MatchupDiscussion>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || typeof discussionId !== 'string' || typeof metaId !== 'string')
+      return { ok: false, error: 'Discussione Matchup non valida.' }
+    const parent = projectStore.getMatchupDiscussion(discussionId)
+    if (!parent || generatingProjects.has(parent.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
+    generatingProjects.add(parent.projectId)
+    try {
+      const project = projectStore.get(parent.projectId)
+      const baseline = projectStore.getBaseline(parent.projectId)
+      const snapshot = projectStore.getLatestMetaSnapshot()
+      const opponent = snapshot?.decks.find((deck) => deck.id === parent.opponentId)
+      const hash = projectStore.getCurrentDeckHash(parent.projectId)
+      if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot || snapshot.id !== metaId || !opponent || !hash)
+        throw new Error('Importa una lista e aggiorna il metagame prima di continuare.')
+      if (parent.metaId === metaId && parent.deckHash === hash) throw new Error('Questa discussione usa già la base corrente.')
+      if (projectStore.listMatchupDiscussions(parent.projectId, parent.opponentId)
+        .some((item) => item.metaId === metaId && item.deckHash === hash))
+        throw new Error('Esiste già una discussione per la base corrente.')
+      const config = await runConfig(override)
+      const context = await prepareMatchupHistory(parent, config)
+      const sample = await fetchOpponentSample(opponent)
+      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(parent.projectId), catalogStore?.view())
+      const report = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
+        config, matchupHistoryContext(context))
+      return { ok: true, value: projectStore.saveContinuedMatchupReport(report, parent.id) }
+    } catch (error) {
+      return { ok: false, error: aiError(error) }
+    } finally {
+      generatingProjects.delete(parent.projectId)
+    }
+  })
+
+  ipcMain.handle('matchups:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event) || typeof input !== 'string' || input.length > 500) return { ok: false, error: 'URL non valido.' }
+    try {
+      const url = new URL(input)
+      if (url.protocol !== 'https:' || url.hostname !== 'limitlesstcg.com' || !url.pathname.startsWith('/decks')) {
+        return { ok: false, error: 'URL non valido.' }
+      }
+      await shell.openExternal(url.toString())
+      return { ok: true, value: true }
+    } catch {
+      return { ok: false, error: 'Impossibile aprire Limitless nel browser.' }
+    }
+  })
+}
+
+function createWindow(): void {
+  const window = new BrowserWindow({
+    title: 'Pokéguru',
+    width: 1120,
+    height: 760,
+    minWidth: 760,
+    minHeight: 580,
+    backgroundColor: '#f6f7f6',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true
+    }
+  })
+  mainWindow = window
+
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  window.webContents.on('will-navigate', (event) => event.preventDefault())
+  window.on('closed', () => {
+    if (mainWindow === window) mainWindow = null
+  })
+
+  if (process.env.ELECTRON_RENDERER_URL) {
+    void window.loadURL(process.env.ELECTRON_RENDERER_URL)
+  } else {
+    void window.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+}
+
+app.whenReady().then(() => {
+  try {
+    const override = process.env.POKEGURU_DATA_DIR
+    if (override) {
+      mkdirSync(override, { recursive: true })
+      app.setPath('userData', override)
+    }
+    const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
+    projectStore = new ProjectStore(databasePath)
+    catalogStore = new CatalogStore(databasePath)
+    aiPreferencesStore = new AiPreferencesStore(app.getPath('userData'))
+  } catch (error) {
+    console.error('Impossibile aprire l’archivio locale:', error)
+    storageError = 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
+  }
+
+  registerProjectHandlers()
+  createWindow()
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+})
+
+app.on('before-quit', () => {
+  codexControl.stop()
+  projectStore?.close()
+  catalogStore?.close()
+  projectStore = null
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})

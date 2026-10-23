@@ -1,0 +1,39 @@
+{
+  "name": "pokeguru",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Progetti locali per mazzi Pokémon TCG",
+  "main": "./out/main/index.js",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && electron-vite build",
+    "test": "vitest run",
+    "test:e2e": "npm run build && node tests/electron-smoke.mjs",
+    "test:reconciliation-live": "npm run build && node tests/reconciliation-live.mjs",
+    "test:reconciliation-ai-live": "npm run build && node tests/reconciliation-ai-live.mjs",
+    "test:ai-live": "npm run build && node tests/ai-settings-live.mjs",
+    "test:matchup-live": "npm run build && node tests/matchup-live.mjs"
+  },
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "45.0.0",
+    "electron-vite": "6.0.0",
+    "playwright-core": "1.64.1",
+    "typescript": "5.9.3",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

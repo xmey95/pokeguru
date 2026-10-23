@@ -1,0 +1,345 @@
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import type { DeckBaseline, DeckImportSource } from '../../shared/deck-import'
+import type { Project } from '../../shared/projects'
+import { MatchupSection } from './MatchupSection'
+import { AiSettings } from './AiSettings'
+import { CatalogSection } from './CatalogSection'
+import { DeckList } from './DeckList'
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
+}
+
+function statusLabel(status: Project['status']): string {
+  if (status === 'BOZZA') return 'Bozza'
+  if (status === 'PRONTA_PER_CONTROLLO') return 'Pronta per controllo'
+  return 'Da costruire'
+}
+
+function projectWithBaseline(project: Project, baseline: DeckBaseline): Project {
+  const hasProblems = baseline.diagnostics.some((item) =>
+    item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH')
+  return {
+    ...project,
+    cardTotal: baseline.interpretedTotal,
+    updatedAt: baseline.importedAt,
+    status: baseline.interpretedTotal === 60 && !hasProblems ? 'PRONTA_PER_CONTROLLO' : 'BOZZA'
+  }
+}
+
+export function App() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selected, setSelected] = useState<Project | null>(null)
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [baseline, setBaseline] = useState<DeckBaseline | null>(null)
+  const [baselineLoading, setBaselineLoading] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [source, setSource] = useState<DeckImportSource>('paste')
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'deck' | 'matchups' | 'catalog'>('deck')
+  const [view, setView] = useState<'project' | 'ai'>('project')
+  const selectionVersion = useRef(0)
+
+  async function selectProject(id: string, known?: Project): Promise<void> {
+    const version = ++selectionVersion.current
+    setError(null)
+    setBaselineLoading(true)
+    setBaseline(null)
+    setDraft('')
+    setSource('paste')
+    setFileName(null)
+    try {
+      let project = known
+      if (!project) {
+        const found = await window.projectsApi.get(id)
+        if (!found.ok) throw new Error(found.error)
+        if (!found.value) throw new Error('Progetto non trovato. Riapri l’app per aggiornare l’elenco.')
+        project = found.value
+      }
+      if (version !== selectionVersion.current) return
+      setSelected(project)
+      const result = await window.projectsApi.getBaseline(id)
+      if (version !== selectionVersion.current) return
+      if (!result.ok) throw new Error(result.error)
+      setBaseline(result.value)
+      setDraft(result.value?.rawText ?? '')
+      setSource(result.value?.source ?? 'paste')
+      setFileName(result.value?.fileName ?? null)
+    } catch (cause) {
+      if (version === selectionVersion.current) {
+        setError(cause instanceof Error ? cause.message : 'Impossibile aprire la lista del progetto.')
+      }
+    } finally {
+      if (version === selectionVersion.current) setBaselineLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let active = true
+    async function load(): Promise<void> {
+      try {
+        if (!window.projectsApi?.list) throw new Error('Collegamento con l’archivio locale non disponibile.')
+        const result = await window.projectsApi.list()
+        if (!active) return
+        if (!result.ok) {
+          setError(result.error)
+          return
+        }
+        setProjects(result.value)
+        if (result.value[0]) void selectProject(result.value[0].id, result.value[0])
+      } catch (cause) {
+        if (active) setError(cause instanceof Error ? cause.message : 'Impossibile leggere i progetti.')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    void load()
+    return () => { active = false }
+  }, [])
+
+  async function openProject(id: string): Promise<void> {
+    setView('project')
+    await selectProject(id)
+  }
+
+  async function createProject(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    if (saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.create({ name, format: 'STANDARD' })
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+      setProjects((current) => [result.value, ...current])
+      selectionVersion.current++
+      setSelected(result.value)
+      setBaseline(null)
+      setBaselineLoading(false)
+      setDraft('')
+      setSource('paste')
+      setFileName(null)
+      setName('')
+      setActiveTab('deck')
+      setView('project')
+    } catch {
+      setError('Salvataggio non riuscito. Nessun progetto è stato creato.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function loadTextFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.target.files?.[0]
+    const version = selectionVersion.current
+    event.target.value = ''
+    if (!file) return
+    if (!/\.txt$/i.test(file.name)) {
+      setError('Seleziona un file .txt.')
+      return
+    }
+    if (file.size > 400_000) {
+      setError('Il file è troppo grande per una lista di mazzo.')
+      return
+    }
+    try {
+      const text = await file.text()
+      if (version !== selectionVersion.current) return
+      setDraft(text)
+      setSource('file')
+      setFileName(file.name)
+      setError(null)
+    } catch {
+      if (version === selectionVersion.current) setError('Impossibile leggere il file selezionato.')
+    }
+  }
+
+  async function importDeck(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    if (!selected || importing) return
+    const projectId = selected.id
+    const importVersion = selectionVersion.current
+    setImporting(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.importDeck({ projectId, rawText: draft, source, fileName })
+      if (!result.ok) {
+        if (selectionVersion.current === importVersion) setError(result.error)
+        return
+      }
+      const updated = projectWithBaseline(selected, result.value)
+      setProjects((current) => current.map((project) => project.id === projectId ? updated : project))
+      if (selectionVersion.current !== importVersion) return
+      setBaseline(result.value)
+      setSelected(updated)
+    } catch {
+      if (selectionVersion.current === importVersion) setError('Importazione non riuscita. La lista precedente è rimasta salvata.')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">P</span>
+          <div>
+            <strong>Pokéguru</strong>
+            <span>Laboratorio mazzi Pokémon TCG</span>
+          </div>
+        </div>
+        <div className="topbar-actions"><span className="local-indicator"><span aria-hidden="true" /> Archivio locale</span>
+          <button type="button" className="secondary-button" onClick={() => setView('ai')}>Impostazioni AI</button></div>
+      </header>
+
+      <div className="workspace">
+        <aside className="sidebar" aria-label="Progetti di mazzo">
+          <div className="sidebar-heading">
+            <div>
+              <span className="eyebrow">Workspace</span>
+              <h2>I tuoi progetti</h2>
+            </div>
+            <span className="count" aria-label={`${projects.length} progetti`}>{projects.length}</span>
+          </div>
+
+          <form className="create-form" onSubmit={(event) => void createProject(event)}>
+            <label htmlFor="project-name">Nome progetto</label>
+            <input
+              id="project-name"
+              name="project-name"
+              autoComplete="off"
+              maxLength={120}
+              placeholder="Es. Mega Absol / Mega Audino"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+            />
+            <label htmlFor="project-format">Formato</label>
+            <select id="project-format" defaultValue="STANDARD">
+              <option value="STANDARD">Standard</option>
+            </select>
+            <span className="fixed-circuit">Circuito: Occidentale / internazionale</span>
+            <button className="primary-button" type="submit" disabled={saving || loading || !name.trim()}>
+              {saving ? 'Salvataggio…' : 'Crea progetto'}
+            </button>
+          </form>
+
+          <div className="project-list-heading">Elenco progetti</div>
+          {loading ? <p className="sidebar-note">Caricamento…</p> : projects.length === 0 ? (
+            <p className="sidebar-note">Nessun progetto. Inizia con un nome e scegli Crea progetto.</p>
+          ) : (
+            <ul className="project-list">
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <button
+                    type="button"
+                    className={`project-button ${selected?.id === project.id ? 'active' : ''}`}
+                    onClick={() => void openProject(project.id)}
+                    data-testid={`project-${project.id}`}
+                    aria-current={selected?.id === project.id ? 'page' : undefined}
+                  >
+                    <span className="project-avatar" aria-hidden="true">{project.name.charAt(0).toUpperCase()}</span>
+                    <span className="project-labels">
+                      <strong>{project.name}</strong>
+                      <small>Standard · Occidentale · {statusLabel(project.status)}{project.cardTotal !== null ? ` · ${project.cardTotal} carte` : ''}</small>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+
+        <main className="main-content">
+          {error && <div className="error-banner" role="alert">{error}</div>}
+          {view === 'ai' ? <AiSettings /> : selected ? (
+            <section className="project-detail" aria-label="Dettaglio progetto">
+              <div className="detail-kicker">Progetto di mazzo</div>
+              <div className="detail-headline">
+                <div>
+                  <h1 data-testid="selected-project-name">{selected.name}</h1>
+                  <p>La lista è salvata in locale e resta separata dagli altri progetti.</p>
+                </div>
+                <span className={`status-pill status-${selected.status.toLowerCase()}`}>{statusLabel(selected.status)}</span>
+              </div>
+              <div className="detail-meta">
+                <div><span>Formato</span><strong>Standard</strong></div>
+                <div><span>Circuito</span><strong>Occidentale / internazionale</strong></div>
+                <div><span>Creato il</span><strong>{formatDate(selected.createdAt)}</strong></div>
+                <div><span>Lista corrente</span><strong>{selected.cardTotal === null ? 'Assente' : `${selected.cardTotal} carte interpretate`}</strong></div>
+              </div>
+              {selected.circuitAssignment === 'MIGRATED' && <p className="migration-note">Profilo occidentale assegnato a questo progetto esistente. La lista è rimasta invariata.</p>}
+              <nav className="detail-tabs" aria-label="Sezioni progetto">
+                <button type="button" className={activeTab === 'deck' ? 'active' : ''} aria-current={activeTab === 'deck' ? 'page' : undefined} onClick={() => setActiveTab('deck')}>Lista</button>
+                <button type="button" className={activeTab === 'matchups' ? 'active' : ''} aria-current={activeTab === 'matchups' ? 'page' : undefined} onClick={() => setActiveTab('matchups')}>Matchup</button>
+                <button type="button" className={activeTab === 'catalog' ? 'active' : ''} aria-current={activeTab === 'catalog' ? 'page' : undefined} onClick={() => setActiveTab('catalog')}>Catalogo</button>
+              </nav>
+              {activeTab === 'deck' ? <>
+              {baselineLoading ? <p className="content-note">Caricamento lista…</p> : baseline ? (
+                <div className="baseline-panel" data-testid="baseline-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <span className="eyebrow">Baseline salvata</span>
+                      <h2>Lista corrente</h2>
+                    </div>
+                    <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
+                  </div>
+                  <p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Origine: testo incollato'} · salvata il {formatDate(baseline.importedAt)}. La legalità Standard non è ancora verificata.</p>
+                  {baseline.declaredTotal !== null && <p className="content-note">Totale dichiarato nel testo: {baseline.declaredTotal}. Il totale mostrato deriva dalle righe interpretate.</p>}
+                  {baseline.diagnostics.length > 0 && (
+                    <div className="diagnostics" role="status">
+                      <strong>Da controllare ({baseline.diagnostics.length})</strong>
+                      <p>Queste note descrivono il testo importato. Apri una carta nella lista per vedere le stampe note.</p>
+                      <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
+                    </div>
+                  )}
+                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setActiveTab('catalog')} />
+                  <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>
+                </div>
+              ) : !error && (
+                <div className="empty-deck">
+                  <div className="empty-icon" aria-hidden="true">◇</div>
+                  <h2>Nessuna lista di carte</h2>
+                  <p>Incolla una lista o scegli un file .txt per iniziare. Puoi salvare anche una bozza incompleta.</p>
+                </div>
+              )}
+              <form className="import-panel" onSubmit={(event) => void importDeck(event)}>
+                <div className="panel-heading">
+                  <div><span className="eyebrow">Importazione</span><h2>{baseline ? 'Aggiorna la lista' : 'Aggiungi una lista'}</h2></div>
+                </div>
+                <p className="content-note">Incolla una lista testuale PTCG Live o Limitless, oppure scegli un file .txt. Il salvataggio sostituisce la lista corrente di questo progetto.</p>
+                <label htmlFor="deck-text">Testo lista</label>
+                <textarea id="deck-text" value={draft} onChange={(event) => { setDraft(event.target.value); setSource('paste'); setFileName(null) }} placeholder={'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 2'} spellCheck={false} />
+                <div className="import-actions">
+                  <label className="file-picker" htmlFor="deck-file">Scegli file .txt</label>
+                  <input id="deck-file" type="file" accept=".txt,text/plain" onChange={(event) => void loadTextFile(event)} />
+                  {fileName && <span className="selected-file">{fileName}</span>}
+                  <button className="primary-button" type="submit" disabled={importing || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
+                </div>
+              </form>
+              </> : activeTab === 'matchups' ? <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')} /> : <CatalogSection />}
+            </section>
+          ) : (
+            <section className="welcome" aria-label="Benvenuto">
+              <span className="eyebrow">Inizia da qui</span>
+              <h1>Ogni mazzo parte da un’idea.</h1>
+              <p>Crea un progetto per conservarne il percorso. Potrai aprirlo di nuovo anche dopo aver chiuso l’app.</p>
+              <div className="welcome-steps">
+                <span>01 <strong>Crea un progetto</strong></span>
+                <span>02 <strong>Costruisci il mazzo</strong></span>
+                <span>03 <strong>Analizza e migliora</strong></span>
+              </div>
+            </section>
+          )}
+        </main>
+      </div>
+    </div>
+  )
+}
