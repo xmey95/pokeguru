@@ -153,6 +153,7 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
           <div><strong>{catalog.standardCoverage?.promos.acquired ?? 0}/{catalog.standardCoverage?.promos.expected ?? 0}</strong><span>Promo con marchio, dettagli acquisiti</span></div>
           <div><strong>{catalog.standardCoverage?.promos.series ?? 0}</strong><span>Serie promo riconosciute</span></div>
           <div><strong>{catalog.scope.setIds.length}</strong><span>Set con stampe nell’inventario</span></div>
+          <div><strong>{catalog.standardCoverage?.officialSets.present ?? 0}/{catalog.standardCoverage?.officialSets.expected ?? 0}</strong><span>Set rilasciati nel calendario ufficiale presenti nel manifest</span></div>
           <div><strong>{groups.length}</strong><span>Gruppi locali, equivalenza da verificare</span></div>
         </> : <>
         <div><strong>{catalog.sets.length}/{catalog.scope.setIds.length}</strong><span>Set acquisiti</span></div>
@@ -167,6 +168,8 @@ export function CatalogSection({ onConstrain }: { onConstrain?: (identityId: str
       </div>
       {standard && catalog.standardCoverage && <details className="catalog-set-coverage" open>
         <summary>Copertura per set · {catalog.standardCoverage.bySet.filter((set) => set.missing > 0).length} con dettagli mancanti</summary>
+        <p className="content-note">Audit dei set ufficiali: {catalog.standardCoverage.officialSets.present}/{catalog.standardCoverage.officialSets.expected} presenti nel manifest, {catalog.standardCoverage.officialSets.missing} mancanti. Il calendario è uno snapshot controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}; la presenza di un set non certifica tutte le sue stampe né la legalità.</p>
+        {catalog.standardCoverage.officialSets.missing > 0 && <div className="diagnostics" role="status"><strong>Set ufficiali non presenti nel manifest</strong><ul>{catalog.standardCoverage.officialSets.missingSets.map((set) => <li key={set.setId}>{set.product} ({set.setId})</li>)}</ul></div>}
         <p className="content-note">«Nel perimetro» conta le stampe presenti nel manifest TCGdex; «Totale set» include anche stampe fuori dal filtro. Date di uscita ufficiali: pacchetto v{catalog.standardCoverage.releaseSource.version}, controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}.
           {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti Pokémon ↗</button> Le date di uscita non sono date di ammissione ai tornei.</p>
         <div className="catalog-set-table-wrap"><table aria-label="Copertura Standard per set">

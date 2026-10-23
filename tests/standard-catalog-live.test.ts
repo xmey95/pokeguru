@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CatalogStore, fetchStandardManifest, syncStandardCatalog } from '../src/main/catalog'
+import { officialSetReleases } from '../src/main/official-set-releases'
 
 it.skipIf(process.env.POKEGURU_CATALOG_LIVE !== '1')('legge l’inventario reale H/I/J e le Energie Base', async () => {
   const manifest = await fetchStandardManifest()
@@ -15,6 +16,11 @@ it.skipIf(process.env.POKEGURU_CATALOG_LIVE !== '1')('legge l’inventario reale
   expect(manifest.sets.some((set) => set.id === 'sve')).toBe(true)
   expect(manifest.sets.some((set) => set.id === 'mee')).toBe(true)
   expect(manifest.sets.reduce((sum, set) => sum + set.sampleTotal, 0)).toBe(manifest.prints.length)
+  const setIds = new Set(manifest.sets.map((set) => set.id))
+  const released = officialSetReleases().filter((set) => set.releaseDate <= new Date().toISOString().slice(0, 10))
+  const missing = released.filter((set) => !setIds.has(set.setId))
+  console.log(`Audit set ufficiali nel manifest: ${released.length - missing.length}/${released.length}; mancanti: ${missing.map((set) => set.setId).join(', ') || 'nessuno'}`)
+  expect(missing).toEqual([])
 }, 30_000)
 
 it.skipIf(process.env.POKEGURU_CATALOG_BULK_LIVE !== '1')('acquisisce e conserva l’inventario reale', async () => {

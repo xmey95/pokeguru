@@ -11,7 +11,7 @@ import {
 import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
 import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
-  OFFICIAL_SET_RELEASE_VERSION, officialSetRelease } from './official-set-releases'
+  OFFICIAL_SET_RELEASE_VERSION, officialSetRelease, officialSetReleases } from './official-set-releases'
 
 type SetResponse = {
   id: string; name: string; cardCount: { total: number }; releaseDate?: string
@@ -529,6 +529,9 @@ export class CatalogStore {
     const promoPackage = this.db.prepare('SELECT version, complete FROM catalog_promo_package WHERE id = 1')
       .get() as { version: number; complete: number } | undefined
     const targetSetIds = [...new Set(targetPrints.map((print) => print.setId))].sort()
+    const officialReleased = officialSetReleases().filter((set) =>
+      set.releaseDate <= new Date().toISOString().slice(0, 10))
+    const officialMissing = officialReleased.filter((set) => !targetSetIds.includes(set.setId))
     const printsBySet = new Map<string, CatalogPrint[]>()
     for (const print of targetPrints) {
       const group = printsBySet.get(print.setId) ?? []
@@ -555,6 +558,9 @@ export class CatalogStore {
           missing: targetIds.size - acquiredTargets, marks: candidateMarks, bySet,
           releaseSource: { url: OFFICIAL_SET_RELEASE_SOURCE, version: OFFICIAL_SET_RELEASE_VERSION,
             checkedAt: OFFICIAL_SET_RELEASE_CHECKED_AT },
+          officialSets: { expected: officialReleased.length,
+            present: officialReleased.length - officialMissing.length, missing: officialMissing.length,
+            missingSets: officialMissing.map((set) => ({ setId: set.setId, product: set.product })) },
           promos: { expected: promoTargets.length, acquired: acquiredPromos,
             missing: promoTargets.length - acquiredPromos,
             series: new Set(promoTargets.map((print) => print.setId)).size,

@@ -84,6 +84,10 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   await expect(syncStandardCatalog(store)).rejects.toThrow('limitato temporaneamente')
   expect(store.jobStatus()).toMatchObject({ mode: 'new', state: 'paused', expected: 6, acquired: 5 })
   expect(store.view().standardCoverage).toMatchObject({ expected: 6, acquired: 5, missing: 1 })
+  expect(store.view().standardCoverage?.officialSets).toMatchObject({
+    expected: 17, present: 2, missing: 15,
+    missingSets: expect.arrayContaining([{ setId: 'sv06', product: 'Scarlet & Violet—Twilight Masquerade' }])
+  })
   const pausedCoverage = store.view().standardCoverage!
   expect(pausedCoverage.bySet.reduce((sum, set) => sum + set.expected, 0)).toBe(pausedCoverage.expected)
   expect(pausedCoverage.bySet.reduce((sum, set) => sum + set.missing, 0)).toBe(pausedCoverage.missing)
@@ -100,6 +104,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   const view = await syncStandardCatalog(reopened)
   expect(reopened.jobStatus()).toMatchObject({ mode: 'new', state: 'done', expected: 6, acquired: 6 })
   expect(view.standardCoverage).toMatchObject({ expected: 6, acquired: 6, missing: 0 })
+  expect(view.standardCoverage?.officialSets).toEqual(pausedCoverage.officialSets)
   expect(view.standardCoverage?.bySet.find((set) => set.setId === 'sv05')?.releaseDate).toBe('2024-03-22')
   expect(view.standardCoverage?.bySet.find((set) => set.setId === 'sv05')?.officialReleaseDate).toBe('2024-03-22')
   expect(view.standardCoverage?.bySet.find((set) => set.setId === 'me01')?.releaseDate).toBeNull()

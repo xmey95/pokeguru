@@ -71,6 +71,8 @@ export interface CatalogView {
   scope: { setIds: readonly string[]; names: readonly string[]; kind?: 'sample' | 'standard-marks' }
   standardCoverage?: { expected: number; acquired: number; missing: number; marks: readonly string[];
     releaseSource: { url: string; version: number; checkedAt: string };
+    officialSets: { expected: number; present: number; missing: number;
+      missingSets: { setId: string; product: string }[] };
     bySet: { setId: string; name: string; sourceTotal: number; releaseDate?: string | null;
       officialReleaseDate: string | null; expected: number;
       acquired: number; missing: number; promo: boolean; promoVerified: number; promoUnchecked: number }[];

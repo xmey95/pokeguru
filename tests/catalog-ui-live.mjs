@@ -58,6 +58,8 @@ try {
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
   const table = page.getByRole('table', { name: 'Copertura Standard per set' })
   await table.waitFor()
+  assert.match(await page.getByText('Audit dei set ufficiali:', { exact: false }).textContent(), /2\/17 presenti nel manifest, 15 mancanti/)
+  assert.match(await page.getByRole('status').filter({ hasText: 'Set ufficiali non presenti nel manifest' }).textContent(), /Twilight Masquerade \(sv06\)/)
   assert.match(await table.textContent(), /Data set \(TCGdex\)/)
   assert.match(await table.textContent(), /Uscita ufficiale/)
   assert.match(await table.getByRole('row').filter({ hasText: 'Set A' }).textContent(), /22 mar 2024/)
