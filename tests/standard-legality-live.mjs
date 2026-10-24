@@ -49,6 +49,7 @@ try {
   await page.getByRole('button', { name: 'Crea progetto' }).click()
   await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 086\n59 Psychic Energy SVE 005')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('.deck-technical > summary').click()
   const rotation = page.getByRole('region', { name: 'Controllo della rotazione Standard occidentale' })
   await rotation.getByLabel('Data di riferimento').fill('2026-10-24')
   const standard = page.getByRole('region', { name: 'Esito Standard occidentale' })

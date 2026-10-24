@@ -65,6 +65,7 @@ try {
   await page.getByRole('button', { name: 'Salva lista' }).click()
   const card = await iono(page)
   await card.first().waitFor()
+  await page.locator('.deck-technical > summary').click()
   const construction = page.getByRole('region', { name: 'Controlli di costruzione del mazzo' })
   assert.match(await construction.textContent(), /7 copie: ne servono esattamente 60/)
   assert.match(await construction.textContent(), /Pokémon Base.*Non è possibile stabilire/s)

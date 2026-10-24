@@ -122,7 +122,7 @@ export function ConstraintsSection({ projectId, baseline, selectedIdentityId, se
     <div className="panel-heading"><div><span className="eyebrow">Requisiti del mazzo</span><h2>Vincoli</h2></div>
       <strong>{constraints.length} {constraints.length === 1 ? 'vincolo' : 'vincoli'}{problemCount ? ` · ${problemCount} da risolvere` : ''}</strong></div>
     <p className="content-note">I vincoli restano nel progetto quando cambi la lista. Le quantità sono controllate sulla carta di gioco attraverso le ristampe equivalenti. Una stampa specifica è facoltativa.</p>
-    <p className="constraint-legality">Legalità Standard occidentale: <strong>indeterminata</strong>. La Lista corrente mostra il primo controllo del marchio; la validazione completa arriverà con APP-018.</p>
+    <p className="constraint-legality">L'esito Standard occidentale della lista, con problemi e punti da verificare, è mostrato in <strong>Lista corrente</strong>. I vincoli sono un controllo aggiuntivo.</p>
     {error && <div className="error-banner" role="alert">{error}</div>}
     {loading ? <p className="content-note">Caricamento vincoli…</p> : <>
       {!catalog?.syncedAt && <p className="diagnostics">Sincronizza il catalogo campione per scegliere una carta. <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}

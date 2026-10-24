@@ -682,9 +682,9 @@ function createWindow(): void {
     title: 'Pokéguru',
     width: 1120,
     height: 760,
-    minWidth: 760,
+    minWidth: 640,
     minHeight: 580,
-    backgroundColor: '#f6f7f6',
+    backgroundColor: '#edf1ed',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,

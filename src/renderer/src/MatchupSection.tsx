@@ -230,13 +230,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       <div><span className="eyebrow">Metagame e analisi AI</span><h2>Matchup</h2></div>
       <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || generating}>Aggiorna Limitless</button>
     </div>
-    <p className="content-note">Gli archetipi arrivano dal Metagame Limitless: Standard, ultimo mese, Europa, Nord America, America Latina e Oceania. Scegli un mazzo per generare con Codex punti forti, debolezze, carte chiave e piano di gioco sulla tua lista.</p>
+    <p className="content-note">Scegli un archetipo, leggi il piano e controlla nello stesso momento la tua lista principale.</p>
     {error && <div className="error-banner" role="alert">{error}</div>}
     {loading && !snapshot ? <p className="content-note">Caricamento del metagame Limitless…</p> : snapshot && <>
       <div className="meta-provenance">
         <strong>{snapshot.decks.length} archetipi presenti nella tabella Limitless</strong>
-        <span>Acquisito {date(snapshot.fetchedAt)} · {snapshot.period} · {snapshot.cached ? 'Copia locale: aggiornamento online non riuscito' : 'Aggiornato online'}</span>
+        <span>{snapshot.cached ? 'Copia locale · aggiornamento online non riuscito' : `Aggiornato ${date(snapshot.fetchedAt)}`}</span>
         <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(snapshot.sourceUrl)}>Apri fonte Limitless ↗</button>
+        <details><summary>Periodo e provenienza</summary><p>{snapshot.period} · Standard occidentale · acquisito {date(snapshot.fetchedAt)}. Quota del meta, non winrate.</p></details>
       </div>
       <div className="meta-layout">
         <div className="meta-deck-list" aria-label="Archetipi Limitless">
@@ -261,12 +262,11 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
             </div>}
             {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p> : report ? <>
               {discussion && !discussion.current && <p className="stale-discussion">Questa discussione riguarda una lista o uno snapshot precedente. La guida resta consultabile come storico.</p>}
-              <p className="content-note">Analisi Codex generata il {date(report.generatedAt)} · Standard occidentale · lista {report.deckHash.slice(0, 12)} · snapshot Meta {report.metaId.slice(0, 12)}{report.metaPeriod ? ` · ${report.metaPeriod}` : ''}{report.metaFetchedAt ? ` · acquisito ${date(report.metaFetchedAt)}` : ''}. {report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p>
               {report.metaSourceUrl && <button type="button" className="text-button"
                 onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}
               <div className="matchup-fields">
-                <div><strong>Punti forti del nostro mazzo</strong><p>{report.strengths}</p></div>
-                <div><strong>Debolezze del nostro mazzo</strong><p>{report.weaknesses}</p></div>
+                <div className="strategy-field matchup-trust"><strong>Limiti dell’analisi</strong><p>{report.limitations}</p></div>
+                <div className="strategy-field"><strong>Come giocare il matchup</strong><p>{report.strategy}</p></div>
                 <div><strong>Le nostre carte chiave</strong><p>{report.ourKeyCards}</p>
                   {ourCatalogCards.map((card) => <button key={card.identityId} type="button" className="text-button"
                     onClick={() => onOpenCatalogCard(card.identityId!)}>Apri {card.name} nel Catalogo ↗</button>)}
@@ -275,9 +275,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                   {theirCatalogCards.map((card) => <button key={card.catalogIdentityId} type="button" className="text-button"
                     onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri {card.name} nel Catalogo ↗</button>)}
                 </div>
-                <div className="strategy-field"><strong>Come giocare il matchup</strong><p>{report.strategy}</p></div>
-                <div className="strategy-field"><strong>Limiti dell’analisi</strong><p>{report.limitations}</p></div>
+                <div><strong>Punti forti del nostro mazzo</strong><p>{report.strengths}</p></div>
+                <div><strong>Debolezze del nostro mazzo</strong><p>{report.weaknesses}</p></div>
               </div>
+              <details className="matchup-report-meta"><summary>Versione, modello e dati usati</summary><p>Analisi Codex generata il {date(report.generatedAt)} · Standard occidentale · lista {report.deckHash.slice(0, 12)} · snapshot Meta {report.metaId.slice(0, 12)}{report.metaPeriod ? ` · ${report.metaPeriod}` : ''}{report.metaFetchedAt ? ` · acquisito ${date(report.metaFetchedAt)}` : ''}. {report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p></details>
               {report.tournamentEvidence && <section className="rotation-panel" aria-label="Evidenze torneo del matchup">
                 <strong>Liste osservate in un evento online</strong>
                 <p>{report.tournamentEvidence.status === 'matched'
@@ -332,7 +333,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 </button> : !selectedInCurrentMeta && <p className="content-note">Questo archetipo non compare nello snapshot attuale. Puoi consultare lo storico; per continuare, seleziona uno snapshot in cui è presente quando sarà disponibile questa scelta.</p>}
               </div>}
             </> : <p className="matchup-empty">Analisi AI non ancora generata per questo archetipo e questa lista.</p>}
-            {hasBaseline && <div className="matchup-ai-options">
+            {hasBaseline && <details className="matchup-ai-details"><summary>Opzioni AI e dati condivisi per una nuova analisi</summary><div className="matchup-ai-options">
               <div className="matchup-ai-heading"><strong>AI per questa analisi</strong><button type="button" className="text-button" onClick={onOpenAiSettings}>Impostazioni AI</button></div>
               <div className="settings-grid">
                 <div className="settings-field"><label htmlFor="matchup-model">Modello</label>
@@ -356,7 +357,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                   : previewEvidence?.detail ?? 'Nessun dato evento disponibile.'} Le revisioni riutilizzano le evidenze salvate nella guida precedente.</p>
                 <p>Include l’archetipo {selected.name}, la quota e i punti del metagame, il periodo {snapshot.period} e le fonti Limitless {snapshot.sourceUrl} e {selected.url}. Pokéguru cercherà una lista avversaria pubblica di esempio su Limitless e, se la trova, ne invierà i nomi e le quantità delle carte. Per una revisione invia anche il nuovo commento, la guida precedente e un contesto delle revisioni passate; per «Continua sulla nuova base» invia il contesto della discussione collegata. Non invia il testo grezzo dell’import né altri progetti.</p>
               </details>
-            </div>}
+            </div></details>}
             {selectedInCurrentMeta && (!discussion || discussion.current) && <button type="button" className="primary-button" onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
               {generating ? 'Codex sta analizzando…' : report ? 'Rigenera analisi' : 'Genera analisi con Codex'}
             </button>}

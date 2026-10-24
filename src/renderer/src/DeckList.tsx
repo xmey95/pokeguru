@@ -100,12 +100,14 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
     finally { setSaving(false) }
   }
 
-  return <>
+  return <div className="deck-list-body">
     {error && <div className="error-banner" role="alert">{error}</div>}
     {!loading && !catalog?.syncedAt && <p className="diagnostics">Il catalogo campione non è ancora sincronizzato. <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button> per vedere le varianti disponibili.</p>}
     <section className={`standard-deck-panel ${standardDeck.status}`} aria-label="Esito Standard occidentale">
       <strong>Esito Standard occidentale: {standardDeck.status === 'problem' ? 'errore certo nei controlli' :
         standardDeck.status === 'review' ? 'da verificare' : 'controlli disponibili superati'}</strong>
+      {standardDeck.problems.length > 0 && <div><b>Problemi accertati</b><ul>{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
+      <details className="standard-explanation"><summary>Copertura, fonti e controlli ({standardDeck.toReview.length} da verificare)</summary>
       <p>Data {asOf}. Fonti del pacchetto: {ruleAudit?.status === 'matching' ? `coerenti al ${ruleAudit.checkedAt.slice(0, 10)}` : ruleAudit?.status === 'changed' ? 'da rivedere' : ruleAudit?.status === 'unavailable' ? 'non raggiungibili all’ultimo controllo' : 'non ricontrollate da questa installazione'}. {standardDeck.legality === 'supported'
         ? 'La lista è conforme ai controlli Standard coperti dal pacchetto incluso. La verifica riguarda la lista e le stampe riconosciute, non lingua, autenticità o condizioni delle carte fisiche.'
         : standardDeck.legality === 'invalid' ? 'La lista viola almeno una regola Standard verificata.'
@@ -113,40 +115,9 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       <p>Elenco carte vietate verificato il {BUNDLED_WESTERN_RULE_PACKAGE.standardBans.checkedAt}; errata consultate il {BUNDLED_WESTERN_RULE_PACKAGE.errata.checkedAt}.{' '}
         <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('standard-bans')}>Carte vietate ↗</button>{' '}
         <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('errata')}>Errata ↗</button></p>
-      {standardDeck.problems.length > 0 && <div><b>Problemi accertati</b><ul>{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
       {standardDeck.toReview.length > 0 && <details><summary>Da verificare ({standardDeck.toReview.length})</summary><ul>{standardDeck.toReview.map((reason, index) => <li key={index}>{reason}</li>)}</ul></details>}
       {standardDeck.passed.length > 0 && <details><summary>Controlli superati ({standardDeck.passed.length})</summary><ul>{standardDeck.passed.map((item) => <li key={item}>{item}</li>)}</ul></details>}
-    </section>
-    <section className="rotation-panel" aria-label="Controllo della rotazione Standard occidentale">
-      <strong>Rotazione Standard occidentale</strong>
-      <label>Data di riferimento <input type="date" value={asOf} onChange={(event) => setReferenceDate(event.target.value || null)} /></label>
-      {referenceDate && <button type="button" className="text-button" onClick={() => setReferenceDate(null)}>Torna a oggi</button>}
-      <p>{rotation.rule ? `Regole ${rotation.rule.version}: marchio ${rotation.rule.firstAllowedMark} o successivo, tra quelli documentati. ` : 'Nessuna regola locale verificata per questa data. '}
-        Marchio ammesso: {rotation.counts['mark-accepted']} copie · marchio ruotato: {rotation.counts['mark-rotated']} · da chiarire: {rotation.counts.indeterminate}.
-      </p>
-      <p>Il solo controllo del marchio non conclude la validazione della lista: il riquadro «Esito Standard occidentale» combina costruzione, ammissione, promo e carte vietate. Fonte controllata il {rotation.sourceChecked}; nuove regole arrivano con una release dell’app.
-        {rotation.rule && <> <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(rotation.rule!.version)}>Fonte Play! Pokémon ↗</button></>}
-      </p>
-    </section>
-    <section className="rotation-panel" aria-label="Ammissione dei set Standard occidentali">
-      <strong>Ammissione dei set ai tornei</strong>
-      <p>Attesa superata: {admission.counts.admitted} copie · prima della data: {admission.counts.waiting} · data da chiarire: {admission.counts.indeterminate}. Pacchetto {admission.version}, controllato il {admission.checkedAt}.</p>
-      <p>La data del set non vale per le promo. I set speciali senza data confermata restano da chiarire. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-admission')}>Regola 2026 ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-admission-older')}>Regola precedente ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti ↗</button></p>
-    </section>
-    {promoAdmission.lines.length > 0 && <section className="rotation-panel" aria-label="Ammissione delle promo Standard occidentali">
-      <strong>Ammissione delle promo</strong>
-      <p>Disponibili nel registro alla data osservata: {promoAdmission.counts.admitted} copie · in attesa: {promoAdmission.counts.waiting} · da chiarire: {promoAdmission.counts.indeterminate}. Pacchetto v{promoAdmission.packageVersion ?? '—'}, controllato il {promoAdmission.checkedAt?.slice(0, 10) ?? 'mai'}.</p>
-      <p>Per le promo già disponibili il registro non pubblica la data storica di ammissione. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('promo')}>Registro Play! Pokémon ↗</button></p>
-    </section>}
-    <section className="construction-panel" aria-label="Controlli di costruzione del mazzo">
-      <strong>Costruzione del mazzo</strong>
-      <ul>
-        {([['60 carte', construction.cardCount], ['Quattro copie per nome', construction.copyLimit],
-          ['Pokémon Base', construction.basicPokemon], ['ACE SPEC', construction.aceSpec]] as const).map(([name, check]) =>
-          <li key={name}><span className={`construction-status ${check.status}`}>{check.status === 'met' ? 'Verificato' : check.status === 'problem' ? 'Controlla' : 'Da chiarire'}</span>
-            <span><strong>{name}:</strong> {check.message}</span></li>)}
-      </ul>
-      <p>Questi controlli sono necessari, ma non bastano a confermare la legalità Standard. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('construction')}>Regole del mazzo ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('ace-spec')}>Regola ACE SPEC ↗</button></p>
+      </details>
     </section>
     <p className="content-note">Una riga per carta di gioco riconosciuta. Aprila per vedere tutte le stampe note, la rarità, le varianti e le righe originali. {catalog?.scope.kind === 'standard-marks' ? 'La copertura del manifest TCGdex è indicata nel Catalogo.' : 'Il catalogo è un campione parziale.'}</p>
     {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-list" aria-label="Carte della lista corrente">
@@ -201,5 +172,38 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
         </article>
       })}
     </div>}
-  </>
+    <details className="deck-technical"><summary>Rotazione, ammissione e costruzione del mazzo</summary>
+    <section className="rotation-panel" aria-label="Controllo della rotazione Standard occidentale">
+      <strong>Rotazione Standard occidentale</strong>
+      <label>Data di riferimento <input type="date" value={asOf} onChange={(event) => setReferenceDate(event.target.value || null)} /></label>
+      {referenceDate && <button type="button" className="text-button" onClick={() => setReferenceDate(null)}>Torna a oggi</button>}
+      <p>{rotation.rule ? `Regole ${rotation.rule.version}: marchio ${rotation.rule.firstAllowedMark} o successivo, tra quelli documentati. ` : 'Nessuna regola locale verificata per questa data. '}
+        Marchio ammesso: {rotation.counts['mark-accepted']} copie · marchio ruotato: {rotation.counts['mark-rotated']} · da chiarire: {rotation.counts.indeterminate}.
+      </p>
+      <p>Il solo controllo del marchio non conclude la validazione della lista: il riquadro «Esito Standard occidentale» combina costruzione, ammissione, promo e carte vietate. Fonte controllata il {rotation.sourceChecked}; nuove regole arrivano con una release dell’app.
+        {rotation.rule && <> <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(rotation.rule!.version)}>Fonte Play! Pokémon ↗</button></>}
+      </p>
+    </section>
+    <section className="rotation-panel" aria-label="Ammissione dei set Standard occidentali">
+      <strong>Ammissione dei set ai tornei</strong>
+      <p>Attesa superata: {admission.counts.admitted} copie · prima della data: {admission.counts.waiting} · data da chiarire: {admission.counts.indeterminate}. Pacchetto {admission.version}, controllato il {admission.checkedAt}.</p>
+      <p>La data del set non vale per le promo. I set speciali senza data confermata restano da chiarire. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-admission')}>Regola 2026 ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-admission-older')}>Regola precedente ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti ↗</button></p>
+    </section>
+    {promoAdmission.lines.length > 0 && <section className="rotation-panel" aria-label="Ammissione delle promo Standard occidentali">
+      <strong>Ammissione delle promo</strong>
+      <p>Disponibili nel registro alla data osservata: {promoAdmission.counts.admitted} copie · in attesa: {promoAdmission.counts.waiting} · da chiarire: {promoAdmission.counts.indeterminate}. Pacchetto v{promoAdmission.packageVersion ?? '—'}, controllato il {promoAdmission.checkedAt?.slice(0, 10) ?? 'mai'}.</p>
+      <p>Per le promo già disponibili il registro non pubblica la data storica di ammissione. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('promo')}>Registro Play! Pokémon ↗</button></p>
+    </section>}
+    <section className="construction-panel" aria-label="Controlli di costruzione del mazzo">
+      <strong>Costruzione del mazzo</strong>
+      <ul>
+        {([['60 carte', construction.cardCount], ['Quattro copie per nome', construction.copyLimit],
+          ['Pokémon Base', construction.basicPokemon], ['ACE SPEC', construction.aceSpec]] as const).map(([name, check]) =>
+          <li key={name}><span className={`construction-status ${check.status}`}>{check.status === 'met' ? 'Verificato' : check.status === 'problem' ? 'Controlla' : 'Da chiarire'}</span>
+            <span><strong>{name}:</strong> {check.message}</span></li>)}
+      </ul>
+      <p>Questi controlli sono necessari, ma non bastano a confermare la legalità Standard. <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('construction')}>Regole del mazzo ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('ace-spec')}>Regola ACE SPEC ↗</button></p>
+    </section>
+    </details>
+  </div>
 }
