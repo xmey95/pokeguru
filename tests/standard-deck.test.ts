@@ -4,6 +4,7 @@ import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { evaluateStandardDeck } from '../src/shared/standard-deck'
 import type { StandardRuleAudit } from '../src/shared/standard-rule-audit'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../src/shared/western-rule-package'
+import { buildDeckCards } from '../src/shared/reconciliation'
 
 function print(id: string, name: string, options: Partial<CatalogPrint> = {}): CatalogPrint {
   const [setId, localId] = id.split('-')
@@ -88,6 +89,30 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
     const result = evaluateStandardDeck(deck, coveredCatalog, '2026-10-24', staleAudit)
     expect(result.legality).toBe('supported')
     expect(result.toReview).toEqual([])
+  })
+
+  it('copre PRE, Energia {G} e Boss PAL quando una ristampa corrente identica è ammessa', () => {
+    const bossIdentity = 'boss-orders-text'
+    const oldBoss = print('sv02-265', "Boss's Orders", { regulationMark: 'G',
+      identityId: bossIdentity, identityBasis: 'trainer-text' })
+    const newBoss = print('me01-114', "Boss's Orders", { identityId: bossIdentity,
+      identityBasis: 'trainer-text' })
+    const energy = print('mee-001', 'Grass Energy', { category: 'Energy', energyType: 'Normal',
+      regulationMark: null })
+    const coveredCatalog: CatalogView = { ...catalog,
+      scope: { ...catalog.scope, kind: 'standard-marks' }, rulePackage: BUNDLED_WESTERN_RULE_PACKAGE,
+      prints: [...prints, newBoss, energy,
+        print('sv08.5-102', 'Bug Catching Set', { regulationMark: 'H' }),
+        print('sv06-165', 'Unfair Stamp', { regulationMark: 'H', rarity: 'ACE SPEC Rare' })],
+      referencePrints: [oldBoss] }
+    const deck = baseline([...raw.slice(0, 39), '4 Bug Catching Set PRE 102',
+      "2 Boss's Orders PAL 265", '14 Basic {G} Energy MEE 1', '1 Unfair Stamp TWM 165'])
+    const result = evaluateStandardDeck(deck, coveredCatalog, '2026-10-24')
+    expect(result.problems).toEqual([])
+    expect(result.toReview).toEqual([])
+    expect(result.legality).toBe('supported')
+    expect(buildDeckCards(deck, coveredCatalog).find((card) => card.name === "Boss's Orders")
+      ?.importedPrintIds).toEqual(['sv02-265'])
   })
 
   it('segnala come certi 59 carte, due ACE SPEC e ammissione futura', () => {

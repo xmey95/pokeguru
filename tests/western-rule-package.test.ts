@@ -66,7 +66,7 @@ it('usa sempre le regole incluse nella release anche con un pacchetto sperimenta
     database.close()
     store = new CatalogStore(path)
     const after = store.view()
-    expect(before.rulePackage?.version).toBe('2026-10-24.2')
+    expect(before.rulePackage?.version).toBe('2026-10-24.3')
     expect(after.rulePackage?.version).toBe(before.rulePackage?.version)
     const withPrint = { ...after, syncedAt: '2027-01-01T00:00:00.000Z', prints: [print()] }
     const baseline = deck('1 Future Card FUTURE 001')
