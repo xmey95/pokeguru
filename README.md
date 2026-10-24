@@ -50,6 +50,8 @@ APP-069 usa un unico campo per **Discuti / Proponi una lista**, conservando il t
 
 APP-070 riunisce gli avversari **Matchup** in un selettore con ricerca, quota meta e stato della guida. Gli avversari storici restano consultabili senza presentare una vecchia quota come attuale. Il menu lascia visibile il mazzo; frecce e Invio selezionano, Escape chiude e restituisce il focus.
 
+APP-071 porta il **piano Matchup** in primo piano e rende punti forti, rischi e fonti dettagliate apribili. I testi della guida e delle revisioni contengono **link contestuali** a carte, eventi e fonti disponibili; lo storico conserva i propri riferimenti. Nella demo, cerca “fixture UI” e prova i link a Mega Absol ex e Mega Audino ex.
+
 Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con token condivisi, tipografia sans, icone SVG, controlli leggibili e stati coerenti. La sidebar desktop è larga **224 px**; la lista principale rimane fissa a **384 px**, con dock di 220 px sotto la soglia di 1240 px. Il primo progetto si crea nell'area centrale. Metadati e metodo precedono meno spesso carte, differenze e strategia; focus e scorrimento sono verificati anche da tastiera.
 
 L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.

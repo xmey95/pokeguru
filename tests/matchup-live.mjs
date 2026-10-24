@@ -41,6 +41,7 @@ try {
       throw new Error(`Analisi non generata: ${await page.getByRole('alert').textContent()}`)
     })
   ])
+  await page.locator('.guide-sources > summary').click()
   await page.locator('.matchup-report-meta > summary').click()
   assert.match(await page.locator('.meta-analysis').textContent(), /Analisi Codex generata/)
   assert.match(await page.locator('.meta-analysis').textContent(), new RegExp(`Modello: ${model.id}`))

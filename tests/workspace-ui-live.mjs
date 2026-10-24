@@ -283,7 +283,7 @@ try {
   for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'matchup')
     assert.match(await page.getByTestId('deck-companion').textContent(), /Mega Absol ex/)
-    assert.ok(await page.locator('.matchup-fields').isVisible())
+    assert.ok(await page.locator('.matchup-fields').first().isVisible())
     if (width === 1280) {
       const plan = await page.getByText('Come giocare il matchup').boundingBox()
       assert.ok(plan && plan.y + 80 < height, 'Il testo del piano Matchup non compare nella prima schermata a 1280×720')

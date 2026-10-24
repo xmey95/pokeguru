@@ -13,6 +13,7 @@ const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
 const profile = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-switcher-'))
 const deck = readFileSync(join(workspace, 'examples/workspace-principale.txt'), 'utf8').trim()
+const guideLinks = process.argv.includes('--guide-links')
 const hash = (text) => createHash('sha256').update(text).digest('hex')
 const names = ['Gardevoir ex', 'Dragapult ex', 'Charizard ex / Pidgeot ex',
   'Gholdengo ex / Joltik Box / Mega Kangaskhan ex · nome lungo di prova']
@@ -45,6 +46,20 @@ function seed() {
   try {
     const project = db.prepare("SELECT id FROM projects WHERE name = 'Matchup · fixture UI'").get()
     const savedDeck = db.prepare('SELECT raw_text FROM deck_baselines WHERE project_id = ?').get(project.id).raw_text
+    if (guideLinks) {
+      db.prepare('INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date) VALUES (?, ?, 1, 1, ?, ?)')
+        .run('me01', 'Mega Evolution · fixture', now, '2025-09-27')
+      const print = { id: 'me01-086', setId: 'me01', setName: 'Mega Evolution · fixture', localId: '086',
+        name: 'Mega Absol ex', category: 'Pokemon', rarity: null, variants: null,
+        identityId: 'fixture-absol', identityBasis: 'gameplay', imageBase: null, thumbnail: null,
+        highImageAvailable: null, sourceUpdated: null, sourceUrl: 'https://api.tcgdex.net/v2/en/cards/me01-086',
+        detailAt: now, error: null, isPromo: false, regulationMark: 'I',
+        gameplaySchemaVersion: 1, gameplay: { hp: 200, types: ['Darkness'], evolveFrom: null,
+          attacks: [], abilities: [], effect: 'Fixture UI, non una scheda competitiva verificata.',
+          trainerType: null, weaknesses: [], resistances: [], retreat: null } }
+      db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(print.id, print.setId, JSON.stringify(print))
+      db.prepare('INSERT INTO catalog_sync VALUES (1, ?)').run(now)
+    }
     for (const meta of [oldSnapshot, snapshot]) db.prepare('INSERT INTO meta_snapshots (id, fetched_at, payload) VALUES (?, ?, ?)')
       .run(meta.id, meta.fetchedAt, JSON.stringify(meta))
     for (const [opponent, meta, deckHash] of [
@@ -57,12 +72,29 @@ function seed() {
         ourKeyCards: 'Mega Absol ex, Mega Audino ex e Night Stretcher.',
         theirKeyCards: opponent.name, strategy: 'Piano di prova contro ' + opponent.name + '. Conserva una carta di ricerca per il turno successivo.',
         limitations: 'Fixture UI: guida di esempio, non generata da Codex e non verificata in partita.' }
+      if (guideLinks) {
+        report.sampleDeckMechanics = [{ name: 'Gardevoir ex', text: 'Scheda di prova.', sourceUrl: 'https://api.tcgdex.net/v2/en/cards/sv01-245' }]
+        report.strategy += '\nAvvio: prepara Mega Absol ex. Sviluppo: controlla Gardevoir ex e confronta la [lista campione](https://limitlesstcg.com/decks/list/12345). Chiusura: valuta le risorse osservate al Regional di prova.'
+        report.strengths = 'Mega Absol ex può affiancare un secondo attaccante. Verifica Gardevoir ex.'
+        report.weaknesses = 'Ipotesi da controllare con la [lista campione](https://limitlesstcg.com/decks/list/12345).'
+        report.theirKeyCards = 'Gardevoir ex; la [lista campione](https://limitlesstcg.com/decks/list/12345) resta un esempio.'
+        report.limitations += ' Fonte: https://limitlesstcg.com/decks?format=standard. Testo non affidabile: <img src=x onerror=alert(1)> [non aprire](javascript:alert).'
+        report.tournamentEvidence = { schemaVersion: 2, status: 'matched', detail: 'Evidenze dimostrative del Regional di prova.',
+          eventId: null, eventName: null, eventDate: null, eventUrl: null, eventLists: null, eventParticipants: null,
+          matchedDeckId: null, matchedCompleteLists: 1, observedCards: [], sampleLists: [],
+          events: [{ source: 'main', eventId: '582', name: 'Regional di prova', date: now,
+            url: 'https://limitlesstcg.com/tournaments/582', totalParticipants: 1, visibleParticipants: 1,
+            completeLists: 1, matchedLists: 1, circuit: 'WESTERN' }] }
+      }
       db.prepare('INSERT INTO matchup_reports (project_id, meta_id, opponent_id, deck_hash, generated_at, payload) VALUES (?, ?, ?, ?, ?, ?)')
         .run(project.id, meta.id, opponent.id, deckHash, meta.fetchedAt, JSON.stringify(report))
       db.prepare('INSERT INTO matchup_discussions (id, project_id, meta_id, opponent_id, deck_hash, parent_id, created_at) VALUES (?, ?, ?, ?, ?, NULL, ?)')
         .run(opponent.id, project.id, meta.id, opponent.id, deckHash, meta.fetchedAt)
       db.prepare('INSERT INTO matchup_turns (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary) VALUES (?, ?, 0, NULL, ?, ?, NULL)')
-        .run(opponent.id, opponent.id, meta.fetchedAt, JSON.stringify(report))
+        .run(opponent.id, opponent.id, meta.fetchedAt, JSON.stringify(guideLinks && opponent.id === opponents[0].id
+          ? { ...report, sampleDeckMechanics: [{ name: 'Gardevoir ex', text: 'Scheda precedente.', sourceUrl: 'https://api.tcgdex.net/v2/en/cards/sv01-086' }] } : report))
+      if (guideLinks && opponent.id === opponents[0].id) db.prepare('INSERT INTO matchup_turns (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary) VALUES (?, ?, 1, ?, ?, ?, ?)')
+        .run(opponent.id + '-revision', opponent.id, 'Rivedi le risorse finali.', now, JSON.stringify(report), 'Riferimento aggiornato per Gardevoir ex.')
     }
   } finally { db.close() }
 }
@@ -116,10 +148,58 @@ try {
   await trigger.waitFor()
   await page.waitForFunction(() => document.querySelector('#matchup-switcher-trigger')?.textContent.includes('Guida disponibile'))
   await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
+  if (guideLinks) {
+    await application.evaluate(({ shell }) => {
+      globalThis.guideOpened = []
+      globalThis.guideOpenFails = false
+      shell.openExternal = async (url) => {
+        if (globalThis.guideOpenFails) throw new Error('Fixture: browser non disponibile')
+        globalThis.guideOpened.push(url)
+      }
+    })
+    const plan = page.locator('.matchup-fields > .strategy-field').first()
+    const card = plan.getByRole('link', { name: 'Gardevoir ex', exact: true }).last()
+    await card.focus()
+    await page.keyboard.press('Enter')
+    await plan.getByRole('link', { name: 'lista campione', exact: true }).click()
+    await plan.getByRole('link', { name: 'Regional di prova', exact: true }).click()
+    assert.deepEqual(await application.evaluate(() => globalThis.guideOpened), [
+      'https://api.tcgdex.net/v2/en/cards/sv01-245', 'https://limitlesstcg.com/decks/list/12345', 'https://limitlesstcg.com/tournaments/582'
+    ], 'Le API reali non hanno aperto le destinazioni previste')
+    await application.evaluate(() => { globalThis.guideOpenFails = true })
+    await card.click()
+    await plan.getByRole('alert').waitFor()
+    await application.evaluate(() => { globalThis.guideOpenFails = false })
+    await card.click()
+    await plan.getByRole('alert').waitFor({ state: 'detached' })
+    assert.equal(await page.locator('.matchup-fields img, .matchup-fields a[href^="javascript:"]').count(), 0)
+    assert.equal(await page.locator('.matchup-assessment').getAttribute('open'), null)
+    assert.equal(await page.locator('.guide-sources').getAttribute('open'), null)
+    await page.locator('.matchup-assessment > summary').click()
+    assert.ok(await page.locator('.matchup-assessment').getByRole('link', { name: 'lista campione' }).isVisible())
+    await page.locator('.matchup-assessment > summary').click()
+    await page.locator('.guide-sources > summary').click()
+    await page.getByRole('region', { name: 'Evidenze torneo del matchup' }).waitFor()
+    await page.locator('.guide-sources > summary').click()
+    const previous = page.locator('.discussion-timeline details').first()
+    await previous.locator('summary').click()
+    assert.equal(await previous.getByRole('link', { name: 'Gardevoir ex', exact: true }).first().getAttribute('href'), 'https://api.tcgdex.net/v2/en/cards/sv01-086')
+    assert.equal(await previous.locator('a[href^="#catalog-card"]').count(), 0, 'Lo storico usa le carte della lista attuale')
+    await previous.locator('summary').click()
+    await plan.getByRole('link', { name: 'Mega Absol ex', exact: true }).click()
+    await page.locator('.catalog-detail').getByRole('heading', { name: 'Mega Absol ex', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Matchup', exact: true }).click()
+    await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
+  }
 
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
     await page.locator('.main-content').evaluate((el) => { el.scrollTop = 0 })
     await geometry(page, width, height, false)
+    if (guideLinks) {
+      const planBox = await page.locator('.strategy-field p').first().boundingBox()
+      const mainBox = await page.locator('.main-content').boundingBox()
+      assert.ok(planBox.y + 40 < mainBox.y + mainBox.height, 'Il testo del piano non è visibile nella prima schermata')
+    }
     await page.screenshot({ path: join(workspace, 'node_modules', 'matchup-guide-' + width + '.png') })
     await trigger.focus()
     await page.keyboard.press('Enter')
@@ -170,7 +250,7 @@ try {
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
   await page.getByText('Guida storica · base precedente', { exact: true }).waitFor()
-  assert.match(await page.locator('.matchup-fields').innerText(), /Piano di prova contro Archetipo solo nello storico/)
+  assert.match(await page.locator('.matchup-fields').first().innerText(), /Piano di prova contro Archetipo solo nello storico/)
   await page.getByRole('button', { name: 'Aggiorna Limitless', exact: true }).click()
   assert.match(await trigger.innerText(), /Archetipo solo nello storico/)
   await openPicker()
@@ -196,7 +276,7 @@ try {
   await page.getByRole('button', { name: 'Matchup', exact: true }).click()
   await page.getByRole('alert').filter({ hasText: 'Storico non leggibile' }).waitFor()
   assert.match(await trigger.innerText(), /Disponibilità da verificare/)
-  console.log('MATCHUP SELECTOR UI OK: ricerca, tastiera, storico, base precedente, isolamento progetti, errore lettura; 1440/1280/640; contrasto minimo ' + minimumContrast.toFixed(2))
+  console.log('MATCHUP UI OK' + (guideLinks ? ' con riferimenti contestuali, API reali e shell intercettata' : '') + ': ricerca, tastiera, storico, base precedente, isolamento progetti, errore lettura; 1440/1280/640; contrasto minimo ' + minimumContrast.toFixed(2))
 } finally {
   await application?.close()
   const resolved = realpathSync(profile)

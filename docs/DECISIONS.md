@@ -125,6 +125,14 @@ L'utente approva un selettore ricercabile con nome, quota meta e disponibilità 
 
 Il menu usa lo stesso stile dei Thread, un popover nativo con ricerca e pulsanti, limitato all'area centrale per lasciare il mazzo consultabile. La ricerca si azzera alla chiusura e l'opzione corrente torna in vista alla riapertura; frecce/Invio, Tab ed Escape sono verificati. Escape viene gestito esplicitamente anche nel campo search compilato. Il nome scelto compare una volta; i punti Limitless passano nei dettagli della fonte. Nessuna modifica a storage, guida/revisioni o integrazioni. Le prove di disponibilità usano report dichiaratamente dimostrativi in SQLite; non attestano qualità o nuove generazioni Codex.
 
+### T-60 — Gerarchia della guida e riferimenti contestuali (APP-071)
+
+Il piano precede carte chiave e approfondimenti; i limiti restano aperti e lo stato storico visibile. Punti forti/rischi e fonti dettagliate sono richiudibili; la provenienza del meta resta accessibile dopo la guida. L'utente richiede hyperlink nei testi: la UI riconosce link Markdown e URL espliciti, oltre ai nomi di carte/eventi associati a riferimenti disponibili. Gli URL nudi supportati assumono etichette brevi; href e tooltip conservano la destinazione.
+
+Nomi completi, confini delle parole e destinazioni univoche evitano collegamenti arbitrari. Le carte riconosciute della base attuale aprono il Catalogo; le fonti salvate in un report e nelle sue revisioni restano quelle di quel report. Non si ricavano fonti storiche dalla lista attuale e non si inventano citazioni a supporto di un'affermazione. Il link serve a consultare il riferimento, senza certificare l'inferenza AI.
+
+Il renderer usa ancore semantiche, senza HTML interpretato né navigazione interna di Electron verso URL esterni. Le route IPC esistenti validano l'apertura di TCGdex e Limitless; protocolli, host o percorsi non supportati restano testo. Errori vicino al link e focus visibile. Non viene introdotto un parser Markdown generale né modificato il prompt di generazione. I test intercettano solo l'apertura finale della shell; IPC e navigazione Catalogo sono reali. La demo conserva guide dichiaratamente dimostrative.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

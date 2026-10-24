@@ -38,11 +38,12 @@ try {
   assert.match(await page.locator('.ai-data-preview').textContent(), /liste complete dell’archetipo/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([
-    page.getByRole('region', { name: 'Evidenze torneo del matchup' }).waitFor({ timeout: 200000 }),
+    page.locator('.guide-sources > summary').waitFor({ timeout: 200000 }),
     page.getByRole('alert').waitFor({ timeout: 200000 }).then(async () => {
       throw new Error(`Analisi non generata: ${await page.getByRole('alert').textContent()}`)
     })
   ])
+  await page.locator('.guide-sources > summary').click()
   const evidenceText = await page.getByRole('region', { name: 'Evidenze torneo del matchup' }).textContent()
   assert.match(evidenceText, /liste complete dell’archetipo/)
   assert.match(evidenceText, /Carte osservate/)
