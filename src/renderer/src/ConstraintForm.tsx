@@ -3,6 +3,7 @@ import type { CatalogPrint } from '../../shared/catalog'
 import { buildDeckCards } from '../../shared/reconciliation'
 import { evaluateConstraints, type ConstraintKind, type ConstraintResult, type DeckConstraint } from '../../shared/constraints'
 import { useDeckConstraints } from './DeckConstraintsContext'
+import { useDraftState } from './Navigation'
 
 export function constraintLabel(constraint: DeckConstraint): string {
   return constraint.kind === 'required' ? 'Obbligatoria' : constraint.kind === 'minimum'
@@ -26,7 +27,7 @@ export function focusConstraintControl(element: HTMLElement | null): void {
     main.scrollTop += rect.top - viewport.top - 20
 }
 
-export function ConstraintForm({ id, initial, initialIdentityId = '', fixedIdentity, onSaved, onCancel }: {
+export function ConstraintForm({ id, initial, initialIdentityId = '', fixedIdentity, onSaved, onCancel: cancel }: {
   id: string
   initial?: DeckConstraint
   initialIdentityId?: string
@@ -35,10 +36,18 @@ export function ConstraintForm({ id, initial, initialIdentityId = '', fixedIdent
   onCancel(): void
 }) {
   const { projectId, baseline, catalog, reconciliation, constraints, saving, save } = useDeckConstraints()
-  const [identityId, setIdentityId] = useState(fixedIdentity?.id ?? initial?.identityId ?? initialIdentityId)
-  const [printId, setPrintId] = useState(initial?.printId ?? '')
-  const [kind, setKind] = useState<ConstraintKind>(initial?.kind ?? 'required')
-  const [quantity, setQuantity] = useState(String(initial?.quantity ?? 2))
+  const draftKey = `constraint:${projectId}:${id}:${initial?.updatedAt ?? 'new'}`
+  const [identityId, setIdentityId] = useDraftState(`${draftKey}:identity`, fixedIdentity?.id ?? initial?.identityId ?? initialIdentityId)
+  const [printId, setPrintId] = useDraftState(`${draftKey}:print`, initial?.printId ?? '')
+  const [kind, setKind] = useDraftState<ConstraintKind>(`${draftKey}:kind`, initial?.kind ?? 'required')
+  const [quantity, setQuantity] = useDraftState(`${draftKey}:quantity`, String(initial?.quantity ?? 2))
+  function resetDraft(): void {
+    setIdentityId(fixedIdentity?.id ?? initial?.identityId ?? initialIdentityId)
+    setPrintId(initial?.printId ?? '')
+    setKind(initial?.kind ?? 'required')
+    setQuantity(String(initial?.quantity ?? 2))
+  }
+  function onCancel(): void { resetDraft(); cancel() }
   const [error, setError] = useState<string | null>(null)
   const form = useRef<HTMLFormElement>(null)
   useEffect(() => { focusConstraintControl(form.current?.querySelector('select') ?? null) }, [])
@@ -66,7 +75,7 @@ export function ConstraintForm({ id, initial, initialIdentityId = '', fixedIdent
     event.preventDefault()
     if (!valid || saving) return
     setError(null)
-    try { onSaved(await save({ id: initial?.id, identityId, printId: printId || null, kind, quantity: copies })) }
+    try { const saved = await save({ id: initial?.id, identityId, printId: printId || null, kind, quantity: copies }); resetDraft(); onSaved(saved) }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Vincolo non salvato.') }
   }
 

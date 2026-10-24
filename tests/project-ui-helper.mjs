@@ -19,11 +19,15 @@ export async function startNewProject(page) {
 export async function switchProject(page, name) {
   await openProjectPicker(page)
   await page.getByRole('dialog', { name: 'Scegli progetto' }).getByRole('button', { name }).click()
+  await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
 }
 
 export async function switchThread(page, name) {
   await page.locator('#thread-switcher-trigger').click()
   await page.getByRole('dialog', { name: 'Scegli thread' }).getByRole('button', { name }).click()
+  await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
 }
 
 /** Loaded decks expose import on request; empty projects expose it immediately. */

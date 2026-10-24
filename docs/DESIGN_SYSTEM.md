@@ -115,6 +115,8 @@ Per conservare il profilo creato dalla prova: `node tests/workspace-ui-live.mjs 
 
 ## Feedback utile
 
+**Navigazione globale (APP-072):** un solo gruppo Indietro/Avanti nell'intestazione, con tooltip della destinazione, focus visibile, stato disabilitato e Alt+Sinistra/Destra. L'intestazione resta sopra il contenuto anche sotto 640 px. Tornare recupera la lettura esatta, le selezioni e le bozze; non modifica dati salvati. I link esterni hanno ↗ e mantengono il contesto nell'app. Cronologia e bozze sono valide nella sessione, con 80 destinazioni al massimo. [Desktop 1440](design-review/navigazione-1440.png), [1280](design-review/navigazione-1280.png) e [compatto 640](design-review/navigazione-640.png) usano guide dichiaratamente dimostrative. Provare una guida → Catalogo → Indietro, poi un Thread con bozza → Impostazioni AI → Indietro; verificare anche Avanti e Alt+frecce.
+
 - Leggibilità e ritmo durante una sessione reale, soprattutto sui nomi lunghi.
 - Equilibrio tra colonna di lavoro e pannello da 384 px.
 - Chiarezza del colore proposta e degli stati incerti.

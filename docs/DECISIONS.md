@@ -133,6 +133,16 @@ Nomi completi, confini delle parole e destinazioni univoche evitano collegamenti
 
 Il renderer usa ancore semantiche, senza HTML interpretato né navigazione interna di Electron verso URL esterni. Le route IPC esistenti validano l'apertura di TCGdex e Limitless; protocolli, host o percorsi non supportati restano testo. Errori vicino al link e focus visibile. Non viene introdotto un parser Markdown generale né modificato il prompt di generazione. I test intercettano solo l'apertura finale della shell; IPC e navigazione Catalogo sono reali. La demo conserva guide dichiaratamente dimostrative.
 
+### T-61 — Cronologia di navigazione e stato della sessione (APP-072)
+
+L'utente approva la gestione globale Indietro/Avanti. L'intestazione contiene una sola coppia di controlli, disponibile anche nel layout compatto, con destinazione nel tooltip e Alt+Sinistra/Destra. La cronologia conserva fino a 80 destinazioni nella finestra corrente; una nuova destinazione dopo Indietro elimina il ramo Avanti. Scorrere, scrivere e aprire un dettaglio aggiornano il contesto senza generare ulteriori pagine.
+
+Le destinazioni conservano solo stato di presentazione. Ogni passaggio rilegge i dati dalle API esistenti; non ricrea record né ripete invii o adozioni. I componenti della destinazione sono rimontati con stato di vista conservato, isolando le risposte tardive. Dettagli aperti, scroll dei pannelli e focus vengono ripristinati dopo il caricamento; un'interazione dell'utente interrompe un ripristino ancora in attesa. Elementi non più presenti ricevono un fallback di focus sul contenuto. Il ritorno a progetti o contenuti non disponibili è esplicito.
+
+Bozze e operazioni in corso hanno uno stato di sessione separato per progetto e contenuto: una vecchia voce di cronologia non deve far riapparire come bozza un testo già salvato. Un risultato tardivo può liberare la propria operazione e aggiornare la propria bozza solo se non è stata modificata nel frattempo. I controlli di invio restano disabilitati anche dopo un ritorno durante l'attesa; al completamento vengono riletti i dati salvati. Le bozze non sono persistite su disco, quindi questa attività non anticipa la ripresa estesa I4.
+
+Le fonti esterne sono marcate ↗ e continuano a usare le API validate di apertura nel browser predefinito. Non generano una pagina nella cronologia interna. Nessuna modifica a schema DB, IPC o prompt di generazione. Le verifiche usano archivi temporanei reali, dati di esempio e ritardi dichiarati; la shell esterna è intercettata nel test.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

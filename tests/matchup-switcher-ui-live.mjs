@@ -8,12 +8,13 @@ import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
 import { auditDesignSystem } from './design-system-audit.mjs'
 import { createProjectFromStart, switchProject } from './project-ui-helper.mjs'
+import { navigationScenarios } from './navigation-scenarios.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
 const profile = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-switcher-'))
 const deck = readFileSync(join(workspace, 'examples/workspace-principale.txt'), 'utf8').trim()
-const guideLinks = process.argv.includes('--guide-links')
+const guideLinks = process.argv.includes('--guide-links') || process.argv.includes('--navigation')
 const hash = (text) => createHash('sha256').update(text).digest('hex')
 const names = ['Gardevoir ex', 'Dragapult ex', 'Charizard ex / Pidgeot ex',
   'Gholdengo ex / Joltik Box / Mega Kangaskhan ex · nome lungo di prova']
@@ -192,6 +193,8 @@ try {
     await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
   }
 
+  if (process.argv.includes('--navigation')) await navigationScenarios(page, application, workspace)
+
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
     await page.locator('.main-content').evaluate((el) => { el.scrollTop = 0 })
     await geometry(page, width, height, false)
@@ -242,6 +245,7 @@ try {
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
   await picker.waitFor({ state: 'hidden' })
+  await page.waitForFunction(() => document.querySelector('#matchup-switcher-trigger')?.textContent.includes('Nessuna guida') && document.activeElement?.id === 'matchup-switcher-trigger')
   assert.match(await trigger.innerText(), /Gholdengo.*Nessuna guida/s)
   assert.ok(await trigger.evaluate((el) => el === document.activeElement))
   await page.getByText('Nessuna guida per questo archetipo e questa lista.').waitFor()

@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-072 completato:** cronologia globale Indietro/Avanti con recupero di selezioni, bozze, dettagli, scorrimento e focus; controlli presenti anche nel layout compatto. Operazioni pendenti e dati correnti separati dalla cronologia; link esterni riconoscibili. Build, nove test mirati e sette percorsi Electron passati; risultati e limiti nel backlog. Prossimo passo: prova utente e ripresa della revisione grafica condivisa, a partire dalla discussione/revisione delle guide Matchup. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
 - **APP-071 completato:** piano prioritario, approfondimenti apribili e hyperlink contestuali nei testi; riferimenti storici separati dalla lista attuale. Build, sette test mirati e due percorsi Electron passati; demo e schermate aggiornate, risultati/limiti nel backlog. Prossimo passo: prova utente di gerarchia e collegamenti, poi proseguire la revisione condivisa dei singoli blocchi. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
 
 - **APP-070 completato:** selettore avversario ricercabile con quota meta, disponibilità guida e storico; titolo ripetuto rimosso, lista principale consultabile anche a menu aperto. Build e tre percorsi Electron passati; tastiera, isolamento, storico, errore di lettura e layout verificati. Risultati e limiti nel backlog. Prossimo punto proposto: APP-071, gerarchia della guida Matchup, da discutere prima di applicare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.

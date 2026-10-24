@@ -1,5 +1,6 @@
 import { Icon } from './Icon'
 import { useEffect, useMemo, useState } from 'react'
+import { useViewState } from './Navigation'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { CatalogView } from '../../shared/catalog'
 import { buildDeckCards, type DeckReconciliation } from '../../shared/reconciliation'
@@ -46,10 +47,10 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
   const [loading, setLoading] = useState(true)
   const [dataUnavailable, setDataUnavailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [expanded, setExpanded] = useViewState<string | null>('deck.expanded', null)
   const [saving, setSaving] = useState(false)
   const [today, setToday] = useState(localDate)
-  const [referenceDate, setReferenceDate] = useState<string | null>(null)
+  const [referenceDate, setReferenceDate] = useViewState<string | null>('deck.referenceDate', null)
 
   useEffect(() => {
     const timer = window.setInterval(() => setToday(localDate()), 60_000)
@@ -136,7 +137,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
     finally { setSaving(false) }
   }
 
-  return <div className="deck-list-body">
+  return <div className="deck-list-body" data-nav-loading={loading}>
     {error && <div className="error-banner" role="alert">{error}</div>}
     <section className="standard-deck-panel" aria-label="Esito Standard occidentale">
       <div className="deck-summary-heading">

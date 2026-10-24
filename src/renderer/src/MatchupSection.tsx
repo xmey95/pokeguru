@@ -9,6 +9,7 @@ import { buildDeckCards, matchupDeckContext, type DeckReconciliation } from '../
 import { MatchupSwitcher } from './MatchupSwitcher'
 import { GuideText } from './GuideText'
 import { reportGuideReferences, type GuideReference } from './guide-links'
+import { useNavigation, useViewState, useDraftState, useBusyState } from './Navigation'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -20,6 +21,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   onOpenAiSettings(): void
   onOpenCatalogCard(identityId: string): void
 }) {
+  const nav = useNavigation()
   const hasBaseline = baseline !== null
   const baselineKey = baseline?.rawText ?? null
   const [snapshot, setSnapshot] = useState<MetaSnapshot | null>(null)
@@ -28,20 +30,20 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [historyKey, setHistoryKey] = useState<string | null>(null)
   const [discussions, setDiscussions] = useState<MatchupDiscussion[]>([])
   const [discussionsKey, setDiscussionsKey] = useState<string | null>(null)
-  const [activeDiscussionId, setActiveDiscussionId] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState('')
+  const [activeDiscussionId, setActiveDiscussionId] = useViewState<string | null>('matchup.discussion', null)
   const [reportsKey, setReportsKey] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useViewState<string | null>('matchup.selected', null)
+  const [feedback, setFeedback] = useDraftState(`matchup.feedback:${projectId}:${selectedId}:${activeDiscussionId}`, '')
   const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [generating, setGenerating] = useBusyState(`matchup:${projectId}:${selectedId}`)
+  const [error, setError] = useDraftState<string | null>(`matchup.error:${projectId}:${selectedId}`, null)
   const [connection, setConnection] = useState<AiConnection | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [previewEvidence, setPreviewEvidence] = useState<MatchupTournamentEvidence | null>(null)
-  const [overrideModel, setOverrideModel] = useState('')
-  const [overrideEffort, setOverrideEffort] = useState('')
+  const [overrideModel, setOverrideModel] = useDraftState(`matchup.model:${projectId}:${selectedId}`, '')
+  const [overrideEffort, setOverrideEffort] = useDraftState(`matchup.effort:${projectId}:${selectedId}`, '')
 
   useEffect(() => {
     let active = true
@@ -88,8 +90,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       const result = await window.projectsApi.getMeta()
       if (!result.ok) throw new Error(result.error)
       setSnapshot(result.value)
-      setSelectedId((id) => id && (result.value.decks.some((deck) => deck.id === id) || historicalOpponents.some((deck) => deck.id === id))
-        ? id : result.value.decks[0]?.id ?? null)
+      setSelectedId((id) => id ?? result.value.decks[0]?.id ?? null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Metagame non disponibile.')
     } finally {
@@ -117,7 +118,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       else setError(result.error)
     }).catch(() => { if (active) setError('Impossibile leggere le analisi salvate.') })
     return () => { active = false }
-  }, [projectId, snapshot?.id, baselineKey, hasBaseline])
+  }, [projectId, snapshot?.id, baselineKey, hasBaseline, generating])
 
   async function reloadDiscussions(opponentId: string): Promise<void> {
     const result = await window.projectsApi.listMatchupDiscussions(projectId, opponentId)
@@ -139,11 +140,12 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       if (result.ok) {
         setDiscussions(result.value)
         setDiscussionsKey(key)
-        setActiveDiscussionId(result.value.find((item) => item.current)?.id ?? result.value[0]?.id ?? null)
+        setActiveDiscussionId((old) => old ?? result.value.find((item) => item.current)?.id ?? result.value[0]?.id ?? null)
+        if (activeDiscussionId && !result.value.some((item) => item.id === activeDiscussionId)) setError('Questa discussione non è più disponibile. Scegli una base disponibile oppure torna indietro.')
       } else setError(result.error)
     }).catch(() => { if (active) setError('Impossibile leggere le discussioni Matchup.') })
     return () => { active = false }
-  }, [projectId, selectedId, snapshot?.id, baselineKey])
+  }, [projectId, selectedId, snapshot?.id, baselineKey, generating])
 
   async function generate(): Promise<void> {
     if (!snapshot || !selectedId || !hasBaseline || !reconciliation || generating) return
@@ -217,6 +219,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const otherOpponents = knownHistory.filter((deck) => !snapshot?.decks.some((current) => current.id === deck.id))
   const allOpponents = [...(snapshot?.decks ?? []), ...otherOpponents]
   const selected = allOpponents.find((deck) => deck.id === selectedId)
+  useEffect(() => { if (selected) nav.entry.label = `Matchup · ${selected.name}` }, [selected?.id])
   const selectedInCurrentMeta = !!snapshot?.decks.some((deck) => deck.id === selectedId)
   const currentReports = reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}` ? reports : []
   const reportsLoaded = !hasBaseline || reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}`
@@ -247,7 +250,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         ? 'Nessuna guida' : 'Disponibilità da verificare'
   }))
 
-  return <section className="matchup-section" aria-label="Matchup del progetto">
+  return <section className="matchup-section" aria-label="Matchup del progetto" data-nav-loading={!error && (loading || !historyLoaded || !reportsLoaded || (!!selectedId && !!snapshot && discussionsKey !== `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`))}>
+    {!loading && historyLoaded && selectedId && !selected && <p className="error-banner" role="alert">Questo avversario non è più disponibile. Scegline un altro oppure torna indietro.</p>}
     <div className="panel-heading">
       <h2>Matchup</h2>
       <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || generating}>Aggiorna Limitless</button>
@@ -255,14 +259,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     {error && <div className="error-banner" role="alert">{error}</div>}
     {loading && !snapshot ? <p className="content-note">Caricamento del metagame Limitless…</p> : snapshot && <>
       <div className="meta-layout">
-        <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading || generating} onSelect={setSelectedId} />
+        <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading || generating} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
         <div className="meta-analysis">
           {selected && <>
             {discussion && !discussion.current && <p className="matchup-freshness stale">Guida storica · base precedente</p>}
             {visibleDiscussions.length > 1 && <div className="discussion-switcher" aria-label="Discussioni Matchup">
               {visibleDiscussions.map((item, index) => <button type="button" key={item.id}
                 className={`secondary-button ${discussion?.id === item.id ? 'selected' : ''}`}
-                onClick={() => setActiveDiscussionId(item.id)}>
+                onClick={() => nav.visit({ 'matchup.discussion': item.id }, `Matchup · ${selected?.name ?? 'Guida'} · base ${date(item.createdAt)}`)}>
                 {item.current ? 'Base attuale' : `Storico ${index + 1}`}{item.parentId ? ' · collegata' : ''}
               </button>)}
             </div>}
@@ -302,7 +306,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                     {card.name} · {card.lists}/{report.tournamentEvidence!.matchedCompleteLists} liste{card.catalogStatus === 'recognized'
                       ? '' : card.catalogStatus === 'ambiguous' ? ' · identità da verificare' : ' · non nel catalogo locale'}
                     {card.catalogIdentityId && <button type="button" className="text-button"
-                      onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo ↗</button>}
+                      onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo</button>}
                     {card.gameplay && <details><summary>Meccaniche verificate</summary><p>{body(card.gameplay)}</p>
                       {card.cardSourceUrl && <small>{body(card.cardSourceUrl)}</small>}</details>}
                   </li>)}</ul></details>

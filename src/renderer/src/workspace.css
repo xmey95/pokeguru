@@ -6,6 +6,13 @@
 .workspace { display: contents; }
 .topbar { grid-column: 2; grid-row: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--ink-muted); font-size: var(--text-xs); }
 .topbar b { margin: 0 8px; color: var(--line-strong); font-weight: 400; }
+.history-controls { display: flex; gap: 4px; flex: none; }
+.history-controls button { display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; border: 1px solid transparent; background: transparent; color: var(--ink); font-size: 22px; line-height: 1; }
+.history-controls button:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--line); }
+.history-controls button:disabled { opacity: .4; cursor: default; }
+.topbar > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.external-link-mark { white-space: nowrap; font-size: .85em; }
+@media (max-width: 640px) { .topbar { gap: 8px; } .topbar > span:last-child { display: none; } }
 .sidebar { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 24px 12px 16px; overflow: auto; background: var(--rail); color: var(--rail-text); scrollbar-width: thin; }
 .brand { order: 0; display: flex; align-items: center; gap: 12px; flex: none; padding: 0 8px; margin-bottom: 24px; }
 .brand-mark { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 10px; background: #c3e9da; color: var(--rail); }
@@ -100,9 +107,9 @@
   .companion-list { grid-column: 2; grid-row: 1 / span 2; border-left: 1px solid var(--line); }
 }
 @media (max-width: 640px) {
-  .app-shell, .app-shell.with-deck { grid-template-columns: minmax(0, 1fr); grid-template-rows: 60px minmax(0, 1fr); }
-  .app-shell.with-deck { grid-template-rows: 60px minmax(0, 1fr) 220px; }
-  .topbar { display: none; }
+  .app-shell, .app-shell.with-deck { grid-template-columns: minmax(0, 1fr); grid-template-rows: 60px 44px minmax(0, 1fr); }
+  .app-shell.with-deck { grid-template-rows: 60px 44px minmax(0, 1fr) 220px; }
+  .topbar { display: flex; grid-column: 1; grid-row: 2; padding: 0 16px; }
   .sidebar { grid-column: 1; grid-row: 1; flex-direction: row; gap: 8px; padding: 8px 12px; overflow-x: auto; overflow-y: hidden; }
   .brand { margin: 0; }
   .brand-mark { width: 32px; height: 36px; }
@@ -111,8 +118,8 @@
   .workspace-nav, .resource-nav { display: flex; flex: none; width: auto; margin: 0; padding: 0; border: 0; gap: 4px; }
   .resource-nav { padding-left: 8px; border-left: 1px solid #35505a; }
   .workspace-nav button, .resource-nav button { width: 40px; min-height: 40px; padding: 8px; }
-  .main-content { grid-column: 1; grid-row: 2; padding: 20px 16px 32px; }
-  .deck-companion { grid-column: 1; grid-row: 3; grid-template-columns: 240px minmax(0, 1fr); }
+  .main-content { grid-column: 1; grid-row: 3; padding: 20px 16px 32px; }
+  .deck-companion { grid-column: 1; grid-row: 4; grid-template-columns: 240px minmax(0, 1fr); }
   .companion-top, .companion-summary { padding-left: 12px; padding-right: 12px; }
   .companion-top { flex-wrap: wrap; gap: 4px; }
   .companion-top h2 { font-size: var(--text-base); }

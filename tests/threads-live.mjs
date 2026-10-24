@@ -50,6 +50,7 @@ try {
   await page.getByLabel('Titolo').fill('Piano B')
   await page.getByRole('button', { name: 'Crea thread' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
+  await page.locator('.manual-candidate > summary').click()
   await page.getByLabel('Lista completa proposta').fill('60 Carta C MEG 3')
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
   await switchThread(page, /Piano A/)

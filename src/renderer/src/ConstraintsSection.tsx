@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ConstraintForm, constraintLabel, ConstraintStatus, focusConstraintControl } from './ConstraintForm'
 import { useDeckConstraints } from './DeckConstraintsContext'
+import { useViewState } from './Navigation'
 
 export function ConstraintsSection({ selectedIdentityId, selectionVersion, onTargetConsumed, onOpenCatalog }: {
   selectedIdentityId: string | null
@@ -9,8 +10,8 @@ export function ConstraintsSection({ selectedIdentityId, selectionVersion, onTar
   onOpenCatalog(): void
 }) {
   const { catalog, constraints, evaluation, loading, saving, error, remove } = useDeckConstraints()
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [createIdentity, setCreateIdentity] = useState<string | null>(null)
+  const [editingId, setEditingId] = useViewState<string | null>('constraint.editing', null)
+  const [createIdentity, setCreateIdentity] = useViewState<string | null>('constraint.creating', null)
   const [notice, setNotice] = useState('')
   const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null)
   const section = useRef<HTMLElement>(null)
@@ -42,7 +43,7 @@ export function ConstraintsSection({ selectedIdentityId, selectionVersion, onTar
     } catch (cause) { setDeleteError({ id, message: cause instanceof Error ? cause.message : 'Vincolo non eliminato.' }) }
   }
 
-  return <section ref={section} id="deck-constraints" className="constraints-panel" aria-label="Vincoli del mazzo">
+  return <section ref={section} id="deck-constraints" className="constraints-panel" aria-label="Vincoli del mazzo" data-nav-loading={loading}>
     <div className="panel-heading"><div><h2 tabIndex={-1}>Vincoli</h2>
       <span className="content-note">{constraints.length} {constraints.length === 1 ? 'vincolo' : 'vincoli'}{problemCount ? ' · ' + problemCount + ' da risolvere' : ''}</span></div>
       {createIdentity === null && <button ref={addButton} type="button" className="secondary-button" disabled={loading || saving || !!error || !catalog?.syncedAt}

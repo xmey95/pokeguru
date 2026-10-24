@@ -12,6 +12,7 @@ import { ThreadsSection } from './ThreadsSection'
 import { TournamentSection } from './TournamentSection'
 import { Icon } from './Icon'
 import { ProjectSwitcher } from './ProjectSwitcher'
+import { NavigationControls, useNavigation, useDraftState, useViewState, useBusyState } from './Navigation'
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
@@ -35,44 +36,46 @@ function projectWithBaseline(project: Project, baseline: DeckBaseline): Project 
 }
 
 export function App() {
+  const nav = useNavigation()
+  const { view, tab: activeTab } = nav.entry.route
+  const importKey = `import:${nav.entry.route.projectId}`
   const [projects, setProjects] = useState<Project[]>([])
   const [selected, setSelected] = useState<Project | null>(null)
-  const [name, setName] = useState('')
+  const [name, setName] = useDraftState('project-name', '')
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useBusyState('project.create')
   const [baseline, setBaseline] = useState<DeckBaseline | null>(null)
   const [baselineLoading, setBaselineLoading] = useState(false)
-  const [draft, setDraft] = useState('')
-  const [source, setSource] = useState<DeckImportSource>('paste')
-  const [fileName, setFileName] = useState<string | null>(null)
-  const [importing, setImporting] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
+  const [draft, setDraft] = useDraftState(`${importKey}:text`, baseline?.rawText ?? '')
+  const [source, setSource] = useDraftState<DeckImportSource>(`${importKey}:source`, baseline?.source ?? 'paste')
+  const [fileName, setFileName] = useDraftState<string | null>(`${importKey}:file`, baseline?.fileName ?? null)
+  const [importing, setImporting] = useBusyState(importKey)
+  const [importOpen, setImportOpen] = useViewState('import.open', false)
   const [readingFile, setReadingFile] = useState(false)
-  const [importError, setImportError] = useState<string | null>(null)
+  const [importError, setImportError] = useDraftState<string | null>(`${importKey}:error`, null)
   const [importNotice, setImportNotice] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'deck' | 'threads' | 'matchups'>('deck')
-  const [view, setView] = useState<'project' | 'ai' | 'catalog' | 'tournament'>('project')
-  const [catalogFocusIdentityId, setCatalogFocusIdentityId] = useState<string | null>(null)
-  const [constraintTargetId, setConstraintTargetId] = useState<string | null>(null)
+  const catalogFocusIdentityId = nav.entry.ui['catalog.focus'] as string | null ?? null
+  const setView = (next: typeof view) => nav.go({ view: next })
+  const [constraintTargetId, setConstraintTargetId] = useState<string | null>(nav.entry.ui['constraint.target'] as string | null ?? null)
   const [constraintSelectionVersion, setConstraintSelectionVersion] = useState(0)
-  const [showCompactCreate, setShowCompactCreate] = useState(false)
+  const [showCompactCreate, setShowCompactCreate] = useViewState('project.create', false)
   const selectionVersion = useRef(0)
   const importDraftVersion = useRef(0)
+  const wasImporting = useRef(importing)
+  useEffect(() => {
+    const finished = wasImporting.current && !importing
+    wasImporting.current = importing
+    if (finished && selected) void selectProject(selected.id)
+  }, [importing])
 
-  useEffect(() => { document.getElementById('main-content')?.scrollTo(0, 0) }, [view, activeTab, selected?.id])
   useEffect(() => { if (showCompactCreate) document.getElementById('compact-project-name')?.focus() }, [showCompactCreate])
 
   async function selectProject(id: string, known?: Project): Promise<void> {
     const version = ++selectionVersion.current
-    setConstraintTargetId(null)
-    resetImportUi()
     setError(null)
     setBaselineLoading(true)
     setBaseline(null)
-    setDraft('')
-    setSource('paste')
-    setFileName(null)
     try {
       let project = known
       if (!project) {
@@ -87,9 +90,6 @@ export function App() {
       if (version !== selectionVersion.current) return
       if (!result.ok) throw new Error(result.error)
       setBaseline(result.value)
-      setDraft(result.value?.rawText ?? '')
-      setSource(result.value?.source ?? 'paste')
-      setFileName(result.value?.fileName ?? null)
     } catch (cause) {
       if (version === selectionVersion.current) {
         setError(cause instanceof Error ? cause.message : 'Impossibile aprire la lista del progetto.')
@@ -111,7 +111,12 @@ export function App() {
           return
         }
         setProjects(result.value)
-        if (result.value[0]) void selectProject(result.value[0].id, result.value[0])
+        const requested = nav.entry.route.projectId
+        const project = requested ? result.value.find((item) => item.id === requested) : result.value[0]
+        if (project) {
+          nav.entry.route.projectId = project.id
+          void selectProject(project.id, project)
+        } else if (requested) setError('Questo progetto non è più disponibile. Scegli un altro progetto oppure torna indietro.')
       } catch (cause) {
         if (active) setError(cause instanceof Error ? cause.message : 'Impossibile leggere i progetti.')
       } finally {
@@ -119,19 +124,17 @@ export function App() {
       }
     }
     void load()
-    return () => { active = false }
+    return () => { active = false; selectionVersion.current++; importDraftVersion.current++ }
   }, [])
 
   async function openProject(id: string): Promise<void> {
-    setShowCompactCreate(false)
-    setView('project')
-    await selectProject(id)
+    nav.go({ view: 'project', projectId: id }, undefined, `${activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup'} · ${projects.find((item) => item.id === id)?.name ?? 'Progetto'}`)
   }
 
   function selectConstraintTarget(identityId: string): void {
     setConstraintTargetId(identityId)
     setConstraintSelectionVersion((version) => version + 1)
-    setActiveTab('deck')
+    if (activeTab !== 'deck' || view !== 'project') nav.go({ view: 'project', tab: 'deck' }, { 'constraint.target': identityId })
   }
 
   async function createProject(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -147,17 +150,9 @@ export function App() {
       }
       setProjects((current) => [result.value, ...current])
       selectionVersion.current++
-      resetImportUi()
-      setSelected(result.value)
-      setBaseline(null)
-      setBaselineLoading(false)
-      setDraft('')
-      setSource('paste')
-      setFileName(null)
       setName('')
-      setActiveTab('deck')
-      setView('project')
       setShowCompactCreate(false)
+      nav.go({ view: 'project', tab: 'deck', projectId: result.value.id })
     } catch {
       setError('Salvataggio non riuscito. Nessun progetto è stato creato.')
     } finally {
@@ -203,7 +198,13 @@ export function App() {
     try {
       const result = await window.projectsApi.importDeck({ projectId, rawText: draft, source, fileName })
       if (!result.ok) {
-        if (selectionVersion.current === importVersion) setImportError(result.error)
+        setImportError(result.error)
+        return
+      }
+      if (!nav.isCurrent()) {
+        setDraft(result.value.rawText)
+        setSource(result.value.source)
+        setFileName(result.value.fileName)
         return
       }
       const updated = projectWithBaseline(selected, result.value)
@@ -218,7 +219,7 @@ export function App() {
       setImportNotice(baseline ? 'Lista sostituita.' : 'Lista salvata.')
       requestAnimationFrame(focusList)
     } catch {
-      if (selectionVersion.current === importVersion) setImportError('Importazione non riuscita. Riprova il salvataggio.')
+      setImportError('Importazione non riuscita. Riprova il salvataggio.')
     } finally {
       setImporting(false)
     }
@@ -273,6 +274,7 @@ export function App() {
     <div className={`app-shell ${showDeckCompanion ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
       <a className="skip-link" href="#main-content">Vai al contenuto</a>
       <header className="topbar">
+        <NavigationControls />
         <span>Pokéguru <b aria-hidden="true">/</b> {view === 'project' ? activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup' : view === 'catalog' ? 'Catalogo' : view === 'tournament' ? 'Eventi' : 'Impostazioni AI'}</span>
         <span>Standard occidentale</span>
       </header>
@@ -285,23 +287,23 @@ export function App() {
           </div>
           <ProjectSwitcher projects={projects} selected={selected} loading={loading}
             onSelect={(id) => void openProject(id)}
-            onCreate={() => { setView('project'); setShowCompactCreate(true) }} />
+            onCreate={() => { if (view === 'project') setShowCompactCreate(true); else nav.go({ view: 'project' }, { 'project.create': true }) }} />
           <nav className="workspace-nav" aria-label="Aree del progetto">
             <span className="rail-caption">Area di lavoro</span>
-            <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('deck') }} title="Lista" aria-label="Lista"><Icon name="deck" /><span className="nav-label">Lista</span></button>
-            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('threads') }} title="Thread" aria-label="Thread"><Icon name="thread" /><span className="nav-label">Thread</span></button>
-            <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('matchups') }} title="Matchup" aria-label="Matchup"><Icon name="matchup" /><span className="nav-label">Matchup</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'deck' })} title="Lista" aria-label="Lista"><Icon name="deck" /><span className="nav-label">Lista</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'threads' })} title="Thread" aria-label="Thread"><Icon name="thread" /><span className="nav-label">Thread</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'matchups' })} title="Matchup" aria-label="Matchup"><Icon name="matchup" /><span className="nav-label">Matchup</span></button>
           </nav>
           <nav className="resource-nav" aria-label="Risorse globali">
             <span className="rail-caption">Risorse</span>
-            <button type="button" className={view === 'catalog' ? 'active' : ''} onClick={() => { setCatalogFocusIdentityId(null); setView('catalog') }} title="Catalogo" aria-label="Catalogo" aria-current={view === 'catalog' ? 'page' : undefined}><Icon name="catalog" /><span className="nav-label">Catalogo</span></button>
+            <button type="button" className={view === 'catalog' ? 'active' : ''} onClick={() => setView('catalog')} title="Catalogo" aria-label="Catalogo" aria-current={view === 'catalog' ? 'page' : undefined}><Icon name="catalog" /><span className="nav-label">Catalogo</span></button>
             <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi" aria-label="Eventi" aria-current={view === 'tournament' ? 'page' : undefined}><Icon name="event" /><span className="nav-label">Eventi</span></button>
             <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI" aria-label="Impostazioni AI" aria-current={view === 'ai' ? 'page' : undefined}><Icon name="settings" /><span className="nav-label">Impostazioni AI</span></button>
           </nav>
           <div className="local-indicator"><span aria-hidden="true" /> Archivio locale</div>
         </aside>
 
-        <main id="main-content" className="main-content" tabIndex={-1}>
+        <main id="main-content" className="main-content" tabIndex={-1} data-nav-loading={loading || baselineLoading}>
           {showCompactCreate && <form className="compact-create-panel" onSubmit={(event) => void createProject(event)}>
             <div className="panel-heading"><h2>Nuovo progetto</h2><button type="button" className="text-button" onClick={() => { setShowCompactCreate(false); document.getElementById('project-switcher-trigger')?.focus() }}>Chiudi</button></div>
             <label htmlFor="compact-project-name">Nome progetto</label>
@@ -310,7 +312,7 @@ export function App() {
             <button type="submit" className="primary-button" disabled={saving || loading || !name.trim()}>{saving ? 'Salvataggio…' : 'Crea progetto'}</button>
           </form>}
           {error && <div className="error-banner" role="alert">{error}</div>}
-          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? (identityId) => { setView('project'); selectConstraintTarget(identityId) } : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
+          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? selectConstraintTarget : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-headline">
                 <div>
@@ -359,7 +361,7 @@ export function App() {
               ) : null}
               {!baselineLoading && <ConstraintsSection key={selected.id}
                 selectedIdentityId={constraintTargetId} selectionVersion={constraintSelectionVersion}
-                onTargetConsumed={() => setConstraintTargetId(null)}
+                onTargetConsumed={() => { setConstraintTargetId(null); delete nav.entry.ui['constraint.target'] }}
                 onOpenCatalog={() => setView('catalog')} />}
               </DeckConstraintsProvider> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
                 onAdopt={(adopted) => {
@@ -372,7 +374,7 @@ export function App() {
                   setSelected(updated)
                   setProjects((current) => current.map((project) => project.id === selected.id ? updated : project))
                 }} /> : <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')}
-                  onOpenCatalogCard={(identityId) => { setCatalogFocusIdentityId(identityId); setView('catalog') }} />}
+                  onOpenCatalogCard={(identityId) => nav.go({ view: 'catalog' }, { 'catalog.focus': identityId, 'catalog.focusConsumed': false, 'catalog.selected': identityId, 'catalog.query': '', 'catalog.set': 'all' }, 'Catalogo · carta dalla guida')} />}
             </section>
           ) : (
             <section className="welcome" aria-label="Benvenuto">

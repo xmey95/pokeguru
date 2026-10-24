@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigation, useViewState } from './Navigation'
 import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { gameplaySummary } from '../../shared/card-gameplay'
@@ -29,24 +30,28 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
   onConstrain?: (identityId: string) => void
   focusIdentityId?: string | null
 }) {
+  const nav = useNavigation()
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [setFilter, setSetFilter] = useState('all')
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [query, setQuery] = useViewState('catalog.query', '')
+  const [setFilter, setSetFilter] = useViewState('catalog.set', 'all')
+  const [selectedKey, setSelectedKey] = useViewState<string | null>('catalog.selected', null)
+  const [focusConsumed, setFocusConsumed] = useViewState('catalog.focusConsumed', false)
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [checkingRules, setCheckingRules] = useState(false)
 
   useEffect(() => {
-    if (!focusIdentityId || !catalog) return
+    if (!focusIdentityId || !catalog || focusConsumed) return
     const print = catalog.prints.find((item) => item.identityId === focusIdentityId)
-    if (!print) return
+    if (!print) { setError('Questa carta non è più disponibile nel catalogo locale. Torna indietro o cerca un’altra carta.'); return }
     setQuery(print.name)
     setSetFilter('all')
     setSelectedKey(focusIdentityId)
+    setFocusConsumed(true)
+    nav.entry.label = `Catalogo · ${print.name}`
   }, [focusIdentityId, catalog?.syncedAt])
 
   useEffect(() => {
@@ -158,7 +163,8 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     group.basis !== 'unverified').length
   const standard = catalog?.scope.kind === 'standard-marks'
 
-  return <section className="catalog-section" aria-label="Catalogo occidentale">
+  return <section className="catalog-section" aria-label="Catalogo occidentale" data-nav-loading={loading}>
+    {!loading && catalog && selectedKey && !groups.some((group) => group.key === selectedKey) && <p className="error-banner" role="alert">La carta selezionata non è più disponibile. Scegli un’altra carta oppure torna indietro.</p>}
     <div className="panel-heading">
       <div><span className="eyebrow">Catalogo condiviso · Standard occidentale</span><h1>Carte e ristampe</h1></div>
       <div className="catalog-actions">
@@ -214,7 +220,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       </div>
       <div className="catalog-layout">
         <div className="catalog-list" aria-label="Risultati catalogo">
-          {filtered.length === 0 ? <p className="content-note">Nessuna carta locale corrisponde alla ricerca.</p> : <>{filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => setSelectedKey(group.key)} aria-pressed={selected?.key === group.key}>
+          {filtered.length === 0 ? <p className="content-note">Nessuna carta locale corrisponde alla ricerca.</p> : <>{filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`)} aria-pressed={selected?.key === group.key}>
             <strong>{group.name}</strong><span>{group.prints.length} {group.prints.length === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
           </button>)}</>}
         </div>

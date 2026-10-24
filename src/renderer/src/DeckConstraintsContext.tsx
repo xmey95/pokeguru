@@ -3,19 +3,21 @@ import type { CatalogView } from '../../shared/catalog'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { DeckReconciliation } from '../../shared/reconciliation'
 import { evaluateConstraints, type DeckConstraint, type SaveConstraintInput } from '../../shared/constraints'
+import { useBusyState } from './Navigation'
 
 function useConstraintsState(projectId: string, baseline: DeckBaseline | null) {
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [constraints, setConstraints] = useState<DeckConstraint[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useBusyState(`constraints:${projectId}`)
   const [error, setError] = useState<string | null>(null)
   const mutationPending = useRef(false)
+  const hasLoaded = useRef(false)
 
   useEffect(() => {
     let active = true
-    setLoading(true)
+    setLoading(!hasLoaded.current)
     setError(null)
     void Promise.all([window.projectsApi.getCatalog(), window.projectsApi.getReconciliation(projectId),
       window.projectsApi.listConstraints(projectId)])
@@ -28,15 +30,15 @@ function useConstraintsState(projectId: string, baseline: DeckBaseline | null) {
         setReconciliation(reconciliationResult.value)
         setConstraints(constraintsResult.value)
       }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Vincoli non disponibili.') })
-      .finally(() => { if (active) setLoading(false) })
+      .finally(() => { if (active) { hasLoaded.current = true; setLoading(false) } })
     return () => { active = false }
-  }, [projectId, baseline?.importedAt])
+  }, [projectId, baseline?.importedAt, saving])
 
   const evaluation = useMemo(() => catalog ? evaluateConstraints(constraints, baseline, catalog, reconciliation) : null,
     [constraints, baseline, catalog, reconciliation])
 
   async function save(input: Omit<SaveConstraintInput, 'projectId'>): Promise<DeckConstraint> {
-    if (mutationPending.current) throw new Error('Attendi il salvataggio in corso.')
+    if (mutationPending.current || saving) throw new Error('Attendi il salvataggio in corso.')
     mutationPending.current = true
     setSaving(true)
     try {
@@ -48,7 +50,7 @@ function useConstraintsState(projectId: string, baseline: DeckBaseline | null) {
   }
 
   async function remove(id: string): Promise<void> {
-    if (mutationPending.current) throw new Error('Attendi il salvataggio in corso.')
+    if (mutationPending.current || saving) throw new Error('Attendi il salvataggio in corso.')
     mutationPending.current = true
     setSaving(true)
     try {

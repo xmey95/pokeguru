@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import type { AiConnection, AiPreferences } from '../../shared/ai'
+import { useDraftState, useBusyState } from './Navigation'
 
 const automatic: AiPreferences = { model: null, reasoningEffort: null }
 
 export function AiSettings() {
   const [saved, setSaved] = useState<AiPreferences>(automatic)
-  const [draft, setDraft] = useState<AiPreferences>(automatic)
+  const [draftValue, setDraft] = useDraftState<AiPreferences | null>('ai.preferences', null)
+  const draft = draftValue ?? saved
   const [connection, setConnection] = useState<AiConnection | null>(null)
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useBusyState('ai.settings')
   const [loginPending, setLoginPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [error, setError] = useDraftState<string | null>('ai.error', null)
+  const [notice, setNotice] = useDraftState<string | null>('ai.notice', null)
 
   async function refresh(): Promise<void> {
     setLoading(true)
@@ -31,12 +33,12 @@ export function AiSettings() {
     let active = true
     void window.projectsApi.getAiPreferences().then((result) => {
       if (!active) return
-      if (result.ok) { setSaved(result.value); setDraft(result.value) }
+      if (result.ok) setSaved(result.value)
       else setError(result.error)
     })
     void refresh()
     return () => { active = false }
-  }, [])
+  }, [busy])
 
   useEffect(() => {
     if (!loginPending) return
@@ -93,7 +95,7 @@ export function AiSettings() {
     finally { setBusy(false) }
   }
 
-  return <section className="ai-settings" aria-label="Impostazioni AI">
+  return <section className="ai-settings" aria-label="Impostazioni AI" data-nav-loading={loading}>
     <span className="detail-kicker">Impostazioni</span>
     <h1>AI per Pokéguru</h1>
     <p className="content-note">Le preferenze valgono dalle prossime analisi.</p>

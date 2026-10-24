@@ -1,21 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { TournamentParticipation, TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../../shared/tournament'
 import { MainTournamentSection } from './MainTournamentSection'
+import { useNavigation, useViewState } from './Navigation'
 
 function dateTime(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 
 export function TournamentSection() {
-  const [sourceTab, setSourceTab] = useState<'play' | 'main'>('play')
+  const nav = useNavigation()
+  const [sourceTab] = useViewState<'play' | 'main'>('events.source', 'play')
+  const setSourceTab = (source: 'play' | 'main') => nav.visit({ 'events.source': source }, source === 'play' ? 'Eventi · Play' : 'Eventi · Regional')
+  const [loading, setLoading] = useState(true)
   const [snapshot, setSnapshot] = useState<TournamentSnapshot | null>(null)
   const [events, setEvents] = useState<TournamentSummary[]>([])
   const [progress, setProgress] = useState<TournamentSyncProgress | null>(null)
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [selectedEventId, setSelectedEventId] = useViewState<string | null>('events.play.event', null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [query, setQuery] = useViewState('events.play.query', '')
+  const [selectedId, setSelectedId] = useViewState<string | null>('events.play.player', null)
 
   useEffect(() => {
     let active = true
@@ -26,12 +30,13 @@ export function TournamentSection() {
         if (!synced.ok) throw new Error(synced.error)
         setEvents(listed.value)
         setProgress(synced.value)
-        const first = listed.value[0]
+        const first = selectedEventId ? listed.value.find((item) => item.eventId === selectedEventId) : listed.value[0]
+        if (selectedEventId && !first) setError('Questo evento non è più disponibile. Scegli un altro evento oppure torna indietro.')
         if (first) {
           const result = await window.projectsApi.getTournamentEvent(first.eventId)
           if (active && result.ok) { setSnapshot(result.value); setSelectedEventId(first.eventId) }
         }
-      }).catch(() => { if (active) setError('Archivio tornei non leggibile.') })
+      }).catch(() => { if (active) setError('Archivio tornei non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
 
@@ -76,7 +81,7 @@ export function TournamentSection() {
   const selected: TournamentParticipation | null = sorted.find((entry) => entry.playerId === selectedId) ??
     sorted.find((entry) => entry.listStatus === 'available') ?? sorted[0] ?? null
 
-  return <><div className="discussion-switcher" aria-label="Fonte tornei">
+  return <><div className="discussion-switcher" aria-label="Fonte tornei" data-nav-loading={sourceTab === 'play' && loading}>
     <button type="button" className={`secondary-button ${sourceTab === 'play' ? 'selected' : ''}`}
       aria-pressed={sourceTab === 'play'} onClick={() => setSourceTab('play')}>Tornei Play</button>
     <button type="button" className={`secondary-button ${sourceTab === 'main' ? 'selected' : ''}`}
@@ -102,7 +107,7 @@ export function TournamentSection() {
     {error && <div className="error-banner" role="alert">{error}</div>}
     {!snapshot ? <div className="matchup-empty">Nessun evento salvato.</div> : <>
       <div className="catalog-filters"><label>Evento archiviato
-        <select value={selectedEventId ?? snapshot.eventId} onChange={(event) => void selectEvent(event.target.value)}>
+        <select value={selectedEventId ?? snapshot.eventId} onChange={(event) => nav.visit({ 'events.play.event': event.target.value, 'events.play.player': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Play'}`)}>
           {events.map((item) => <option key={item.eventId} value={item.eventId}>
             {new Date(item.date).toLocaleDateString('it-IT')} · {item.name} · {item.isOnline ? 'online' : 'in presenza'}
           </option>)}
@@ -123,7 +128,7 @@ export function TournamentSection() {
         <div className="tournament-players" aria-label="Partecipazioni evento">
           {filtered.map((entry) => <button type="button" key={entry.playerId}
             className={selected?.playerId === entry.playerId ? 'active' : ''}
-            onClick={() => setSelectedId(entry.playerId)} aria-pressed={selected?.playerId === entry.playerId}>
+            onClick={() => nav.visit({ 'events.play.player': entry.playerId }, `Eventi · ${snapshot.name} · ${entry.playerName}`)} aria-pressed={selected?.playerId === entry.playerId}>
             <strong>{entry.placing ? `${entry.placing}° · ` : ''}{entry.playerName}</strong>
             <span>{entry.deck?.name ?? 'Archetipo non indicato'} · {entry.listStatus === 'available' ? `${entry.cardTotal} carte` : 'Lista non disponibile'}</span>
           </button>)}

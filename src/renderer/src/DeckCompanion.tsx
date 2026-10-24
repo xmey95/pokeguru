@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { useViewState } from './Navigation'
 import type { DeckBaseline, DeckLine } from '../../shared/deck-import'
 
 interface DeckGroup {
@@ -42,7 +43,7 @@ function deckState(baseline: DeckBaseline | null, loading: boolean): string {
 }
 
 export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | null; loading: boolean }) {
-  const [brief, setBrief] = useState(false)
+  const [brief, setBrief] = useViewState('deck.brief', false)
   const groups = useMemo(() => baseline ? groupCards(baseline) : [], [baseline])
   const namedGroups = groups.filter((group) => group.name !== 'Carte importate')
   const preview = groups.flatMap((group) => group.lines).slice(0, 5)

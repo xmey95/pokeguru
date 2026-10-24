@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../../shared/main-tournament'
+import { useNavigation, useViewState } from './Navigation'
 
 const date = (value: string): string => new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
 
 export function MainTournamentSection() {
+  const nav = useNavigation()
+  const [loading, setLoading] = useState(true)
   const [events, setEvents] = useState<MainTournamentSummary[]>([])
   const [snapshot, setSnapshot] = useState<MainTournamentSnapshot | null>(null)
   const [progress, setProgress] = useState<MainTournamentSyncProgress | null>(null)
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
-  const [selectedPlace, setSelectedPlace] = useState<number | null>(null)
-  const [query, setQuery] = useState('')
+  const [selectedEventId, setSelectedEventId] = useViewState<string | null>('events.main.event', null)
+  const [selectedPlace, setSelectedPlace] = useViewState<number | null>('events.main.place', null)
+  const [query, setQuery] = useViewState('events.main.query', '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,11 +25,13 @@ export function MainTournamentSection() {
         if (!synced.ok) throw new Error(synced.error)
         setEvents(listed.value)
         setProgress(synced.value)
-        if (listed.value[0]) {
-          const result = await window.projectsApi.getMainTournament(listed.value[0].eventId)
-          if (active && result.ok) { setSnapshot(result.value); setSelectedEventId(listed.value[0].eventId) }
+        const chosen = selectedEventId ? listed.value.find((item) => item.eventId === selectedEventId) : listed.value[0]
+        if (selectedEventId && !chosen) setError('Questo Regional non è più disponibile. Scegli un altro evento oppure torna indietro.')
+        if (chosen) {
+          const result = await window.projectsApi.getMainTournament(chosen.eventId)
+          if (active && result.ok) { setSnapshot(result.value); setSelectedEventId(chosen.eventId) }
         }
-      }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Archivio Regional non leggibile.') })
+      }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Archivio Regional non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
 
@@ -60,7 +65,7 @@ export function MainTournamentSection() {
   const selected = sorted.find((item) => item.placing === selectedPlace && selectedPlace !== null) ??
     sorted.find((item) => item.cards && item.cardTotal === 60) ?? sorted[0]
 
-  return <section className="tournament-section" aria-label="Regional Limitless">
+  return <section className="tournament-section" aria-label="Regional Limitless" data-nav-loading={loading}>
     <div className="panel-heading"><div><span className="eyebrow">Database principale · Standard occidentale</span><h1>Regional e grandi eventi</h1></div>
       <div className="panel-actions">{progress?.status === 'running' || progress?.status === 'rate-limited'
         ? <button type="button" className="primary-button" onClick={() => void sync(progress.mode ?? 'new')}
@@ -80,7 +85,7 @@ export function MainTournamentSection() {
     {error && <div className="error-banner" role="alert">{error}</div>}
     {!snapshot ? <div className="matchup-empty">Nessun Regional archiviato.</div> : <>
       <div className="catalog-filters"><label>Evento archiviato
-        <select value={selectedEventId ?? snapshot.eventId} onChange={(event) => void choose(event.target.value)}>
+        <select value={selectedEventId ?? snapshot.eventId} onChange={(event) => nav.visit({ 'events.main.event': event.target.value, 'events.main.place': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Regional'}`)}>
           {events.map((item) => <option value={item.eventId} key={item.eventId}>{date(item.date)} · {item.name}</option>)}
         </select></label><label>Filtra giocatore o mazzo<input value={query}
         onChange={(event) => setQuery(event.target.value)} placeholder="Es. Hydrapple" /></label></div><p className="content-note">{events.length} {events.length === 1 ? 'evento disponibile offline' : 'eventi disponibili offline'}</p>
@@ -95,7 +100,7 @@ export function MainTournamentSection() {
       </div>
       <div className="tournament-layout"><div className="tournament-players" aria-label="Piazzamenti Regional">
         {filtered.map((item) => <button type="button" key={`${item.placing}:${item.playerName}`}
-          className={selected === item ? 'active' : ''} aria-pressed={selected === item} onClick={() => setSelectedPlace(item.placing)}>
+          className={selected === item ? 'active' : ''} aria-pressed={selected === item} onClick={() => nav.visit({ 'events.main.place': item.placing }, `Eventi · ${snapshot.name} · ${item.playerName}`)}>
           <strong>{item.placing}° · {item.playerName}</strong><span>{item.deckName ?? 'Archetipo non indicato'} · {item.cardTotal === 60 ? '60 carte' : item.listUrl ? 'Lista da acquisire' : 'Nessuna lista'}</span>
         </button>)}
         {!filtered.length && <p className="content-note">Nessun piazzamento corrisponde al filtro.</p>}

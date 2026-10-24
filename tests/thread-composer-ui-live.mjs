@@ -141,6 +141,8 @@ try {
   assert.equal(await input.inputValue(), '')
   assert.ok(await discuss.isChecked())
   await switchThread(page, /Piano A/)
+  assert.ok(await propose.isChecked(), 'La modalità del thread deve essere conservata durante la navigazione')
+  await discuss.check()
   await input.fill('Richiesta discussione fixture')
   await page.getByRole('button', { name: 'Chiedi a Codex' }).click()
   await page.getByRole('button', { name: 'Codex sta rispondendo…' }).waitFor()

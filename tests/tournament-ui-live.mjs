@@ -32,11 +32,13 @@ try {
       sourceUrl: 'https://play.limitlesstcg.com/api/tournaments/6ad92350115c12b73a5a9419/standings',
       publicUrl: 'https://play.limitlesstcg.com/tournament/6ad92350115c12b73a5a9419',
       name: 'Evento prova offline', date: '2026-10-22T23:00:00.000Z', circuit: 'WESTERN', format: 'STANDARD',
-      platform: 'PTCGL', isOnline: true, reportedPlayers: 1, phases: [], participations: [player],
-      coverage: { returnedParticipants: 1, availableLists: 1, invalidLists: 0, missingLists: 0, complete60Lists: 1 },
+      platform: 'PTCGL', isOnline: true, reportedPlayers: 2, phases: [], participations: [player, { ...player, playerId: 'two', playerName: 'Two', placing: 2 }],
+      coverage: { returnedParticipants: 2, availableLists: 2, invalidLists: 0, missingLists: 0, complete60Lists: 2 },
       cached: false }
     db.prepare('INSERT INTO tournament_snapshots (id, event_id, fetched_at, payload) VALUES (?, ?, ?, ?)')
       .run(snapshot.id, snapshot.eventId, snapshot.fetchedAt, JSON.stringify(snapshot))
+    const secondPlay = { ...snapshot, id: 'second-play-fixture', eventId: '6ad92350115c12b73a5a9418', name: 'Secondo evento offline', date: '2026-10-20T00:00:00.000Z' }
+    db.prepare('INSERT INTO tournament_snapshots VALUES (?, ?, ?, ?)').run(secondPlay.id, secondPlay.eventId, secondPlay.fetchedAt, JSON.stringify(secondPlay))
     const regional = { id: 'regional-ui-fixture', eventId: '999999', name: 'Regional · esempio UI',
       date: '2026-10-17', country: 'FR', players: 128, url: 'https://limitlesstcg.com/tournaments/582',
       fetchedAt: '2026-10-23T20:00:00.000Z', source: 'Limitless tournament database', circuit: 'WESTERN',
@@ -47,6 +49,8 @@ try {
           { category: 'energy', count: 56, name: 'Grass Energy', set: 'MEE', number: '9' }] }],
       coverage: { returnedParticipants: 1, listedDecks: 1, fetchedLists: 1, complete60Lists: 1, noListLink: 0 } }
     db.prepare('INSERT INTO main_tournament_snapshots VALUES (?, ?, ?, ?)').run(regional.id, regional.eventId, regional.fetchedAt, JSON.stringify(regional))
+    const secondRegional = { ...regional, id: 'second-regional-fixture', eventId: '999998', name: 'Secondo Regional offline', date: '2026-10-15' }
+    db.prepare('INSERT INTO main_tournament_snapshots VALUES (?, ?, ?, ?)').run(secondRegional.id, secondRegional.eventId, secondRegional.fetchedAt, JSON.stringify(secondRegional))
     db.close()
   }
   application = await launch()
@@ -72,9 +76,39 @@ try {
     }
   }
   if (offline) {
+    const ready = async () => {
+      await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
+    }
+    await ready()
+    await page.locator('.tournament-players button').filter({ hasText: 'Two' }).click()
+    await ready()
+    await page.getByLabel('Filtra giocatore o mazzo').fill('Two')
+    await page.locator('.sidebar').getByRole('button', { name: 'Catalogo', exact: true }).click()
+    await ready()
+    await page.getByRole('button', { name: 'Indietro', exact: true }).click()
+    await ready()
+    assert.equal(await page.getByLabel('Filtra giocatore o mazzo').inputValue(), 'Two')
+    assert.match(await page.locator('.tournament-detail').innerText(), /Two/)
+    await page.getByLabel('Evento archiviato').selectOption('6ad92350115c12b73a5a9418')
+    await ready()
+    await page.getByRole('button', { name: 'Indietro', exact: true }).click()
+    await ready()
+    assert.equal(await page.getByLabel('Evento archiviato').inputValue(), '6ad92350115c12b73a5a9419')
+    assert.match(await page.locator('.tournament-detail').innerText(), /Two/)
     await page.getByRole('button', { name: 'Regional', exact: true }).click()
+    await ready()
     await page.getByRole('heading', { name: 'Regional e grandi eventi' }).waitFor()
     await page.getByText('Giocatore esempio', { exact: true }).waitFor()
+    await page.getByLabel('Evento archiviato').selectOption('999998')
+    await ready()
+    await page.getByLabel('Filtra giocatore o mazzo').fill('Hydrapple')
+    await page.locator('.sidebar').getByRole('button', { name: 'Impostazioni AI', exact: true }).click()
+    await ready()
+    await page.getByRole('button', { name: 'Indietro', exact: true }).click()
+    await ready()
+    assert.equal(await page.getByLabel('Evento archiviato').inputValue(), '999998')
+    assert.equal(await page.getByLabel('Filtra giocatore o mazzo').inputValue(), 'Hydrapple')
     for (const [width, height] of [[1440, 900], [1280, 720], [640, 580]]) {
       await page.setViewportSize({ width, height })
       await auditDesignSystem(page, 'Regional ' + width)

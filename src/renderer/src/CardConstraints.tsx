@@ -1,13 +1,14 @@
-import { useId, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ConstraintForm, constraintLabel, ConstraintStatus, focusConstraintControl } from './ConstraintForm'
 import { useDeckConstraints } from './DeckConstraintsContext'
+import { useViewState } from './Navigation'
 
 export function CardConstraints({ identityId, name }: { identityId: string; name: string }) {
   const { evaluation, loading, saving, error } = useDeckConstraints()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useViewState(`constraint.card.${identityId}`, false)
   const [notice, setNotice] = useState('')
   const trigger = useRef<HTMLButtonElement>(null)
-  const formId = useId()
+  const formId = `card-constraint-${identityId}`
   const results = evaluation?.results.filter((result) => result.constraint.identityId === identityId) ?? []
   function close(): void {
     setOpen(false)

@@ -13,6 +13,7 @@ import type { ThreadEvidencePacket } from '../../shared/thread-evidence'
 import { reviewSummary } from './review-summary'
 import { ThreadSwitcher } from './ThreadSwitcher'
 import { Icon } from './Icon'
+import { useNavigation, useViewState, useDraftState, useBusyState } from './Navigation'
 
 interface Props {
   projectId: string
@@ -194,11 +195,13 @@ function focusInWorkspace(element: HTMLElement | null): void {
 }
 
 export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
+  const nav = useNavigation()
   const newThreadTrigger = useRef<HTMLButtonElement>(null)
   const newThreadTitle = useRef<HTMLInputElement>(null)
   const newThreadError = useRef<HTMLDivElement>(null)
+  const hasLoaded = useRef(false)
   const returnCreateFocus = useRef(false)
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useViewState('thread.creating', false)
   const [createError, setCreateError] = useState<string | null>(null)
   const adoptionTrigger = useRef<HTMLElement | null>(null)
   const [versions, setVersions] = useState<DeckVersion[]>([])
@@ -207,21 +210,21 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [constraints, setConstraints] = useState<DeckConstraint[]>([])
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [aiModels, setAiModels] = useState<AiModel[]>([])
-  const [overrides, setOverrides] = useState<Record<string, AiPreferences>>({})
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
-  const [openingNote, setOpeningNote] = useState('')
-  const [message, setMessage] = useState('')
-  const [composerMode, setComposerMode] = useState<'ask' | 'proposal'>('ask')
-  const [composerError, setComposerError] = useState<string | null>(null)
+  const [overrides, setOverrides] = useDraftState<Record<string, AiPreferences>>(`thread.overrides:${projectId}`, {})
+  const [selectedId, setSelectedId] = useViewState<string | null>('thread.selected', null)
+  const [title, setTitle] = useDraftState(`thread.title:${projectId}`, '')
+  const [openingNote, setOpeningNote] = useDraftState(`thread.opening:${projectId}`, '')
+  const [message, setMessage] = useDraftState(`thread.message:${projectId}:${selectedId}`, '')
+  const [composerMode, setComposerMode] = useDraftState<'ask' | 'proposal'>(`thread.mode:${projectId}:${selectedId}`, 'ask')
+  const [composerError, setComposerError] = useDraftState<string | null>(`thread.error:${projectId}:${selectedId}`, null)
   const composerErrorElement = useRef<HTMLDivElement>(null)
   const previewRequest = useRef(0)
   const [preview, setPreview] = useState<{ kind: 'ask' | 'proposal'; prompt: string; packet: ThreadEvidencePacket } | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
-  const [candidateText, setCandidateText] = useState('')
-  const [candidateNote, setCandidateNote] = useState('')
+  const [candidateDraft, setCandidateText] = useDraftState<string | null>(`thread.candidate:${projectId}:${selectedId}`, null)
+  const [candidateNote, setCandidateNote] = useDraftState(`thread.candidateNote:${projectId}:${selectedId}`, '')
   const [loading, setLoading] = useState(true)
-  const [working, setWorking] = useState(false)
+  const [working, setWorking] = useBusyState(`thread:${projectId}:${selectedId}`)
   const [asking, setAsking] = useState(false)
   const [proposing, setProposing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -253,6 +256,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   }
 
   const selected = threads.find((thread) => thread.id === selectedId) ?? null
+  const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
+  useEffect(() => { if (selected) nav.entry.label = `Thread · ${selected.title}` }, [selected?.id])
   const featuredCandidate = selected?.candidates.at(-1) ?? null
   const selectedOverride = selected ? overrides[selected.id] ?? { model: null, reasoningEffort: null } : null
   const selectedModel = aiModels.find((model) => model.id === selectedOverride?.model)
@@ -263,7 +268,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
 
   useEffect(() => {
     let active = true
-    setLoading(true)
+    setLoading(!hasLoaded.current)
     setError(null)
     invalidatePreview()
     void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId),
@@ -280,16 +285,13 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         setCatalog(catalogResult.value)
         setConstraints(constraintResult.value)
         setRuleAudit(auditResult.value)
-        setSelectedId((current) => threadResult.value.some((thread) => thread.id === current)
-          ? current : threadResult.value[0]?.id ?? null)
-        const first = threadResult.value[0]
-        setCandidateText(first?.candidates.at(-1)?.rawText ??
-          versionResult.value.find((version) => version.id === first?.baseVersionId)?.rawText ?? '')
+        if (selectedId && !threadResult.value.some((thread) => thread.id === selectedId)) setError('Il thread non è più disponibile. Scegli un altro thread oppure torna indietro.')
+        else setSelectedId((current) => current ?? threadResult.value[0]?.id ?? null)
       })
       .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Impossibile leggere i thread.') })
-      .finally(() => { if (active) setLoading(false) })
+      .finally(() => { if (active) { hasLoaded.current = true; setLoading(false) } })
     return () => { active = false; previewRequest.current++ }
-  }, [projectId, mainImportedAt])
+  }, [projectId, mainImportedAt, working])
 
   useEffect(() => {
     let active = true
@@ -299,15 +301,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     return () => { active = false }
   }, [])
 
-  function selectThread(thread: DeckThread): void {
-    setSelectedId(thread.id)
-    setCandidateText(thread.candidates.at(-1)?.rawText ??
-      versions.find((version) => version.id === thread.baseVersionId)?.rawText ?? '')
-    setCandidateNote('')
-    setMessage('')
-    setComposerMode('ask')
-    setComposerError(null)
-    invalidatePreview()
+  function selectThread(thread: DeckThread, focus = '#thread-switcher-trigger'): void {
+    if (thread.id === selectedId && !creating) return
+    nav.visit({ 'thread.selected': thread.id, 'thread.creating': false, 'nav.focus': focus }, `Thread · ${thread.title}`)
   }
 
   function closeCreate(): void {
@@ -356,8 +352,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const result = await window.projectsApi.createDeckThread({ projectId, title, openingNote })
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => [result.value, ...current])
-      selectThread(result.value)
       closeCreate()
+      selectThread(result.value, '#new-thread-trigger')
     } catch (cause) { setCreateError(cause instanceof Error ? cause.message : 'Thread non creato.') }
     finally { setWorking(false) }
   }
@@ -458,7 +454,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     finally { setWorking(false) }
   }
 
-  return <><section className="threads-section" aria-label="Thread del mazzo">
+  return <><section className="threads-section" aria-label="Thread del mazzo" data-nav-loading={loading}>
     <div className="panel-heading"><h2>Thread del mazzo</h2></div>
     {error && !confirmCandidate && <div className="error-banner" role="alert">{error}</div>}
     {loading ? <p className="content-note">Caricamento thread…</p> : <>
@@ -466,7 +462,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         <div className="threads-toolbar">
           <ThreadSwitcher threads={threads} selected={selected} versions={versions} disabled={working || creating}
             onSelect={selectThread} />
-          <button ref={newThreadTrigger} type="button" className="secondary-button" aria-expanded={creating}
+          <button ref={newThreadTrigger} id="new-thread-trigger" type="button" className="secondary-button" aria-expanded={creating}
             aria-controls="new-thread-form" disabled={working} onClick={() => creating ? closeCreate() : setCreating(true)}>
             <Icon name="plus" />Nuovo thread
           </button>
