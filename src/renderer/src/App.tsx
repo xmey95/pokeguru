@@ -202,12 +202,14 @@ export function App() {
     }
   }
 
+  const importProblems = baseline?.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH') ?? []
+
   return (
     <div className={`app-shell ${selected && view === 'project' ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
       <a className="skip-link" href="#main-content">Vai al contenuto</a>
       <header className="topbar">
         <span>POKÉGURU <b>/</b> {view === 'project' ? 'WORKSPACE DEL MAZZO' : view === 'catalog' ? 'CATALOGO' : view === 'tournament' ? 'EVENTI' : 'IMPOSTAZIONI AI'}</span>
-        <span>ARCHIVIO LOCALE · STANDARD OCCIDENTALE</span>
+        <span>ARCHIVIO LOCALE</span>
       </header>
 
       <div className="workspace">
@@ -218,13 +220,12 @@ export function App() {
           </div>
           <div className="sidebar-heading">
             <div>
-              <span className="eyebrow">Progetti</span>
-              <h2>I tuoi mazzi</h2>
+              <h2>Progetti</h2>
             </div>
             <span className="count" aria-label={`${projects.length} progetti`}>{projects.length}</span>
           </div>
 
-          {!selected && <form className="create-form" onSubmit={(event) => void createProject(event)}>
+          {!selected && view === 'project' && !showCompactCreate && <form className="create-form" onSubmit={(event) => void createProject(event)}>
             <label htmlFor="project-name">Nome progetto</label>
             <input
               id="project-name"
@@ -246,9 +247,8 @@ export function App() {
             </button>
           </form>}
 
-          <div className="project-list-heading">Elenco progetti</div>
           {loading ? <p className="sidebar-note">Caricamento…</p> : projects.length === 0 ? (
-            <p className="sidebar-note">Nessun progetto. Inizia con un nome e scegli Crea progetto.</p>
+            <p className="sidebar-note">Nessun progetto.</p>
           ) : (
             <ul className="project-list">
               {projects.map((project) => (
@@ -259,11 +259,12 @@ export function App() {
                     onClick={() => void openProject(project.id)}
                     data-testid={`project-${project.id}`}
                     aria-current={selected?.id === project.id ? 'page' : undefined}
+                      title={project.name}
                   >
                     <span className="project-avatar" aria-hidden="true">{project.name.charAt(0).toUpperCase()}</span>
                     <span className="project-labels">
                       <strong>{project.name}</strong>
-                      <small>Standard · Occidentale · {statusLabel(project.status)}{project.cardTotal !== null ? ` · ${project.cardTotal} carte` : ''}</small>
+                      <small>{project.cardTotal === null ? statusLabel(project.status) : `${project.cardTotal} carte`}</small>
                     </span>
                   </button>
                 </li>
@@ -282,7 +283,7 @@ export function App() {
             <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi"><span aria-hidden="true">◷</span>Eventi</button>
             <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI"><span aria-hidden="true">⚙</span>Impostazioni AI</button>
           </nav>
-          <button type="button" className="compact-create-trigger" aria-expanded={showCompactCreate} onClick={() => setShowCompactCreate((value) => !value)} title="Nuovo progetto">＋ <span>Nuovo progetto</span></button>
+          <button type="button" className="compact-create-trigger" aria-expanded={showCompactCreate} onClick={() => { setView('project'); setShowCompactCreate((value) => !value) }} title="Nuovo progetto">＋ <span>Nuovo progetto</span></button>
           <div className="local-indicator"><span aria-hidden="true" /> Archivio locale</div>
         </aside>
 
@@ -297,11 +298,9 @@ export function App() {
           {error && <div className="error-banner" role="alert">{error}</div>}
           {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? (identityId) => { setView('project'); selectConstraintTarget(identityId) } : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
-              <div className="detail-kicker">Progetto di mazzo</div>
               <div className="detail-headline">
                 <div>
                   <h1 data-testid="selected-project-name">{selected.name}</h1>
-                  <p>La lista è salvata in locale e resta separata dagli altri progetti.</p>
                 </div>
                 <span className={`status-pill status-${selected.status.toLowerCase()}`}>{statusLabel(selected.status)}</span>
               </div>
@@ -317,7 +316,6 @@ export function App() {
                 <div className="baseline-panel" data-testid="baseline-panel">
                   <div className="panel-heading">
                     <div>
-                      <span className="eyebrow">Baseline salvata</span>
                       <h2>Lista corrente</h2>
                     </div>
                     <div className="deck-heading-actions">
@@ -326,11 +324,11 @@ export function App() {
                       <button type="button" className="secondary-button" onClick={() => document.getElementById('deck-text')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>Importa / sostituisci</button>
                     </div>
                   </div>
-                  <p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Origine: testo incollato'} · salvata il {formatDate(baseline.importedAt)}. Consulta l'esito Standard e le sue incertezze qui sotto.</p>
-                  {baseline.declaredTotal !== null && <p className="content-note">Totale dichiarato nel testo: {baseline.declaredTotal}. Il totale mostrato deriva dalle righe interpretate.</p>}
+                  <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
+                  {baseline.declaredTotal !== null && baseline.declaredTotal !== baseline.interpretedTotal && <p className="diagnostics">Totale dichiarato: {baseline.declaredTotal}; interpretato: {baseline.interpretedTotal}.</p>}
                   {baseline.diagnostics.length > 0 && (
-                    <details className="diagnostics" role="status"><summary>Testo importato · {baseline.diagnostics.length} {baseline.diagnostics.some((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH') ? 'problemi da correggere' : 'note da verificare'}</summary>
-                      <p>Queste note descrivono il testo importato. Apri una carta nella lista per vedere le stampe note.</p>
+                    <details className={importProblems.length ? 'diagnostics' : 'project-meta-details'} role={importProblems.length ? 'status' : undefined}>
+                      <summary>{importProblems.length ? `Testo importato · ${importProblems.length} ${importProblems.length === 1 ? 'problema' : 'problemi'} da correggere` : 'Note sul testo importato'}</summary>
                       <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
                     </details>
                   )}
@@ -341,7 +339,7 @@ export function App() {
                 <div className="empty-deck">
                   <div className="empty-icon" aria-hidden="true">◇</div>
                   <h2>Nessuna lista di carte</h2>
-                  <p>Incolla una lista o scegli un file .txt per iniziare. Puoi salvare anche una bozza incompleta.</p>
+                  <p>Incolla una lista o scegli un file .txt.</p>
                   <button type="button" className="primary-button" onClick={() => document.getElementById('deck-text')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>Aggiungi una lista</button>
                 </div>
               )}
@@ -352,7 +350,7 @@ export function App() {
                 <div className="panel-heading">
                   <div><span className="eyebrow">Importazione</span><h2>{baseline ? 'Aggiorna la lista' : 'Aggiungi una lista'}</h2></div>
                 </div>
-                <p className="content-note">Incolla una lista testuale PTCG Live o Limitless, oppure scegli un file .txt. Il salvataggio sostituisce la lista corrente di questo progetto.</p>
+                {baseline && <p className="content-note">Il salvataggio sostituisce la lista corrente.</p>}
                 <label htmlFor="deck-text">Testo lista</label>
                 <textarea id="deck-text" value={draft} onChange={(event) => { setDraft(event.target.value); setSource('paste'); setFileName(null) }} placeholder={'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 2'} spellCheck={false} />
                 <div className="import-actions">

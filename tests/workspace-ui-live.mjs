@@ -90,6 +90,14 @@ function seedMatchup() {
     .run(metaId, now, JSON.stringify(snapshot))
   database.prepare('INSERT INTO matchup_reports (project_id, meta_id, opponent_id, deck_hash, generated_at, payload) VALUES (?, ?, ?, ?, ?, ?)')
     .run(project.id, metaId, opponent.id, report.deckHash, now, JSON.stringify(report))
+  database.prepare('INSERT INTO matchup_discussions (id, project_id, meta_id, opponent_id, deck_hash, parent_id, created_at) VALUES (?, ?, ?, ?, ?, NULL, ?)')
+    .run('workspace-fixture-discussion', project.id, metaId, opponent.id, report.deckHash, now)
+  database.prepare('INSERT INTO matchup_turns (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run('workspace-fixture-first', 'workspace-fixture-discussion', 0, null, now,
+      JSON.stringify({ ...report, strategy: 'Piano iniziale della fixture.' }), null)
+  database.prepare('INSERT INTO matchup_turns (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run('workspace-fixture-latest', 'workspace-fixture-discussion', 1, 'Conservare una carta di ricerca.', now,
+      JSON.stringify(report), 'Il piano ora conserva una carta di ricerca.')
   database.close()
 }
 
@@ -110,6 +118,15 @@ try {
   await page.getByLabel('Testo lista').fill(deck)
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
+  const firstCard = page.locator('.deck-card').first()
+  await firstCard.locator('.deck-card-toggle').click()
+  assert.match(await page.locator('.deck-list-body > .diagnostics').innerText(), /Catalogo non sincronizzato/)
+  assert.doesNotMatch(await firstCard.innerText(), /Stampa da identificare/)
+  assert.doesNotMatch(await firstCard.innerText(), /Catalogo locale non sincronizzato\./)
+  await firstCard.locator('.deck-source-lines summary').first().click()
+  assert.match(await firstCard.innerText(), /Rotazione: Catalogo locale non sincronizzato/)
+  assert.match(await firstCard.innerText(), /Ammissione: Catalogo locale non sincronizzato/)
+  await firstCard.locator('.deck-card-toggle').click()
   const scrolls = await page.evaluate(() => {
     const main = document.querySelector('.main-content')
     const list = document.querySelector('.companion-list')
@@ -138,6 +155,9 @@ try {
   await page.locator('.thread-candidate.featured > summary').waitFor()
   assert.match(await page.locator('.thread-candidate.featured').textContent(), /Lista principale completa/)
   assert.match(await page.locator('.thread-candidate.featured').textContent(), /Lista proposta completa/)
+  const reviewLabel = await page.locator('.thread-candidate.featured .thread-review details summary').textContent()
+  const reviewCount = Number(/Da verificare \((\d+)\)/.exec(reviewLabel ?? '')?.[1])
+  assert.ok(reviewCount > 0 && reviewCount < 10, `Le cause ripetute non sono raggruppate: ${reviewLabel}`)
   const comparisonScrolls = await page.locator('.comparison-list-scroll').evaluateAll((elements) => {
     elements.forEach((element) => { element.scrollTop = 0 })
     elements[0].scrollTop = 100
@@ -159,6 +179,18 @@ try {
   assert.equal(await page.locator('.meta-deck').count(), 1, 'La ricerca non filtra gli archetipi')
   await page.locator('.meta-deck').filter({ hasText: 'Gardevoir ex · fixture UI' }).click({ timeout: 30000 })
   await page.getByText('Come giocare il matchup').waitFor()
+  assert.equal(await page.locator('.discussion-timeline details').count(), 2)
+  assert.equal(await page.locator('.discussion-timeline details').last().locator('.discussion-version').count(), 0,
+    'La revisione corrente ripete la guida già visibile sopra')
+  assert.match(await page.locator('.discussion-timeline details').last().textContent(), /Il piano ora conserva una carta di ricerca/)
+  await page.locator('.discussion-timeline details').first().locator('summary').click()
+  assert.match(await page.locator('.discussion-timeline details').first().textContent(), /Piano iniziale della fixture/)
+  await page.locator('.matchup-ai-details > summary').click()
+  await page.locator('.ai-data-preview > summary').click()
+  const sharedData = await page.locator('.ai-data-preview').innerText()
+  assert.match(sharedData, /Mega Absol ex/)
+  assert.match(sharedData, /altri progetti/)
+  await page.locator('.matchup-ai-details > summary').click()
   await page.getByLabel('Cerca avversario').fill('')
   for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'matchup')

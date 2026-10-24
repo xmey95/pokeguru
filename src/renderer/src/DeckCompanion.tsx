@@ -48,7 +48,7 @@ export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | 
   const preview = groups.flatMap((group) => group.lines).slice(0, 5)
   return <aside className={`deck-companion ${brief ? 'brief' : ''}`} aria-label="Lista principale persistente" data-testid="deck-companion">
     <div className="companion-top">
-      <div><span className="eyebrow">Riferimento fisso</span><h2>Lista principale</h2></div>
+      <h2>Lista principale</h2>
       <button type="button" className="companion-view-button" onClick={() => setBrief((value) => !value)}>
         {brief ? 'Vista completa' : 'Vista breve'}
       </button>
@@ -57,10 +57,10 @@ export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | 
       <div className="companion-total"><strong>{baseline?.interpretedTotal ?? 0}<span>/60</span></strong><span className="companion-state">{deckState(baseline, loading)}</span></div>
       {namedGroups.length > 0 ? <div className="companion-counts">{namedGroups.map((group, index) =>
         <div key={`${group.name}-${index}`}><strong>{group.total}</strong><span>{group.name}</span></div>)}</div>
-        : <p className="companion-count-note">{baseline ? 'Il testo non indica sezioni di carte.' : 'Nessuna carta nel progetto.'}</p>}
+        : baseline && <p className="companion-count-note">Sezioni non indicate nel testo.</p>}
     </div>
     <div className="companion-list" aria-label={brief ? 'Prime carte della lista principale' : 'Carte della lista principale'}>
-      {loading ? <p>Caricamento lista…</p> : !baseline ? <p>La lista comparirà qui in ogni sezione del progetto.</p>
+      {loading ? <p>Caricamento lista…</p> : !baseline ? <p>Aggiungi una lista dalla sezione Lista.</p>
         : brief ? <section className="companion-group"><h3>Prime carte</h3>{preview.map((line) => <div className="companion-row" key={line.lineNumber}>
           <strong>{line.quantity}</strong><span title={line.name}>{line.name}</span></div>)}</section>
           : groups.map((group, index) => <section className="companion-group" key={`${group.name}-${index}`}>
@@ -70,6 +70,5 @@ export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | 
               {line.setCode && <small>{line.setCode} {line.cardNumber}</small>}</div>)}
           </section>)}
     </div>
-    <div className="companion-foot">Solo la lista principale salvata · una candidata non la sostituisce senza conferma</div>
   </aside>
 }

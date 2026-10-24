@@ -68,7 +68,7 @@ try {
   assert.match(await candidate.textContent(), /Rispetto alla lista corrente v1: 60 → 60 carte/)
   assert.match(await candidate.textContent(), /0× Mega Audino ex.*\+1.*1× Mega Audino ex/s)
   assert.match(await candidate.textContent(), /ME02\.5 → ASC/)
-  assert.match(await candidate.textContent(), /Legalità torneo indeterminata/)
+  assert.match(await candidate.textContent(), /Legalità torneo da verificare/)
   await candidate.getByRole('button', { name: "Adotta l'intera lista candidata" }).click()
   await page.getByRole('dialog', { name: 'Adottare l’intera lista candidata?' }).waitFor()
   await page.keyboard.press('Escape')

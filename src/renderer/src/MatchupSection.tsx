@@ -236,14 +236,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       <div><span className="eyebrow">Metagame e analisi AI</span><h2>Matchup</h2></div>
       <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || generating}>Aggiorna Limitless</button>
     </div>
-    <p className="content-note">Scegli un archetipo, leggi il piano e controlla nello stesso momento la tua lista principale.</p>
     {error && <div className="error-banner" role="alert">{error}</div>}
     {loading && !snapshot ? <p className="content-note">Caricamento del metagame Limitless…</p> : snapshot && <>
       <div className="meta-provenance">
-        <strong>{snapshot.decks.length} archetipi presenti nella tabella Limitless</strong>
-        <span>{snapshot.cached ? 'Copia locale · aggiornamento online non riuscito' : `Aggiornato ${date(snapshot.fetchedAt)}`}</span>
+        <strong>{snapshot.decks.length} archetipi Limitless</strong>
+        <span>{snapshot.cached ? 'Copia locale' : `Aggiornato ${date(snapshot.fetchedAt)}`}</span>
         <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(snapshot.sourceUrl)}>Apri fonte Limitless ↗</button>
-        <details><summary>Periodo e provenienza</summary><p>{snapshot.period} · Standard occidentale · acquisito {date(snapshot.fetchedAt)}. Quota del meta, non winrate.</p></details>
+        <details><summary>Periodo e provenienza</summary><p>{snapshot.period} · Standard occidentale · acquisito {date(snapshot.fetchedAt)}. Le quote indicano il meta, non il winrate.</p></details>
       </div>
       <div className="meta-layout">
         <div className="meta-picker">
@@ -262,7 +261,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         </div>
         <div className="meta-analysis">
           {selected && <>
-            <div className="matchup-card-head"><div><h3>{selected.name}</h3><span className="note-source">{selectedInCurrentMeta ? 'Metagame Limitless · quota nel periodo, non percentuale di vittoria' : 'Archetipo presente in uno snapshot precedente'}</span></div></div>
+            <div className="matchup-card-head"><div><h3>{selected.name}</h3><span className="note-source">{selectedInCurrentMeta ? 'Quota meta, non winrate' : 'Archetipo dello storico'}</span></div></div>
             <div className="matchup-source-links"><button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(selected.url)}>Apri archetipo su Limitless ↗</button>
               {report?.metaSourceUrl && <button type="button" className="text-button"
                 onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}</div>
@@ -274,7 +273,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               </button>)}
             </div>}
             {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p> : report ? <>
-              {discussion && !discussion.current && <p className="stale-discussion">Questa discussione riguarda una lista o uno snapshot precedente. La guida resta consultabile come storico.</p>}
+              {discussion && !discussion.current && <p className="stale-discussion">Guida storica · lista o meta precedenti.</p>}
               <div className="matchup-fields">
                 <div className="strategy-field"><strong>Come giocare il matchup</strong><p>{report.strategy}</p></div>
                 <div className="strategy-field matchup-trust"><strong>Limiti dell’analisi</strong><p>{report.limitations}</p></div>
@@ -293,13 +292,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               {report.tournamentEvidence && <section className="rotation-panel" aria-label="Evidenze torneo del matchup">
                 <strong>Liste osservate in un evento online</strong>
                 <p>{report.tournamentEvidence.status === 'matched'
-                  ? `${report.tournamentEvidence.matchedCompleteLists} liste complete dell’archetipo in ${report.tournamentEvidence.eventName} (${report.tournamentEvidence.eventDate ? date(report.tournamentEvidence.eventDate) : 'data non indicata'}); ${report.tournamentEvidence.eventLists}/${report.tournamentEvidence.eventParticipants} liste complete nell’intero evento. Sono osservazioni di un singolo torneo Limitless Play, non statistiche del matchup né del meta in presenza.`
+                  ? `${report.tournamentEvidence.matchedCompleteLists} liste complete dell’archetipo in ${report.tournamentEvidence.eventName} (${report.tournamentEvidence.eventDate ? date(report.tournamentEvidence.eventDate) : 'data non indicata'}). Evento online singolo; non è un winrate.`
                   : report.tournamentEvidence.detail}</p>
                 {report.tournamentEvidence.status === 'matched' && <>
-                  <p>Carte osservate nelle liste collegate (presenza, non copie):</p>
+                  <p>Carte osservate · numero di liste, non copie:</p>
                   <ul>{report.tournamentEvidence.observedCards.slice(0, 18).map((card) => <li key={card.name}>
-                    {card.name} · {card.lists}/{report.tournamentEvidence!.matchedCompleteLists} liste · {card.catalogStatus === 'recognized'
-                      ? 'identità catalogo riconosciuta' : card.catalogStatus === 'ambiguous' ? 'identità da verificare' : 'non nel catalogo locale'}
+                    {card.name} · {card.lists}/{report.tournamentEvidence!.matchedCompleteLists} liste{card.catalogStatus === 'recognized'
+                      ? '' : card.catalogStatus === 'ambiguous' ? ' · identità da verificare' : ' · non nel catalogo locale'}
                     {card.catalogIdentityId && <button type="button" className="text-button"
                       onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo ↗</button>}
                   </li>)}</ul>
@@ -312,13 +311,12 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               {report.sampleDeckUrl && <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.sampleDeckUrl!)}>Apri la lista avversaria usata ↗</button>}
               {discussion && <div className="matchup-discussion">
                 <h4>Discussione dell’analisi</h4>
-                <p className="content-note">Ogni risposta crea una nuova versione della guida. Le tue osservazioni restano distinte dai dati Limitless e dalle conclusioni AI.</p>
                 <div className="discussion-timeline">
                   {discussion.turns.map((turn, index) => <details key={turn.id} open={index === discussion.turns.length - 1}>
                     <summary>{index === 0 ? 'Analisi iniziale' : `Revisione ${index}`} · {date(turn.createdAt)}{turn.report ? '' : ' · in attesa'}</summary>
                     {turn.feedback && <p><strong>La tua osservazione:</strong> {turn.feedback}</p>}
                     {turn.changeSummary && <p><strong>Cosa è cambiato:</strong> {turn.changeSummary}</p>}
-                    {turn.report && <div className="discussion-version">
+                    {turn.report && index !== discussion.turns.length - 1 && <div className="discussion-version">
                       <p><strong>Punti forti:</strong> {turn.report.strengths}</p>
                       <p><strong>Debolezze:</strong> {turn.report.weaknesses}</p>
                       <p><strong>Le nostre carte chiave:</strong> {turn.report.ourKeyCards}</p>
@@ -343,8 +341,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                   {generating ? 'Codex sta rivalutando…' : 'Continua sulla nuova base'}
                 </button> : !selectedInCurrentMeta && <p className="content-note">Questo archetipo non compare nello snapshot attuale. Puoi consultare lo storico; per continuare, seleziona uno snapshot in cui è presente quando sarà disponibile questa scelta.</p>}
               </div>}
-            </> : <p className="matchup-empty">Analisi AI non ancora generata per questo archetipo e questa lista.</p>}
-            {hasBaseline && <details className="matchup-ai-details"><summary>Opzioni AI e dati condivisi per una nuova analisi</summary><div className="matchup-ai-options">
+            </> : <p className="matchup-empty">Nessuna guida per questo archetipo e questa lista.</p>}
+            {hasBaseline && <details className="matchup-ai-details"><summary>Opzioni AI e dati inviati</summary><div className="matchup-ai-options">
               <div className="matchup-ai-heading"><strong>AI per questa analisi</strong><button type="button" className="text-button" onClick={onOpenAiSettings}>Impostazioni AI</button></div>
               <div className="settings-grid">
                 <div className="settings-field"><label htmlFor="matchup-model">Modello</label>
@@ -361,12 +359,12 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 </div>
               </div>
               <details className="ai-data-preview"><summary>Dati inviati a Codex per questa analisi</summary>
-                <p>La richiesta include le righe interpretate e, se presenti, le stampe scelte e i totali per identità di gioco:</p>
+                <p>Lista interpretata, stampe scelte e totali per carta di gioco:</p>
                 <pre>{deckContext ?? 'Caricamento corrispondenze…'}</pre>
-                <p>Per una nuova analisi, evento online salvato: {previewEvidence?.status === 'matched'
-                  ? `${previewEvidence.eventName}: ${previewEvidence.matchedCompleteLists} liste complete dell’archetipo su ${previewEvidence.eventLists} liste complete dell’evento. Pokéguru invia a Codex i nomi delle carte osservate, il numero di liste in cui compaiono e i link alle liste pubbliche; non invia risultati di match del nostro mazzo.`
-                  : previewEvidence?.detail ?? 'Nessun dato evento disponibile.'} Le revisioni riutilizzano le evidenze salvate nella guida precedente.</p>
-                <p>Include l’archetipo {selected.name}, la quota e i punti del metagame, il periodo {snapshot.period} e le fonti Limitless {snapshot.sourceUrl} e {selected.url}. Pokéguru cercherà una lista avversaria pubblica di esempio su Limitless e, se la trova, ne invierà i nomi e le quantità delle carte. Per una revisione invia anche il nuovo commento, la guida precedente e un contesto delle revisioni passate; per «Continua sulla nuova base» invia il contesto della discussione collegata. Non invia il testo grezzo dell’import né altri progetti.</p>
+                <p>Evento online: {previewEvidence?.status === 'matched'
+                  ? `${previewEvidence.eventName} · ${previewEvidence.matchedCompleteLists} liste dell’archetipo. Inviati nomi delle carte osservate, frequenza nelle liste e link pubblici.`
+                  : previewEvidence?.detail ?? 'Nessun dato evento disponibile.'} Le revisioni riusano le evidenze salvate.</p>
+                <p>Meta: {selected.name}, quota, punti, periodo {snapshot.period} e fonti Limitless {snapshot.sourceUrl} e {selected.url}. Se disponibile, sono inviati nomi e quantità di una lista avversaria pubblica. Le revisioni includono commento, guida precedente e contesto della discussione. Non sono inviati risultati di match del tuo mazzo, il testo grezzo dell’import o altri progetti.</p>
               </details>
             </div></details>}
             {selectedInCurrentMeta && (!discussion || discussion.current) && <button type="button" className="primary-button" onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
