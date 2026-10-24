@@ -28,16 +28,25 @@ async function expectSelected(page, name) {
   assert.equal(await page.getByTestId('selected-project-name').textContent(), name)
 }
 
+async function openCreateForm(page) {
+  const sidebarForm = page.locator('.create-form')
+  if (await sidebarForm.isVisible()) return sidebarForm
+  await page.locator('.compact-create-trigger').click()
+  return page.locator('.compact-create-panel')
+}
+
 try {
   const dataDirectory = join(temporary, 'profile')
   application = await launch(dataDirectory)
   let page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Mega Absol / Mega Audino')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  let createForm = await openCreateForm(page)
+  await createForm.getByLabel('Nome progetto').fill('Mega Absol / Mega Audino')
+  await createForm.getByRole('button', { name: 'Crea progetto' }).click()
   await expectSelected(page, 'Mega Absol / Mega Audino')
   await page.locator('.compact-create-trigger').click()
-  await page.getByLabel('Nome progetto').fill('Secondo mazzo')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  createForm = page.locator('.compact-create-panel')
+  await createForm.getByLabel('Nome progetto').fill('Secondo mazzo')
+  await createForm.getByRole('button', { name: 'Crea progetto' }).click()
   await expectSelected(page, 'Secondo mazzo')
   assert.equal(await page.locator('.project-button').count(), 2)
   await page.getByRole('button', { name: /Mega Absol \/ Mega Audino/ }).click()
@@ -135,8 +144,9 @@ try {
   page = await application.firstWindow()
   await page.getByRole('alert').waitFor()
   assert.match(await page.getByRole('alert').textContent(), /Archivio locale non disponibile/)
-  await page.getByLabel('Nome progetto').fill('Non salvare')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  createForm = await openCreateForm(page)
+  await createForm.getByLabel('Nome progetto').fill('Non salvare')
+  await createForm.getByRole('button', { name: 'Crea progetto' }).click()
   assert.equal(await page.locator('.project-button').count(), 0)
   await application.close()
   application = undefined
