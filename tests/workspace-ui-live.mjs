@@ -274,12 +274,7 @@ try {
   await page.locator('.discussion-history > summary').click()
   await page.locator('.discussion-version > summary').first().click()
   assert.match(await page.locator('.discussion-version').first().innerText(), /Piano iniziale della fixture/)
-  await page.locator('.matchup-ai-details > summary').click()
-  await page.locator('.ai-data-preview > summary').click()
-  const sharedData = await page.locator('.ai-data-preview').innerText()
-  assert.match(sharedData, /Mega Absol ex/)
-  assert.match(sharedData, /altri progetti/)
-  await page.locator('.matchup-ai-details > summary').click()
+  assert.equal(await page.locator('.matchup-ai-controls').count(), 0, 'Guida solo storica: opzioni per una richiesta non disponibile')
   for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'matchup')
     assert.match(await page.getByTestId('deck-companion').textContent(), /Mega Absol ex/)

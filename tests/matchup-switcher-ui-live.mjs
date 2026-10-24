@@ -10,12 +10,13 @@ import { auditDesignSystem } from './design-system-audit.mjs'
 import { createProjectFromStart, switchProject } from './project-ui-helper.mjs'
 import { navigationScenarios } from './navigation-scenarios.mjs'
 import { discussionScenarios } from './matchup-discussion-scenarios.mjs'
+import { matchupAiScenarios } from './matchup-ai-scenarios.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
 const profile = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-switcher-'))
 const deck = readFileSync(join(workspace, 'examples/workspace-principale.txt'), 'utf8').trim()
-const guideLinks = process.argv.includes('--guide-links') || process.argv.includes('--navigation') || process.argv.includes('--discussion')
+const guideLinks = process.argv.includes('--guide-links') || process.argv.includes('--navigation') || process.argv.includes('--discussion') || process.argv.includes('--ai-options')
 const hash = (text) => createHash('sha256').update(text).digest('hex')
 const names = ['Gardevoir ex', 'Dragapult ex', 'Charizard ex / Pidgeot ex',
   'Gholdengo ex / Joltik Box / Mega Kangaskhan ex · nome lungo di prova']
@@ -75,6 +76,8 @@ function seed() {
         theirKeyCards: opponent.name, strategy: 'Piano di prova contro ' + opponent.name + '. Conserva una carta di ricerca per il turno successivo.',
         limitations: 'Fixture UI: guida di esempio, non generata da Codex e non verificata in partita.' }
       if (guideLinks) {
+        report.sampleDeckCards = ['2 Gardevoir ex SV1 245', '4 Ralts SV1 84']
+        report.sampleDeckUrl = 'https://limitlesstcg.com/decks/list/12345'
         report.sampleDeckMechanics = [{ name: 'Gardevoir ex', text: 'Scheda di prova.', sourceUrl: 'https://api.tcgdex.net/v2/en/cards/sv01-245' }]
         report.strategy += '\nAvvio: prepara Mega Absol ex. Sviluppo: controlla Gardevoir ex e confronta la [lista campione](https://limitlesstcg.com/decks/list/12345). Chiusura: valuta le risorse osservate al Regional di prova.'
         report.strengths = 'Mega Absol ex può affiancare un secondo attaccante. Verifica Gardevoir ex.'
@@ -197,6 +200,7 @@ try {
   }
 
   if (process.argv.includes('--navigation')) await navigationScenarios(page, application, workspace)
+  if (process.argv.includes('--ai-options')) await matchupAiScenarios(page, application, workspace)
   if (process.argv.includes('--discussion')) await discussionScenarios(page, application, workspace, profile)
 
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {

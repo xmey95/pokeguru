@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { MatchupDiscussion as Discussion, MatchupTurn } from '../../shared/meta-matchups'
 import { GuideText } from './GuideText'
 import { reportGuideReferences } from './guide-links'
@@ -12,7 +13,7 @@ const date = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'm
 const revisionLabel = (index: number) => index === 0 ? 'Guida iniziale' : `Revisione ${index}`
 
 export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, onRetry, onContinue,
-  onOpenCatalogCard, generating, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached }: {
+  onOpenCatalogCard, generating, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached, aiControls }: {
   discussion: Discussion
   feedback: string
   onFeedback(value: string): void
@@ -28,6 +29,7 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
   canContinue: boolean
   absentFromMeta: boolean
   cached: boolean
+  aiControls: ReactNode
 }) {
   const pending = discussion.turns.find((turn) => !turn.report)
   const submitting = inFlight?.discussionId === discussion.id ? inFlight : null
@@ -54,10 +56,13 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
       {!latest.report && <div className="discussion-pending">
         <p role="status">{submitting ? 'Codex sta aggiornando la guida…' : 'Revisione non completata. La guida precedente resta disponibile.'}</p>
         {error && <p className="error-banner" role="alert">{error}</p>}
-        {discussion.current && pending && <button type="button" className="primary-button"
-          onClick={() => onRetry(pending.id)} disabled={generating || !canRetry}>Riprova la revisione</button>}
       </div>}
     </article>}
+    {discussion.current && (pending || submitting) && <div className="discussion-retry-actions">
+      {aiControls}
+      {pending && <button type="button" className="primary-button"
+        onClick={() => onRetry(pending.id)} disabled={generating || !canRetry}>Riprova la revisione</button>}
+    </div>}
     {discussion.current && !pending && !submitting && <div className="feedback-form">
       <label htmlFor="matchup-feedback">Aggiungi un’osservazione</label>
       <textarea id="matchup-feedback" value={feedback} maxLength={5000}
@@ -65,13 +70,14 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
         placeholder="Per esempio: terrei una carta di ricerca per il turno successivo…" />
       {error && <p className="error-banner" role="alert">{error}</p>}
       {cached && <p className="content-note">Aggiorna Limitless per rivedere la guida.</p>}
+      {aiControls}
       <button type="button" className="primary-button" onClick={onSubmit}
         disabled={!feedback.trim() || generating || !canRevise}>Aggiorna guida</button>
     </div>}
-    {!discussion.current && canContinue && <button type="button" className="primary-button discussion-continue"
+    {!discussion.current && canContinue && <div className="discussion-continue-actions">{aiControls}<button type="button" className="primary-button discussion-continue"
       onClick={onContinue} disabled={generating || cached || !canRetry}>
       {generating ? 'Codex sta rivalutando…' : 'Continua sulla nuova base'}
-    </button>}
+    </button></div>}
     {absentFromMeta && <p className="content-note">Avversario assente dal meta attuale. Guida consultabile.</p>}
     {previous.length > 0 && <details className="discussion-history" id={`discussion-history-${discussion.id}`}>
       <summary>Revisioni precedenti ({previous.length})</summary>

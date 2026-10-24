@@ -96,7 +96,9 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
-- **APP-074 completato:** Vista breve eliminata su richiesta dell'utente; lista persistente sempre completa anche nel dock. Build e percorso Electron workspace passati, risultati nel backlog. Prossimo punto della revisione grafica condivisa: APP-075, configurazione AI e dati inviati nei Matchup, da discutere prima di applicare.
+- **APP-075 completato:** configurazione AI compatta, scelte personalizzate riconoscibili e dati separati vicino alle azioni Matchup; sintesi distinta per revisione, rigenerazione e nuova base. Build e percorsi Electron Matchup/navigazione/discussione e workspace passati; verifiche e limiti nel backlog. Prossimo passo: prova utente di Modifica, Dati inviati e Dati per rigenerare, poi scelta condivisa del prossimo blocco grafico. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
+- **APP-074 completato:** Vista breve eliminata su richiesta dell'utente; lista persistente sempre completa anche nel dock. Build e percorso Electron workspace passati, risultati nel backlog. La successiva revisione di configurazione AI e dati inviati è coperta da APP-075.
 
 - **APP-073 completato:** ultimo scambio visibile, osservazione e modifica AI distinte, campo di scrittura vicino e revisioni precedenti nello storico; rigenerazione secondaria, attesa/errore senza duplicazioni. Build e due percorsi Electron passati, inclusi riprova dello stesso turno, navigazione durante la richiesta, fonti e ritorno dai link, responsive e lista persistente. Risultati e limiti nel backlog. Prossimo passo: prova utente del blocco Discussione e prosecuzione della revisione grafica condivisa. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
 

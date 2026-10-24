@@ -25,7 +25,7 @@ try {
   const deckCount = await page.locator('.matchup-option').count()
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
-  await page.locator('.matchup-ai-details > summary').click()
+  await page.getByRole('button', { name: 'Modifica configurazione AI' }).click()
   const model = connection.value.models.find((item) => item.id.includes('luna')) ??
     connection.value.models.find((item) => item.isDefault) ?? connection.value.models[0]
   assert.ok(model, 'Nessun modello Codex disponibile')
@@ -33,7 +33,8 @@ try {
     model.reasoningEfforts.find((item) => item.id === model.defaultReasoningEffort)?.id ?? null
   await page.getByLabel('Modello', { exact: true }).selectOption(model.id)
   if (effort) await page.getByLabel('Ragionamento', { exact: true }).selectOption(effort)
-  assert.match(await page.locator('.ai-data-preview').textContent(), /Dati inviati a Codex/)
+  await page.getByRole('button', { name: 'Dati inviati', exact: true }).click()
+  assert.match(await page.locator('.matchup-data-preview').textContent(), /Per generare una nuova guida/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([
     page.locator('.matchup-fields').getByText('Limiti dell’analisi').waitFor({ timeout: 200000 }),

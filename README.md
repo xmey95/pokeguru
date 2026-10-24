@@ -60,6 +60,8 @@ L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le sce
 
 APP-073 rifinisce **Discussione** nelle guide Matchup: ultimo scambio sempre visibile, osservazione e risposta Codex distinte, **Aggiorna guida** come azione principale. **Revisioni precedenti (N)** raccoglie lo storico e **Leggi versione** apre le vecchie guide senza scorrimenti annidati. Attesa, errore e riprova restano accanto al commento; la guida valida resta disponibile. `node tests/matchup-switcher-ui-live.mjs --discussion --navigation` verifica questi stati e il ritorno al contesto con risposte AI simulate e archivio temporaneo.
 
+APP-075 separa **Modifica** della configurazione AI e **Dati inviati** vicino all'azione Matchup. Una scelta locale resta visibile come **Personalizzata**. La sintesi distingue fonti salvate della revisione e archivio corrente di rigenerazione/nuova base; **Dettagli e fonti** raccoglie il contenuto tecnico. **Dati per rigenerare** descrive l'invio della nuova guida. `node tests/matchup-switcher-ui-live.mjs --ai-options --discussion --navigation` verifica il flusso con risposte controllate, senza nuove chiamate AI.
+
 ## Versione scaricabile
 
 Scarica [Pokéguru v0.1.0](https://github.com/xmey95/pokeguru/releases/tag/v0.1.0): `Pokeguru-0.1.0-linux-x86_64.AppImage` su Linux oppure `Pokeguru-0.1.0-windows-x64-setup.exe` su Windows. Il file `SHA256SUMS.txt` permette di controllare il download. Su Linux rendi eseguibile l'AppImage (`chmod +x`) e avviala; su Windows usa l'installer. I pacchetti iniziali non sono firmati digitalmente. La [prova della validazione Standard occidentale](#prova-della-validazione-standard-occidentale) e le prove dei thread più avanti descrivono i percorsi da verificare prima di I4.

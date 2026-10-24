@@ -8,6 +8,8 @@ import { evaluateStandardDeck } from '../../shared/standard-deck'
 import { buildDeckCards, matchupDeckContext, type DeckReconciliation } from '../../shared/reconciliation'
 import { MatchupSwitcher } from './MatchupSwitcher'
 import { MatchupDiscussion as DiscussionView, type RevisionInFlight } from './MatchupDiscussion'
+import { MatchupAiControls } from './MatchupAiControls'
+import { MatchupDataPreview, type MatchupAction } from './MatchupDataPreview'
 import { GuideText } from './GuideText'
 import { reportGuideReferences, type GuideReference } from './guide-links'
 import { useNavigation, useViewState, useDraftState, useBusyState } from './Navigation'
@@ -43,27 +45,43 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [revisionError, setRevisionError] = useDraftState<string | null>(revisionErrorKey, null)
   const [error, setError] = useDraftState<string | null>(`matchup.error:${projectId}:${selectedId}`, null)
   const [connection, setConnection] = useState<AiConnection | null>(null)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [connectionLoading, setConnectionLoading] = useState(true)
+  const [connectionRequest, setConnectionRequest] = useState(0)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [previewEvidence, setPreviewEvidence] = useState<MatchupTournamentEvidence | null>(null)
+  const [evidenceLoading, setEvidenceLoading] = useState(true)
+  const [evidenceError, setEvidenceError] = useState<string | null>(null)
   const [overrideModel, setOverrideModel] = useDraftState(`matchup.model:${projectId}:${selectedId}`, '')
   const [overrideEffort, setOverrideEffort] = useDraftState(`matchup.effort:${projectId}:${selectedId}`, '')
 
   useEffect(() => {
     let active = true
+    setConnectionLoading(true)
+    setConnectionError(null)
     void window.projectsApi.getAiConnection().then((result) => {
-      if (active && result.ok) setConnection(result.value)
-    })
+      if (!active) return
+      if (result.ok) setConnection(result.value)
+      else { setConnection(null); setConnectionError(result.error) }
+    }).catch(() => { if (active) { setConnection(null); setConnectionError('Impossibile leggere i modelli disponibili.') } })
+      .finally(() => { if (active) setConnectionLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [connectionRequest])
 
   useEffect(() => {
     if (!snapshot || !selectedId) { setPreviewEvidence(null); return }
     let active = true
+    setPreviewEvidence(null)
+    setEvidenceLoading(true)
+    setEvidenceError(null)
     void window.projectsApi.getMatchupEvidence(snapshot.id, selectedId).then((result) => {
-      if (active) setPreviewEvidence(result.ok ? result.value : null)
-    }).catch(() => { if (active) setPreviewEvidence(null) })
+      if (!active) return
+      if (result.ok) setPreviewEvidence(result.value)
+      else setEvidenceError(result.error)
+    }).catch(() => { if (active) setEvidenceError('Impossibile leggere le evidenze torneo.') })
+      .finally(() => { if (active) setEvidenceLoading(false) })
     return () => { active = false }
   }, [snapshot?.id, selectedId, catalog])
 
@@ -256,7 +274,6 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const report = discussion ? [...discussion.turns].reverse().find((turn) => turn.report)?.report :
     currentReports.find((item) => item.opponentId === selectedId)
   const pendingTurn = discussion?.turns.find((turn) => !turn.report)
-  const model = connection?.models.find((item) => item.id === overrideModel)
   const standard = baseline ? evaluateStandardDeck(baseline, catalog,
     new Date().toISOString().slice(0, 10), ruleAudit) : null
   const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog, standard) : null
@@ -267,6 +284,16 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     ...ourCatalogCards.map((card): GuideReference => ({ label: card.name, target: { kind: 'catalog', identityId: card.identityId! } }))
   ] : []
   const body = (text: string, references = guideReferences) => <GuideText key={`${selectedId}:${report?.metaId}:${report?.deckHash}:${report?.generatedAt}:${text}`} text={text} references={references} onOpenCatalogCard={onOpenCatalogCard} />
+  const preview = (action: MatchupAction) => selected && snapshot && baseline ? <MatchupDataPreview
+    action={action} total={baseline.interpretedTotal} deckContext={deckContext} opponent={selected} snapshot={snapshot}
+    report={report} currentEvidence={previewEvidence} evidenceLoading={evidenceLoading} evidenceError={evidenceError}
+    feedback={pendingTurn?.feedback ?? revisionInFlight?.feedback ?? feedback} onOpenCatalogCard={onOpenCatalogCard} /> : null
+  const aiControls = hasBaseline && <MatchupAiControls connection={connection} connectionError={connectionError}
+    loading={connectionLoading} onReload={() => setConnectionRequest((value) => value + 1)}
+    model={overrideModel} effort={overrideEffort} onModel={(value) => { setOverrideModel(value); setOverrideEffort('') }}
+    onEffort={setOverrideEffort} disabled={generating} onOpenSettings={onOpenAiSettings}>
+    {preview(discussion ? discussion.current ? 'revise' : 'continue' : 'generate')}
+  </MatchupAiControls>
 
   const opponentOptions = allOpponents.map((opponent) => ({
     ...opponent,
@@ -352,34 +379,15 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 generating={generating} inFlight={revisionInFlight} error={revisionError}
                 canRevise={!snapshot.cached && !!reconciliation} canRetry={!!reconciliation}
                 canContinue={!currentDiscussion && selectedInCurrentMeta && hasBaseline}
-                absentFromMeta={!selectedInCurrentMeta} cached={snapshot.cached} />}
+                absentFromMeta={!selectedInCurrentMeta} cached={snapshot.cached} aiControls={aiControls} />}
             </> : <p className="matchup-empty">Nessuna guida per questo archetipo e questa lista.</p>}
-            {hasBaseline && <details className="matchup-ai-details"><summary>Opzioni AI e dati inviati</summary><div className="matchup-ai-options">
-              <div className="matchup-ai-heading"><strong>AI per questa analisi</strong><button type="button" className="text-button" onClick={onOpenAiSettings}>Impostazioni AI</button></div>
-              <div className="settings-grid">
-                <div className="settings-field"><label htmlFor="matchup-model">Modello</label>
-                  <select id="matchup-model" value={overrideModel} onChange={(event) => { setOverrideModel(event.target.value); setOverrideEffort('') }} disabled={generating}>
-                    <option value="">Usa preferenze globali</option>
-                    {connection?.models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                  </select>
-                </div>
-                <div className="settings-field"><label htmlFor="matchup-effort">Ragionamento</label>
-                  <select id="matchup-effort" value={overrideEffort} onChange={(event) => setOverrideEffort(event.target.value)} disabled={generating || !model}>
-                    <option value="">Predefinito</option>
-                    {model?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
-                  </select>
-                </div>
-              </div>
-              <details className="ai-data-preview"><summary>Dati inviati a Codex per questa analisi</summary>
-                <p>Righe della lista, carte identificate, regole di gioco disponibili e controllo Standard alla data odierna:</p>
-                <pre>{deckContext ?? 'Caricamento corrispondenze…'}</pre>
-                <p>Tornei archiviati: {previewEvidence?.detail ?? 'Caricamento evidenze…'} Inviati liste campione, frequenze, meccaniche disponibili, fonti e soli risultati espliciti degli abbinamenti Play. Le revisioni riusano le evidenze salvate.</p>
-                <p>Meta: {selected.name}, quota, punti, periodo {snapshot.period} e fonti Limitless {snapshot.sourceUrl} e {selected.url}. Se disponibile, sono inviati nomi e quantità di una lista avversaria pubblica. Le revisioni includono commento, guida precedente e contesto della discussione. Non sono inviati risultati di match del tuo mazzo né dati di altri progetti.</p>
-              </details>
-            </div></details>}
-            {selectedInCurrentMeta && (!discussion || discussion.current) && <button type="button" className={report ? 'secondary-button matchup-regenerate' : 'primary-button'} onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
+            {selectedInCurrentMeta && (!discussion || discussion.current) && <div className="matchup-generation-actions">
+              {!discussion && aiControls}
+              <button type="button" className={report ? 'secondary-button matchup-regenerate' : 'primary-button'} onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
               {generating && !revisionInFlight ? 'Codex sta analizzando…' : report ? 'Rigenera guida' : 'Genera analisi con Codex'}
-            </button>}
+              </button>
+              {report && discussion && <details className="matchup-regenerate-data"><summary>Dati per rigenerare</summary>{preview('generate')}</details>}
+            </div>}
             {snapshot.cached && !discussion?.current && <p className="content-note">Per generare una nuova analisi, aggiorna prima il metagame online.</p>}
           </>}
         </div>

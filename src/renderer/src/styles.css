@@ -307,7 +307,7 @@ details[open] > summary { margin-bottom: 8px; }
 .composer-mode:disabled label { cursor: not-allowed; }
 .thread-composer .composer-preview { justify-self: start; padding-left: 0; }
 .composer-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.thread-ai-options, .candidate-evidence, .matchup-report-meta, .matchup-ai-details { margin: 16px 0; padding: 4px 12px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.thread-ai-options, .candidate-evidence, .matchup-report-meta { margin: 16px 0; padding: 4px 12px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .manual-candidate, .thread-versions { margin-top: 20px; padding-top: 8px; border-top: 1px solid var(--line); }
 .thread-versions > details { margin: 8px 0; padding: 8px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
 .thread-timeline { display: grid; gap: 16px; margin: 24px 0; }
@@ -405,9 +405,35 @@ details[open] > summary { margin-bottom: 8px; }
 .guide-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .guide-link-error { display: block; margin-top: 8px; color: var(--danger); font-size: var(--text-sm); }
 .matchup-report-meta p { margin: 12px 0; }
-.matchup-ai-options { padding: 12px; }
-.matchup-ai-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.ai-data-preview { margin-top: 16px; font-size: var(--text-sm); overflow-wrap: anywhere; }
+.matchup-ai-controls { min-width: 0; }
+.matchup-ai-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.matchup-ai-summary { display: flex; align-items: baseline; flex-wrap: wrap; flex: 1; gap: 4px 8px; min-width: 160px; font-size: var(--text-sm); color: var(--ink-secondary); overflow-wrap: anywhere; }
+.matchup-ai-summary > strong { color: var(--ink); }
+.matchup-ai-local { color: var(--accent); font-size: var(--text-xs); font-weight: 600; }
+.matchup-ai-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.matchup-ai-buttons .text-button { padding: 8px; }
+.matchup-ai-buttons [aria-expanded=true] { background: var(--accent-soft); }
+.matchup-config-panel, .matchup-data-preview { margin: 8px 0 12px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-subtle); min-width: 0; }
+.matchup-config-panel .settings-grid { margin: 0; }
+.matchup-config-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.matchup-config-footer .content-note { margin: 0; font-size: var(--text-sm); line-height: 1.65; }
+.matchup-config-error { margin-top: 12px; }
+.matchup-data-preview > h4 { font-size: var(--text-base); margin: 0 0 16px; }
+.matchup-data-summary { display: grid; gap: 12px; margin: 0; font-size: var(--text-sm); line-height: 1.6; }
+.matchup-data-summary > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; }
+.matchup-data-summary dt { color: var(--ink-secondary); font-weight: 600; }
+.matchup-data-summary dd { margin: 0; overflow-wrap: anywhere; }
+.matchup-data-summary dd > span { display: block; color: var(--ink-secondary); }
+.matchup-data-details { margin-top: 16px; }
+.matchup-data-preview .matchup-data-details h4 { margin: 20px 0 8px; font-size: var(--text-base); }
+.matchup-data-preview .matchup-data-details p, .matchup-data-details li { font-size: var(--text-sm); line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+.matchup-data-details p + p { margin-top: 12px; }
+.matchup-data-details pre { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--text-xs); }
+.matchup-generation-actions { margin-top: 20px; }
+.matchup-generation-actions > .matchup-ai-controls { margin-bottom: 12px; }
+.matchup-regenerate-data { margin: 4px 0 0; }
+.discussion-retry-actions, .discussion-continue-actions { margin-top: 20px; }
+.discussion-retry-actions > button { margin-top: 12px; }
 .matchup-discussion { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
 .matchup-discussion > h3 { margin: 0 0 20px; font-size: var(--text-md); }
 .matchup-discussion h4 { margin: 0 0 8px; font-size: var(--text-base); }

@@ -155,6 +155,12 @@ Le prove di stato controllano le risposte AI e scrivono fixture nell'archivio te
 
 Su richiesta dell'utente viene eliminata Vista breve dal pannello laterale e dal dock. Rimane un'unica rappresentazione dell'intera lista per gruppi, con conteggi e scorrimento indipendente. Rimossi stato di sessione, anteprima delle prime cinque carte e stili del comando; larghezze e breakpoint restano quelli approvati. Nessuna modifica ai dati o alla vista Lista principale.
 
+### T-64 — Configurazione e dati Matchup separati per azione (APP-075)
+
+La riga AI vicina all'azione mostra preferenze globali oppure scelta personalizzata. Modifica e Dati inviati aprono pannelli alternativi nel flusso, con Escape e ritorno al comando. I selettori nativi conservano gli override di sessione per progetto/avversario; passare a un altro modello azzera il ragionamento. Un modello temporaneamente non leggibile resta identificato, con possibilità di ricaricare l'elenco.
+
+La sintesi dei dati segue il percorso già implementato nel backend: revisione/riprova riusano lista avversaria ed evidenze della guida se presenti, anche se la lista salvata è vuota; generazione e continuazione acquisiscono il contesto corrente. La rigenerazione ha una disclosure dedicata perché non invia lo stesso contesto di una revisione. La configurazione resta unica. Conteggi, fonte salvata/corrente e indisponibilità sono nel primo livello; dati tecnici e collegamenti nel secondo. Non è una copia esatta del prompt: acquisizione della lista pubblica e arricchimento delle schede possono avvenire all'invio. Nessuna modifica a API, prompt o persistenza. Le prove UI usano risposte controllate in archivi temporanei e non attestano l'integrazione AI.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

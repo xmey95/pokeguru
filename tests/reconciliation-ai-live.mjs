@@ -27,7 +27,7 @@ try {
   await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
-  await page.locator('.matchup-ai-details > summary').click()
+  await page.getByRole('button', { name: 'Modifica configurazione AI' }).click()
   const fastModel = connection.value.models.find((model) => model.id.includes('luna'))
   if (fastModel) {
     await page.getByLabel('Modello', { exact: true }).selectOption(fastModel.id)
@@ -36,8 +36,9 @@ try {
     }
   }
   console.log(`Codex test model: ${fastModel?.id ?? 'automatico'}`)
-  await page.locator('.ai-data-preview summary').click()
-  assert.match(await page.locator('.ai-data-preview pre').textContent(), /3 Iono — identità da testo di gioco coincidente/)
+  await page.getByRole('button', { name: 'Dati inviati', exact: true }).click()
+  await page.locator('.matchup-data-details > summary').click()
+  assert.match(await page.locator('.matchup-data-details pre').first().textContent(), /3 Iono — identità da testo di gioco coincidente/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([
     page.locator('.matchup-fields').getByText('Limiti dell’analisi').waitFor({ timeout: 200000 }),

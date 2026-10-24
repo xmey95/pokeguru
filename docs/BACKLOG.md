@@ -81,7 +81,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-072** | Navigazione globale Indietro/Avanti e ripristino del contesto | UI/UX | R-03, R-08, R-10, R-13 / qualità pre-I4 | P1 / L | APP-071; proposta approvata, fasi circoscritte sotto | Done |
 | **APP-073** | Revisione condivisa di Discussione e revisioni della guida Matchup | UI/UX | R-10, R-13 / qualità pre-I4 | P1 / S | APP-071/072; proposta approvata dall'utente | Done |
 | **APP-074** | Lista persistente sempre completa, senza Vista breve | UI/UX | R-03, R-10 / qualità pre-I4 | P1 / S | APP-073; richiesta esplicita dell'utente | Done |
-| **APP-075** | Revisione condivisa di opzioni AI e anteprima dati nei Matchup | UI/UX | R-10, R-11 / qualità pre-I4 | P1 / S | APP-073; proposta da discutere con l'utente | Backlog |
+| **APP-075** | Revisione condivisa di opzioni AI e anteprima dati nei Matchup | UI/UX | R-10, R-11 / qualità pre-I4 | P1 / S | APP-073/074; proposta approvata dall'utente | Done |
 
 ## Task dettagliati I0–I2
 
@@ -674,8 +674,12 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 
 ### APP-075 — Opzioni AI e dati inviati nei Matchup
 
+- **Autorizzazione e Ready:** separazione approvata dall'utente; perimetro S, dipendenze risolte. Renderer sul ramo locale `task/production-design-system`; nessun cambio a prompt, API, database o integrazioni.
+- **Accettazione e verifica prevista:** configurazione compatta e scelte locali riconoscibili, modello/ragionamento su richiesta; dati accessibili vicino all'azione con sintesi e dettagli separati. Distinguere nuova guida, revisione/riprova e continuazione; evidenze mancanti o non leggibili esplicite, nessuna anteprima presentata come pacchetto esatto. Build/typecheck e percorso Electron per selezione/azzeramento, instradamento degli override, navigazione, errore di lettura, fonti salvate e layout 1440/1280/640; regressione workspace. Risposte AI di prova dichiaratamente simulate.
 - **Osservazione:** una disclosure unisce configurazione ed evidenze; all'apertura ripete “AI per questa analisi” e mostra due selettori anche con preferenze globali. L'anteprima annidata contiene lunghi paragrafi e testo tecnico, con un riferimento generico all'analisi anche quando l'azione è una revisione.
-- **Proposta da discutere:** riga compatta “Configurazione AI · Preferenze globali” con modifica su richiesta e indicazione esplicita dell'eventuale scelta locale. Accesso distinto “Dati inviati”, accanto alle azioni, con sintesi leggibile di lista, avversario ed evidenze; pacchetto completo e fonti in un livello successivo. Distinguere nuova guida e revisione usando il contesto reale, senza presentare come anteprima esatta dati che non lo sono. Nessuna modifica a prompt, API o integrazioni autorizzata da questo task.
+- **Risultato:** riga AI con preferenze globali o modello/ragionamento e indicazione “Personalizzata”; Modifica apre i selettori, Dati inviati apre una sintesi distinta. Una sola configurazione vicino a generazione, osservazione, riprova o continuazione; Escape chiude e restituisce il focus. La revisione mostra lista avversaria ed evidenze salvate, quando presenti; rigenerazione e nuova base usano i dati correnti. “Dati per rigenerare” distingue il secondo invio dalla revisione. Testo tecnico, copertura e fonti in Dettagli e fonti. Errori di lettura espliciti e ricarica modelli; cambio modello azzera il ragionamento, valori non più nell'elenco conservati.
+- **Verifiche:** build/typecheck e `matchup-switcher-ui-live.mjs --ai-options --discussion --navigation` passati su Windows: override instradati, ritorno alle preferenze globali, fonti salvate/correnti, errori, ricarica, bozze e ritorno da Catalogo, revisione/riprova e fonti storiche. Tre stati AI controllati a 1440×900, 1280×720 e 640×720, contrasto minimo osservato 5,16:1, tastiera, lista persistente e assenza di overflow/sovrapposizioni. Regressione `workspace-ui-live.mjs` passata alle sei dimensioni previste. Schermate in `docs/design-review/matchup-ai-*.png`, decisione T-64, `git diff --check` pulito.
+- **Limiti:** risposte di modelli, evidenze e invii AI controllate nel test; nessuna nuova verifica dell'integrazione Codex o della qualità competitiva. Sintesi consultabile, non copia esatta del prompt finale: acquisizioni e arricchimenti avvengono all'invio. Linux e scala OS elevata non verificati. Nessun cambio a database, API o prompt; nessun merge, release o I4.
 
 ## Regola per i blocchi
 

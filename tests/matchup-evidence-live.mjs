@@ -35,7 +35,9 @@ try {
   await page.locator('#matchup-switcher-trigger').click()
   await page.getByLabel('Cerca avversario').fill(match.name)
   await page.locator('.matchup-option').filter({ hasText: match.name }).first().click()
-  assert.match(await page.locator('.ai-data-preview').textContent(), /liste complete dell’archetipo/)
+  await page.getByRole('button', { name: 'Dati inviati', exact: true }).click()
+  await page.locator('.matchup-data-details > summary').click()
+  assert.match(await page.locator('.matchup-data-details').textContent(), /liste complete dell’archetipo/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([
     page.locator('.guide-sources > summary').waitFor({ timeout: 200000 }),
