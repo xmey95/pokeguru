@@ -34,7 +34,7 @@ try {
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
+  assert.match(await page.locator('.thread-detail').textContent(), /Base superata/)
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano A')
   await page.getByLabel('Prima osservazione (facoltativa)').fill('Più pescata')
@@ -44,7 +44,7 @@ try {
   await page.getByLabel('Lista completa proposta').fill('60 Carta B MEG 2')
   await page.getByLabel('Motivo o appunti (facoltativo)').fill('Cambio completo')
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
-  await page.locator('.thread-candidate.featured > summary').waitFor()
+  await page.locator('.thread-candidate.featured .candidate-brief').waitFor()
   assert.match(await page.locator('#thread-switcher-trigger').innerText(), /Proposta nuova/)
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano B')
@@ -62,7 +62,7 @@ try {
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
+  assert.match(await page.locator('.thread-detail').textContent(), /Base superata/)
   assert.match(await page.locator('#thread-switcher-trigger').innerText(), /Base superata/)
   await application.close()
   application = undefined
@@ -73,8 +73,22 @@ try {
   await switchThread(page, /Piano A/)
   assert.match(await page.locator('.thread-detail').textContent(), /Più pescata/)
   assert.match(await page.locator('.thread-candidate').textContent(), /Carta B/)
-  assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
+  assert.match(await page.locator('.thread-detail').textContent(), /Base superata/)
   assert.equal(await page.locator('.thread-versions > details').count(), 2)
+  await page.locator('.manual-candidate > summary').click()
+  for (const [text, label] of [
+    ['60 Carta D MEG 4', 'Nessuna variazione'],
+    ['60 Carta D MEG 5', 'Cambiano solo le stampe'],
+    ['59 Carta D MEG 5', '+0 / −1 copie']
+  ]) {
+    await page.getByLabel('Lista completa proposta').fill(text)
+    await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+    await page.locator('.candidate-change-summary').getByText(label, { exact: false }).waitFor()
+    assert.equal(await page.locator('.candidate-comparison').getAttribute('open'), null)
+    assert.match(await page.locator('.candidate-brief').innerText(), /Adozione bloccata/)
+  }
+  await page.locator('.thread-timeline .thread-candidate > summary').first().click()
+  assert.match(await page.locator('.thread-timeline .thread-candidate').first().innerText(), /Carta B/)
   await page.screenshot({ path: join(temporary, 'threads.png'), fullPage: true })
   console.log('E2E APP-019 OK: thread paralleli, candidate isolate, base superata e riapertura.')
 } finally {

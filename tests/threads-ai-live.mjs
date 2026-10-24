@@ -180,6 +180,7 @@ try {
             ({ author: item.author, text: item.text.slice(0, 500) })), candidates: thread.candidates.length })) : current))
         throw error
       }
+      await page.locator('.thread-candidate.featured .candidate-comparison > summary').click()
       await page.locator('.thread-candidate.featured .candidate-evidence > summary').click()
       await page.locator('.thread-candidate.featured').getByRole('button', { name: /Mega Absol ex.*↗/ }).first().waitFor()
     }

@@ -81,6 +81,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
   candidate: DeckCandidate; thread: DeckThread; versions: DeckVersion[]; catalog: CatalogView | null
   constraints: DeckConstraint[]; audit: StandardRuleAudit | null; working: boolean; featured?: boolean; onAdopt(candidate: DeckCandidate): void
 }) {
+  const comparison = useRef<HTMLDetailsElement>(null)
   const base = versions.find((version) => version.id === thread.baseVersionId)
   const current = versions[0]
   const adopted = versions.find((version) => version.adoption?.candidateId === candidate.id)
@@ -88,8 +89,21 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
     new Date().toLocaleDateString('sv-SE'), audit) : null
   const comparisonDeck = review ? parseDeck(review.normalizedRawText) : candidate.parsed
   const reviewItems = review ? reviewSummary(review.toReview) : []
-  return <details className={`thread-candidate ${featured ? 'featured' : ''}`} open={featured || undefined}>
-    <summary>Candidata {candidate.sequence} · {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {candidate.parsed.interpretedTotal} carte · {adopted ? `adottata in v${adopted.sequence}` : thread.stale ? 'base superata' : 'proposta nuova'}</summary>
+  const diff = current ? compareDecks(current.parsed, comparisonDeck) : null
+  const added = diff?.byName.reduce((sum, item) => sum + Math.max(0, item.delta), 0) ?? 0
+  const removed = diff?.byName.reduce((sum, item) => sum + Math.max(0, -item.delta), 0) ?? 0
+  const blockers = adopted ? [] : [
+    ...(thread.stale ? ['Base superata: apri un nuovo thread dalla lista corrente.'] : []),
+    ...(!current ? ['Manca una lista principale.'] : []),
+    ...(!review ? ['Controlli non disponibili.'] : review.blockers)
+  ]
+  const status = adopted ? `Adottata in v${adopted.sequence}` : thread.stale ? 'Base superata' : 'Proposta nuova'
+  function closeComparison() {
+    if (!comparison.current) return
+    comparison.current.open = false
+    focusInWorkspace(comparison.current.querySelector('summary'))
+  }
+  const content = <>
     <div className="candidate-identities"><div><span>LISTA PRINCIPALE</span><strong>{current ? `v${current.sequence} · ${current.parsed.interpretedTotal}/60` : 'Nessuna lista principale'}</strong></div>
       <b aria-hidden="true">→</b><div><span>LISTA PROPOSTA</span><strong>Candidata {candidate.sequence} · {candidate.parsed.interpretedTotal}/60</strong></div></div>
     {candidate.note && <p>{candidate.note}</p>}
@@ -98,7 +112,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
         ? <button key={source.id} type="button" className="text-button" onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
         : <span key={source.id}>{source.label}</span>)}
       {candidate.sources.length > 2 && <span>+{candidate.sources.length - 2} nei dettagli</span>}</div>}
-    {current && <DiffView title={`Rispetto alla lista corrente v${current.sequence}`} diff={compareDecks(current.parsed, comparisonDeck)} />}
+    {current && diff && <DiffView title={`Rispetto alla lista corrente v${current.sequence}`} diff={diff} />}
     {base && base.id !== current?.id && <DiffView title={`Rispetto alla base v${base.sequence}`} diff={compareDecks(base.parsed, comparisonDeck)} beforeLabel="BASE DEL THREAD" />}
     {review && review.conversions.length > 0 && <p className="candidate-conversions">Codici adattati per l'adozione: {review.conversions.map((item) =>
       `riga ${item.lineNumber} ${item.from} → ${item.to}`).join('; ')}.</p>}
@@ -126,7 +140,44 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
         <pre>{review.normalizedRawText}</pre></div>}
       <pre>{candidate.rawText}</pre>
     </details>
+  </>
+  if (!featured) return <details className="thread-candidate">
+    <summary>Candidata {candidate.sequence} · {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {candidate.parsed.interpretedTotal} carte · {status}</summary>
+    <div className="candidate-comparison-body">{content}</div>
   </details>
+  return <section className="thread-candidate featured" aria-labelledby={`candidate-title-${candidate.id}`}>
+    <div className="candidate-brief">
+      <div className="candidate-brief-heading">
+        <h3 id={`candidate-title-${candidate.id}`}>Candidata {candidate.sequence} <span>· {candidate.parsed.interpretedTotal} carte</span></h3>
+        <span className="candidate-state">{status}</span>
+      </div>
+      <p className="candidate-change-summary">{diff ? <>
+        {added || removed ? <strong>+{added} / −{removed} copie</strong>
+          : <strong>{diff.byPrint.length ? 'Cambiano solo le stampe' : 'Nessuna variazione'}</strong>}
+        <span> rispetto alla principale v{current!.sequence}</span>
+      </> : 'Nessuna lista principale da confrontare.'}</p>
+      {blockers.length > 0 && <p className="candidate-blocked"><strong>Adozione bloccata.</strong> {blockers[0]}
+        {blockers.length > 1 && <span> Altri {blockers.length - 1} blocchi nel confronto.</span>}</p>}
+      <p className="candidate-caution">{reviewItems.length > 0 && <span>{reviewItems.length} verifiche aperte · </span>}Legalità torneo da verificare.</p>
+      <span className="candidate-origin">{candidate.origin === 'ai'
+        ? `Codex · ${candidate.sources.length ? `${candidate.sources.length} fonti nel confronto` : 'nessuna fonte collegata'}` : 'Proposta manuale'}</span>
+    </div>
+    <details ref={comparison} className="candidate-comparison" onToggle={(event) => {
+      if (event.target !== event.currentTarget || !event.currentTarget.open) return
+      const main = event.currentTarget.closest<HTMLElement>('.main-content')
+      const heading = event.currentTarget.querySelector('summary')?.getBoundingClientRect()
+      if (!main || !heading) return
+      const bounds = main.getBoundingClientRect()
+      if (heading.bottom > bounds.bottom - 200) main.scrollTop += heading.top - bounds.top - 16
+    }} onKeyDown={(event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeComparison() }
+    }}>
+      <summary><span className="comparison-closed-label">Apri confronto</span><span className="comparison-open-label">Chiudi confronto</span></summary>
+      <div className="candidate-comparison-body">{content}
+        <button type="button" className="secondary-button close-comparison" onClick={closeComparison}>Chiudi confronto</button>
+      </div>
+    </details>
+  </section>
 }
 
 function displayDate(value: string): string {
@@ -183,12 +234,12 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     if (createError) focusInWorkspace(newThreadError.current)
   }, [createError])
   useEffect(() => {
-    if (!confirmCandidate && adoptionTrigger.current) {
-      if (adoptionTrigger.current.isConnected) adoptionTrigger.current.focus()
-      else document.querySelector<HTMLElement>('.thread-heading h3')?.focus()
+    if (!confirmCandidate && !loading && !working && adoptionTrigger.current) {
+      if (adoptionTrigger.current.isConnected) focusInWorkspace(adoptionTrigger.current)
+      else focusInWorkspace(document.getElementById('thread-switcher-trigger'))
       adoptionTrigger.current = null
     }
-  }, [confirmCandidate])
+  }, [confirmCandidate, loading, working])
 
   function confirmAdoption(candidate: DeckCandidate) {
     adoptionTrigger.current = document.activeElement as HTMLElement
@@ -410,12 +461,24 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         </form>}
         <div className="thread-detail">
           {selected ? <>
-            <div className="thread-heading"><div><h3 tabIndex={-1}>{selected.title}</h3><p className="content-note">{selected.baseVersionNumber === null ? 'Senza lista iniziale' : `Base v${selected.baseVersionNumber}`} · {displayDate(selected.createdAt)}</p></div>
-              {selected.stale && <span className="matchup-freshness stale">Base da confrontare</span>}</div>
+            {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista corrente.</p>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
               catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured onAdopt={confirmAdoption} />
-              : <div className="thread-no-candidate"><strong>Nessuna proposta salvata</strong><p>Chiedi a Codex una lista completa o incollane una.</p></div>}
-            <details className="thread-ai-options"><summary>Modello e ragionamento</summary><div className="thread-form">
+              : <p className="thread-no-candidate">Nessuna proposta salvata.</p>}
+            <div className="thread-timeline"><h4>Conversazione</h4>
+              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
+                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={confirmAdoption} />)}
+            </div>
+            <form className="thread-form" onSubmit={(event) => void ask(event)}>
+              <label htmlFor="thread-message">Scrivi nel thread</label>
+              <textarea id="thread-message" value={message} maxLength={5000} onChange={(event) => { setMessage(event.target.value); setPreview(null) }} />
+              <p className="content-note">Base, candidata e fonti locali sono incluse nella richiesta.</p>
+              <button type="button" className="secondary-button" disabled={!message.trim() || previewLoading || working} onClick={() => void previewEvidence('ask')}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
+              {preview?.kind === 'ask' && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
+              <div className="thread-form-actions"><button className="primary-button" disabled={working || !message.trim()}>{asking ? 'Codex sta rispondendo…' : 'Chiedi a Codex'}</button>
+              <button type="button" className="secondary-button" disabled={working || !message.trim()} onClick={() => void addMessage()}>Salva osservazione</button></div>
+            </form>
+            <details className="thread-ai-options"><summary>Dettagli del thread e AI</summary><div className="thread-form"><p className="content-note">Creato il {displayDate(selected.createdAt)}</p>
               <label htmlFor="thread-ai-model">Modello Codex per questo thread</label>
               <select id="thread-ai-model" value={selectedOverride?.model ?? ''} disabled={working}
                 onChange={(event) => setOverrides((current) => ({ ...current, [selected.id]: {
@@ -432,19 +495,6 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 {selectedModel?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
               </select>
             </div></details>
-            <div className="thread-timeline"><h4>Discussione e proposte precedenti</h4>
-              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
-                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={confirmAdoption} />)}
-            </div>
-            <form className="thread-form" onSubmit={(event) => void ask(event)}>
-              <label htmlFor="thread-message">Scrivi nel thread</label>
-              <textarea id="thread-message" value={message} maxLength={5000} onChange={(event) => { setMessage(event.target.value); setPreview(null) }} />
-              <p className="content-note">Base, candidata e fonti locali sono incluse nella richiesta.</p>
-              <button type="button" className="secondary-button" disabled={!message.trim() || previewLoading || working} onClick={() => void previewEvidence('ask')}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
-              {preview?.kind === 'ask' && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
-              <div className="thread-form-actions"><button className="primary-button" disabled={working || !message.trim()}>{asking ? 'Codex sta rispondendo…' : 'Chiedi a Codex'}</button>
-              <button type="button" className="secondary-button" disabled={working || !message.trim()} onClick={() => void addMessage()}>Salva osservazione</button></div>
-            </form>
             <form className="thread-form candidate-form" onSubmit={(event) => void propose(event)}>
               <h4>Proposta completa con Codex</h4>
               <p className="content-note">Descrivi cosa cambiare. Riceverai una lista completa da confrontare.</p>

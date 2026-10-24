@@ -107,6 +107,12 @@ L'utente approva il selettore unico con titolo e stato accanto a “Nuovo thread
 
 La creazione avviene in un modulo nel contenuto, annullabile senza scritture; il selettore è disabilitato mentre il modulo è aperto. Un errore mantiene i valori e viene portato in vista muovendo solo l'area centrale. Il successo seleziona il nuovo thread e chiude il modulo. Il renderer usa le API esistenti; persistenza, sessioni AI, confronto e adozione non cambiano. La gerarchia tra conversazione e candidata sarà discussa separatamente in APP-068.
 
+### T-57 — Candidata compatta e confronto su richiesta (APP-068)
+
+L'utente approva il riepilogo della candidata con “Apri confronto” e la rimozione del titolo del thread ripetuto. Le variazioni sintetiche usano lo stesso confronto per nome e lo stesso testo normalizzato già mostrati nel dettaglio; copie aggiunte e tolte sono distinte. Nessuna variazione e sole differenze di stampa hanno etichette dedicate. Lo stato descrive proposta nuova, base superata o versione di adozione; il primo impedimento e il conteggio degli altri restano visibili, insieme alle verifiche aperte e all'origine. Lo stato della proposta non certifica la legalità.
+
+Il confronto resta nel flusso della pagina, con liste, fonti e controlli esistenti. L'apertura porta i contenuti in vista quando necessario, muovendo solo l'area centrale; chiusura ed Escape restituiscono il focus al comando. Dopo adozione il focus torna al selettore quando il caricamento è concluso. L'adozione resta esplicita e richiede la conferma dell'intera lista. Le candidate precedenti restano apribili nella cronologia; data di creazione e configurazione AI passano sotto la scrittura. Nessuna modifica a validatori, persistenza o integrazioni.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

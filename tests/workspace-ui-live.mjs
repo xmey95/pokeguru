@@ -180,12 +180,20 @@ try {
   await page.getByTestId('deck-companion').waitFor()
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano più rapido')
+  await page.getByLabel('Prima osservazione (facoltativa)').fill('Vorrei conservare più risorse per il finale. Osservazione di esempio UI.')
   await page.getByRole('button', { name: 'Crea thread' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
   await page.locator('.manual-candidate > summary').click()
   await page.getByLabel('Lista completa proposta').fill(candidateDeck)
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
-  await page.locator('.thread-candidate.featured > summary').waitFor()
+  await page.locator('.thread-candidate.featured .candidate-brief').waitFor()
+  assert.equal(await page.locator('.candidate-comparison').getAttribute('open'), null)
+  assert.equal(await page.locator('.thread-heading').count(), 0, 'Titolo del thread ripetuto')
+  assert.ok(await page.locator('.candidate-caution').isVisible(), 'Incertezza nascosta dal confronto chiuso')
+  await page.getByLabel('Scrivi nel thread').fill('Bozza conservata durante il confronto')
+  await page.locator('.candidate-comparison > summary').focus()
+  await page.keyboard.press('Enter')
+  assert.ok(await page.locator('.comparison-list-scroll').first().isVisible())
   const scrolls = await page.evaluate(() => {
     const main = document.querySelector('.main-content')
     const list = document.querySelector('.companion-list')
@@ -218,6 +226,35 @@ try {
   for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'thread')
     assert.match(await page.getByTestId('deck-companion').textContent(), /3\s*Mega Absol ex/)
+    if ([1440, 1280, 640].includes(width)) await page.screenshot({ path: join(screenshots, `workspace-comparison-${width}.png`) })
+  }
+  await page.getByRole('button', { name: 'Chiudi confronto', exact: true }).click()
+  assert.equal(await page.locator('.candidate-comparison').getAttribute('open'), null)
+  assert.ok(await page.locator('.candidate-comparison > summary').evaluate(el => el === document.activeElement))
+  const focusedSummary = await page.locator('.candidate-comparison > summary').boundingBox()
+  assert.ok(focusedSummary.y >= 60 && focusedSummary.y + focusedSummary.height <= 500, 'Focus fuori dal contenuto al ritorno dal confronto')
+  assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Bozza conservata durante il confronto')
+  await page.keyboard.press('Enter')
+  await page.locator('.comparison-list-scroll').first().focus()
+  await page.keyboard.press('Escape')
+  assert.equal(await page.locator('.candidate-comparison').getAttribute('open'), null)
+  assert.ok(await page.locator('.candidate-comparison > summary').evaluate(el => el === document.activeElement))
+  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
+    await checkGeometry(page, width, height, 'thread')
+    assert.ok(!(await page.locator('.comparison-list-scroll').first().isVisible()), 'Confronto aperto automaticamente')
+    if (width >= 1280) {
+      const firstMessage = await page.locator('.thread-message').first().boundingBox()
+      assert.ok(firstMessage.y + 40 < height, 'La conversazione non compare nella prima schermata desktop')
+    }
+    await page.locator('.candidate-comparison > summary').focus()
+    await page.keyboard.press('Enter')
+    await page.waitForFunction(() => {
+      const main = document.querySelector('.main-content').getBoundingClientRect()
+      const content = document.querySelector('.candidate-identities').getBoundingClientRect()
+      return content.top >= main.top && content.bottom <= main.bottom
+    })
+    await page.screenshot({ path: join(screenshots, `workspace-comparison-${width}.png`) })
+    await page.keyboard.press('Escape')
   }
   await application.close()
   application = undefined

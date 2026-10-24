@@ -95,7 +95,8 @@ details[open] > summary { margin-bottom: 8px; }
 .detail-meta strong { font-size: var(--text-sm); }
 .deck-heading-actions, .deck-export-action { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .deck-heading-actions > strong { padding-right: 8px; color: var(--ink-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
-.matchup-empty, .thread-no-candidate { padding: 32px; margin: 20px 0; border: 1px dashed var(--line-strong); border-radius: var(--radius-md); text-align: center; background: var(--surface); color: var(--ink-secondary); }
+.matchup-empty { padding: 32px; margin: 20px 0; border: 1px dashed var(--line-strong); border-radius: var(--radius-md); text-align: center; background: var(--surface); color: var(--ink-secondary); }
+.thread-no-candidate { color: var(--ink-muted); font-size: var(--text-sm); }
 .compact-create-panel { display: grid; gap: 12px; max-width: 600px; margin-bottom: 24px; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
 .compact-create-panel h2, .compact-create-panel p { margin: 0; }
 .compact-create-panel .primary-button { justify-self: start; }
@@ -289,9 +290,6 @@ details[open] > summary { margin-bottom: 8px; }
 .new-thread-form { margin-bottom: 20px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 .thread-detail:empty { display: none; }
 .thread-detail { margin: 0; }
-.thread-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.thread-heading h3 { margin: 0; }
-.thread-heading p { margin: 8px 0 0; }
 .thread-form { display: grid; gap: 12px; padding: 20px; }
 .thread-form h3, .thread-form h4 { margin: 0; }
 .thread-form .primary-button, .thread-form .secondary-button { justify-self: start; }
@@ -312,8 +310,22 @@ details[open] > summary { margin-bottom: 8px; }
 .thread-candidate { margin: 20px 0; border: 1px solid var(--line); border-radius: var(--radius-md); font-size: var(--text-sm); }
 .thread-candidate > summary { padding: 16px; color: var(--ink); }
 .thread-candidate[open] > summary { border-bottom: 1px solid var(--line); margin: 0; }
-.thread-candidate.featured > summary { background: var(--proposal-soft); color: var(--proposal); border-radius: var(--radius-md) var(--radius-md) 0 0; }
-.thread-candidate > :not(summary) { margin-left: 16px; margin-right: 16px; }
+.thread-candidate.featured { margin-top: 0; }
+.candidate-brief { padding: 16px; background: var(--proposal-soft); border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.candidate-brief-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+.candidate-brief-heading h3 { margin: 0; font-size: var(--text-base); }
+.candidate-brief-heading h3 span { font-weight: 400; }
+.candidate-state { color: var(--proposal); font-size: var(--text-xs); font-weight: 650; }
+.candidate-brief p { margin: 8px 0 0; line-height: 1.5; }
+.candidate-change-summary span, .candidate-caution, .candidate-origin { color: var(--ink-secondary); }
+.candidate-origin { display: block; margin-top: 8px; font-size: var(--text-xs); }
+.candidate-blocked { color: var(--danger); }
+.candidate-comparison > summary { padding: 10px 16px; color: var(--accent); font-weight: 650; }
+.candidate-comparison[open] > summary { border-bottom: 1px solid var(--line); }
+.candidate-comparison .comparison-open-label, .candidate-comparison[open] .comparison-closed-label { display: none; }
+.candidate-comparison[open] .comparison-open-label { display: inline; }
+.candidate-comparison-body { margin: 0 16px; padding-bottom: 16px; }
+.close-comparison { margin-top: 8px; }
 .candidate-identities { display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); align-items: center; gap: 8px; margin-top: 20px; }
 .candidate-identities > div { padding: 16px; min-width: 0; border-radius: var(--radius-sm); background: var(--surface-subtle); }
 .candidate-identities > div:last-child { background: var(--proposal-soft); }

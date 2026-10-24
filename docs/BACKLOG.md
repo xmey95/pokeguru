@@ -74,7 +74,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-065** | Vincoli contestuali e riepilogo generale | UI/UX | R-05 / qualità pre-I4 | P1 / S | APP-064; proposta approvata dall'utente | Done |
 | **APP-066** | Importazione su richiesta e annullamento | UI/UX | R-03, R-04 / qualità pre-I4 | P1 / S | APP-065; proposta approvata dall'utente | Done |
 | **APP-067** | Revisione condivisa di selezione e creazione dei Thread | UI/UX | R-03, R-07 / qualità pre-I4 | P1 / S | APP-066; proposta approvata dall'utente | Done |
-| **APP-068** | Revisione condivisa della gerarchia tra conversazione e candidata | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-067; proposta da discutere con l'utente | Backlog |
+| **APP-068** | Revisione condivisa della gerarchia tra conversazione e candidata | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-067; proposta approvata dall'utente | Done |
+| **APP-069** | Revisione condivisa della scrittura nel Thread | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-068; proposta da discutere con l'utente | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -596,10 +597,20 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche Windows:** build/typecheck e cinque percorsi Electron passati: `thread-switcher-ui-live.mjs`, `threads-live.mjs`, workspace UI, adozione e Thread AI offline. Ricerca senza risultati, 13 thread, titolo lungo, frecce/Tab/Invio/Escape, ritorno del focus, annullamento, errore SQLite indotto nel solo profilo temporaneo e recupero, isolamento fra progetti, candidate separate, base superata e riapertura verificati. Menu/modulo a 1440×900, 1280×720 e 640×720; workspace anche a 1241/1240×720 e 1024×768, senza sovrapposizioni al mazzo. Schermate ispezionate; demo con dati di esempio e contrasto minimo osservato 5,38:1. `git diff --check` pulito.
 - **Limiti:** scenari UI con dati dichiarati e storage temporaneo; nessuna nuova generazione AI. Linux, lettore di schermo e scala OS elevata non verificati. Revisione della conversazione/candidata rinviata al confronto con l'utente; nessun merge o release.
 
-### APP-068 — Gerarchia tra conversazione e candidata, proposta da discutere
+### APP-068 — Gerarchia tra conversazione e candidata
 
 - **Osservazione:** titolo e versione del thread sono ripetuti dopo il selettore; la candidata aperta con confronto e liste complete precede i messaggi e richiede molto scorrimento.
-- **Proposta:** intestazione senza ripetizioni e candidata in un riepilogo con stato, variazioni e “Apri confronto”, lasciando spazio alla conversazione. Blocchi e incertezze essenziali restano leggibili; confronto completo e adozione manuale esplicita restano accessibili. Da discutere prima dell'implementazione.
+- **Autorizzazione e Ready:** proposta approvata dall'utente il 24-10-2026; ambito S e dipendenze risolti, quindi avviata nel ramo locale `task/production-design-system`.
+- **Accettazione:** intestazione senza ripetizioni e candidata in un riepilogo con stato, variazioni e “Apri confronto”, lasciando spazio alla conversazione. Blocchi e incertezze essenziali leggibili anche da chiusa; confronto completo, fonti e adozione manuale esplicita accessibili. Nessuna modifica a validatori, persistenza o AI.
+- **Verifica prevista:** build, percorsi Electron di confronto/adozione, isolamento dei thread e AI offline; riepilogo/confronto a 1440×900, 1280×720 e 640×720, tastiera, focus, contrasto e lista principale persistente.
+- **Risultato:** candidata corrente compatta con totale, stato, copie aggiunte/tolte rispetto alla principale e casi senza differenze o con sole stampe diverse. Primo impedimento e numero degli altri blocchi, verifiche aperte e provenienza restano visibili. “Apri confronto” mostra nella pagina differenze, liste complete, fonti e adozione; Escape o il comando finale richiudono e restituiscono il focus in vista. L'apertura porta i contenuti in vista quando lo spazio sotto il comando è ridotto. Titolo/base duplicati rimossi; data e impostazioni del thread sono nei dettagli sotto la scrittura. Candidate precedenti e messaggi restano in ordine; nessuna modifica a IPC, database o valutazioni.
+- **Verifiche Windows:** build/typecheck e quattro percorsi Electron passati: workspace UI, adozione, thread persistenti e AI offline. Riepilogo e confronto a 1440×900, 1280×720 e 640×720; workspace anche a 1241/1240×720 e 1024×768. Contrasto, tastiera, focus dopo chiusura/adozione, bozza conservata, scroll indipendente e lista persistente verificati. Il primo messaggio di esempio compare nella prima schermata desktop; quantità, sole stampe, nessuna variazione, nuova candidata, base superata, adozione esplicita, archivio delle candidate e riapertura controllati. Schermate demo/fixture ispezionate, contrasto minimo della demo 5,54:1. `git diff --check` pulito.
+- **Limiti:** dati UI di esempio e archivio temporaneo per i test; nessuna nuova generazione AI. Linux, lettore di schermo e scala OS elevata non verificati. Il percorso AI live è adattato al confronto apribile ma non rieseguito. Nessun merge o release.
+
+### APP-069 — Scrittura nel Thread, proposta da discutere
+
+- **Osservazione:** scrittura del messaggio e richiesta di una lista completa usano due grandi campi separati, con istruzioni e anteprima dati ripetute.
+- **Proposta:** un campo di scrittura con scelta esplicita tra “Discuti” e “Proponi una lista”; mantenere salvataggio dell'osservazione e importazione manuale della candidata come azioni distinte. Preservare errori, bozza, anteprima dei dati e semantica delle API. Da discutere con l'utente prima di applicare.
 
 ## Regola per i blocchi
 
