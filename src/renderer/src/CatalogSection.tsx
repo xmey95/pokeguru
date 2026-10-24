@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigation, useViewState } from './Navigation'
+import { useNavigation, useViewState, useBusyState, useBusyStartedAt, useDraftState } from './Navigation'
 import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { CatalogCardDetail } from './CatalogCardDetail'
 import { SearchEmpty } from './SearchEmpty'
+import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
+import { CatalogActivity } from './CatalogActivity'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -33,16 +35,19 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
 }) {
   const nav = useNavigation()
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [requesting, setRequesting] = useBusyState('catalog.sync')
+  const startedAt = useBusyStartedAt('catalog.sync')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useDraftState<string | null>('catalog.error', null)
   const [query, setQuery] = useViewState('catalog.query', '')
   const [setFilter, setSetFilter] = useViewState('catalog.set', 'all')
   const [selectedKey, setSelectedKey] = useViewState<string | null>('catalog.selected', null)
   const [focusConsumed, setFocusConsumed] = useViewState('catalog.focusConsumed', false)
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null)
+  const busy = requesting || !!syncStatus?.running
+  const [progressError, setProgressError] = useState<string | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
-  const [checkingRules, setCheckingRules] = useState(false)
+  const [checkingRules, setCheckingRules] = useBusyState('catalog.rules')
   const [managementOpen, setManagementOpen] = useViewState('catalog.management', false)
 
   function closeManagement() {
@@ -84,7 +89,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       if (active && result.ok) setRuleAudit(result.value)
     }).catch(() => undefined)
     return () => { active = false }
-  }, [])
+  }, [checkingRules])
 
   async function checkRules(): Promise<void> {
     if (checkingRules) return
@@ -103,26 +108,31 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     let lastProgress = ''
     let lastRefresh = 0
     async function poll(): Promise<void> {
-      const result = await window.projectsApi.getCatalogSyncStatus()
-      if (!active || !result.ok) return
-      setSyncStatus(result.value)
-      setBusy(result.value.running)
-      const progress = `${result.value.state}:${result.value.acquired}:${result.value.expected}`
-      if (progress !== lastProgress && (!result.value.running || Date.now() - lastRefresh > 5_000)) {
-        lastProgress = progress
-        lastRefresh = Date.now()
-        const current = await window.projectsApi.getCatalog()
-        if (active && current.ok) setCatalog(current.value)
-      }
+      try {
+        const result = await window.projectsApi.getCatalogSyncStatus()
+        if (!active) return
+        if (!result.ok) throw new Error(result.error)
+        setProgressError(null)
+        setSyncStatus(result.value)
+        const progress = `${result.value.state}:${result.value.acquired}:${result.value.expected}`
+        if (progress !== lastProgress && (!result.value.running || Date.now() - lastRefresh > 5_000)) {
+          lastProgress = progress
+          lastRefresh = Date.now()
+          const current = await window.projectsApi.getCatalog()
+          if (active && current.ok) setCatalog(current.value)
+        }
+      } catch {
+        if (active) setProgressError('Avanzamento non disponibile. Nuovo controllo in corso…')
+      } finally { if (active) timer = window.setTimeout(() => void poll(), 1500) }
     }
+    let timer: number | undefined
     void poll()
-    const timer = window.setInterval(() => void poll(), 1500)
-    return () => { active = false; window.clearInterval(timer) }
-  }, [])
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [requesting])
 
   async function sync(): Promise<void> {
     if (busy) return
-    setBusy(true)
+    setRequesting(true)
     setError(null)
     try {
       const result = await window.projectsApi.syncCatalog()
@@ -130,24 +140,22 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       setCatalog(result.value)
     } catch (cause) {
       setError(`${cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.'} I dati già acquisiti restano consultabili.`)
-    } finally { setBusy(false) }
+    } finally { setRequesting(false) }
   }
 
   async function syncStandard(mode: CatalogSyncMode): Promise<void> {
     if (busy) return
-    setBusy(true)
+    setRequesting(true)
     setError(null)
     try {
       const result = await window.projectsApi.syncStandardCatalog(mode)
       if (!result.ok) throw new Error(result.error)
       setSyncStatus(result.value)
-      setBusy(result.value.running)
     } catch (cause) {
-      setBusy(false)
       setError(`${cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.'} I dettagli già acquisiti restano salvati.`)
       const current = await window.projectsApi.getCatalog()
       if (current.ok) setCatalog(current.value)
-    }
+    } finally { setRequesting(false) }
   }
 
   async function openSource(url: string): Promise<void> {
@@ -189,11 +197,11 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     <div className="panel-heading"><h2 id="catalog-management-heading">Gestione catalogo</h2>
       <button type="button" className="text-button" onClick={closeManagement}>Chiudi gestione</button></div>
     <div className="catalog-maintenance-actions">
-      <div><button type="button" className="secondary-button" onClick={() => void syncStandard('full')} disabled={busy}>
+      <div><button type="button" className="secondary-button" onClick={() => void syncStandard('full')} disabled={loading || busy || !syncStatus || !!progressError}>
           {syncStatus?.state === 'paused' && syncStatus.mode === 'full' ? 'Riprendi scansione completa' : 'Scansione completa'}
         </button>
         <p className="content-note">Ricontrolla anche le schede già acquisite.</p></div>
-      {!standard && <div><button type="button" className="secondary-button" onClick={() => void sync()} disabled={busy}>
+      {!standard && <div><button type="button" className="secondary-button" onClick={() => void sync()} disabled={loading || busy || !syncStatus || !!progressError}>
           {busy ? 'Sincronizzazione…' : catalog?.syncedAt ? 'Aggiorna campione' : 'Sincronizza campione'}
         </button>
         <p className="content-note">Acquisisce un piccolo gruppo di carte.</p></div>}
@@ -208,7 +216,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       <p>Le regole sono incluse nella release dell’app; aggiornare le carte non le cambia. Le promo usano il registro locale.</p>
       {ruleAudit?.sources.map((source) => <p key={source.id}>{source.id === 'rotation-2026' ? 'Rotazione 2026' : 'Attesa dei prodotti'}: {source.status === 'matching' ? 'coerente' : source.status === 'changed' ? 'da rivedere' : 'non raggiungibile'} · {source.detail}{' '}
         <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(source.id === 'rotation-2026' ? 'play-2026-01-09' : 'set-admission')}>Fonte ↗</button></p>)}
-      <button type="button" className="secondary-button" disabled={checkingRules} onClick={() => void checkRules()}>{checkingRules ? 'Controllo in corso…' : 'Controlla fonti Standard'}</button>
+      <button type="button" className="secondary-button" disabled={checkingRules} onClick={() => void checkRules()}>{checkingRules && <Spinner />}{checkingRules ? 'Controllo in corso…' : 'Controlla fonti Standard'}</button>
     </details>
 
     {catalog?.syncedAt && <>
@@ -267,7 +275,8 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     <div className="panel-heading">
       <div><h1>Catalogo</h1><p className="content-note">{catalog?.syncedAt ? `Aggiornato ${date(catalog.syncedAt)}${standard ? '' : ' · campione di prova'}` : 'Carte condivise fra i progetti'}</p></div>
       <div className="catalog-actions">
-        <button type="button" className="primary-button" onClick={() => void syncStandard('new')} disabled={busy}>
+        <button type="button" className="primary-button" onClick={() => void syncStandard('new')} disabled={loading || busy || !syncStatus || !!progressError}>
+          {busy && <Spinner />}
           {busy ? 'Aggiornamento in corso…' : syncStatus?.state === 'paused' && syncStatus.mode === 'new' ? 'Riprendi aggiornamento' : 'Aggiorna nuove carte'}
         </button>
         <button type="button" id="catalog-management-trigger" className="secondary-button"
@@ -277,15 +286,14 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     {catalog?.rulePackageError && <p className="diagnostics" role="alert">{catalog.rulePackageError}</p>}
     {ruleAudit?.status === 'changed' && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
     {ruleAudit?.status === 'unavailable' && <p className="catalog-gap-summary" role="status">Fonti Standard non raggiungibili · ultimo controllo riuscito {ruleAudit.verifiedAt ? date(ruleAudit.verifiedAt) : 'mai'}.</p>}
-    {syncStatus && syncStatus.state !== 'idle' && syncStatus.state !== 'done' && <p className="catalog-sync-status" role="status">
-      {syncStatus.mode === 'full' ? 'Scansione completa' : 'Aggiornamento'}{syncStatus.state === 'paused' ? ' in pausa' : ' in corso'} · {syncStatus.acquired}/{syncStatus.expected || '?'} dettagli
-      {syncStatus.state === 'paused' && syncStatus.mode === 'full' && ' · riprendi da Gestisci catalogo'}
-    </p>}
+    <CatalogActivity status={syncStatus} requesting={requesting} startedAt={startedAt} onResume={() => void syncStandard(syncStatus?.mode ?? 'new')} />
+    {progressError && <p className="warning-banner" role="status">{progressError}</p>}
+    {checkingRules && <ActivityStatus title="Controllo delle fonti Standard…" />}
     {syncStatus?.error && <p className="diagnostics" role="status">{syncStatus.error}</p>}
     {error && <div className="error-banner" role="alert">{error}</div>}
     {catalog?.syncedAt && gaps.length > 0 && <p className="catalog-gap-summary" role="status">{gaps.join(' · ')}.</p>}
     {management}
-    {loading ? <p className="content-note">Apertura catalogo…</p> : !catalog?.syncedAt ? (
+    {loading ? <LoadingSkeleton label="Apertura catalogo…" /> : !catalog?.syncedAt ? (
       <div className="matchup-empty">Catalogo vuoto. Usa <strong>Aggiorna nuove carte</strong> per iniziare.</div>
     ) : <>
       <div className="catalog-filters">

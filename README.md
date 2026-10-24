@@ -72,6 +72,8 @@ APP-079 riordina **Impostazioni AI**: stato Codex compatto, modello/ragionamento
 
 APP-080 completa la [revisione grafica finale](docs/UI_FINAL_REVIEW.md): terminologia **Lista principale**, titoli e azioni coerenti, stato del mazzo senza duplicati, ricerche vuote recuperabili e selettori AI dei Thread che conservano le scelte non disponibili. Il rapporto raccoglie la matrice delle sezioni, le schermate responsive e le verifiche eseguite su Windows. Il checkpoint resta sul ramo locale, prima di I4.
 
+APP-081 uniforma [caricamenti e attività in corso](docs/UI_LOADING_REVIEW.md): segnaposto iniziali, avanzamento misurato del Catalogo con ripresa dalla pausa, conteggi di Play/Regional e tempo trascorso durante le richieste Codex. Carte e guide salvate restano consultabili; tornando nella sezione si ritrova lo stato dell'operazione. Nessuna percentuale AI o durata restante inventata. `node tests/loading-startup-ui.mjs` prova apertura, totale ignoto, errore e recupero del polling con ritardi controllati.
+
 ## Versione scaricabile
 
 Scarica [Pokéguru v0.1.0](https://github.com/xmey95/pokeguru/releases/tag/v0.1.0): `Pokeguru-0.1.0-linux-x86_64.AppImage` su Linux oppure `Pokeguru-0.1.0-windows-x64-setup.exe` su Windows. Il file `SHA256SUMS.txt` permette di controllare il download. Su Linux rendi eseguibile l'AppImage (`chmod +x`) e avviala; su Windows usa l'installer. I pacchetti iniziali non sono firmati digitalmente. La [prova della validazione Standard occidentale](#prova-della-validazione-standard-occidentale) e le prove dei thread più avanti descrivono i percorsi da verificare prima di I4.

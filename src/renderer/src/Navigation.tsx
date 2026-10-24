@@ -156,9 +156,18 @@ export function useBusyState(key: string): [boolean, Dispatch<SetStateAction<boo
   const nav = useNavigation()
   const value = useSyncExternalStore(nav.subscribe, () => nav.drafts.get(`busy:${key}`) === true)
   return [value, (action) => {
-    nav.drafts.set(`busy:${key}`, typeof action === 'function' ? action(nav.drafts.get(`busy:${key}`) === true) : action)
+    const previous = nav.drafts.get(`busy:${key}`) === true
+    const next = typeof action === 'function' ? action(previous) : action
+    if (next && !previous) nav.drafts.set(`started:${key}`, Date.now())
+    nav.drafts.set(`busy:${key}`, next)
     nav.notify()
   }]
+}
+
+/** Session timestamp survives navigation; it is elapsed time, never an ETA. */
+export function useBusyStartedAt(key: string): number | null {
+  const nav = useNavigation()
+  return useSyncExternalStore(nav.subscribe, () => nav.drafts.get(`started:${key}`) as number ?? null)
 }
 
 export function NavigationControls() {

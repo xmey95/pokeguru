@@ -1,3 +1,4 @@
+import { InlineLoading } from './Loading'
 import type { ReactNode } from 'react'
 import type { AiConnection } from '../../shared/ai'
 import { useViewState } from './Navigation'
@@ -56,7 +57,7 @@ export function MatchupAiControls({ connection, connectionError, loading, onRelo
           </select>
         </div>
       </div>
-      {loading && <p className="content-note" role="status">Caricamento modelli…</p>}
+      {loading && <InlineLoading>Caricamento modelli…</InlineLoading>}
       {connectionError && <div className="matchup-config-error"><p className="error-banner" role="alert">{connectionError}</p>
         <button type="button" className="text-button" onClick={onReload} disabled={disabled}>Ricarica modelli</button></div>}
       {!loading && !connectionError && connection?.models.length === 0 && <p className="content-note">Nessun modello disponibile.</p>}

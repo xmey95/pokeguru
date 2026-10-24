@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { auditLoading } from './loading-ui-audit.mjs'
 import { join } from 'node:path'
 import { auditDesignSystem } from './design-system-audit.mjs'
 
@@ -45,8 +46,9 @@ export async function matchupAiScenarios(page, application, workspace) {
           events: [{ source: 'main', eventId: '123', name: 'Evento corrente · fixture', date: new Date().toISOString(),
             url: 'https://limitlesstcg.com/tournaments/123', completeLists: 20, matchedLists: 7 }] } }
     }
-    for (const route of ['matchups:generate', 'matchups:revise', 'matchups:continue']) handlers[route] = (_event, ...args) => {
+    for (const route of ['matchups:generate', 'matchups:revise', 'matchups:continue']) handlers[route] = async (_event, ...args) => {
       globalThis.aiUiRequests.push({ route, args })
+      if (globalThis.generationHold && route === 'matchups:generate') await new Promise(resolve => { globalThis.generationRelease = resolve })
       return { ok: false, error: 'Fixture: invio AI non eseguito.' }
     }
     for (const [route, handler] of Object.entries(handlers)) {
@@ -100,7 +102,16 @@ export async function matchupAiScenarios(page, application, workspace) {
   assert.match(await regeneration.innerText(), /Per generare una nuova guida/)
   assert.match(await regeneration.innerText(), /7 liste complete · archivio attuale/)
   assert.doesNotMatch(await regeneration.innerText(), /Discussione|evidenze salvate/)
+  const savedStrategy = await page.locator('.strategy-field p').first().innerText()
+  await application.evaluate(() => { globalThis.generationHold = true })
   await page.getByRole('button', { name: 'Rigenera guida', exact: true }).click()
+  await page.getByRole('status').filter({ hasText: 'Codex sta analizzando…' }).waitFor()
+  assert.equal(await page.locator('.strategy-field p').first().innerText(), savedStrategy)
+  await auditLoading(page, workspace, 'analisi')
+  await remount()
+  await page.getByRole('status').filter({ hasText: 'Codex sta analizzando…' }).waitFor()
+  assert.equal(await page.getByRole('progressbar').count(), 0)
+  await application.evaluate(() => { globalThis.generationHold = false; globalThis.generationRelease() })
   await page.getByRole('alert').filter({ hasText: 'invio AI non eseguito' }).waitFor()
   request = await application.evaluate(() => globalThis.aiUiRequests.at(-1))
   assert.equal(request.route, 'matchups:generate')

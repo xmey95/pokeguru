@@ -545,3 +545,36 @@ details[open] > summary { margin-bottom: 8px; }
 .meta-disclosure > p { margin: 8px 0; }
 .connection-state[data-connected=true] { color: var(--success); background: var(--success-soft); }
 .settings-grid + .content-note, .settings-actions + .content-note { margin-top: 16px; }
+/* Loading is contextual: saved content stays interactive and no overlay is used. */
+.loading-spinner { display: inline-block; width: 16px; height: 16px; flex: 0 0 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: loading-spin .9s linear infinite; }
+.inline-loading { display: inline-flex; align-items: center; gap: 10px; color: var(--ink-secondary); font-size: var(--text-base); }
+button > .loading-spinner { width: 14px; height: 14px; flex-basis: 14px; margin-right: 8px; vertical-align: -2px; }
+.loading-skeleton { margin: 16px 0; }
+.skeleton-rows { display: grid; gap: 12px; margin-top: 16px; max-width: 800px; }
+.skeleton-row { display: flex; gap: 16px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.skeleton-thumb { display: block; width: 36px; height: 50px; flex: 0 0 36px; border-radius: 4px; background: var(--line); }
+.skeleton-lines { display: grid; flex: 1; gap: 10px; }
+.skeleton-lines i { display: block; height: 10px; width: 65%; max-width: 340px; border-radius: 4px; background: var(--line); }
+.skeleton-lines i + i { width: 38%; max-width: 190px; }
+.activity-status { padding: 16px; margin: 16px 0; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-md); min-width: 0; }
+.activity-heading { display: flex; align-items: center; gap: 12px; color: var(--accent); min-width: 0; }
+.activity-heading strong { color: var(--ink); font-size: var(--text-base); line-height: 1.5; overflow-wrap: anywhere; }
+.activity-elapsed { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink-secondary); font-size: var(--text-sm); white-space: nowrap; }
+.activity-status .activity-detail { color: var(--ink-secondary); font-size: var(--text-sm); line-height: 1.6; margin: 8px 0 0; overflow-wrap: anywhere; }
+.activity-progress { display: grid; gap: 8px; margin-top: 12px; }
+.activity-progress progress { width: 100%; height: 6px; border: 0; border-radius: 3px; overflow: hidden; appearance: none; }
+.activity-progress progress::-webkit-progress-bar { background: var(--line); }
+.activity-progress progress::-webkit-progress-value { background: var(--accent); }
+.activity-progress > span { color: var(--ink-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.activity-status[data-state="paused"] { border-color: var(--warning-line); background: var(--warning-soft); }
+.activity-status[data-state="paused"] .activity-heading { color: var(--warning); }
+.activity-status[data-state="paused"] progress::-webkit-progress-value { background: var(--warning); }
+.activity-status[data-state="complete"] .activity-heading { color: var(--success); }
+.activity-symbol { width: 16px; flex: 0 0 16px; text-align: center; font-weight: 700; }
+.activity-status .text-button { margin-top: 8px; }
+.discussion-pending > .activity-status { margin: 0; width: 100%; }
+.thread-ai-activity { margin-bottom: 0; }
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner { animation: none; }
+}

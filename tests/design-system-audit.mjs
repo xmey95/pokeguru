@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 
 // Checks rendered text and controls, including content below the fold.
 // Disabled controls are excluded from contrast checks; disclosure-hidden content is excluded.
-export async function auditDesignSystem(page, label) {
+export async function auditDesignSystem(page, label, minimumTexts = 11) {
   const result = await page.evaluate(() => {
     const errors = []
     let texts = 0
@@ -49,7 +49,7 @@ export async function auditDesignSystem(page, label) {
     return { errors: [...new Set(errors)], texts, minimumContrast }
   })
   assert.deepEqual(result.errors, [], label)
-  assert.ok(result.texts > 10, label + ': empty audit')
+  assert.ok(result.texts >= minimumTexts, label + ': empty audit')
   assert.ok(Number.isFinite(result.minimumContrast), label + ': invalid contrast calculation')
   return result
 }

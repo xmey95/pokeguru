@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { MatchupDiscussion as Discussion, MatchupTurn } from '../../shared/meta-matchups'
 import { GuideText } from './GuideText'
 import { reportGuideReferences } from './guide-links'
+import { ActivityStatus } from './Loading'
 
 export interface RevisionInFlight {
   discussionId: string
@@ -13,7 +14,7 @@ const date = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'm
 const revisionLabel = (index: number) => index === 0 ? 'Guida iniziale' : `Revisione ${index}`
 
 export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, onRetry, onContinue,
-  onOpenCatalogCard, generating, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached, aiControls }: {
+  onOpenCatalogCard, generating, startedAt, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached, aiControls }: {
   discussion: Discussion
   feedback: string
   onFeedback(value: string): void
@@ -22,6 +23,7 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
   onContinue(): void
   onOpenCatalogCard(identityId: string): void
   generating: boolean
+  startedAt: number | null
   inFlight: RevisionInFlight | null
   error: string | null
   canRevise: boolean
@@ -54,7 +56,9 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
       </div>
       {exchange(latest)}
       {!latest.report && <div className="discussion-pending">
-        <p role="status">{submitting ? 'Codex sta aggiornando la guida…' : 'Revisione non completata. La guida precedente resta disponibile.'}</p>
+        {submitting ? <ActivityStatus title="Codex sta aggiornando la guida…" startedAt={startedAt}
+          detail="La guida precedente resta disponibile durante la revisione." />
+          : <p role="status">Revisione non completata. La guida precedente resta disponibile.</p>}
         {error && <p className="error-banner" role="alert">{error}</p>}
       </div>}
     </article>}

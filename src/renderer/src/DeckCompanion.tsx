@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from './Loading'
 import { useMemo } from 'react'
 import type { DeckBaseline, DeckLine } from '../../shared/deck-import'
 
@@ -55,7 +56,7 @@ export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | 
         : baseline && <p className="companion-count-note">Sezioni non indicate nel testo.</p>}
     </div>
     <div className="companion-list" tabIndex={0} role="region" aria-label="Carte della lista principale">
-      {loading ? <p>Caricamento lista…</p> : !baseline ? <p>Aggiungi una lista dalla sezione Lista.</p>
+      {loading ? <LoadingSkeleton label="Caricamento lista…" rows={3} /> : !baseline ? <p>Aggiungi una lista dalla sezione Lista.</p>
         : groups.map((group, index) => <section className="companion-group" key={`${group.name}-${index}`}>
             <h3>{group.name}<span>{group.total}</span></h3>
             {group.lines.map((line) => <div className="companion-row" key={line.lineNumber}>

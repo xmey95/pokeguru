@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from './Loading'
 import { Icon } from './Icon'
 import { useEffect, useMemo, useState } from 'react'
 import { useViewState } from './Navigation'
@@ -174,7 +175,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
     </details>}
     {!loading && !catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
     <p className="content-note">Apri una carta per leggere il testo di gioco e impostare vincoli.</p>
-    {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-groups" aria-label="Carte della lista principale">
+    {loading ? <LoadingSkeleton label="Caricamento carte…" /> : <div className="deck-card-groups" aria-label="Carte della lista principale">
       <nav className="deck-composition" aria-label="Composizione del mazzo">{groups.filter((group) => group.id !== 'unknown' || group.total > 0).map((group) =>
         group.total > 0 ? <a key={group.id} href={`#deck-group-${group.id}`} onClick={(event) => { event.preventDefault(); jumpToGroup(group.id) }}><span>{group.name}</span><strong>{group.total}</strong></a>
           : <span key={group.id}><span>{group.name}</span><strong>0</strong></span>

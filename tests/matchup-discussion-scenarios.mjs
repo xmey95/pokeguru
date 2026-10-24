@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { auditLoading } from './loading-ui-audit.mjs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { auditDesignSystem } from './design-system-audit.mjs'
@@ -81,6 +82,7 @@ export async function discussionScenarios(page, application, workspace, profile)
   })
   await submit.click()
   await latest.getByRole('status').filter({ hasText: 'Codex sta aggiornando' }).waitFor()
+  await auditLoading(page, workspace, 'revisione')
   await page.waitForFunction(() => document.activeElement?.id === 'matchup-discussion-heading')
   assert.equal(await page.getByText(comment, { exact: true }).count(), 1, 'Commento ripetuto durante invio')
   assert.equal(await input.count(), 0)

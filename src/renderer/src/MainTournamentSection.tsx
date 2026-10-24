@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../../shared/main-tournament'
-import { useNavigation, useViewState } from './Navigation'
+import { useNavigation, useViewState, useBusyState, useBusyStartedAt, useDraftState } from './Navigation'
+import { useProgressPoll } from './useProgressPoll'
 import { eventDateTime, TournamentCoverage, TournamentWorkspace } from './TournamentWorkspace'
 import { TournamentDeck } from './TournamentDeck'
 import { SearchEmpty } from './SearchEmpty'
@@ -16,8 +17,10 @@ export function MainTournamentSection() {
   const [selectedEventId, setSelectedEventId] = useViewState<string | null>('events.main.event', null)
   const [selectedPlace, setSelectedPlace] = useViewState<number | null>('events.main.place', null)
   const [query, setQuery] = useViewState('events.main.query', '')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useBusyState('events.main.sync')
+  const startedAt = useBusyStartedAt('events.main.sync')
+  const [error, setError] = useDraftState<string | null>('events.main.error', null)
+  const progressError = useProgressPoll(busy, window.projectsApi.getMainTournamentSync, setProgress)
 
   useEffect(() => {
     let active = true
@@ -39,7 +42,7 @@ export function MainTournamentSection() {
         }
       }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Archivio Regional non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [busy])
 
   async function choose(eventId: string): Promise<void> {
     const result = await window.projectsApi.getMainTournament(eventId)
@@ -80,6 +83,7 @@ export function MainTournamentSection() {
     filtered.find((item) => item.cards && item.cardTotal === 60) ?? filtered[0]
 
   return <TournamentWorkspace source="main" count={events.length} loading={loading} busy={busy} progress={progress} error={error}
+    startedAt={startedAt} progressError={progressError} progressDetail={progress ? `${progress.inspectedEvents} eventi controllati · ${progress.fetchedLists} liste scaricate` : undefined}
     onRefresh={sync} management={<>
       {progress && progress.status !== 'idle' && <p className="content-note">{progress.inspectedEvents} eventi controllati · {progress.fetchedLists} liste scaricate · {progress.pendingLists.length} liste e {progress.pendingEvents.length} eventi in coda.</p>}
       <p className="content-note">Ogni blocco acquisisce fino a 7 pagine, con massimo 16 liste rappresentative per evento. L’aggiornamento cerca nuovi tornei; la scansione completa ricontrolla anche quelli precedenti.</p>

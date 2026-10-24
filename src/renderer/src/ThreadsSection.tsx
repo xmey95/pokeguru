@@ -13,7 +13,8 @@ import type { ThreadEvidencePacket } from '../../shared/thread-evidence'
 import { reviewSummary } from './review-summary'
 import { ThreadSwitcher } from './ThreadSwitcher'
 import { Icon } from './Icon'
-import { useNavigation, useViewState, useDraftState, useBusyState } from './Navigation'
+import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
+import { ActivityStatus, InlineLoading, LoadingSkeleton, Spinner } from './Loading'
 
 interface Props {
   projectId: string
@@ -228,8 +229,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [candidateNote, setCandidateNote] = useDraftState(`thread.candidateNote:${projectId}:${selectedId}`, '')
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useBusyState(`thread:${projectId}:${selectedId}`)
-  const [asking, setAsking] = useState(false)
-  const [proposing, setProposing] = useState(false)
+  const [asking, setAsking] = useBusyState(`thread.ask:${projectId}:${selectedId}`)
+  const [proposing, setProposing] = useBusyState(`thread.propose:${projectId}:${selectedId}`)
+  const startedAt = useBusyStartedAt(`thread:${projectId}:${selectedId}`)
   const [error, setError] = useState<string | null>(null)
   const [confirmCandidate, setConfirmCandidate] = useState<DeckCandidate | null>(null)
   useEffect(() => {
@@ -472,7 +474,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   return <><section className="threads-section" aria-label="Thread del mazzo" data-nav-loading={loading}>
     <div className="panel-heading"><h2>Thread</h2></div>
     {error && !confirmCandidate && <div className="error-banner" role="alert">{error}</div>}
-    {loading ? <p className="content-note">Caricamento thread…</p> : <>
+    {loading ? <LoadingSkeleton label="Caricamento thread…" rows={3} /> : <>
       <div className="threads-layout">
         <div className="threads-toolbar">
           <ThreadSwitcher threads={threads} selected={selected} versions={versions} disabled={working || creating}
@@ -493,7 +495,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
             <textarea id="thread-opening" value={openingNote} disabled={working} maxLength={5000} onChange={(event) => setOpeningNote(event.target.value)} />
             {createError && <div ref={newThreadError} className="error-banner" role="alert" tabIndex={-1}>{createError}</div>}
             <div className="thread-form-actions">
-              <button className="primary-button" disabled={working || !title.trim()}>{working ? 'Creazione…' : 'Crea thread'}</button>
+              <button className="primary-button" disabled={working || !title.trim()}>{working && <Spinner />}{working ? 'Creazione…' : 'Crea thread'}</button>
               <button type="button" className="text-button" disabled={working} onClick={closeCreate}>Annulla</button>
             </div>
         </form>}
@@ -507,6 +509,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={confirmAdoption} />)}
             </div>
+            {(asking || proposing) && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
+              title={proposing ? 'Codex sta preparando la proposta…' : 'Codex sta rispondendo…'}
+              detail={proposing ? 'La lista principale resta invariata. Potrai confrontare la proposta quando sarà pronta.' : 'Puoi consultare la lista o cambiare sezione durante l’attesa.'} />}
             <form className="thread-form thread-composer" onSubmit={(event) => void (composerMode === 'ask' ? ask(event) : propose(event))}>
               <fieldset className="composer-mode" aria-label="Modalità di invio" disabled={working}>
                 <label><input type="radio" name="thread-composer-mode" value="ask" checked={composerMode === 'ask'}
@@ -522,14 +527,14 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               {composerError && <div ref={composerErrorElement} className="error-banner" role="alert" tabIndex={-1}>{composerError}</div>}
               <div className="composer-actions"><div className="thread-form-actions">
                 <button className="primary-button" disabled={working || !message.trim() || (composerMode === 'proposal' && !selected.baseVersionId)}>
-                  {asking ? 'Codex sta rispondendo…' : proposing ? 'Codex sta preparando la proposta…'
+                  {(asking || proposing) && <Spinner />}{asking ? 'Risposta in corso…' : proposing ? 'Proposta in corso…'
                     : composerMode === 'ask' ? 'Chiedi a Codex' : 'Genera proposta Codex'}
                 </button>
                 <button type="button" className="secondary-button" disabled={working || !message.trim()}
                   title="Salva il testo senza inviarlo a Codex" onClick={() => void addMessage()}>Salva osservazione</button>
               </div>
               <button type="button" className="text-button composer-preview" disabled={!message.trim() || previewLoading || working}
-                onClick={() => void previewEvidence()}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
+                onClick={() => void previewEvidence()}>{previewLoading && <Spinner />}{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
               </div>
               {preview?.kind === composerMode && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
             </form>
@@ -551,7 +556,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 {selectedOverride?.reasoningEffort && !selectedModel?.reasoningEfforts.some((effort) => effort.id === selectedOverride.reasoningEffort) && <option value={selectedOverride.reasoningEffort}>{selectedOverride.reasoningEffort} · disponibilità da verificare</option>}
                 {selectedModel?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
               </select>
-              {aiModelsLoading && <p className="content-note" role="status">Caricamento modelli…</p>}
+              {aiModelsLoading && <InlineLoading>Caricamento modelli…</InlineLoading>}
               {aiModelsError && <p className="error-banner" role="alert">{aiModelsError}</p>}
               {!aiModelsLoading && !aiModelsError && !aiModels.length && <p className="content-note">Nessun modello disponibile.</p>}
               {!aiModelsLoading && !aiModelsError && selectedOverride?.model && (!selectedModel || (selectedOverride.reasoningEffort && !selectedModel.reasoningEfforts.some((effort) => effort.id === selectedOverride.reasoningEffort))) && <p className="warning-banner" role="status">Disponibilità della scelta personalizzata da verificare.</p>}

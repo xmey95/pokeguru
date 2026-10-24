@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { auditLoading } from './loading-ui-audit.mjs'
 import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
@@ -84,6 +85,7 @@ try {
   // Test must use saved configuration; authentication alone is not success.
   await application.evaluate(() => { globalThis.aiUi.hold = 'test' })
   await test.click(); await page.getByRole('button', { name: 'Prova in corso…' }).waitFor()
+  await auditLoading(page, workspace, 'prova-ai')
   assert.equal(await page.getByText('Prova AI riuscita', { exact: false }).count(), 0)
   await leave()
   await page.getByRole('button', { name: 'Indietro', exact: true }).click()
@@ -134,11 +136,11 @@ try {
   await page.locator('.ai-connection-panel').getByRole('alert').getByText('Fixture: browser non disponibile.').waitFor()
   await application.evaluate(() => { globalThis.aiUi.loginError = null })
   await page.getByRole('button', { name: 'Accedi con ChatGPT' }).click(); await ready()
-  await page.getByText('Completa l’accesso nel browser.', { exact: false }).waitFor()
+  await page.getByText('Completa l’accesso nel browser', { exact: false }).waitFor()
   assert.ok(await page.getByRole('button', { name: 'Accedi con ChatGPT' }).isDisabled())
   await application.evaluate(() => { globalThis.aiUi.connection.account = 'apiKey' })
   await page.getByText('Connesso con chiave API', { exact: true }).waitFor()
-  assert.equal(await page.getByText('Completa l’accesso nel browser.', { exact: false }).count(), 0)
+  assert.equal(await page.getByText('Completa l’accesso nel browser', { exact: false }).count(), 0)
   if (!await account.evaluate(el => el.open)) await account.locator('summary').click()
   const beforeLogout = (await application.evaluate(() => globalThis.aiUi.calls)).length
   page.once('dialog', dialog => dialog.dismiss())

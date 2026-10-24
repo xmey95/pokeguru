@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { auditLoading } from './loading-ui-audit.mjs'
 import { join } from 'node:path'
 import { auditDesignSystem } from './design-system-audit.mjs'
 
@@ -67,7 +68,13 @@ export async function catalogManagementScenarios(page, application, workspace) {
     }
   })
   await page.getByRole('button', { name: 'Aggiorna nuove carte' }).click()
-  await page.locator('.catalog-sync-status').filter({ hasText: 'Aggiornamento in corso · 3/4 dettagli' }).waitFor()
+  await page.locator('.catalog-sync-status').filter({ hasText: 'Aggiornamento in corso' }).waitFor()
+  assert.equal(await page.getByRole('progressbar', { name: 'dettagli acquisiti' }).getAttribute('value'), '3')
+  assert.equal(await page.getByRole('progressbar', { name: 'dettagli acquisiti' }).getAttribute('max'), '4')
+  await auditLoading(page, workspace, 'catalogo')
+  await page.locator('.sidebar').getByRole('button', { name: 'Impostazioni AI', exact: true }).click()
+  await page.getByRole('button', { name: 'Indietro', exact: true }).click()
+  await page.locator('.catalog-sync-status').filter({ hasText: 'Aggiornamento in corso' }).waitFor()
   assert.deepEqual(await application.evaluate(() => globalThis.catalogUiRequests), ['new'])
   assert.ok(await page.getByRole('button', { name: 'Aggiornamento in corso…' }).isDisabled())
   assert.equal(await panel.count(), 0)
@@ -86,7 +93,8 @@ export async function catalogManagementScenarios(page, application, workspace) {
   await page.getByRole('button', { name: 'Chiudi gestione' }).click()
   await page.locator('.catalog-sync-status').filter({ hasText: 'Scansione completa in corso' }).waitFor()
   await application.evaluate(() => { globalThis.catalogUiStatus = { ...globalThis.catalogUiStatus, running: false, state: 'paused', error: 'Fixture: scansione interrotta.' } })
-  await page.locator('.catalog-sync-status').filter({ hasText: 'riprendi da Gestisci catalogo' }).waitFor()
+  await page.locator('.catalog-sync-status').filter({ hasText: 'in pausa' }).waitFor()
+  assert.ok(await page.locator('.catalog-sync-status').getByRole('button', { name: 'Riprendi scansione' }).isVisible())
   await trigger.click()
   await page.getByRole('button', { name: 'Riprendi scansione completa' }).click()
   await page.locator('.catalog-sync-status').filter({ hasText: 'in corso' }).waitFor()

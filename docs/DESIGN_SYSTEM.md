@@ -64,7 +64,7 @@ I token risiedono in `src/renderer/src/tokens.css`; `styles.css` descrive i comp
 - **Base superata:** avviso esplicito e adozione disabilitata; storico conservato.
 - **Guida assente o incerta:** stato esplicito, limiti nel piano e accesso alle fonti. Nessuna certezza ottenuta cambiando il colore.
 - **AI indisponibile:** errore leggibile e stato locale; preferenze consultabili.
-- **Scansioni e richieste in corso:** mantengono le etichette di progresso e i controlli disabilitati esistenti.
+- **Caricamenti (APP-081):** `LoadingSkeleton` per la prima lettura, `Spinner` e `InlineLoading` per azioni brevi, `ActivityStatus` per attività prolungate. I dati caricati restano consultabili. Catalogo: barra solo con totale noto; Eventi: conteggi e stato del blocco; Codex: tempo trascorso, nessuna percentuale o fase simulata nel prodotto. Pausa ambra con ripresa, completamento con simbolo/testo; timer fuori dalle live region, movimento ridotto senza rotazione. Stato e timestamp nella sessione, polling seriale con cleanup. [Verifiche e schermate](UI_LOADING_REVIEW.md).
 - **Dialogo adozione:** azione annullabile, focus contenuto e restituito; sostituzione sempre manuale dell'intera lista.
 
 ## Verifica

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { TournamentParticipation, TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../../shared/tournament'
 import { MainTournamentSection } from './MainTournamentSection'
-import { useNavigation, useViewState } from './Navigation'
+import { useNavigation, useViewState, useBusyState, useBusyStartedAt, useDraftState } from './Navigation'
+import { useProgressPoll } from './useProgressPoll'
 import { TournamentCoverage, TournamentWorkspace } from './TournamentWorkspace'
 import { TournamentDeck } from './TournamentDeck'
 import { SearchEmpty } from './SearchEmpty'
@@ -18,8 +19,10 @@ export function TournamentSection() {
   const [events, setEvents] = useState<TournamentSummary[]>([])
   const [progress, setProgress] = useState<TournamentSyncProgress | null>(null)
   const [selectedEventId, setSelectedEventId] = useViewState<string | null>('events.play.event', null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useBusyState('events.play.sync')
+  const startedAt = useBusyStartedAt('events.play.sync')
+  const [error, setError] = useDraftState<string | null>('events.play.error', null)
+  const progressError = useProgressPoll(busy, window.projectsApi.getTournamentSync, setProgress)
   const [query, setQuery] = useViewState('events.play.query', '')
   const [selectedId, setSelectedId] = useViewState<string | null>('events.play.player', null)
 
@@ -43,7 +46,7 @@ export function TournamentSection() {
         }
       }).catch(() => { if (active) setError('Archivio tornei non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [busy])
 
   async function selectEvent(eventId: string): Promise<void> {
     setError(null)
@@ -91,6 +94,7 @@ export function TournamentSection() {
 
   if (sourceTab === 'main') return <MainTournamentSection />
   return <TournamentWorkspace source="play" count={events.length} loading={loading} busy={busy} progress={progress} error={error}
+    startedAt={startedAt} progressError={progressError} progressDetail={progress ? `${progress.saved} eventi archiviati · ${progress.inspected} controllati` : undefined}
     onRefresh={refresh} management={<>
       {progress && progress.status !== 'idle' && <p className="content-note">{progress.inspected} eventi controllati · {progress.saved} archiviati · {progress.skipped} fuori perimetro · prossima pagina {progress.page}.</p>}
       <p className="content-note">Ogni blocco acquisisce fino a tre eventi pubblici Standard senza regole speciali. L’aggiornamento cerca nuovi tornei dall’ultima scansione; al primo avvio, negli ultimi 90 giorni. La scansione completa percorre anche le pagine precedenti.</p>

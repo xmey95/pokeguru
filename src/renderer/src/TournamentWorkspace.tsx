@@ -1,12 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { TournamentSyncProgress } from '../../shared/tournament'
 import { useNavigation, useViewState } from './Navigation'
+import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 
 type Progress = Pick<TournamentSyncProgress, 'status' | 'mode' | 'cooldownUntil' | 'lastError'>
 export const eventDateTime = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 
-export function TournamentWorkspace({ source, loading, count, busy, progress, error, onRefresh, management, children }: {
+export function TournamentWorkspace({ source, loading, count, busy, progress, error, startedAt, progressDetail, progressError, onRefresh, management, children }: {
   source: 'play' | 'main'; loading: boolean; count: number; busy: boolean; progress: Progress | null; error: string | null
+  startedAt: number | null; progressDetail?: string; progressError: string | null
   onRefresh(mode: 'new' | 'full'): Promise<void>; management: ReactNode; children: ReactNode
 }) {
   const nav = useNavigation()
@@ -26,11 +28,11 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
   }
   return <section className="tournament-section" aria-label={source === 'play' ? 'Evento Limitless Play' : 'Regional Limitless'} data-nav-loading={loading}>
     <div className="panel-heading">
-      <div><h1>Eventi</h1><p className="content-note">{loading ? 'Caricamento archivio…' : `${count} ${count === 1 ? 'evento disponibile' : 'eventi disponibili'} offline`}</p></div>
+      <div><h1>Eventi</h1><p className="content-note">{loading ? 'Archivio locale' : `${count} ${count === 1 ? 'evento disponibile' : 'eventi disponibili'} offline`}</p></div>
       <div className="catalog-actions">
         <button type="button" className="primary-button" disabled={loading || busy || cooldown > now}
           onClick={() => void onRefresh(pending ? progress?.mode ?? 'new' : 'new')}>
-          {busy ? 'Acquisizione…' : pending ? source === 'play' ? 'Continua blocco' : 'Continua blocco Regional'
+          {busy && <Spinner />}{busy ? 'Acquisizione…' : pending ? source === 'play' ? 'Continua blocco' : 'Continua blocco Regional'
             : source === 'play' ? 'Aggiorna nuovi tornei' : 'Aggiorna nuovi Regional'}</button>
         <button type="button" id={`${id}-trigger`} className="secondary-button event-management-trigger"
           aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>Gestisci eventi</button>
@@ -45,11 +47,17 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
       </div>
       <span className="content-note">{source === 'play' ? 'Liste e abbinamenti · Limitless Play' : 'Piazzamenti e liste · Limitless'}</span>
     </div>
-    {busy ? <p className="content-note" role="status">Acquisizione del blocco in corso…</p>
-      : progress && progress.status !== 'idle' && (!error || progress.status !== 'complete') && <p className="content-note" role="status">
-        {progress.status === 'complete' ? 'Scansione completata.' : cooldown > now
-          ? `Limite della fonte raggiunto. Ripresa disponibile dopo ${eventDateTime(progress.cooldownUntil!)}.`
-          : 'Scansione da continuare: sono disponibili altri dati.'}</p>}
+    {(busy || (progress && progress.status !== 'idle' && (!error || progress.status !== 'complete'))) && <ActivityStatus
+      title={busy ? 'Acquisizione del blocco in corso…' : progress?.status === 'complete' ? 'Scansione completata.'
+        : cooldown > now ? 'Limite della fonte raggiunto' : 'Scansione da continuare'}
+      state={busy ? 'working' : progress?.status === 'complete' ? 'complete' : 'paused'}
+      startedAt={startedAt}
+      detail={busy ? 'Gli eventi già archiviati restano consultabili.' : cooldown > now
+        ? `Ripresa disponibile dopo ${eventDateTime(progress!.cooldownUntil!)}.`
+        : progress?.status === 'complete' ? 'Gli eventi acquisiti sono disponibili offline.' : 'Sono disponibili altri dati. Continua dal prossimo blocco.'}>
+      {progressDetail && <p className="activity-detail">{progressDetail}</p>}
+    </ActivityStatus>}
+    {progressError && <p className="warning-banner" role="status">{progressError}</p>}
     {progress?.lastError && progress.lastError !== error && <p className="diagnostics" role="status">{progress.lastError}</p>}
     {error && <div className="error-banner" role="alert">{error}</div>}
     <section id={id} className="catalog-management" aria-labelledby={`${id}-heading`} hidden={!open}
@@ -60,7 +68,7 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
       <p className="content-note">{pending ? 'Completa la scansione in corso prima di avviarne un’altra.' : 'Ricontrolla anche gli eventi già acquisiti, in blocchi riprendibili.'}</p>
       {management}
     </section>
-    {children}
+    {loading ? <LoadingSkeleton label="Caricamento archivio…" /> : children}
   </section>
 }
 

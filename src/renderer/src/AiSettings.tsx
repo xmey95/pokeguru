@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AiConnection, AiPreferences } from '../../shared/ai'
-import { useDraftState, useBusyState } from './Navigation'
+import { useNavigation, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
+import { ActivityStatus, Spinner } from './Loading'
 
 const automatic: AiPreferences = { model: null, reasoningEffort: null }
 type Action = 'save' | 'test' | 'login' | 'logout'
 
 export function AiSettings() {
+  const nav = useNavigation()
   const [saved, setSaved] = useState<AiPreferences | null>(null)
   const [draftValue, setDraft] = useDraftState<AiPreferences | null>('ai.preferences', null)
   const draft = draftValue ?? saved ?? automatic
@@ -15,7 +17,8 @@ export function AiSettings() {
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [preferencesError, setPreferencesError] = useState<string | null>(null)
   const [busy, setBusy] = useBusyState('ai.settings')
-  const [action, setAction] = useState<Action | null>(null)
+  const [action, setAction] = useDraftState<Action | null>('ai.action', null)
+  const startedAt = useBusyStartedAt('ai.settings')
   const [loginPending, setLoginPending] = useDraftState('ai.login-pending', false)
   const [error, setError] = useDraftState<string | null>('ai.error', null)
   const [errorScope, setErrorScope] = useDraftState<'connection' | 'preferences'>('ai.error-scope', 'preferences')
@@ -87,7 +90,11 @@ export function AiSettings() {
     setAction(value); setBusy(true); setError(null); setNotice(null)
     setErrorScope(value === 'login' || value === 'logout' ? 'connection' : 'preferences')
   }
-  function finish() { setAction(null); setBusy(false) }
+  function finish() {
+    // Completion belongs to the operation, including after its view was unmounted.
+    nav.drafts.set('ai.action', null)
+    setBusy(false)
+  }
 
   async function save(): Promise<void> {
     if (!ready || !dirty || unavailableChoice) return
@@ -142,20 +149,20 @@ export function AiSettings() {
       <div className="ai-connection-row">
         <div className="ai-connection-summary">
           <h2 id="ai-connection-title">Codex</h2>
-          <span className="connection-state" role="status" data-connected={connected}>{loading ? 'Verifica in corso…'
+          <span className="connection-state" role="status" data-connected={connected}>{busy && loading ? 'Operazione Codex in corso…' : loading ? 'Verifica in corso…'
             : connection?.account === 'chatgpt' ? `Connesso con ChatGPT${connection.plan ? ` · ${connection.plan}` : ''}`
             : connection?.account === 'apiKey' ? 'Connesso con chiave API'
             : connection?.account === 'other' ? 'Accesso non supportato'
             : connection ? 'Accesso richiesto' : 'Codex non disponibile'}</span>
         </div>
         <div className="ai-connection-actions">
-          <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || busy}>Aggiorna stato</button>
+          <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || busy}>{loading && !busy && <Spinner />}Aggiorna stato</button>
           {connection && !connection.account && <button type="button" className="primary-button" onClick={() => void login()} disabled={busy || loading || loginPending}>{action === 'login' ? 'Apertura accesso…' : 'Accedi con ChatGPT'}</button>}
         </div>
       </div>
       {connectionError && <p className="error-banner" role="alert">{connectionError}</p>}
       {error && errorScope === 'connection' && <p className="error-banner" role="alert">{error}</p>}
-      {loginPending && <p className="content-note ai-operation" role="status">Completa l’accesso nel browser. Lo stato si aggiorna automaticamente.</p>}
+      {loginPending && <ActivityStatus state="paused" title="Completa l’accesso nel browser" detail="Lo stato si aggiorna automaticamente." />}
       <details className="ai-account-details">
         <summary>Account e accesso</summary>
         <p className="content-note">L’accesso è condiviso con le altre app Codex su questo computer. Pokéguru non archivia password, chiavi o token.</p>
@@ -191,11 +198,12 @@ export function AiSettings() {
         : !connected ? 'Accedi a Codex per verificare la disponibilità della scelta salvata.'
         : 'La scelta attuale non è tra quelle disponibili. Scegli un’altra opzione o Automatico.'}</p>}
       <div className="ai-save-row">
-        <button type="button" className="primary-button" onClick={() => void save()} disabled={!ready || !dirty || unavailableChoice}>{action === 'save' ? 'Salvataggio…' : 'Salva preferenze'}</button>
+        <button type="button" className="primary-button" onClick={() => void save()} disabled={!ready || !dirty || unavailableChoice}>{action === 'save' && <Spinner />}{action === 'save' ? 'Salvataggio…' : 'Salva preferenze'}</button>
         {dirty && <button type="button" className="text-button" onClick={() => edit(saved!)} disabled={!ready}>Annulla modifiche</button>}
         <span className="content-note" role="status">{preferencesLoading ? 'Lettura preferenze…' : !saved ? 'Preferenze non disponibili' : dirty ? 'Modifiche non salvate' : notice === 'Preferenze salvate.' ? notice : 'Preferenze salvate'}</span>
       </div>
       {error && errorScope === 'preferences' && <div className="error-banner" role="alert">{error}</div>}
+      {action === 'test' && <ActivityStatus title="Codex sta eseguendo la prova…" startedAt={startedAt} detail="La richiesta usa la configurazione salvata." />}
       <div className="ai-test-row">
         <div>
           <h3>Prova della configurazione</h3>
@@ -203,7 +211,7 @@ export function AiSettings() {
           {testReason && <p className="content-note" id="ai-test-reason">{testReason}</p>}
           {notice?.startsWith('Prova AI riuscita') && <p className="ai-feedback" role="status">{notice}</p>}
         </div>
-        <button type="button" className="secondary-button" onClick={() => void test()} disabled={Boolean(testReason)} aria-describedby={testReason ? 'ai-test-reason' : undefined}>{action === 'test' ? 'Prova in corso…' : 'Esegui prova AI'}</button>
+        <button type="button" className="secondary-button" onClick={() => void test()} disabled={Boolean(testReason)} aria-describedby={testReason ? 'ai-test-reason' : undefined}>{action === 'test' && <Spinner />}{action === 'test' ? 'Prova in corso…' : 'Esegui prova AI'}</button>
       </div>
     </section>
 

@@ -12,7 +12,8 @@ import { MatchupAiControls } from './MatchupAiControls'
 import { MatchupDataPreview, type MatchupAction } from './MatchupDataPreview'
 import { GuideText } from './GuideText'
 import { reportGuideReferences, type GuideReference } from './guide-links'
-import { useNavigation, useViewState, useDraftState, useBusyState } from './Navigation'
+import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
+import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -39,6 +40,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [feedback, setFeedback] = useDraftState(`matchup.feedback:${projectId}:${selectedId}:${activeDiscussionId}`, '')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useBusyState(`matchup:${projectId}:${selectedId}`)
+  const startedAt = useBusyStartedAt(`matchup:${projectId}:${selectedId}`)
   const revisionKey = `matchup.revision:${projectId}:${selectedId}`
   const revisionErrorKey = `matchup.revision-error:${projectId}:${selectedId}:${activeDiscussionId}`
   const [revisionInFlight, setRevisionInFlight] = useDraftState<RevisionInFlight | null>(revisionKey, null)
@@ -308,10 +310,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     {!loading && historyLoaded && selectedId && !selected && <p className="error-banner" role="alert">Questo avversario non è più disponibile. Scegline un altro oppure torna indietro.</p>}
     <div className="panel-heading">
       <h2>Matchup</h2>
-      <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || generating}>Aggiorna Limitless</button>
+      <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || generating}>{loading && <Spinner />}Aggiorna Limitless</button>
     </div>
     {error && <div className="error-banner" role="alert">{error}</div>}
-    {loading && !snapshot ? <p className="content-note">Caricamento del metagame Limitless…</p> : snapshot && <>
+    {loading && snapshot && <ActivityStatus title="Aggiornamento del metagame…" detail="La guida salvata resta consultabile." />}
+    {generating && !revisionInFlight && <ActivityStatus title="Codex sta analizzando…" startedAt={startedAt}
+      detail="La guida sarà disponibile al termine. Puoi consultare la lista o cambiare sezione." />}
+    {loading && !snapshot ? <LoadingSkeleton label="Caricamento del metagame Limitless…" rows={3} /> : snapshot && <>
       <div className="meta-layout">
         <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading || generating} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
         <div className="meta-analysis">
@@ -376,7 +381,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               {discussion && <DiscussionView discussion={discussion} feedback={feedback} onFeedback={setFeedback}
                 onSubmit={() => void submitFeedback()} onRetry={(turnId) => void submitFeedback(turnId)}
                 onContinue={() => void continueOnCurrentBase()} onOpenCatalogCard={onOpenCatalogCard}
-                generating={generating} inFlight={revisionInFlight} error={revisionError}
+                generating={generating} startedAt={startedAt} inFlight={revisionInFlight} error={revisionError}
                 canRevise={!snapshot.cached && !!reconciliation} canRetry={!!reconciliation}
                 canContinue={!currentDiscussion && selectedInCurrentMeta && hasBaseline}
                 absentFromMeta={!selectedInCurrentMeta} cached={snapshot.cached} aiControls={aiControls} />}
@@ -384,7 +389,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
             {selectedInCurrentMeta && (!discussion || discussion.current) && <div className="matchup-generation-actions">
               {!discussion && aiControls}
               <button type="button" className={report ? 'secondary-button matchup-regenerate' : 'primary-button'} onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
-              {generating && !revisionInFlight ? 'Codex sta analizzando…' : report ? 'Rigenera guida' : 'Genera analisi con Codex'}
+              {generating && !revisionInFlight && <Spinner />}{generating && !revisionInFlight ? 'Analisi in corso…' : report ? 'Rigenera guida' : 'Genera analisi con Codex'}
               </button>
               {report && discussion && <details className="matchup-regenerate-data"><summary>Dati per rigenerare</summary>{preview('generate')}</details>}
             </div>}

@@ -1,3 +1,4 @@
+import { InlineLoading } from './Loading'
 import { useEffect, useRef, useState } from 'react'
 import { ConstraintForm, constraintLabel, ConstraintStatus, focusConstraintControl } from './ConstraintForm'
 import { useDeckConstraints } from './DeckConstraintsContext'
@@ -50,7 +51,7 @@ export function ConstraintsSection({ selectedIdentityId, selectionVersion, onTar
         onClick={() => { setEditingId(null); setCreateIdentity(''); setNotice('') }}>Aggiungi vincolo</button>}</div>
     {error && <div className="error-banner" role="alert">{error}</div>}
     <p className="constraint-notice" role="status">{notice}</p>
-    {loading ? <p className="content-note">Caricamento vincoli…</p> : !error && <>
+    {loading ? <InlineLoading>Caricamento vincoli…</InlineLoading> : !error && <>
       {!catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button> per scegliere una carta.</p>}
       {evaluation?.conflicts.map((message, index) => <p className="constraint-conflict" role="alert" key={index}>{message}</p>)}
       {constraints.length ? <div className="constraint-list">{evaluation?.results.map((result) => {

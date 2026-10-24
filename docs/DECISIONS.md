@@ -191,6 +191,14 @@ La revisione finale richiesta dall'utente conserva layout e scelte condivise. Li
 
 Catalogo e le due fonti Eventi condividono lo stato di ricerca vuota: un messaggio, Azzera filtri quando applicabile, focus restituito al campo e torneo conservato. Le scelte AI esplicite dei Thread restano visibili quando il catalogo modelli non le contiene; ricarica e incertezza seguono la presentazione di Matchup/Impostazioni AI. Errore e avviso non ripetono la stessa causa. Nessun cambiamento a IPC, prompt, autenticazione, validatori o database. Le verifiche e la demo usano archivi separati e fixture dichiarate; evidenze in `UI_FINAL_REVIEW.md`.
 
+### T-70 — Caricamento contestuale e avanzamento misurato (APP-081)
+
+L'utente autorizza il miglioramento dei loader dell'app, inclusi Catalogo, Eventi e Codex. Apertura senza dati: segnaposto strutturali non interattivi con etichetta di stato. Aggiornamento: contenuto già acquisito consultabile e riquadro attività nella pagina, senza overlay. Operazioni brevi: spinner nello stesso controllo.
+
+Il Catalogo usa `acquired/expected` del job esistente; l'inventario senza totale non mostra una barra. Play e Regional mostrano solo conteggi ricevuti dalle API esistenti: il totale degli eventi non è noto. Codex mostra attesa e tempo trascorso, senza inventare percentuali, ragionamenti, fasi o durata restante. Il timer e l'operazione sono dati di sessione distinti dalla cronologia; ritornare nella vista non avvia una nuova richiesta. Pausa, cooldown, completamento ed errore hanno stati distinti; la ripresa Catalogo è disponibile accanto allo stato.
+
+Polling seriale con cleanup e risposte obsolete ignorate; animazione disattivata con movimento ridotto. Le etichette di attività sono live region, mentre secondi e contatori non vengono annunciati a ogni aggiornamento. Nessun nuovo canale di streaming, cancellazione remota, provider o modifica di archivio. Verifiche e demo isolate in `UI_LOADING_REVIEW.md`.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

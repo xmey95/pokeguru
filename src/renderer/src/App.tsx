@@ -1,3 +1,4 @@
+import { InlineLoading, LoadingSkeleton, Spinner } from './Loading'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { DeckBaseline, DeckImportSource } from '../../shared/deck-import'
 import type { Project } from '../../shared/projects'
@@ -306,7 +307,7 @@ export function App() {
             <button type="submit" className="primary-button" disabled={saving || loading || !name.trim()}>{saving ? 'Salvataggio…' : 'Crea progetto'}</button>
           </form>}
           {error && <div className="error-banner" role="alert">{error}</div>}
-          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? selectConstraintTarget : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
+          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? selectConstraintTarget : undefined} /> : view === 'tournament' ? <TournamentSection /> : loading ? <LoadingSkeleton label="Apertura progetti…" rows={3} /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-headline">
                 <div>
@@ -337,14 +338,14 @@ export function App() {
                   <label className="file-picker" htmlFor="deck-file" aria-disabled={importing || readingFile}>Scegli file .txt</label>
                   <input id="deck-file" type="file" accept=".txt,text/plain" disabled={importing || readingFile} onChange={(event) => void loadTextFile(event)} />
                   {fileName && <span className="selected-file">{fileName}</span>}
-                  {readingFile && <span role="status">Lettura file…</span>}
+                  {readingFile && <InlineLoading>Lettura file…</InlineLoading>}
                   <div className="import-submit-actions">
                     {baseline && <button type="button" className="text-button" disabled={importing} onClick={cancelImport}>Annulla</button>}
-                    <button className="primary-button" type="submit" disabled={importing || readingFile || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
+                    <button className="primary-button" type="submit" disabled={importing || readingFile || !draft.trim()}>{importing && <Spinner />}{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
                   </div>
                 </div>
               </form>}
-              {baselineLoading ? <p className="content-note">Caricamento lista…</p> : baseline ? (
+              {baselineLoading ? <LoadingSkeleton label="Caricamento lista…" /> : baseline ? (
                 <div className="baseline-panel" data-testid="baseline-panel">
                   <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} importOpen={importOpen} />
                   <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>

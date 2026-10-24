@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { auditLoading } from './loading-ui-audit.mjs'
 import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
@@ -146,7 +147,13 @@ try {
   await discuss.check()
   await input.fill('Richiesta discussione fixture')
   await page.getByRole('button', { name: 'Chiedi a Codex' }).click()
-  await page.getByRole('button', { name: 'Codex sta rispondendo…' }).waitFor()
+  await page.getByRole('button', { name: 'Risposta in corso…' }).waitFor()
+  await auditLoading(page, workspace, 'thread')
+  const before = await page.locator('.activity-elapsed').textContent()
+  await page.locator('.sidebar').getByRole('button', { name: 'Catalogo', exact: true }).click()
+  await page.getByRole('button', { name: 'Indietro', exact: true }).click()
+  await page.getByRole('status').filter({ hasText: 'Codex sta rispondendo…' }).waitFor()
+  assert.ok(await page.locator('.activity-elapsed').textContent() >= before, 'Timer non deve ripartire al ritorno')
   assert.ok(await input.isDisabled())
   assert.ok(await discuss.isDisabled())
   assert.ok(await propose.isDisabled())
@@ -156,7 +163,7 @@ try {
   await propose.check()
   await input.fill('Richiesta proposta fixture')
   await page.getByRole('button', { name: 'Genera proposta Codex' }).click()
-  await page.getByRole('button', { name: 'Codex sta preparando la proposta…' }).waitFor()
+  await page.getByRole('button', { name: 'Proposta in corso…' }).waitFor()
   await finish({ ok: false, error: 'Proposta non disponibile · errore di prova UI' })
   await page.locator('.thread-composer').getByRole('alert').waitFor()
   assert.equal(await input.inputValue(), 'Richiesta proposta fixture')
