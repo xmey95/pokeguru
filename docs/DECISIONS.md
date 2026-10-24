@@ -179,6 +179,12 @@ L'utente approva il riordino di Eventi con selezione, risultati e liste priorita
 
 La sintesi Copertura e fonti espone partecipanti osservati/dichiarati, liste da 60 e parzialità; al suo interno rimangono data, fonte, lacune e limiti dei risultati. I piazzamenti Regional non diventano percentuali di matchup; abbinamenti Play assenti non sono descritti come zero match osservati. Gestisci eventi apre la scansione completa e il metodo di acquisizione nel normale flusso. Errori, avanzamento e pausa restano esterni; il pulsante di ripresa si abilita alla scadenza della pausa, mostrata con l'orario. Escape richiude la gestione con focus restituito; cronologia e stato sono separati per fonte. Nessun cambiamento a schema, API o acquisizione. Le prove di sincronizzazione sono controllate nel processo di test; la demo contiene record esplicitamente illustrativi.
 
+### T-68 — Impostazioni AI: connessione, scelta e prova distinte (APP-079)
+
+L'utente autorizza la rifinitura grafica delle Impostazioni AI. Una riga di connessione precede il modulo delle preferenze globali; account e accesso restano apribili, compresa la disconnessione con conferma dell'effetto condiviso. Modello e ragionamento usano i nomi del catalogo Codex; il predefinito del provider non viene presentato come consiglio del prodotto.
+
+Il salvataggio è esplicito, con stato della bozza e annullamento. La prova è separata e usa solo le preferenze salvate; stato connesso e disponibilità nel catalogo non sono una prova riuscita. I motivi che bloccano un comando restano visibili. Un modello/livello non più elencato conserva il proprio valore; una lettura fallita non viene presentata come preferenze Automatico salvate. Gli errori delle azioni non sono cancellati da un aggiornamento dello stato Codex. Le letture obsolete non aggiornano la schermata; bozza e operazione in corso sopravvivono alla navigazione. Nessun cambio a IPC, provider, autenticazione, prompt o persistenza; fixture solo nei test e nella demo isolata.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

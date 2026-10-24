@@ -18,7 +18,7 @@ try {
   application = await launch()
   let page = await application.firstWindow()
   await page.getByRole('button', { name: 'Impostazioni AI' }).click()
-  await page.getByRole('heading', { name: 'AI per Pokéguru' }).waitFor()
+  await page.getByRole('heading', { name: 'Impostazioni AI' }).waitFor()
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
   assert.ok(connection.value.account === 'chatgpt' || connection.value.account === 'apiKey', 'Accesso Codex necessario per la prova live')

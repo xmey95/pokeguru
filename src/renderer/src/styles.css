@@ -222,6 +222,28 @@ details[open] > summary { margin-bottom: 8px; }
 .settings-grid select { width: 100%; }
 .ai-settings { max-width: 1080px; margin: 0 auto; }
 .ai-settings h1 { margin: 0 0 12px; }
+.ai-settings h2 { margin: 0; font-size: var(--text-lg); }
+.ai-settings .content-note { margin: 8px 0 0; }
+.ai-connection-row, .ai-connection-summary, .ai-connection-actions, .ai-save-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.ai-connection-row { justify-content: space-between; gap: 16px; }
+.ai-connection-summary { gap: 16px; }
+.ai-connection-panel .connection-state { font-size: var(--text-sm); }
+.ai-account-details { margin-top: 16px; }
+.ai-account-details .text-button { margin-top: 8px; }
+.ai-settings .settings-grid { margin: 20px 0; align-items: start; }
+.ai-settings .settings-field { min-width: 0; }
+.ai-settings .settings-field .content-note { margin: 0; }
+.ai-save-row > .content-note { margin: 0; }
+.ai-test-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+.ai-test-row > div { flex: 1 1 320px; min-width: 0; }
+.ai-test-row h3 { margin: 0; font-size: var(--text-base); }
+.ai-test-row > button { flex-shrink: 0; }
+.ai-settings .ai-feedback { margin: 8px 0 0; color: var(--success); font-size: var(--text-sm); }
+.ai-settings .error-banner { overflow-wrap: anywhere; }
+.ai-settings .error-banner button { display: block; margin-top: 12px; }
+.ai-settings-details { margin-top: 20px; padding: 0 4px; }
+.ai-settings-details > details { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.ai-settings-details p { max-width: 80ch; }
 .connection-state { display: inline-flex; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--surface-subtle); color: var(--ink-secondary); font-weight: 600; }
 .welcome { max-width: 700px; margin: 80px auto; padding: 24px; }
 .welcome h1 { font-size: 36px; margin: 12px 0 16px; }
