@@ -36,7 +36,7 @@ const total = deck => deck.reduce((sum, card) => sum + card.quantity, 0)
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char])
 
 const state = {
-  view: 'lista', project: 'loaded', railCompact: false, railWidth: 340,
+  view: 'lista', project: 'loaded', railCompact: false,
   thread: 'tempo', threadTab: 'confronto', stale: false, candidate: true,
   matchup: 'gardevoir', revision: 2, feedback: '', adopted: false,
   listFilter: 'Tutte', search: '', showImport: false, confirmAdopt: false,
@@ -54,7 +54,7 @@ function button(label, action, cls = '', extra = '') { return `<button type="but
 function rail() {
   return `<aside class="app-rail" aria-label="Navigazione principale">
     <div class="logo"><span class="logo-mark">P<span>.</span></span><div><strong>Pokéguru</strong><small>DECK INTELLIGENCE</small></div></div>
-    <div class="rail-block"><div class="rail-caption">PROGETTI ${button('＋', 'new-project', 'rail-add', 'aria-label="Mostra progetto vuoto"')}</div>
+    <div class="rail-block project-block"><div class="rail-caption">PROGETTI ${button('＋', 'new-project', 'rail-add', 'aria-label="Mostra progetto vuoto"')}</div>
       <button class="project-link ${state.project === 'loaded' ? 'selected' : ''}" data-action="project-loaded"><span class="project-glyph">MA</span><span><strong>Mega Absol / Mega Audino</strong><small>Standard · v${state.adopted ? '5' : '4'}</small></span></button>
       <button class="project-link ${state.project === 'empty' ? 'selected' : ''}" data-action="project-empty"><span class="project-glyph muted">＋</span><span><strong>Nuovo progetto</strong><small>Da costruire</small></span></button>
     </div>
@@ -68,7 +68,7 @@ function rail() {
   </aside>`
 }
 function navItem(view, icon, label) {
-  return `<button class="nav-item ${state.view === view ? 'active' : ''}" data-action="view-${view}" ${state.view === view ? 'aria-current="page"' : ''}><span class="nav-icon">${icon}</span>${label}</button>`
+  return `<button class="nav-item ${state.view === view ? 'active' : ''}" data-action="view-${view}" title="${label}" ${state.view === view ? 'aria-current="page"' : ''}><span class="nav-icon">${icon}</span>${label}</button>`
 }
 
 function pageHeader() {
@@ -95,8 +95,8 @@ function deckRows(deck, options = {}) {
 function companion() {
   const deck = deckInUse()
   const compact = state.railCompact
-  return `<aside class="deck-companion ${compact ? 'compact' : ''}" aria-label="Lista principale persistente" style="width:${compact ? 202 : state.railWidth}px">
-    <div class="companion-top"><div><span class="overline">RIFERIMENTO FISSO</span><h2>Lista principale</h2></div>${button(compact ? 'Espandi' : 'Compatta','toggle-companion','icon-button')}</div>
+  return `<aside class="deck-companion ${compact ? 'compact' : ''}" aria-label="Lista principale persistente">
+    <div class="companion-top"><div><span class="overline">RIFERIMENTO FISSO</span><h2>Lista principale</h2></div>${button(compact ? 'Vista completa' : 'Vista breve','toggle-companion','icon-button')}</div>
     <div class="companion-summary"><div class="companion-total"><strong>${total(deck)}<span>/60</span></strong>${statusChip(deck.length ? 'amber' : 'neutral', deck.length ? 'Da verificare' : 'Da costruire')}</div>
       <div class="companion-counts">${groupCounts(deck).map(item => `<div><strong>${item.total}</strong><span>${item.group}</span></div>`).join('')}</div>
       ${deck.length ? `<p class="companion-help">${compact ? 'Carte chiave sempre visibili' : 'Scorri la lista senza perdere la guida o il thread.'}</p>` : `<p class="companion-help">Nessuna carta nel progetto.</p>`}</div>
@@ -145,8 +145,8 @@ function conversation() {
 }
 
 function threadView() {
-  if (state.project === 'empty') return `<section class="empty-view"><span class="overline">THREAD DA ZERO · ANTEPRIMA I4</span><h2>Parti da un’idea, senza lista</h2><p>Il pannello laterale mostra chiaramente 0/60. Nel prodotto futuro, il thread manterrà una proposta completa separata dalla principale fino all’adozione esplicita.</p>${button('Torna alla lista di esempio','project-loaded','primary')}</section>`
-  return `<div class="split-view">${threadSidebar()}<section class="thread-main"><div class="section-heading"><div><span class="overline">BASE V4 · THREAD INDIPENDENTE</span><h2>${state.thread === 'tempo' ? 'Variante più rapida' : 'Più stabilità'}</h2><p>La discussione esplora una direzione. La lista principale resta a destra.</p></div></div>
+  if (state.project === 'empty') return `<section class="empty-view"><span class="overline">THREAD DA ZERO · ANTEPRIMA I4</span><h2>Parti da un’idea, senza lista</h2><p>Il riferimento persistente mostra chiaramente 0/60. Nel prodotto futuro, il thread manterrà una proposta completa separata dalla principale fino all’adozione esplicita.</p>${button('Torna alla lista di esempio','project-loaded','primary')}</section>`
+  return `<div class="split-view">${threadSidebar()}<section class="thread-main"><div class="section-heading"><div><span class="overline">BASE V4 · THREAD INDIPENDENTE</span><h2>${state.thread === 'tempo' ? 'Variante più rapida' : 'Più stabilità'}</h2><p>La discussione esplora una direzione. La lista principale resta sempre visibile.</p></div></div>
     ${state.thread === 'tempo' ? `<div class="thread-tabs" role="tablist" aria-label="Contenuti del thread"><button role="tab" aria-selected="${state.threadTab === 'confronto'}" class="${state.threadTab === 'confronto' ? 'active' : ''}" data-action="thread-tab-confronto">Confronto <span>1</span></button><button role="tab" aria-selected="${state.threadTab === 'discussione'}" class="${state.threadTab === 'discussione' ? 'active' : ''}" data-action="thread-tab-discussione">Discussione</button></div>
     ${state.threadTab === 'confronto' ? comparison() : conversation()}
     <div class="prototype-switch"><span>PROVA GLI STATI</span>${button(state.stale ? 'Ripristina base corrente' : 'Simula base superata','toggle-stale','small-button')}</div>` : `<div class="notice info"><strong>Discussione senza candidata</strong><span>Le idee restano qui. Una proposta di 60 carte comparirà nel confronto solo dopo essere stata salvata.</span></div><div class="message user"><span>TU · ESEMPIO</span><p>Come posso rendere più stabile il primo turno?</p></div>${button('Apri thread con proposta','thread-tempo','secondary')}`}
@@ -176,7 +176,7 @@ function guide() {
 function matchupView() {
   if (state.project === 'empty') return `<section class="empty-view"><span class="overline">MATCHUP</span><h2>Importa una lista per leggere un piano pertinente</h2><p>Una guida deve essere ancorata alle tue carte. Puoi già vedere il meta, ma non attribuiamo una strategia a una lista inesistente.</p>${button('Carica lista di esempio','project-loaded','primary')}</section>`
   const current = archetypes.find(item => item.id === state.matchup)
-  return `<div class="split-view">${matchupSidebar()}<section class="matchup-main"><div class="section-heading"><div><span class="overline">STANDARD OCCIDENTALE · META</span><h2>Matchup</h2><p>Leggi il piano mentre controlli le tue carte a destra.</p></div><div class="meta-period">${current.meta}<small>quota meta · esempio</small></div></div>${guide()}</section></div>`
+  return `<div class="split-view">${matchupSidebar()}<section class="matchup-main"><div class="section-heading"><div><span class="overline">STANDARD OCCIDENTALE · META</span><h2>Matchup</h2><p>Leggi il piano mentre controlli le tue carte nella lista persistente.</p></div><div class="meta-period">${current.meta}<small>quota meta · esempio</small></div></div>${guide()}</section></div>`
 }
 
 function globalView() {
@@ -198,7 +198,7 @@ function render() {
   const main = document.querySelector('#main')
   const scroll = main?.scrollTop ?? 0
   const companionScroll = document.querySelector('#companion-list')?.scrollTop ?? 0
-  app.innerHTML = `<div class="shell" style="--companion-width:${state.railCompact ? 202 : state.railWidth}px">${rail()}<div class="work-area"><div class="top-strip"><span>POKÉGURU <b>/</b> PROTOTIPO DESKTOP</span><span>DATI DI ESEMPIO · NESSUNA INTEGRAZIONE ATTIVA</span></div><main id="main" class="main-scroll">${pageHeader()}${state.view === 'lista' ? listView() : state.view === 'thread' ? threadView() : state.view === 'matchup' ? matchupView() : globalView()}</main></div><div class="resize-handle" role="separator" tabindex="0" aria-label="Ridimensiona pannello lista principale" aria-orientation="vertical" aria-valuemin="280" aria-valuemax="460" aria-valuenow="${state.railWidth}"></div>${companion()}</div>${modal()}${state.toast ? `<div class="toast" role="status">${escapeHtml(state.toast)}</div>` : ''}`
+  app.innerHTML = `<div class="shell">${rail()}<div class="work-area"><div class="top-strip"><span>POKÉGURU <b>/</b> PROTOTIPO DESKTOP</span><span>DATI DI ESEMPIO · NESSUNA INTEGRAZIONE ATTIVA</span></div><main id="main" class="main-scroll">${pageHeader()}${state.view === 'lista' ? listView() : state.view === 'thread' ? threadView() : state.view === 'matchup' ? matchupView() : globalView()}</main></div>${companion()}</div>${modal()}${state.toast ? `<div class="toast" role="status">${escapeHtml(state.toast)}</div>` : ''}`
   document.querySelector('#main').scrollTop = scroll
   document.querySelector('#companion-list').scrollTop = companionScroll
 }
@@ -228,7 +228,7 @@ app.addEventListener('click', event => {
   if (action.startsWith('thread-')) { state.thread = action.slice(7); render(); return }
   switch (action) {
     case 'new-project': state.project = 'empty'; state.view = 'lista'; render(); break
-    case 'toggle-companion': state.railCompact = !state.railCompact; render(); break
+    case 'toggle-companion': state.railCompact = !state.railCompact; render(); document.querySelector('.deck-companion .icon-button').focus(); break
     case 'toggle-stale': state.stale = !state.stale; render(); break
     case 'confirm-adopt': state.confirmAdopt = true; render(); document.querySelector('.dialog button').focus(); break
     case 'adopt': state.adopted = true; state.confirmAdopt = false; announce('Adozione simulata: lista principale v5 aggiornata solo nel prototipo.'); break
@@ -250,14 +250,6 @@ app.addEventListener('submit', event => {
 })
 app.addEventListener('keydown', event => {
   if (event.key === 'Escape' && (state.showImport || state.confirmAdopt)) { state.showImport = state.confirmAdopt = false; render() }
-  if (event.target.classList.contains('resize-handle')) {
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); state.railCompact = false; state.railWidth = Math.max(280, Math.min(460, state.railWidth + (event.key === 'ArrowLeft' ? 20 : -20))); render(); document.querySelector('.resize-handle').focus() }
-  }
 })
-
-let dragging = false
-app.addEventListener('pointerdown', event => { if (event.target.classList.contains('resize-handle')) { dragging = true; event.target.setPointerCapture(event.pointerId) } })
-app.addEventListener('pointermove', event => { if (dragging) { state.railCompact = false; state.railWidth = Math.max(280, Math.min(460, window.innerWidth - event.clientX - 8)); document.querySelector('.shell').style.setProperty('--companion-width', `${state.railWidth}px`); document.querySelector('.deck-companion').style.width = `${state.railWidth}px`; document.querySelector('.resize-handle').setAttribute('aria-valuenow', String(state.railWidth)) } })
-app.addEventListener('pointerup', () => { dragging = false })
 
 render()
