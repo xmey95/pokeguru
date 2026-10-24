@@ -1,6 +1,7 @@
 import type { CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
 import { suggestPrints } from './reconciliation'
+import { basicEnergyType } from './basic-energy-name'
 
 export const DECK_CONSTRUCTION_SOURCE =
   'https://www.pokemon.com/uk/strategy/designing-a-deck-from-scratch'
@@ -24,14 +25,12 @@ export interface DeckConstructionEvaluation {
   legality: 'indeterminate'
 }
 
-const basicEnergyName = /^(?:Basic\s+)?(?:Grass|Fire|Water|Lightning|Psychic|Fighting|Darkness|Metal|Fairy)\s+Energy$/i
-
 function normalizedName(name: string): string {
   return name.normalize('NFKC').replace(/[’‘]/g, "'").trim().replace(/\s+/g, ' ').toLocaleLowerCase()
 }
 
 function isBasicEnergy(line: DeckLine, catalog: CatalogView | null): boolean {
-  if (basicEnergyName.test(line.name ?? '')) return true
+  if (basicEnergyType(line.name ?? '')) return true
   if (!catalog) return false
   const exact = suggestPrints(line, catalog).filter((candidate) => candidate.reason === 'same-print')
   return exact.length === 1 && exact[0].print.category === 'Energy' &&
@@ -39,7 +38,7 @@ function isBasicEnergy(line: DeckLine, catalog: CatalogView | null): boolean {
 }
 
 function basicPokemonEvidence(line: DeckLine, catalog: CatalogView | null): 'yes' | 'no' | 'unknown' {
-  if (basicEnergyName.test(line.name ?? '')) return 'no'
+  if (basicEnergyType(line.name ?? '')) return 'no'
   if (!catalog?.syncedAt) return 'unknown'
   const candidates = suggestPrints(line, catalog)
   const exact = candidates.filter((candidate) => candidate.reason === 'same-print')

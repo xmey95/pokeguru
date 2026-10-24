@@ -3,6 +3,8 @@ import type { DeckBaseline, DeckLine } from './deck-import'
 import { suggestPrints } from './reconciliation'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from './western-rule-package'
 import { currentBasicEnergy, BASIC_ENERGY_OBSERVED_AT } from './standard-basic-energy'
+import { westernRotationRule } from './standard-rotation'
+import { admittedTrainerReprint } from './standard-reprint'
 
 export const SET_ADMISSION_VERSION = BUNDLED_WESTERN_RULE_PACKAGE.version
 export const SET_ADMISSION_CHECKED_AT = BUNDLED_WESTERN_RULE_PACKAGE.checkedAt
@@ -51,6 +53,12 @@ function evaluateLine(line: DeckLine, catalog: CatalogView | null, asOf: string)
   if (print.isPromo) return { ...located, status: 'indeterminate',
     message: 'Promo: usare la data del registro ufficiale; non eredita quella del set.' }
   const packageUsed = catalog.rulePackage ?? BUNDLED_WESTERN_RULE_PACKAGE
+
+  const rotation = westernRotationRule(asOf, packageUsed)
+  const reprint = rotation && admittedTrainerReprint(print, catalog, rotation, packageUsed, asOf)
+  if (reprint) return { ...located, legalDate: reprint.legalDate, status: 'admitted',
+    message: `Stampa storica ammessa tramite ${reprint.print.id}, ` +
+      `legale dal ${reprint.legalDate}; nome e testo di gioco coincidono.` }
   const admission = packageUsed.setAdmissions.find((rule) => rule.setId === print.setId)
   if (!admission) return { ...located, status: 'indeterminate',
     message: 'Data di ammissione di questo set non verificata nel pacchetto locale.' }

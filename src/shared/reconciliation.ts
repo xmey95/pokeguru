@@ -3,6 +3,7 @@ import type { DeckBaseline, DeckLine } from './deck-import'
 import { OFFICIAL_SET_CODES } from './set-codes'
 import { gameplaySummary } from './card-gameplay'
 import type { StandardDeckEvaluation } from './standard-deck'
+import { basicEnergyType } from './basic-energy-name'
 
 export interface MappedPrint {
   id: string
@@ -83,6 +84,13 @@ function normalizedName(value: string): string {
   return value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase()
 }
 
+function printNameMatches(lineName: string, print: CatalogPrint): boolean {
+  if (normalizedName(lineName) === normalizedName(print.name)) return true
+  const requested = basicEnergyType(lineName)
+  return !!requested && print.category === 'Energy' &&
+    print.energyType?.toLowerCase() === 'normal' && requested === basicEnergyType(print.name)
+}
+
 function normalizedNumber(value: string): string {
   return value.toUpperCase().replace(/^0+(?=\d)/, '')
 }
@@ -97,12 +105,13 @@ function sameCode(line: DeckLine, print: CatalogPrint): boolean {
 export function suggestPrints(line: DeckLine, catalog: CatalogView, search = ''): PrintCandidate[] {
   if (line.kind !== 'card' || !line.name) return []
   const term = normalizedName(search)
-  return catalog.prints
+  const referencePrints = (catalog.referencePrints ?? []).filter((print) => sameCode(line, print))
+  return [...catalog.prints, ...referencePrints]
     .filter((print) => print.detailAt !== null && print.identityId !== null)
     .map((print): PrintCandidate | null => {
       if (term && !`${print.name} ${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase().includes(term)) return null
       const printCode = sameCode(line, print)
-      const name = normalizedName(line.name!) === normalizedName(print.name)
+      const name = printNameMatches(line.name!, print)
       if (printCode && name) return { print, reason: 'same-print' }
       if (printCode) return { print, reason: 'code-conflict' }
       if (name) return { print, reason: 'same-name' }
@@ -141,8 +150,9 @@ export function buildDeckCards(baseline: DeckBaseline, catalog: CatalogView | nu
   const overrides = new Map(reconciliation?.mappings.map((item) => [item.lineNumber, item]) ?? [])
   const entries = new Map<string, DeckCardEntry>()
   for (const line of baseline.lines.filter((item) => item.kind === 'card')) {
-    const sameName = prints.filter((print) => normalizedName(print.name) === normalizedName(line.name ?? ''))
-    const exact = sameName.filter((print) => sameCode(line, print))
+    const sameName = prints.filter((print) => printNameMatches(line.name ?? '', print))
+    const exact = catalog ? suggestPrints(line, catalog).filter((item) => item.reason === 'same-print')
+      .map((item) => item.print) : []
     const identities = [...new Set(sameName.map((print) => print.identityId!))]
     const exactIdentities = [...new Set(exact.map((print) => print.identityId!))]
     const override = overrides.get(line.lineNumber)
@@ -153,7 +163,8 @@ export function buildDeckCards(baseline: DeckBaseline, catalog: CatalogView | nu
     if (!identityId && exactIdentities.length === 1) identityId = exactIdentities[0]
     if (!identityId && !line.setCode && identities.length === 1 &&
       sameName[0]?.identityBasis !== 'unverified') identityId = identities[0]
-    const identityPrints = identityId ? byIdentity.get(identityId) ?? [] : []
+    const identityPrints = identityId ? [...byIdentity.get(identityId) ?? [],
+      ...exact.filter((print) => print.identityId === identityId && !prints.includes(print))] : []
     const status: DeckCardEntry['status'] = identityId
       ? identityPrints[0]?.identityBasis !== 'unverified' ? 'recognized' : 'unverified'
       : identities.length > 0 ? 'ambiguous' : 'outside-catalog'

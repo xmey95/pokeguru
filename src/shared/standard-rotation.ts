@@ -3,11 +3,12 @@ import type { DeckBaseline, DeckLine } from './deck-import'
 import { suggestPrints } from './reconciliation'
 import { BUNDLED_WESTERN_RULE_PACKAGE, type RulePeriod, type WesternRulePackage } from './western-rule-package'
 import { currentBasicEnergy } from './standard-basic-energy'
+import { admittedTrainerReprint } from './standard-reprint'
 
 export type RotationRule = RulePeriod
 
 // Play! Pokémon in-person Western Standard. These snapshots do not cover
-// release waiting periods, reprint equivalence, errata or deck construction.
+// release waiting periods, general reprint equivalence, errata or deck construction.
 export const WESTERN_ROTATION_RULES: readonly RotationRule[] = BUNDLED_WESTERN_RULE_PACKAGE.rotations
 
 export const ROTATION_SOURCE_CHECKED = BUNDLED_WESTERN_RULE_PACKAGE.checkedAt
@@ -59,6 +60,11 @@ function evaluateLine(line: DeckLine, catalog: CatalogView | null, rule: Rotatio
   if (!mark || !/^[A-Z]$/.test(mark) || mark > rule.lastConfirmedMark) return { ...base, status: 'indeterminate', regulationMark: mark,
     printId: print.id, message: 'Marchio di regolamentazione assente o non coperto dalle regole locali.' }
   if (mark < rule.firstAllowedMark) {
+    const reprint = admittedTrainerReprint(print, catalog, rule,
+      catalog.rulePackage ?? BUNDLED_WESTERN_RULE_PACKAGE, asOf)
+    if (reprint) return { ...base, status: 'mark-accepted', regulationMark: reprint.print.regulationMark ?? null,
+      printId: print.id, message: `Stampa storica ${print.id} ammessa tramite ${reprint.print.id}, ` +
+        `con stesso nome e testo di gioco verificato; marchio ${reprint.print.regulationMark} corrente.` }
     return { ...base, status: 'mark-rotated', regulationMark: mark, printId: print.id,
       message: `Marchio ${mark} ruotato sulla stampa indicata. Le stampe storiche non sono verificate dall'app; legalità della lista indeterminata.` }
   }

@@ -106,4 +106,6 @@ export interface CatalogView {
   syncedAt: string | null
   sets: CatalogSet[]
   prints: CatalogPrint[]
+  /** Stored older prints used only to verify an explicitly imported print. */
+  referencePrints?: CatalogPrint[]
 }

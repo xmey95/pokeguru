@@ -640,7 +640,9 @@ export class CatalogStore {
         packageVersion: promoRegistry.version, complete: promoRegistry.complete } : undefined,
       syncedAt: sync?.fetched_at ?? null,
       sets: targetIds ? sets.filter((set) => targetSetIds.includes(set.id)) : sets,
-      prints: targetIds ? targetPrints : prints
+      prints: targetIds ? targetPrints : prints,
+      referencePrints: targetIds ? prints.filter((print) => !targetIds.has(print.id) &&
+        print.detailAt !== null && print.identityId !== null) : []
     }
   }
 
