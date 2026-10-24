@@ -87,11 +87,15 @@ export async function eventWorkspaceScenarios(page, application, workspace) {
     assert.ok(await trigger.evaluate(el => el === document.activeElement))
     await coverage.locator('summary').click()
     for (const [query, expected] of [['Marta', source === 'play' ? 'Lista assente' : 'Lista non pubblicata'],
-      ['Luca', source === 'play' ? 'Lista non interpretabile' : 'Lista da acquisire'], ['Sara', '5 carte · Lista incompleta'], ['inesistente', 'Nessuna lista da mostrare']]) {
+      ['Luca', source === 'play' ? 'Lista non interpretabile' : 'Lista da acquisire'], ['Sara', '5 carte · Lista incompleta'], ['inesistente', 'Nessun giocatore o mazzo']]) {
       await search.fill(query)
-      await page.locator('.tournament-detail').getByText(expected, { exact: false }).waitFor()
+      await page.locator(query === 'inesistente' ? '.search-empty' : '.tournament-detail').getByText(expected, { exact: false }).waitFor()
     }
-    await search.fill('')
+    assert.equal(await page.locator('.tournament-detail').count(), 0)
+    await page.getByRole('button', { name: 'Azzera filtri' }).focus()
+    await page.keyboard.press('Enter')
+    assert.equal(await search.inputValue(), '')
+    assert.ok(await search.evaluate(el => el === document.activeElement))
     const update = page.getByRole('button', { name: source === 'play' ? 'Aggiorna nuovi tornei' : 'Aggiorna nuovi Regional', exact: true })
     const resume = page.getByRole('button', { name: source === 'play' ? 'Continua blocco' : 'Continua blocco Regional', exact: true })
     await application.evaluate(() => { globalThis.eventUiNext = { status: 'running', inspected: 3, saved: 2, inspectedEvents: 3, fetchedLists: 2 } })

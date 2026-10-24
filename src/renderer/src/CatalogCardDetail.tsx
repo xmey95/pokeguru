@@ -36,7 +36,7 @@ export function CatalogCardDetail({ name, basis, prints, onConstrain, onOpenSour
     requestAnimationFrame(() => { if (nav.isCurrent()) document.getElementById('catalog-card-heading')?.focus() })
   }
   return <>
-    <h3 id="catalog-card-heading" tabIndex={-1}>{name}</h3>
+    <h2 id="catalog-card-heading" tabIndex={-1}>{name}</h2>
     {(!basis || basis === 'unverified') && <p className="content-note catalog-card-notice">Equivalenza delle stampe da verificare.</p>}
     {current.isPromo && current.promoStatus?.state !== 'available' && <p className="catalog-card-notice diagnostics" role="status">{promoStatus(current)}</p>}
     {current.error && <p className="catalog-card-notice diagnostics" role="status">{current.error}</p>}

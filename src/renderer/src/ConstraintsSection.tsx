@@ -70,6 +70,6 @@ export function ConstraintsSection({ selectedIdentityId, selectionVersion, onTar
       {createIdentity !== null && <ConstraintForm id="constraint-form" key={'new:' + createIdentity} initialIdentityId={createIdentity}
         onSaved={() => { setNotice('Vincolo aggiunto.'); finishCreate() }} onCancel={finishCreate} />}
     </>}
-    <details className="constraint-legality"><summary>Come funzionano i vincoli</summary><p>Restano nel progetto quando cambi lista e contano le ristampe equivalenti. Puoi richiedere una stampa specifica. L’esito Standard complessivo è nella Lista corrente.</p></details>
+    <details className="constraint-legality"><summary>Come funzionano i vincoli</summary><p>Restano nel progetto quando cambi lista e contano le ristampe equivalenti. Puoi richiedere una stampa specifica. L’esito Standard complessivo è nella Lista principale.</p></details>
   </section>
 }

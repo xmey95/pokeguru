@@ -4,6 +4,7 @@ import { MainTournamentSection } from './MainTournamentSection'
 import { useNavigation, useViewState } from './Navigation'
 import { TournamentCoverage, TournamentWorkspace } from './TournamentWorkspace'
 import { TournamentDeck } from './TournamentDeck'
+import { SearchEmpty } from './SearchEmpty'
 
 function dateTime(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -100,7 +101,7 @@ export function TournamentSection() {
           {events.map((item) => <option key={item.eventId} value={item.eventId}>
             {new Date(item.date).toLocaleDateString('it-IT')} · {item.name} · {item.isOnline ? 'online' : 'in presenza'}
           </option>)}
-        </select></label><label>Filtra giocatore o mazzo<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Dragapult" /></label></div>}
+        </select></label><label>Filtra giocatore o mazzo<input id="event-play-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Dragapult" /></label></div>}
     {!loading && !snapshot ? <div className="matchup-empty">{events.length ? 'Seleziona un evento disponibile.' : 'Nessun evento salvato. Aggiorna nuovi tornei per iniziare.'}</div> : snapshot && <>
       {snapshot.circuit !== 'WESTERN' && <p className="diagnostics" role="status">Evento in presenza · circuito da verificare.</p>}
       <TournamentCoverage participants={snapshot.coverage.returnedParticipants} reported={snapshot.reportedPlayers} lists={snapshot.coverage.complete60Lists}
@@ -116,6 +117,7 @@ export function TournamentSection() {
         <p className="content-note">{snapshot.pairingCoverage ? `Abbinamenti: ${snapshot.pairingCoverage.decided} vittorie attribuibili e ${snapshot.pairingCoverage.tied} pareggi su ${snapshot.pairingCoverage.betweenParticipants} partite fra partecipanti identificati; ${snapshot.pairingCoverage.byes} bye e ${snapshot.pairingCoverage.invalid} righe non interpretabili.` : 'Abbinamenti non acquisiti.'} I record dei partecipanti non sono usati per inventare abbinamenti.</p>
       </TournamentCoverage>
       <div className="tournament-layout">
+        {!filtered.length ? <SearchEmpty focusId="event-play-query" onReset={query ? () => setQuery('') : undefined}>Nessun giocatore o mazzo corrisponde al filtro.</SearchEmpty> : <>
         <div className="tournament-players" aria-label="Partecipazioni evento">
           {filtered.map((entry) => <button type="button" key={entry.playerId}
             className={selected?.playerId === entry.playerId ? 'active' : ''}
@@ -123,15 +125,14 @@ export function TournamentSection() {
             <strong>{entry.placing ? `${entry.placing}° · ` : ''}{entry.playerName}</strong>
             <span>{entry.deck?.name ?? 'Archetipo non indicato'} · {entry.listStatus === 'available' ? `${entry.cardTotal} carte` : 'Lista non disponibile'}</span>
           </button>)}
-          {!filtered.length && <p className="content-note">Nessuna partecipazione corrisponde al filtro.</p>}
         </div>
         <div className="tournament-detail">
           {selected ? <>
             <h2>{selected.playerName}</h2>
             <p className="content-note">{selected.deck?.name ?? 'Archetipo non indicato'} · {selected.placing ? `${selected.placing}° posto` : 'Piazzamento non indicato'} · {selected.record ? `${selected.record.wins}V / ${selected.record.losses}S / ${selected.record.ties}P` : 'Record non indicato'}</p>
             {selected.listStatus !== 'available' ? <p className="content-note">Lista {selected.listStatus === 'missing' ? 'assente' : 'non interpretabile'} nella risposta pubblica.</p> : <TournamentDeck cards={selected.cards} />}
-          </> : <p className="content-note">Nessuna lista da mostrare con questo filtro.</p>}
-        </div>
+          </> : null}
+        </div></>}
       </div>
     </>}
   </TournamentWorkspace>

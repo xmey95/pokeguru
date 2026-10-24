@@ -142,7 +142,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
     <section className="standard-deck-panel" aria-label="Esito Standard occidentale">
       <div className="deck-summary-heading">
         <div className="deck-summary-title">
-          <h2>Lista corrente</h2>
+          <h2>Lista principale</h2>
           <div className="deck-summary-status">
             <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
             <span className="standard-status" data-tone={standardTone} role="status">{standardLabel}</span>
@@ -174,7 +174,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
     </details>}
     {!loading && !catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
     <p className="content-note">Apri una carta per leggere il testo di gioco e impostare vincoli.</p>
-    {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-groups" aria-label="Carte della lista corrente">
+    {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-groups" aria-label="Carte della lista principale">
       <nav className="deck-composition" aria-label="Composizione del mazzo">{groups.filter((group) => group.id !== 'unknown' || group.total > 0).map((group) =>
         group.total > 0 ? <a key={group.id} href={`#deck-group-${group.id}`} onClick={(event) => { event.preventDefault(); jumpToGroup(group.id) }}><span>{group.name}</span><strong>{group.total}</strong></a>
           : <span key={group.id}><span>{group.name}</span><strong>0</strong></span>

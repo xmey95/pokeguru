@@ -185,6 +185,12 @@ L'utente autorizza la rifinitura grafica delle Impostazioni AI. Una riga di conn
 
 Il salvataggio è esplicito, con stato della bozza e annullamento. La prova è separata e usa solo le preferenze salvate; stato connesso e disponibilità nel catalogo non sono una prova riuscita. I motivi che bloccano un comando restano visibili. Un modello/livello non più elencato conserva il proprio valore; una lettura fallita non viene presentata come preferenze Automatico salvate. Gli errori delle azioni non sono cancellati da un aggiornamento dello stato Codex. Le letture obsolete non aggiornano la schermata; bozza e operazione in corso sopravvivono alla navigazione. Nessun cambio a IPC, provider, autenticazione, prompt o persistenza; fixture solo nei test e nella demo isolata.
 
+### T-69 — Coerenza finale di linguaggio, stati e componenti (APP-080)
+
+La revisione finale richiesta dall'utente conserva layout e scelte condivise. Lista principale diventa il termine unico per il mazzo adottato. In Thread/Matchup lo stato appartiene al pannello persistente: viene rimosso il duplicato verde nell'intestazione, che poteva suggerire una validazione positiva. Titoli interni dei pannelli a 20 px e livello h2 per i dettagli Catalogo/Eventi; annullamento testuale nei moduli, pulsante secondario nel dialogo di adozione.
+
+Catalogo e le due fonti Eventi condividono lo stato di ricerca vuota: un messaggio, Azzera filtri quando applicabile, focus restituito al campo e torneo conservato. Le scelte AI esplicite dei Thread restano visibili quando il catalogo modelli non le contiene; ricarica e incertezza seguono la presentazione di Matchup/Impostazioni AI. Errore e avviso non ripetono la stessa causa. Nessun cambiamento a IPC, prompt, autenticazione, validatori o database. Le verifiche e la demo usano archivi separati e fixture dichiarate; evidenze in `UI_FINAL_REVIEW.md`.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

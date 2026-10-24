@@ -74,7 +74,7 @@ try {
   assert.equal(await candidate.locator('.candidate-comparison').getAttribute('open'), null)
   assert.match(await candidate.locator('.candidate-change-summary').innerText(), /\+1 \/ −1 copie/)
   await candidate.locator('.candidate-comparison > summary').click()
-  assert.match(await candidate.textContent(), /Rispetto alla lista corrente v1: 60 → 60 carte/)
+  assert.match(await candidate.textContent(), /Rispetto alla lista principale v1: 60 → 60 carte/)
   assert.match(await candidate.textContent(), /0× Mega Audino ex.*\+1.*1× Mega Audino ex/s)
   assert.match(await candidate.textContent(), /ME02\.5 → ASC/)
   assert.match(await candidate.textContent(), /Legalità torneo da verificare/)

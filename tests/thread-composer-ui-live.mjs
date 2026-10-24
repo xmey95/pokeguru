@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
 import { auditDesignSystem } from './design-system-audit.mjs'
 import { createProjectFromStart, openDeckImport, switchThread } from './project-ui-helper.mjs'
+import { threadAiPresentationScenarios } from './thread-ai-presentation-scenarios.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -172,6 +173,7 @@ try {
   assert.equal((await application.evaluate(() => globalThis.composerFixture.calls)).length, calls.length)
   assert.match(await page.locator('.thread-timeline').innerText(), /Richiesta proposta fixture/)
   console.log('APP-069 OK: campo unico, modalità/tastiera, osservazioni persistite e rollback, instradamento UI, errori, anteprime tardive e layout 1440/1280/640. Risposte AI simulate, nessuna integrazione AI certificata.')
+  await threadAiPresentationScenarios(page, application, workspace)
 } finally {
   if (application) await application.close()
   if (realpathSync(dirname(profile)) !== realpathSync(tmpdir()) || !basename(profile).startsWith('pokeguru-thread-composer-'))

@@ -94,7 +94,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
   const added = diff?.byName.reduce((sum, item) => sum + Math.max(0, item.delta), 0) ?? 0
   const removed = diff?.byName.reduce((sum, item) => sum + Math.max(0, -item.delta), 0) ?? 0
   const blockers = adopted ? [] : [
-    ...(thread.stale ? ['Base superata: apri un nuovo thread dalla lista corrente.'] : []),
+    ...(thread.stale ? ['Base superata: apri un nuovo thread dalla lista principale.'] : []),
     ...(!current ? ['Manca una lista principale.'] : []),
     ...(!review ? ['Controlli non disponibili.'] : review.blockers)
   ]
@@ -113,7 +113,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
         ? <button key={source.id} type="button" className="text-button" onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
         : <span key={source.id}>{source.label}</span>)}
       {candidate.sources.length > 2 && <span>+{candidate.sources.length - 2} nei dettagli</span>}</div>}
-    {current && diff && <DiffView title={`Rispetto alla lista corrente v${current.sequence}`} diff={diff} />}
+    {current && diff && <DiffView title={`Rispetto alla lista principale v${current.sequence}`} diff={diff} />}
     {base && base.id !== current?.id && <DiffView title={`Rispetto alla base v${base.sequence}`} diff={compareDecks(base.parsed, comparisonDeck)} beforeLabel="BASE DEL THREAD" />}
     {review && review.conversions.length > 0 && <p className="candidate-conversions">Codici adattati per l'adozione: {review.conversions.map((item) =>
       `riga ${item.lineNumber} ${item.from} → ${item.to}`).join('; ')}.</p>}
@@ -122,7 +122,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
       {reviewItems.length > 0 && <details><summary>Da verificare ({reviewItems.length})</summary><ul>{reviewItems.map((item, index) => <li key={index}>{item}</li>)}</ul></details>}
       <p>Legalità torneo da verificare.</p>
     </div>}
-    {thread.stale && <p className="diagnostics">Base superata · adozione bloccata. Confronta la proposta con la lista corrente e apri un nuovo thread.</p>}
+    {thread.stale && <p className="diagnostics">Base superata · adozione bloccata. Confronta la proposta con la lista principale e apri un nuovo thread.</p>}
     {!adopted && <div className="candidate-adoption">
       <button type="button" className="primary-button" disabled={working || thread.stale || !current || !review || review.blockers.length > 0}
         onClick={() => onAdopt(candidate)}>Adotta l'intera lista candidata</button></div>}
@@ -210,6 +210,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [constraints, setConstraints] = useState<DeckConstraint[]>([])
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [aiModels, setAiModels] = useState<AiModel[]>([])
+  const [aiModelsLoading, setAiModelsLoading] = useState(true)
+  const [aiModelsError, setAiModelsError] = useState<string | null>(null)
+  const aiModelsRequest = useRef(0)
   const [overrides, setOverrides] = useDraftState<Record<string, AiPreferences>>(`thread.overrides:${projectId}`, {})
   const [selectedId, setSelectedId] = useViewState<string | null>('thread.selected', null)
   const [title, setTitle] = useDraftState(`thread.title:${projectId}`, '')
@@ -293,12 +296,24 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     return () => { active = false; previewRequest.current++ }
   }, [projectId, mainImportedAt, working])
 
+  async function refreshAiModels() {
+    const request = ++aiModelsRequest.current
+    setAiModelsLoading(true)
+    try {
+      const result = await window.projectsApi.getAiConnection()
+      if (request !== aiModelsRequest.current) return
+      if (!result.ok) throw new Error(result.error)
+      setAiModels(result.value.models)
+      setAiModelsError(null)
+    } catch (cause) {
+      if (request !== aiModelsRequest.current) return
+      setAiModels([])
+      setAiModelsError(cause instanceof Error ? cause.message : 'Modelli Codex non disponibili.')
+    } finally { if (request === aiModelsRequest.current) setAiModelsLoading(false) }
+  }
   useEffect(() => {
-    let active = true
-    void window.projectsApi.getAiConnection().then((result) => {
-      if (active && result.ok) setAiModels(result.value.models)
-    }).catch(() => undefined)
-    return () => { active = false }
+    void refreshAiModels()
+    return () => { aiModelsRequest.current++ }
   }, [])
 
   function selectThread(thread: DeckThread, focus = '#thread-switcher-trigger'): void {
@@ -455,7 +470,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   }
 
   return <><section className="threads-section" aria-label="Thread del mazzo" data-nav-loading={loading}>
-    <div className="panel-heading"><h2>Thread del mazzo</h2></div>
+    <div className="panel-heading"><h2>Thread</h2></div>
     {error && !confirmCandidate && <div className="error-banner" role="alert">{error}</div>}
     {loading ? <p className="content-note">Caricamento thread…</p> : <>
       <div className="threads-layout">
@@ -479,12 +494,12 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
             {createError && <div ref={newThreadError} className="error-banner" role="alert" tabIndex={-1}>{createError}</div>}
             <div className="thread-form-actions">
               <button className="primary-button" disabled={working || !title.trim()}>{working ? 'Creazione…' : 'Crea thread'}</button>
-              <button type="button" className="secondary-button" disabled={working} onClick={closeCreate}>Annulla</button>
+              <button type="button" className="text-button" disabled={working} onClick={closeCreate}>Annulla</button>
             </div>
         </form>}
         <div className="thread-detail">
           {selected ? <>
-            {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista corrente.</p>}
+            {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
               catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured onAdopt={confirmAdoption} />
               : <p className="thread-no-candidate">Nessuna proposta salvata.</p>}
@@ -518,22 +533,29 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               </div>
               {preview?.kind === composerMode && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
             </form>
-            <details className="thread-ai-options"><summary>Dettagli del thread e AI</summary><div className="thread-form"><p className="content-note">Creato il {displayDate(selected.createdAt)}</p>
+            <details className="thread-ai-options"><summary>Dettagli del thread e AI{selectedOverride?.model && <span className="thread-ai-choice"> · Personalizzata</span>}</summary><div className="thread-form"><p className="content-note">Creato il {displayDate(selected.createdAt)}</p>
               <label htmlFor="thread-ai-model">Modello Codex per questo thread</label>
-              <select id="thread-ai-model" value={selectedOverride?.model ?? ''} disabled={working}
+              <select id="thread-ai-model" value={selectedOverride?.model ?? ''} disabled={working || aiModelsLoading}
                 onChange={(event) => setOverrides((current) => ({ ...current, [selected.id]: {
                   model: event.target.value || null, reasoningEffort: null } }))}>
                 <option value="">Usa preferenze globali</option>
+                {selectedOverride?.model && !selectedModel && <option value={selectedOverride.model}>{selectedOverride.model} · disponibilità da verificare</option>}
                 {aiModels.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}
               </select>
               <label htmlFor="thread-ai-effort">Ragionamento per questo thread</label>
               <select id="thread-ai-effort" value={selectedOverride?.reasoningEffort ?? ''}
-                disabled={working || !selectedModel}
+                disabled={working || aiModelsLoading || !selectedModel}
                 onChange={(event) => setOverrides((current) => ({ ...current, [selected.id]: {
                   model: selectedOverride?.model ?? null, reasoningEffort: event.target.value || null } }))}>
                 <option value="">Predefinito</option>
+                {selectedOverride?.reasoningEffort && !selectedModel?.reasoningEfforts.some((effort) => effort.id === selectedOverride.reasoningEffort) && <option value={selectedOverride.reasoningEffort}>{selectedOverride.reasoningEffort} · disponibilità da verificare</option>}
                 {selectedModel?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
               </select>
+              {aiModelsLoading && <p className="content-note" role="status">Caricamento modelli…</p>}
+              {aiModelsError && <p className="error-banner" role="alert">{aiModelsError}</p>}
+              {!aiModelsLoading && !aiModelsError && !aiModels.length && <p className="content-note">Nessun modello disponibile.</p>}
+              {!aiModelsLoading && !aiModelsError && selectedOverride?.model && (!selectedModel || (selectedOverride.reasoningEffort && !selectedModel.reasoningEfforts.some((effort) => effort.id === selectedOverride.reasoningEffort))) && <p className="warning-banner" role="status">Disponibilità della scelta personalizzata da verificare.</p>}
+              <button type="button" className="text-button" disabled={working || aiModelsLoading} onClick={() => void refreshAiModels()}>Ricarica modelli</button>
             </div></details>
             <details className="manual-candidate"><summary>Incolla manualmente una candidata completa</summary><form className="thread-form candidate-form" onSubmit={(event) => void saveCandidate(event)}>
               <h4>Nuova candidata</h4>

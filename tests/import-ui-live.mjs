@@ -44,7 +44,7 @@ try {
   await page.keyboard.press('Enter')
   await page.waitForFunction(() => document.activeElement?.id === 'deck-text')
   assert.equal(await page.getByLabel('Testo lista').inputValue(), original)
-  assert.ok(await page.getByText('Il salvataggio sostituisce la lista corrente.').isVisible())
+  assert.ok(await page.getByText('Il salvataggio sostituisce la lista principale.').isVisible())
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
     await page.setViewportSize({ width, height })
     await page.locator('#deck-import').evaluate((el) => {

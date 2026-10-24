@@ -18,12 +18,6 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
 }
 
-function statusLabel(status: Project['status']): string {
-  if (status === 'BOZZA') return 'Bozza'
-  if (status === 'PRONTA_PER_CONTROLLO') return 'Pronta per controllo'
-  return 'Da costruire'
-}
-
 function projectWithBaseline(project: Project, baseline: DeckBaseline): Project {
   const hasProblems = baseline.diagnostics.some((item) =>
     item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH')
@@ -308,7 +302,7 @@ export function App() {
             <div className="panel-heading"><h2>Nuovo progetto</h2><button type="button" className="text-button" onClick={() => { setShowCompactCreate(false); document.getElementById('project-switcher-trigger')?.focus() }}>Chiudi</button></div>
             <label htmlFor="compact-project-name">Nome progetto</label>
             <input id="compact-project-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required placeholder="Es. Mega Absol / Mega Audino" />
-            <p>Standard · circuito occidentale / internazionale</p>
+            <p className="content-note">Standard · circuito occidentale / internazionale</p>
             <button type="submit" className="primary-button" disabled={saving || loading || !name.trim()}>{saving ? 'Salvataggio…' : 'Crea progetto'}</button>
           </form>}
           {error && <div className="error-banner" role="alert">{error}</div>}
@@ -318,13 +312,12 @@ export function App() {
                 <div>
                   <h1 data-testid="selected-project-name">{selected.name}</h1>
                 </div>
-                {activeTab !== 'deck' && <span className={`status-pill status-${selected.status.toLowerCase()}`}>{statusLabel(selected.status)}</span>}
               </div>
               <details className="project-meta-details"><summary>Profilo e date del progetto</summary><div className="detail-meta">
                 <div><span>Formato</span><strong>Standard</strong></div>
                 <div><span>Circuito</span><strong>Occidentale / internazionale</strong></div>
                 <div><span>Creato il</span><strong>{formatDate(selected.createdAt)}</strong></div>
-                <div><span>Lista corrente</span><strong>{selected.cardTotal === null ? 'Assente' : `${selected.cardTotal} carte interpretate`}</strong></div>
+                <div><span>Lista principale</span><strong>{selected.cardTotal === null ? 'Assente' : `${selected.cardTotal} carte interpretate`}</strong></div>
               </div></details>
               {selected.circuitAssignment === 'MIGRATED' && <p className="migration-note">Profilo occidentale assegnato a questo progetto esistente. La lista è rimasta invariata.</p>}
               {activeTab === 'deck' ? <DeckConstraintsProvider key={`${selected.id}:${baseline?.importedAt ?? 'empty'}`} projectId={selected.id} baseline={baseline}>
@@ -334,7 +327,7 @@ export function App() {
                   if (event.key === 'Escape' && baseline && !importing) { event.preventDefault(); event.stopPropagation(); cancelImport() }
                 }}>
                 <div className="panel-heading"><h2 id="deck-import-title">{baseline ? 'Sostituisci la lista' : 'Aggiungi una lista'}</h2></div>
-                <p id="deck-import-note" className="content-note">{baseline ? 'Il salvataggio sostituisce la lista corrente.' : 'Incolla una lista o scegli un file .txt.'}</p>
+                <p id="deck-import-note" className="content-note">{baseline ? 'Il salvataggio sostituisce la lista principale.' : 'Incolla una lista o scegli un file .txt.'}</p>
                 <label htmlFor="deck-text">Testo lista</label>
                 <textarea id="deck-text" value={draft} disabled={importing || readingFile} onChange={(event) => {
                   importDraftVersion.current++; setDraft(event.target.value); setSource('paste'); setFileName(null)
@@ -346,7 +339,7 @@ export function App() {
                   {fileName && <span className="selected-file">{fileName}</span>}
                   {readingFile && <span role="status">Lettura file…</span>}
                   <div className="import-submit-actions">
-                    {baseline && <button type="button" className="secondary-button" disabled={importing} onClick={cancelImport}>Annulla</button>}
+                    {baseline && <button type="button" className="text-button" disabled={importing} onClick={cancelImport}>Annulla</button>}
                     <button className="primary-button" type="submit" disabled={importing || readingFile || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
                   </div>
                 </div>

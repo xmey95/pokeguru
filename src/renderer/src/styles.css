@@ -65,7 +65,7 @@ details[open] > summary { margin-bottom: 8px; }
 .eyebrow, .detail-kicker { display: block; margin-bottom: 6px; color: var(--ink-muted); font-size: var(--text-xs); font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 16px; }
 .panel-heading h1, .panel-heading h2 { margin: 0; }
-.error-banner, .success-banner, .diagnostics, .migration-note, .constraint-conflict, .stale-discussion, .pending-feedback, .candidate-conversions { padding: 12px 16px; margin: 16px 0; border: 1px solid var(--warning-line); border-radius: var(--radius-sm); background: var(--warning-soft); color: var(--warning); font-size: var(--text-sm); line-height: 1.6; overflow-wrap: anywhere; }
+.error-banner, .success-banner, .warning-banner, .diagnostics, .migration-note, .constraint-conflict, .stale-discussion, .pending-feedback, .candidate-conversions { padding: 12px 16px; margin: 16px 0; border: 1px solid var(--warning-line); border-radius: var(--radius-sm); background: var(--warning-soft); color: var(--warning); font-size: var(--text-sm); line-height: 1.6; overflow-wrap: anywhere; }
 .error-banner, .constraint-conflict { color: var(--danger); background: var(--danger-soft); border-color: var(--danger-line); }
 .success-banner { color: var(--success); background: var(--success-soft); border-color: var(--accent-line); }
 .diagnostics summary { color: inherit; }
@@ -84,9 +84,9 @@ details[open] > summary { margin-bottom: 8px; }
 
 /* Surfaces, lists and project forms */
 .baseline-panel, .import-panel, .constraints-panel, .settings-panel, .thread-detail, .meta-analysis, .catalog-detail, .tournament-detail { min-width: 0; margin-top: 20px; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.baseline-panel h2, .import-panel h2, .constraints-panel h2, .settings-panel h2, .catalog-management h2, .compact-create-panel h2, .catalog-detail > h2, .tournament-detail > h2 { font-size: var(--text-lg); }
 .detail-headline { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .detail-headline h1 { margin: 0; }
-.detail-headline .status-pill { margin-top: 4px; }
 .project-meta-details { margin-top: 4px; }
 .project-meta-details > summary { width: fit-content; font-size: var(--text-xs); color: var(--ink-muted); }
 .detail-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 8px 0 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
@@ -96,6 +96,9 @@ details[open] > summary { margin-bottom: 8px; }
 .deck-heading-actions, .deck-export-action { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .deck-heading-actions > strong { padding-right: 8px; color: var(--ink-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .matchup-empty { padding: 32px; margin: 20px 0; border: 1px dashed var(--line-strong); border-radius: var(--radius-md); text-align: center; background: var(--surface); color: var(--ink-secondary); }
+.search-empty { grid-column: 1 / -1; margin: 0; padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--ink-secondary); }
+.search-empty p { margin: 0; }
+.search-empty .text-button { margin-top: 12px; }
 .thread-no-candidate { color: var(--ink-muted); font-size: var(--text-sm); }
 .compact-create-panel { display: grid; gap: 12px; max-width: 600px; margin-bottom: 24px; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
 .compact-create-panel h2, .compact-create-panel p { margin: 0; }
@@ -222,7 +225,7 @@ details[open] > summary { margin-bottom: 8px; }
 .settings-grid select { width: 100%; }
 .ai-settings { max-width: 1080px; margin: 0 auto; }
 .ai-settings h1 { margin: 0 0 12px; }
-.ai-settings h2 { margin: 0; font-size: var(--text-lg); }
+.ai-settings h2 { margin: 0; }
 .ai-settings .content-note { margin: 8px 0 0; }
 .ai-connection-row, .ai-connection-summary, .ai-connection-actions, .ai-save-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .ai-connection-row { justify-content: space-between; gap: 16px; }
@@ -264,7 +267,6 @@ details[open] > summary { margin-bottom: 8px; }
 #catalog-management-trigger[aria-expanded=true], .event-management-trigger[aria-expanded=true] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
 .catalog-management { padding: 24px; margin: 20px 0; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 .catalog-management > .panel-heading { margin-bottom: 20px; }
-.catalog-management h2 { font-size: var(--text-lg); }
 .catalog-maintenance-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .catalog-maintenance-actions .content-note { margin: 8px 0 0; }
 .catalog-coverage-heading { margin: 24px 0 8px; font-size: var(--text-base); }
@@ -293,7 +295,7 @@ details[open] > summary { margin-bottom: 8px; }
 .catalog-list strong, .tournament-players strong { font-size: var(--text-base); }
 .catalog-list span, .tournament-players span { color: var(--ink-muted); font-size: var(--text-xs); }
 .catalog-detail, .tournament-detail { margin: 0; }
-.catalog-detail h3, .tournament-detail h2 { margin-bottom: 8px; }
+.catalog-detail > h2, .tournament-detail > h2 { margin-bottom: 8px; }
 .catalog-detail { container: catalog-card / inline-size; }
 .catalog-detail #catalog-card-heading { margin-bottom: 20px; }
 .catalog-detail .card-overview { grid-template-columns: 180px minmax(0, 1fr); }
@@ -355,10 +357,11 @@ details[open] > summary { margin-bottom: 8px; }
 .thread-detail { margin: 0; }
 .thread-form { display: grid; gap: 12px; padding: 20px; }
 .thread-form h3, .thread-form h4 { margin: 0; }
-.thread-form .primary-button, .thread-form .secondary-button { justify-self: start; }
+.thread-form .primary-button, .thread-form .secondary-button, .thread-form .text-button { justify-self: start; }
 .thread-detail > .thread-form { padding: 24px 0; border-top: 1px solid var(--line); }
 .thread-form .content-note { margin-bottom: 0; }
-.thread-form-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.thread-ai-choice { color: var(--accent); }
+.thread-form-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .composer-mode { display: inline-flex; flex-wrap: wrap; justify-self: start; gap: 4px; margin: 0 0 4px; padding: 4px; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-subtle); }
 .composer-mode label { position: relative; cursor: pointer; }
 .composer-mode input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }

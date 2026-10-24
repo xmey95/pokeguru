@@ -87,7 +87,7 @@ export function ConstraintForm({ id, initial, initialIdentityId = '', fixedIdent
         <select value={identityId} onChange={(event) => { setIdentityId(event.target.value); setPrintId('') }} required disabled={!catalog?.syncedAt}>
           <option value="">Seleziona una carta</option>
           {initial && !identities.some((print) => print.identityId === identityId) && <option value={initial.identityId}>{initial.identityName} · non disponibile</option>}
-          <optgroup label="Nella lista corrente">{identities.filter((print) => inDeck.has(print.identityId!)).map((print) =>
+          <optgroup label="Nella lista principale">{identities.filter((print) => inDeck.has(print.identityId!)).map((print) =>
             <option key={print.identityId!} value={print.identityId!}>{print.name} · {print.setName} {print.localId}</option>)}</optgroup>
           <optgroup label="Nel catalogo">{identities.filter((print) => !inDeck.has(print.identityId!)).map((print) =>
             <option key={print.identityId!} value={print.identityId!}>{print.name} · {print.setName} {print.localId}</option>)}</optgroup>

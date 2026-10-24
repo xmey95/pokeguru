@@ -3,6 +3,7 @@ import { useNavigation, useViewState } from './Navigation'
 import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { CatalogCardDetail } from './CatalogCardDetail'
+import { SearchEmpty } from './SearchEmpty'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -288,20 +289,21 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       <div className="matchup-empty">Catalogo vuoto. Usa <strong>Aggiorna nuove carte</strong> per iniziare.</div>
     ) : <>
       <div className="catalog-filters">
-        <label>Cerca carta o stampa<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Iono o sv02-185" /></label>
+        <label>Cerca carta o stampa<input id="catalog-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Iono o sv02-185" /></label>
         <label>Espansione<select id="catalog-set-filter" value={setFilter} onChange={(event) => setSetFilter(event.target.value)}><option value="all">Tutte</option>{catalog.sets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.id})</option>)}</select></label>
       </div>
       <div className="catalog-layout">
+        {!filtered.length ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all') } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : <>
         <div className="catalog-list" aria-label="Risultati catalogo">
-          {filtered.length === 0 ? <p className="content-note">Nessuna carta locale corrisponde alla ricerca.</p> : <>{filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`)} aria-pressed={selected?.key === group.key}>
+          {filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`)} aria-pressed={selected?.key === group.key}>
             <strong>{group.name}</strong><span>{group.prints.length} {group.prints.length === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
-          </button>)}</>}
+          </button>)}
         </div>
         <div className="catalog-detail">
           {selected && <CatalogCardDetail key={selected.key} name={selected.name} basis={selected.basis} prints={selectedPrints}
             onOpenSource={(url) => void openSource(url)}
             onConstrain={onConstrain && selected.prints.some((print) => print.detailAt && print.identityId) ? () => onConstrain(selected.key) : undefined} />}
-        </div>
+        </div></>}
       </div>
     </>}
   </section>

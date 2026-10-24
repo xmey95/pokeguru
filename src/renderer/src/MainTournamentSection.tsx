@@ -3,6 +3,7 @@ import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncP
 import { useNavigation, useViewState } from './Navigation'
 import { eventDateTime, TournamentCoverage, TournamentWorkspace } from './TournamentWorkspace'
 import { TournamentDeck } from './TournamentDeck'
+import { SearchEmpty } from './SearchEmpty'
 
 const date = (value: string): string => new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
 
@@ -87,7 +88,7 @@ export function MainTournamentSection() {
         <select value={selectedEventId ?? ''} onChange={(event) => nav.visit({ 'events.main.event': event.target.value, 'events.main.place': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Regional'}`)}>
           {!events.some((item) => item.eventId === selectedEventId) && <option value={selectedEventId ?? ''} disabled>Scegli un evento</option>}
           {events.map((item) => <option value={item.eventId} key={item.eventId}>{date(item.date)} · {item.name}</option>)}
-        </select></label><label>Filtra giocatore o mazzo<input value={query}
+        </select></label><label>Filtra giocatore o mazzo<input id="event-main-query" value={query}
         onChange={(event) => setQuery(event.target.value)} placeholder="Es. Hydrapple" /></label></div>}
     {!loading && !snapshot ? <div className="matchup-empty">{events.length ? 'Seleziona un evento disponibile.' : 'Nessun Regional archiviato. Aggiorna nuovi Regional per iniziare.'}</div> : snapshot && <>
       <TournamentCoverage participants={snapshot.coverage.returnedParticipants} reported={snapshot.players} lists={snapshot.coverage.complete60Lists}
@@ -99,17 +100,19 @@ export function MainTournamentSection() {
         <p className="content-note">{snapshot.coverage.returnedParticipants}/{snapshot.players} partecipanti dichiarati appaiono nella pagina risultati; {snapshot.coverage.listedDecks} archetipi indicati, {snapshot.coverage.fetchedLists} liste acquisite, {snapshot.coverage.noListLink} righe senza collegamento lista. I link delle altre liste restano disponibili nella fonte.</p>
         <p className="content-note">La pagina non fornisce abbinamenti. I piazzamenti non misurano la percentuale di vittoria di un matchup.</p>
       </TournamentCoverage>
-      <div className="tournament-layout"><div className="tournament-players" aria-label="Piazzamenti Regional">
+      <div className="tournament-layout">
+      {!filtered.length ? <SearchEmpty focusId="event-main-query" onReset={query ? () => setQuery('') : undefined}>Nessun giocatore o mazzo corrisponde al filtro.</SearchEmpty> : <>
+      <div className="tournament-players" aria-label="Piazzamenti Regional">
         {filtered.map((item) => <button type="button" key={`${item.placing}:${item.playerName}`}
           className={selected === item ? 'active' : ''} aria-pressed={selected === item} onClick={() => nav.visit({ 'events.main.place': item.placing }, `Eventi · ${snapshot.name} · ${item.playerName}`)}>
           <strong>{item.placing}° · {item.playerName}</strong><span>{item.deckName ?? 'Archetipo non indicato'} · {item.cards ? `${item.cardTotal} carte${item.cardTotal !== 60 ? ' · incompleta' : ''}` : item.listUrl ? 'Lista da acquisire' : 'Nessuna lista'}</span>
         </button>)}
-        {!filtered.length && <p className="content-note">Nessun piazzamento corrisponde al filtro.</p>}
       </div><div className="tournament-detail">{selected ? <>
         <h2>{selected.playerName}</h2><p className="content-note">{selected.placing}° · {selected.deckName ?? 'Archetipo non indicato'}</p>
         {selected.listUrl && <button type="button" className="text-button" onClick={() => void openSource(selected.listUrl!)}>Apri lista originale ↗</button>}
         {selected.cards ? <TournamentDeck cards={selected.cards} /> : <p className="content-note">{selected.listUrl ? 'Lista da acquisire. Puoi consultare la lista originale online.' : 'Lista non pubblicata dalla fonte.'}</p>}
-      </> : <p className="content-note">Nessuna lista da mostrare con questo filtro.</p>}</div></div>
+      </> : null}</div></>}
+      </div>
     </>}
   </TournamentWorkspace>
 }

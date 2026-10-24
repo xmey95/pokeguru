@@ -1,0 +1,146 @@
+[
+  {
+    "name": "lista",
+    "width": 1440,
+    "height": 900,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "lista",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "lista",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "thread",
+    "width": 1440,
+    "height": 900,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "thread",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "thread",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "confronto",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "confronto",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "matchup",
+    "width": 1440,
+    "height": 900,
+    "minimumContrast": 5.540970140906928
+  },
+  {
+    "name": "matchup",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.540970140906928
+  },
+  {
+    "name": "matchup",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.540970140906928
+  },
+  {
+    "name": "catalogo",
+    "width": 1440,
+    "height": 900,
+    "minimumContrast": 5.540970140906928
+  },
+  {
+    "name": "catalogo",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.3279519363321395
+  },
+  {
+    "name": "catalogo",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.3279519363321395
+  },
+  {
+    "name": "ricerca-vuota",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.540970140906928
+  },
+  {
+    "name": "ricerca-vuota",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.540970140906928
+  },
+  {
+    "name": "eventi",
+    "width": 1440,
+    "height": 900,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "eventi",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "eventi",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "regional",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.3279519363321395
+  },
+  {
+    "name": "regional",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.160589508967916
+  },
+  {
+    "name": "ai",
+    "width": 1440,
+    "height": 900,
+    "minimumContrast": 5.540970140906928
+  },
+  {
+    "name": "ai",
+    "width": 1280,
+    "height": 720,
+    "minimumContrast": 5.540970140906928
+  },
+  {
+    "name": "ai",
+    "width": 640,
+    "height": 720,
+    "minimumContrast": 5.540970140906928
+  }
+]
