@@ -5,6 +5,7 @@ import { expect, it } from 'vitest'
 import { CodexControl } from '../src/main/codex-control'
 import { ProjectStore } from '../src/main/project-store'
 import { deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from '../src/main/deck-ai'
+import { buildThreadEvidence } from '../src/main/thread-evidence'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import type { AiRunConfig } from '../src/shared/ai'
 
@@ -41,7 +42,8 @@ live('produce due candidate complete in sessioni Codex isolate', async () => {
     const answers = await Promise.all([first, second].map(async (thread, index) => {
       const count = index + 1
       const question = `Prepara una candidata di prova: aggiungi esattamente ${count} Boss's Orders ME01 114, togli ${count} Psychic Energy SVE 005 e conserva Mega Absol ex. Restituisci l'intera lista di 60 carte usando i codici del catalogo; è una prova strutturale, non una raccomandazione competitiva.`
-      const context = deckProposalPrompt(thread, base, question, [], catalog, null)
+      const context = deckProposalPrompt(thread, base, question, [], catalog,
+        buildThreadEvidence(thread, base, question, [], catalog, [], []))
       const sessionId = await control.startThread(directory, config)
       store.assignDeckAiSession(project.id, thread.id, sessionId)
       const answer = await control.jsonTurn(sessionId, directory, context.prompt, config, DECK_PROPOSAL_SCHEMA)

@@ -1,5 +1,6 @@
 import type { ParsedDeck } from './deck-import'
 import type { AiRunConfig } from './ai'
+import type { ThreadEvidencePacket } from './thread-evidence'
 
 export interface DeckVersion {
   id: string
@@ -20,6 +21,9 @@ export interface DeckThreadMessage {
   author: 'user' | 'assistant'
   aiConfig: AiRunConfig | null
   aiTurnId: string | null
+  /** An immutable copy of the facts sent to this assistant turn. Legacy/manual messages omit it. */
+  evidence?: ThreadEvidencePacket | null
+  citedSourceIds?: string[]
 }
 
 export interface DeckCandidate {

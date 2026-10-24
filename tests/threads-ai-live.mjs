@@ -30,7 +30,12 @@ function seedCatalog() {
     const print = { id, setId, setName: setId, localId, name, category, stage,
       energyType: category === 'Energy' ? 'Normal' : null,
       rarity: null, regulationMark: 'I', variants: null, identityId: name,
-      identityBasis: 'unverified', imageBase: null, thumbnail: null,
+      identityBasis: 'unverified',
+      ...(id === 'me01-086' ? { gameplaySchemaVersion: 1,
+        gameplay: { hp: 270, types: ['Darkness'], evolveFrom: null,
+          attacks: [{ name: 'Test Attack', cost: ['Darkness'], damage: '100', effect: 'Test fixture.' }],
+          abilities: [], effect: null, trainerType: null, weaknesses: [], resistances: [], retreat: 2 } } : {}),
+      imageBase: null, thumbnail: null,
       highImageAvailable: null, sourceUpdated: null,
       sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`, detailAt: now, error: null }
     db.prepare('INSERT INTO catalog_prints (id, set_id, payload) VALUES (?, ?, ?)')
@@ -54,6 +59,8 @@ async function openThread(page, name) {
 try {
   application = await launch()
   let page = await application.firstWindow()
+  page.on('pageerror', (error) => console.error('Renderer error:', error))
+  page.on('console', (message) => { if (message.type() === 'error') console.error('Renderer console:', message.text()) })
   await createProjectFromStart(page, 'Discussioni AI')
   const project = await page.evaluate(async () => {
     const result = await window.projectsApi.list()
@@ -75,6 +82,10 @@ try {
 
   if (offline) {
     await page.getByLabel('Scrivi nel thread').fill('Valuta questa idea')
+    await page.getByRole('button', { name: 'Vedi dati inviati a Codex' }).first().click()
+    await page.getByText('Anteprima dei dati locali').waitFor()
+    await page.locator('.thread-review').last().locator('summary').first().click()
+    assert.match(await page.locator('.thread-review').last().innerText(), /Carta A/)
     await page.getByRole('button', { name: 'Chiedi a Codex' }).click()
     await page.getByRole('alert').getByText('Codex CLI non trovato.', { exact: false }).waitFor()
     assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Valuta questa idea')
@@ -82,6 +93,8 @@ try {
     assert.equal(result.ok, true)
     assert.equal(result.value.every((thread) => thread.aiSessionRef === null && thread.messages.length === 0), true)
     await page.getByLabel('Modifica da valutare').fill('Migliora la consistenza')
+    await page.getByRole('button', { name: 'Vedi dati inviati a Codex' }).last().click()
+    await page.getByText('Anteprima dei dati locali').waitFor()
     await page.getByRole('button', { name: 'Genera proposta Codex' }).click()
     await page.getByRole('alert').getByText('Codex CLI non trovato.', { exact: false }).waitFor()
     assert.equal(await page.getByLabel('Modifica da valutare').inputValue(), 'Migliora la consistenza')
@@ -94,8 +107,14 @@ try {
       await page.locator('.thread-picker').getByRole('button', { name: new RegExp(name) }).click()
       await page.getByLabel('Scrivi nel thread').fill(`Rispondi brevemente includendo il codice ${code}.`)
       await page.getByRole('button', { name: 'Chiedi a Codex' }).click()
-      await page.locator('.thread-message').filter({ hasText: new RegExp(code) }).last().waitFor({ timeout: 180000 })
-      await page.getByText('Sessione Codex collegata').waitFor()
+      try {
+        await page.locator('.thread-message')
+          .filter({ has: page.locator('small', { hasText: 'Codex' }) })
+          .filter({ hasText: code }).waitFor({ timeout: 240000 })
+      } catch (error) {
+        console.error('Thread UI after AI wait:', (await page.locator('body').innerText()).slice(-3000))
+        throw error
+      }
     }
     const initial = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
     assert.equal(initial.ok, true)
@@ -108,6 +127,8 @@ try {
     assert.equal(b.messages.length, 2)
     assert.ok(a.messages[1].aiConfig)
     assert.ok(b.messages[1].aiConfig)
+    assert.ok(a.messages[1].evidence.cards.some((card) => card.gameplayText?.includes('Test Attack')))
+    assert.ok(b.messages[1].evidence.sources.some((source) => source.id === 'card:me01-086'))
     await application.close()
     application = undefined
 
@@ -121,6 +142,8 @@ try {
     assert.equal(after.ok, true)
     assert.equal(after.value.find((thread) => thread.title === 'Thread A').aiSessionRef, a.aiSessionRef)
     assert.equal(after.value.find((thread) => thread.title === 'Thread A').messages.length, 4)
+    assert.equal(after.value.find((thread) => thread.title === 'Thread A').messages[1].evidence.cards
+      .some((card) => card.gameplayText?.includes('Test Attack')), true)
     assert.equal(after.value.find((thread) => thread.title === 'Thread B').messages.length, 2)
     const main = await page.evaluate((id) => window.projectsApi.getBaseline(id), project.id)
     assert.equal(main.ok, true)
@@ -143,9 +166,18 @@ try {
       await page.getByLabel('Modifica da valutare').fill(
         `Prepara una candidata di prova: aggiungi esattamente ${count} Boss's Orders ME01 114, togli ${count} Psychic Energy SVE 005 e conserva Mega Absol ex. Restituisci l'intera lista di 60 carte usando i codici del catalogo; è una prova strutturale.`)
       await page.getByRole('button', { name: 'Genera proposta Codex' }).click()
-      await page.locator('.thread-candidate').first().waitFor({ timeout: 180000 })
+      try {
+        await page.locator('.thread-candidate').first().waitFor({ timeout: 180000 })
+      } catch (error) {
+        console.error('Proposal UI:', (await page.locator('body').innerText()).slice(-4500))
+        const current = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
+        console.error('Proposal thread state:', JSON.stringify(current.ok ? current.value
+          .map((thread) => ({ title: thread.title, messages: thread.messages.map((item) =>
+            ({ author: item.author, text: item.text.slice(0, 500) })), candidates: thread.candidates.length })) : current))
+        throw error
+      }
       await page.locator('.thread-candidate.featured .candidate-evidence > summary').click()
-      await page.locator('.thread-candidate.featured').getByRole('button', { name: /Mega Absol ex.*↗/ }).waitFor()
+      await page.locator('.thread-candidate.featured').getByRole('button', { name: /Mega Absol ex.*↗/ }).first().waitFor()
     }
     const proposed = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
     assert.equal(proposed.ok, true)

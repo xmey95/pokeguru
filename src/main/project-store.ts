@@ -12,6 +12,7 @@ import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, Dec
 import type { AiRunConfig } from '../shared/ai'
 import { normalizeDeckCodes } from '../shared/deck-code-normalization'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
+import type { ThreadEvidencePacket } from '../shared/thread-evidence'
 
 interface ProjectRow {
   id: string
@@ -236,6 +237,10 @@ export class ProjectStore {
       } catch (error) { this.db.exec('ROLLBACK'); throw error }
     }
     this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS deck_thread_messages_ai_turn ON deck_thread_messages(thread_id, ai_turn_id) WHERE ai_turn_id IS NOT NULL')
+    const evidenceColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[])
+      .map((row) => row.name))
+    if (!evidenceColumns.has('evidence_json')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN evidence_json TEXT')
+    if (!evidenceColumns.has('cited_source_ids_json')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN cited_source_ids_json TEXT')
     this.migrateDeckVersions()
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS matchup_notes (
@@ -507,7 +512,8 @@ export class ProjectStore {
         id: string; project_id: string; title: string; base_version_id: string | null
         ai_session_ref: string | null; created_at: string; updated_at: string; base_sequence: number | null
       }[]
-    const messages = this.db.prepare(`SELECT id, text, created_at, author, ai_config_json, ai_turn_id FROM deck_thread_messages
+    const messages = this.db.prepare(`SELECT id, text, created_at, author, ai_config_json, ai_turn_id,
+      evidence_json, cited_source_ids_json FROM deck_thread_messages
       WHERE thread_id = ? ORDER BY created_at, rowid`)
     const candidates = this.db.prepare(`SELECT id, sequence, raw_text, parsed_json, note, origin, created_at
       FROM deck_thread_candidates WHERE thread_id = ? ORDER BY sequence`)
@@ -520,11 +526,14 @@ export class ProjectStore {
       stale: row.base_version_id !== (current?.version_id ?? null),
       aiSessionRef: row.ai_session_ref, createdAt: row.created_at, updatedAt: row.updated_at,
       messages: (messages.all(row.id) as {
-        id: string; text: string; created_at: string; author: DeckThreadMessage['author']; ai_config_json: string | null; ai_turn_id: string | null
+        id: string; text: string; created_at: string; author: DeckThreadMessage['author']; ai_config_json: string | null;
+        ai_turn_id: string | null; evidence_json: string | null; cited_source_ids_json: string | null
       }[]).map((message): DeckThreadMessage => ({
         id: message.id, text: message.text, createdAt: message.created_at, author: message.author,
         aiConfig: message.ai_config_json ? JSON.parse(message.ai_config_json) as AiRunConfig : null,
-        aiTurnId: message.ai_turn_id
+        aiTurnId: message.ai_turn_id,
+        evidence: message.evidence_json ? JSON.parse(message.evidence_json) as ThreadEvidencePacket : null,
+        citedSourceIds: message.cited_source_ids_json ? JSON.parse(message.cited_source_ids_json) as string[] : []
       })),
       candidates: [...(candidates.all(row.id) as {
         id: string; sequence: number; raw_text: string; parsed_json: string
@@ -602,7 +611,8 @@ export class ProjectStore {
 
   saveDeckAiExchange(projectId: string, threadId: string, sessionId: string,
     question: string, answer: string, turnId: string, config: AiRunConfig,
-    proposal?: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] }): DeckThread {
+    proposal?: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] },
+    evidence?: ThreadEvidencePacket, citedSourceIds: string[] = []): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
     if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questo thread.')
@@ -611,6 +621,9 @@ export class ProjectStore {
     if (!userText || userText.length > 5000 || userText.includes('\0')) throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
     if (!aiText || aiText.length > 10000 || aiText.includes('\0')) throw new Error('Risposta Codex non valida.')
     if (!turnId || turnId.length > 200) throw new Error('Turno Codex non valido.')
+    if (evidence && (evidence.schemaVersion !== 1 || JSON.stringify(evidence).length > 250_000 ||
+      citedSourceIds.some((id) => !evidence.sources.some((source) => source.id === id))))
+      throw new Error('Evidenze del turno non valide.')
     if (proposal && (!proposal.rawText || proposal.rawText.length > 200_000 ||
       !proposal.note || proposal.note.length > 5000 || proposal.sources.length > 100))
       throw new Error('Proposta Codex non valida.')
@@ -625,9 +638,11 @@ export class ProjectStore {
       this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
         VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), threadId, userText, now)
       this.db.prepare(`INSERT INTO deck_thread_messages
-        (id, thread_id, author, text, created_at, ai_config_json, ai_turn_id)
-        VALUES (?, ?, 'assistant', ?, ?, ?, ?)`)
-        .run(randomUUID(), threadId, aiText, now, JSON.stringify(config), turnId)
+        (id, thread_id, author, text, created_at, ai_config_json, ai_turn_id,
+          evidence_json, cited_source_ids_json)
+        VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?, ?)`)
+        .run(randomUUID(), threadId, aiText, now, JSON.stringify(config), turnId,
+          evidence ? JSON.stringify(evidence) : null, evidence ? JSON.stringify(citedSourceIds) : null)
       if (proposal && parsedProposal) {
         const next = this.nextCandidateSequence(threadId)
         this.db.prepare(`INSERT INTO deck_ai_candidates

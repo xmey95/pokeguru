@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { DeckThread, DeckVersion } from '../../shared/deck-threads'
+import type { DeckThread, DeckThreadMessage, DeckVersion } from '../../shared/deck-threads'
 import type { DeckCandidate } from '../../shared/deck-threads'
 import type { AiModel, AiPreferences } from '../../shared/ai'
 import type { DeckBaseline, ParsedDeck } from '../../shared/deck-import'
@@ -9,6 +9,7 @@ import type { DeckConstraint } from '../../shared/constraints'
 import { compareDecks, type DeckDiff } from '../../shared/deck-diff'
 import { reviewCandidate } from '../../shared/candidate-review'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
+import type { ThreadEvidencePacket } from '../../shared/thread-evidence'
 import { reviewSummary } from './review-summary'
 
 interface Props {
@@ -34,6 +35,44 @@ function ComparisonList({ title, parsed }: { title: string; parsed: ParsedDeck |
     <div className="comparison-list-scroll">{parsed ? parsed.lines.filter((line) => line.kind === 'card').map((line) =>
       <div className="comparison-card" key={line.lineNumber}><strong>{line.quantity}×</strong><span>{line.name}</span><small>{line.setCode ? `${line.setCode} ${line.cardNumber}` : 'stampa non indicata'}</small></div>)
       : <p>Nessuna lista principale.</p>}</div></section>
+}
+
+function ThreadMessageEvidence({ message }: { message: DeckThreadMessage }) {
+  const packet = message.evidence
+  if (!packet) return null
+  const cited = new Set(message.citedSourceIds ?? [])
+  const changed = packet.change.updated.length + packet.change.added.length + packet.change.removed.length
+  return <details className="candidate-evidence"><summary>Dati usati · {packet.cardCoverage.withGameplay}/{packet.cardCoverage.selected} schede · {packet.events.length} eventi{changed ? ` · ${changed} cambi` : ''}</summary>
+    <p>Contesto del {new Date(packet.capturedAt).toLocaleString('it-IT')} · Catalogo: {packet.catalogSyncedAt ? new Date(packet.catalogSyncedAt).toLocaleString('it-IT') : 'non aggiornato'}. Le risposte precedenti mantengono questi dati.</p>
+    {packet.change.updated.length > 0 && <p>Fonti aggiornate: {packet.change.updated.join('; ')}.</p>}
+    {packet.change.added.length > 0 && <p>Nuove fonti selezionate: {packet.change.added.join('; ')}.</p>}
+    {packet.change.removed.length > 0 && <p>Fonti non selezionate in questo turno: {packet.change.removed.join('; ')}.</p>}
+    {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte oltre il limite del contesto; la loro meccanica non è stata inviata.</p>}
+    <p>Fonti fornite a Codex; «citata» indica una fonte dichiarata nella risposta, non una verifica automatica della conclusione.</p>
+    {packet.sources.length === 0 ? <p>Nessuna scheda o lista pertinente disponibile nell'archivio locale.</p> :
+      <ul>{packet.sources.map((source) => <li key={source.id}>{cited.has(source.id) ? <strong>Citata · </strong> : null}
+        {source.url ? <button type="button" className="text-button" onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
+          : source.label}</li>)}</ul>}
+    {packet.events.length > 0 && <p>Eventi: {packet.events.map((event) => `${event.name} (${event.date}, ${event.lists.length} liste selezionate su ${event.completeLists} complete)`).join('; ')}. Piazzamenti e liste non sono winrate del tuo mazzo.</p>}
+  </details>
+}
+
+function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
+  return <div className="thread-review"><strong>Anteprima dei dati locali</strong>
+    <p>{packet.cardCoverage.withGameplay}/{packet.cardCoverage.selected} schede con testo di gioco; {packet.events.length} eventi, {packet.events.reduce((sum, item) => sum + item.lists.length, 0)} liste selezionate.</p>
+    {packet.change.updated.length + packet.change.added.length + packet.change.removed.length > 0 &&
+      <p>Rispetto alla risposta precedente: {packet.change.updated.length} fonti aggiornate, {packet.change.added.length} nuove nella selezione, {packet.change.removed.length} non più selezionate.</p>}
+    <details><summary>Carte e fonti che verranno inviate</summary>
+      <ul>{packet.cards.map((card) => <li key={card.name}><strong>{card.name}</strong> · {card.identityStatus === 'ambiguous' ? 'identità ambigua' : card.identityStatus === 'missing' ? 'scheda assente' : card.printId}
+        {card.gameplayText && <p>{card.gameplayText}</p>}</li>)}</ul>
+      {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte omesse per il limite del contesto.</p>}
+      {packet.events.map((event) => <details key={event.eventId}><summary>{event.name} · {event.date} · {event.lists.length} liste</summary>
+        <p>{event.kind === 'online' ? 'Online' : 'In presenza'} · {event.completeLists} liste complete su {event.participants} partecipazioni visibili.</p>
+        {event.lists.map((list) => <details key={list.sourceId}><summary>{list.deck} · posto {list.placing ?? '?'}</summary><pre>{list.cards.join('\n')}</pre></details>)}
+      </details>)}
+    </details>
+    <p>Il pacchetto viene ricalcolato al momento dell'invio, così include eventuali aggiornamenti locali nel frattempo.</p>
+  </div>
 }
 
 function CandidateDetail({ candidate, thread, versions, catalog, constraints, audit, working, featured, onAdopt }: {
@@ -106,6 +145,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [openingNote, setOpeningNote] = useState('')
   const [message, setMessage] = useState('')
   const [proposalRequest, setProposalRequest] = useState('')
+  const [preview, setPreview] = useState<{ kind: 'ask' | 'proposal'; prompt: string; packet: ThreadEvidencePacket } | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const [candidateText, setCandidateText] = useState('')
   const [candidateNote, setCandidateNote] = useState('')
   const [loading, setLoading] = useState(true)
@@ -167,6 +208,21 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     setCandidateNote('')
     setMessage('')
     setProposalRequest('')
+    setPreview(null)
+  }
+
+  async function previewEvidence(kind: 'ask' | 'proposal'): Promise<void> {
+    if (!selected || previewLoading) return
+    const prompt = kind === 'ask' ? message : proposalRequest
+    if (!prompt.trim()) return
+    setPreviewLoading(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.previewDeckThreadEvidence(projectId, selected.id, prompt)
+      if (!result.ok) throw new Error(result.error)
+      setPreview({ kind, prompt, packet: result.value })
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Anteprima non disponibile.') }
+    finally { setPreviewLoading(false) }
   }
 
   async function create(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -195,6 +251,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setMessage('')
+      setPreview(null)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Messaggio non salvato.') }
     finally { setWorking(false) }
   }
@@ -211,6 +268,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setMessage('')
+      setPreview(null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
       const current = await window.projectsApi.listDeckThreads(projectId)
@@ -248,6 +306,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setCandidateText(result.value.candidates.at(-1)?.rawText ?? candidateText)
       setProposalRequest('')
+      setPreview(null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
       const current = await window.projectsApi.listDeckThreads(projectId)
@@ -323,22 +382,26 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               </select>
             </div></details>
             <div className="thread-timeline"><h4>Discussione e proposte precedenti</h4>
-              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p>{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
+              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={setConfirmCandidate} />)}
             </div>
             <form className="thread-form" onSubmit={(event) => void ask(event)}>
               <label htmlFor="thread-message">Scrivi nel thread</label>
-              <textarea id="thread-message" value={message} maxLength={5000} onChange={(event) => setMessage(event.target.value)} />
-              <p className="content-note">Codex usa la base e la cronologia del thread.</p>
+              <textarea id="thread-message" value={message} maxLength={5000} onChange={(event) => { setMessage(event.target.value); setPreview(null) }} />
+              <p className="content-note">Codex usa la base, la candidata e le schede/eventi pertinenti già disponibili localmente. Ogni risposta conserva le fonti del turno.</p>
+              <button type="button" className="secondary-button" disabled={!message.trim() || previewLoading || working} onClick={() => void previewEvidence('ask')}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
+              {preview?.kind === 'ask' && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
               <button className="primary-button" disabled={working || !message.trim()}>{asking ? 'Codex sta rispondendo…' : 'Chiedi a Codex'}</button>
               <button type="button" className="secondary-button" disabled={working || !message.trim()} onClick={() => void addMessage()}>Salva osservazione</button>
             </form>
             <form className="thread-form candidate-form" onSubmit={(event) => void propose(event)}>
               <h4>Proposta completa con Codex</h4>
-              <p className="content-note">Descrivi il cambiamento. Codex usa la base, i vincoli e i dati disponibili; la proposta richiede 60 carte.</p>
+              <p className="content-note">Descrivi il cambiamento. Codex usa la base, i vincoli, le schede e gli eventi locali pertinenti; la proposta richiede 60 carte.</p>
               <label htmlFor="thread-proposal-request">Modifica da valutare</label>
               <textarea id="thread-proposal-request" value={proposalRequest} maxLength={5000}
-                onChange={(event) => setProposalRequest(event.target.value)} />
+                onChange={(event) => { setProposalRequest(event.target.value); setPreview(null) }} />
+              <button type="button" className="secondary-button" disabled={!proposalRequest.trim() || previewLoading || working} onClick={() => void previewEvidence('proposal')}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
+              {preview?.kind === 'proposal' && preview.prompt === proposalRequest && <EvidencePreview packet={preview.packet} />}
               <button className="primary-button" disabled={working || !selected.baseVersionId || !proposalRequest.trim()}>
                 {proposing ? 'Codex sta preparando la proposta…' : 'Genera proposta Codex'}
               </button>

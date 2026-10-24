@@ -9,6 +9,7 @@ import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVe
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from './tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from './main-tournament'
 import type { StandardRuleAudit } from './standard-rule-audit'
+import type { ThreadEvidencePacket } from './thread-evidence'
 
 export type ProjectFormat = 'STANDARD'
 export type CompetitiveCircuit = 'WESTERN' | 'JAPAN'
@@ -52,6 +53,7 @@ export interface ProjectsApi {
   listDeckThreads(projectId: string): Promise<OperationResult<DeckThread[]>>
   createDeckThread(input: CreateDeckThreadInput): Promise<OperationResult<DeckThread>>
   addDeckThreadMessage(projectId: string, threadId: string, text: string): Promise<OperationResult<DeckThread>>
+  previewDeckThreadEvidence(projectId: string, threadId: string, text: string): Promise<OperationResult<ThreadEvidencePacket>>
   askDeckThread(projectId: string, threadId: string, text: string, override?: AiPreferences | null): Promise<OperationResult<DeckThread>>
   proposeDeckThread(projectId: string, threadId: string, request: string, override?: AiPreferences | null): Promise<OperationResult<DeckThread>>
   openDeckSource(url: string): Promise<OperationResult<boolean>>
