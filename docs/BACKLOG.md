@@ -80,6 +80,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-071** | Gerarchia della guida Matchup e collegamenti contestuali | UI/UX | R-10 / qualità pre-I4 | P1 / M | APP-070; proposta approvata e ampliata dall'utente | Done |
 | **APP-072** | Navigazione globale Indietro/Avanti e ripristino del contesto | UI/UX | R-03, R-08, R-10, R-13 / qualità pre-I4 | P1 / L | APP-071; proposta approvata, fasi circoscritte sotto | Done |
 | **APP-073** | Revisione condivisa di Discussione e revisioni della guida Matchup | UI/UX | R-10, R-13 / qualità pre-I4 | P1 / S | APP-071/072; proposta approvata dall'utente | Done |
+| **APP-074** | Lista persistente sempre completa, senza Vista breve | UI/UX | R-03, R-10 / qualità pre-I4 | P1 / S | APP-073; richiesta esplicita dell'utente | Done |
+| **APP-075** | Revisione condivisa di opzioni AI e anteprima dati nei Matchup | UI/UX | R-10, R-11 / qualità pre-I4 | P1 / S | APP-073; proposta da discutere con l'utente | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -663,7 +665,20 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche Windows:** build/typecheck e due percorsi Electron passati: `matchup-switcher-ui-live.mjs --discussion --navigation` e `workspace-ui-live.mjs`. Nuove prove su guida iniziale, errore prima del salvataggio, turno pendente in SQLite, fallimento dopo navigazione, riprova con ID invariato, completamento mentre un'altra vista è aperta, bozza già inviata non riproposta e ultima guida valida conservata. Tastiera sullo storico/versioni, riferimenti storici, focus, scorrimento e bozze al ritorno dagli hyperlink, isolamento, guida storica e avversario assente coperti. Discussione ispezionata a 1440×900, 1280×720 e 640×720; workspace anche a 1241/1240×720, 1024×768 e risorse a 640×580. Contrasto minimo nella discussione 5,54:1; nel percorso completo 5,16:1. Schermate in `docs/design-review/discussione-*`; `git diff --check` pulito.
 - **Limiti:** risposte AI e scritture dei nuovi turni nella prova sono fixture controllate; letture SQLite/IPC e navigazione reali. Nessuna nuova generazione AI o validazione tattica. Il test live Codex è stato aggiornato ai selettori, ma non eseguito. Linux, lettore di schermo e scala OS elevata non verificati. Demo in copia separata del profilo di esempio con snapshot dichiarato; invio AI disattivato nel solo processo di anteprima. Nessuna modifica a database/API/generazione di produzione, nessun I4, merge o release.
 
+### APP-074 — Lista persistente sempre completa
+
+- **Autorizzazione e Ready:** richiesta esplicita di eliminare la vista breve dal pannello destro. Perimetro S, criteri e dipendenze risolti; avviato sul ramo locale `task/production-design-system`.
+- **Accettazione:** rimuovere comando, stato e rendering delle sole prime cinque carte; mostrare sempre l'intera lista per gruppi, con conteggi e scorrimento indipendente. Stesso comportamento nel dock compatto di Thread e Matchup.
+- **Verifica prevista:** build/typecheck e percorso Electron workspace esistente, aggiornato eliminando l'interazione con il comando rimosso; ispezione desktop e dock. Nessun nuovo test che replichi l'implementazione.
+- **Risultato e verifiche:** rimossi comando, stato e ramo di anteprima, con relativi stili. Build/typecheck e `workspace-ui-live.mjs` passati su Windows: Thread e Matchup con lista consultabile e scorrimento da tastiera, nessuna sovrapposizione a 1440×900, 1280×720, 1241/1240×720, 1024×768 e 640×720. Documentazione aggiornata; `git diff --check` pulito. Nessuna modifica a dati, API o generazione; Linux e scala OS elevata non verificati. Nessun merge o release.
+
+### APP-075 — Opzioni AI e dati inviati nei Matchup
+
+- **Osservazione:** una disclosure unisce configurazione ed evidenze; all'apertura ripete “AI per questa analisi” e mostra due selettori anche con preferenze globali. L'anteprima annidata contiene lunghi paragrafi e testo tecnico, con un riferimento generico all'analisi anche quando l'azione è una revisione.
+- **Proposta da discutere:** riga compatta “Configurazione AI · Preferenze globali” con modifica su richiesta e indicazione esplicita dell'eventuale scelta locale. Accesso distinto “Dati inviati”, accanto alle azioni, con sintesi leggibile di lista, avversario ed evidenze; pacchetto completo e fonti in un livello successivo. Distinguere nuova guida e revisione usando il contesto reale, senza presentare come anteprima esatta dati che non lo sono. Nessuna modifica a prompt, API o integrazioni autorizzata da questo task.
+
 ## Regola per i blocchi
+
 
 Quando un task entra in `Blocked`, aggiungere sotto il task: causa osservata, effetto sul risultato, azione o persona necessaria per sbloccare e verifiche ancora possibili. Non usare `Blocked` per semplice difficoltà. APP-018, APP-024 e APP-025 sono chiusi dopo C-16/C-17 e la prima release. APP-023 conserva verifiche residue annotate. Le questioni Q-03/Q-04 e i rischi sono tracciati in `PRODUCT.md` e `DECISIONS.md`.
 

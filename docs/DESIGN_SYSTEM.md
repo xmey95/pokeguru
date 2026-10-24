@@ -30,7 +30,7 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 - **Vista Lista:** una sola lista nell'area di lavoro disponibile, senza riepilogo laterale o dock; decisione confermata dall'utente in APP-060.
 - **Intestazione Lista (APP-063):** titolo, totale e stato Standard nello stesso riepilogo, azioni a destra quando lo spazio lo consente. Nessun badge “Pronta per controllo” in questa vista. “Controlli e fonti” apre dettagli e incertezze; problemi certi subito visibili. Conformità positiva sempre qualificata dallo snapshot, campione parziale da verificare.
 - **Carte della Lista (APP-062):** righe di almeno 72 px, miniatura 36×50 px, quantità e nome a 16 px. Sezioni Pokémon/Allenatori/Energie con conteggi delle copie; riepilogo cliccabile per raggiungerle. Categoria dal catalogo o dalle intestazioni esplicite dell'import, con nota; altrimenti “Da classificare”. Miniature esistenti della stessa identità, segnaposto stabile quando assenti o non leggibili.
-- **Lista persistente in Thread e Matchup:** **384 px fissi** sopra 1240 px di finestra. Quantità, sezioni e stato restano leggibili; nomi lunghi vanno a capo. Lo stato “Pronta per controllo” è neutro: non equivale a Standard verificato.
+- **Lista persistente in Thread e Matchup:** **384 px fissi** sopra 1240 px di finestra. Tutte le carte restano consultabili per gruppi, con scorrimento indipendente anche nel dock: APP-074 rimuove Vista breve. Quantità, sezioni e stato restano leggibili; nomi lunghi vanno a capo. Lo stato “Pronta per controllo” è neutro: non equivale a Standard verificato.
 - **Dettaglio carta (APP-064):** immagine 180×252 px e testo di gioco a 15 px/1,65; poi vincolo. Stampe/varianti e testo importato/controlli in disclosure native. Immagine sopra il testo sotto 700 px di contenuto. Testo e immagine derivano dalle stampe della stessa identità, con riferimenti distinti; dati ignoti non ricostruiti.
 - **Finestra stretta:** fino a 1240 px, navigazione a icone e lista in dock inferiore di 220 px solo in Thread e Matchup, sempre parte della griglia. A 640 px la navigazione diventa orizzontale. Nessun pannello copre il contenuto.
 - **Livelli informativi:** decisione e blocchi → dettaglio operativo → provenienza e diagnostica. I dati non vengono eliminati per rendere la schermata più breve.
@@ -44,7 +44,7 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 | Famiglia | Segoe UI Variable, Segoe UI, system-ui; fallback nativo Linux. Monospaziato solo per liste grezze |
 | Scala | 12 / 13 / 14 / 16 / 20 / 24 / 28 px; 15 px per prosa tattica; numeri tabulari |
 | Spazi | Scala 4 / 8 / 12 / 16 / 20 / 24 / 32 px |
-| Controlli | 40 px ordinari; 44 px navigazione e righe del pannello; 32–36 px per il comando compatto della lista |
+| Controlli | 40 px ordinari; 44 px navigazione e righe del pannello |
 | Superfici | Canvas grigio freddo, pannelli bianchi, dettaglio neutro chiaro; ombra riservata al dialogo |
 | Raggi | 6 px controlli e gruppi; 10 px superfici; 14 px dialogo |
 | Colori | Testo scuro, petrolio per azioni, verde conferma, ambra incertezza, rosso errore, viola proposta |

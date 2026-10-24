@@ -151,6 +151,10 @@ La revisione ha un'unica azione primaria e la rigenerazione è secondaria. L'inv
 
 Le prove di stato controllano le risposte AI e scrivono fixture nell'archivio temporaneo; lettura delle guide, fonti, progetti e navigazione usano i percorsi reali. La demo grafica usa una copia separata del profilo di esempio e il suo snapshot dichiaratamente dimostrativo; l'invio AI è disattivato soltanto nel processo di anteprima, senza modificare il codice di produzione.
 
+### T-63 — Lista persistente sempre completa (APP-074)
+
+Su richiesta dell'utente viene eliminata Vista breve dal pannello laterale e dal dock. Rimane un'unica rappresentazione dell'intera lista per gruppi, con conteggi e scorrimento indipendente. Rimossi stato di sessione, anteprima delle prime cinque carte e stili del comando; larghezze e breakpoint restano quelli approvati. Nessuna modifica ai dati o alla vista Lista principale.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |
