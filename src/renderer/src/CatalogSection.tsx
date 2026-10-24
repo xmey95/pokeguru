@@ -232,7 +232,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
                     print.promoStatus?.state === 'unlisted' ? 'non elencata · da verificare' : 'non verificata'}
                   {print.promoStatus && ` · controllo ${date(print.promoStatus.checkedAt)}`}</span>}
                 {print.variants && <span>Varianti: {Object.entries(print.variants).filter(([, yes]) => yes).map(([name]) => name).join(', ') || 'nessuna indicata'}</span>}{print.highImageAvailable && <span>Immagine grande disponibile online</span>}{print.sourceUpdated && <span>Fonte aggiornata: {date(print.sourceUpdated)}</span>}{print.error && <span className="catalog-error">{print.error}</span>}
-                {print.gameplay ? <details><summary>Regole di gioco</summary><p>{gameplaySummary(print.gameplay)}</p></details>
+                {print.gameplay ? <details><summary>Regole di gioco</summary><p>{gameplaySummary(print.gameplay, print)}</p></details>
                   : <span>Regole di gioco non ancora acquisite</span>}
                 <button type="button" className="text-button" onClick={() => void openSource(print.sourceUrl)}>Apri scheda fonte ↗</button></div>
             </article>)}</div>
