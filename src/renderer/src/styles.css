@@ -238,6 +238,17 @@ details[open] > summary { margin-bottom: 8px; }
 .catalog-section, .tournament-section { max-width: 1400px; margin: 0 auto; }
 .catalog-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 .catalog-actions button { white-space: normal; }
+.catalog-section > .panel-heading .content-note { margin: 8px 0 0; }
+#catalog-management-trigger[aria-expanded=true] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.catalog-management { padding: 24px; margin: 20px 0; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.catalog-management > .panel-heading { margin-bottom: 20px; }
+.catalog-management h2 { font-size: var(--text-lg); }
+.catalog-maintenance-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.catalog-maintenance-actions .content-note { margin: 8px 0 0; }
+.catalog-coverage-heading { margin: 24px 0 8px; font-size: var(--text-base); }
+.catalog-gap-summary, .catalog-sync-status { padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: var(--text-sm); line-height: 1.65; overflow-wrap: anywhere; }
+.catalog-gap-summary { color: var(--warning); background: var(--warning-soft); border-color: var(--warning-line); }
+.catalog-sync-status { color: var(--ink-secondary); background: var(--surface); }
 .catalog-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 24px 0; }
 .catalog-metrics > div { padding: 20px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 .catalog-metrics strong { display: block; font-size: var(--text-xl); letter-spacing: -.025em; font-variant-numeric: tabular-nums; }

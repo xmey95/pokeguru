@@ -161,6 +161,12 @@ La riga AI vicina all'azione mostra preferenze globali oppure scelta personalizz
 
 La sintesi dei dati segue il percorso già implementato nel backend: revisione/riprova riusano lista avversaria ed evidenze della guida se presenti, anche se la lista salvata è vuota; generazione e continuazione acquisiscono il contesto corrente. La rigenerazione ha una disclosure dedicata perché non invia lo stesso contesto di una revisione. La configurazione resta unica. Conteggi, fonte salvata/corrente e indisponibilità sono nel primo livello; dati tecnici e collegamenti nel secondo. Non è una copia esatta del prompt: acquisizione della lista pubblica e arricchimento delle schede possono avvenire all'invio. Nessuna modifica a API, prompt o persistenza. Le prove UI usano risposte controllate in archivi temporanei e non attestano l'integrazione AI.
 
+### T-65 — Ricerca prioritaria e gestione del Catalogo su richiesta (APP-076)
+
+L'utente sceglie di mantenere Aggiorna nuove carte nell'intestazione e raccogliere scansione e controlli in Gestisci catalogo. Il titolo diventa Catalogo, seguito dalla data di acquisizione e dall'eventuale ambito di campione. Ricerca, filtro e risultati precedono i dettagli di manutenzione. Il pannello si apre nel flusso della pagina: include scansione completa, sincronizzazione del campione se pertinente, regole, copertura e metodo. Gli stessi handler e dati vengono riutilizzati senza cambiare la sincronizzazione.
+
+Stato di aggiornamento/pausa, errori, lacune essenziali e fonti cambiate o non raggiungibili restano sempre accessibili fuori dal pannello. La fase dettagliata è nella gestione. Escape/Chiudi riportano il focus al comando; scegliere un set dalla copertura chiude il pannello e focalizza il filtro. Stato e dettagli seguono la cronologia della sessione. I test controllano le risposte della sincronizzazione e dell'audit; non attestano nuove acquisizioni o verifica delle fonti ufficiali. Il dettaglio della carta è rinviato al successivo confronto grafico.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

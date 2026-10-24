@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-076 completato:** ricerca Catalogo prioritaria, Aggiorna nuove carte sempre visibile e Gestisci catalogo con manutenzione/copertura/fonti. Avvisi essenziali esterni, filtri e navigazione conservati. Build e percorsi Electron Catalogo/workspace passati; verifiche e limiti nel backlog. Prossimo blocco da discutere insieme: dettaglio carta nel Catalogo, ancora centrato sui metadati delle stampe. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
 - **APP-075 completato:** configurazione AI compatta, scelte personalizzate riconoscibili e dati separati vicino alle azioni Matchup; sintesi distinta per revisione, rigenerazione e nuova base. Build e percorsi Electron Matchup/navigazione/discussione e workspace passati; verifiche e limiti nel backlog. Prossimo passo: prova utente di Modifica, Dati inviati e Dati per rigenerare, poi scelta condivisa del prossimo blocco grafico. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
 
 - **APP-074 completato:** Vista breve eliminata su richiesta dell'utente; lista persistente sempre completa anche nel dock. Build e percorso Electron workspace passati, risultati nel backlog. La successiva revisione di configurazione AI e dati inviati è coperta da APP-075.
