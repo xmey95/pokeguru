@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const directory = mkdtempSync(join(tmpdir(), 'pokeguru-reconcile-ai-'))
@@ -12,8 +13,7 @@ try {
   application = await electron.launch({ executablePath: require('electron'), args: ['.'],
     cwd: resolve(import.meta.dirname, '..'), env: { ...process.env, POKEGURU_DATA_DIR: directory } })
   const page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Prova AI riconciliata')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Prova AI riconciliata')
   await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
   await page.getByRole('button', { name: 'Sincronizza campione' }).click()
   await page.getByText('5/5', { exact: true }).first().waitFor({ timeout: 120000 })

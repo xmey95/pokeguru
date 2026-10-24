@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -15,8 +16,7 @@ try {
   application = await electron.launch({ executablePath: require('electron'), args: ['.'], cwd: workspace,
     env: { ...process.env, POKEGURU_DATA_DIR: join(temporary, 'profile') }, timeout: 30000 })
   const page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Verifica export')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Verifica export')
   await page.getByLabel('Testo lista').fill(input)
   await page.getByRole('button', { name: 'Salva lista' }).click()
   const expected = 'Trainer: 3\n2 Iono PAL 185\n1 Iono PAL 254\n1 Rare Candy PAF 089\n\nTotal Cards: 4\n'

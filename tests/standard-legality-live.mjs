@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -45,8 +46,7 @@ try {
 
   application = await launch()
   let page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Conformità Standard')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Conformità Standard')
   await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 086\n59 Psychic Energy SVE 005')
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.locator('.deck-technical > summary').click()
