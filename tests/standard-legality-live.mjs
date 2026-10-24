@@ -53,11 +53,14 @@ try {
   const rotation = page.getByRole('region', { name: 'Controllo della rotazione Standard occidentale' })
   await rotation.getByLabel('Data di riferimento').fill('2026-10-24')
   const standard = page.getByRole('region', { name: 'Esito Standard occidentale' })
-  assert.match(await standard.textContent(), /controlli disponibili superati/)
+  await standard.locator('.standard-status').getByText('Standard: conforme allo snapshot', { exact: true }).waitFor()
+  assert.equal(await page.locator('.detail-headline .status-pill').count(), 0)
+  await standard.locator('.standard-details > summary').click()
+  assert.ok(await standard.getByRole('heading', { name: 'Copertura e fonti' }).isVisible())
   assert.match(await standard.textContent(), /lista è conforme ai controlli Standard coperti/)
   assert.match(await standard.textContent(), /Nessuna carta vietata nello snapshot/)
   await rotation.getByLabel('Data di riferimento').fill('2027-01-01')
-  assert.match(await standard.textContent(), /da verificare/)
+  await standard.locator('.standard-status').getByText('Standard: da verificare', { exact: true }).waitFor()
   await application.close()
   application = undefined
 

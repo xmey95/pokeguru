@@ -7,7 +7,6 @@ import { CatalogSection } from './CatalogSection'
 import { DeckList } from './DeckList'
 import { DeckCompanion } from './DeckCompanion'
 import { ConstraintsSection } from './ConstraintsSection'
-import { ExportButton } from './ExportButton'
 import { ThreadsSection } from './ThreadsSection'
 import { TournamentSection } from './TournamentSection'
 import { Icon } from './Icon'
@@ -264,7 +263,7 @@ export function App() {
                 <div>
                   <h1 data-testid="selected-project-name">{selected.name}</h1>
                 </div>
-                <span className={`status-pill status-${selected.status.toLowerCase()}`}>{statusLabel(selected.status)}</span>
+                {activeTab !== 'deck' && <span className={`status-pill status-${selected.status.toLowerCase()}`}>{statusLabel(selected.status)}</span>}
               </div>
               <details className="project-meta-details"><summary>Profilo e date del progetto</summary><div className="detail-meta">
                 <div><span>Formato</span><strong>Standard</strong></div>
@@ -276,24 +275,7 @@ export function App() {
               {activeTab === 'deck' ? <>
               {baselineLoading ? <p className="content-note">Caricamento lista…</p> : baseline ? (
                 <div className="baseline-panel" data-testid="baseline-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>Lista corrente</h2>
-                    </div>
-                    <div className="deck-heading-actions">
-                      <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
-                      <ExportButton key={`${selected.id}:${baseline.importedAt}`} baseline={baseline} />
-                      <button type="button" className="secondary-button" onClick={() => focusImport()}>Importa / sostituisci</button>
-                    </div>
-                  </div>
-                  {baseline.declaredTotal !== null && baseline.declaredTotal !== baseline.interpretedTotal && <p className="diagnostics">Totale dichiarato: {baseline.declaredTotal}; interpretato: {baseline.interpretedTotal}.</p>}
-                  {importProblems.length > 0 && (
-                    <details className={importProblems.length ? 'diagnostics' : 'project-meta-details'} role={importProblems.length ? 'status' : undefined}>
-                      <summary>{importProblems.length ? `Testo importato · ${importProblems.length} ${importProblems.length === 1 ? 'problema' : 'problemi'} da correggere` : 'Note sul testo importato'}</summary>
-                      <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
-                    </details>
-                  )}
-                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onConstrain={selectConstraintTarget} />
+                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onConstrain={selectConstraintTarget} onImport={focusImport} />
                   <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
                   {importProblems.length === 0 && baseline.diagnostics.length > 0 && <details className="project-meta-details"><summary>Note sul testo importato</summary><ul>{baseline.diagnostics.map((item, index) => <li key={index}>{item.message}</li>)}</ul></details>}
                   <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>

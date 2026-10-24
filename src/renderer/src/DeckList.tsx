@@ -13,6 +13,7 @@ import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { reviewSummary } from './review-summary'
 import { CardThumbnail } from './CardThumbnail'
 import { deckThumbnail, groupDeckCards } from './deck-presentation'
+import { ExportButton } from './ExportButton'
 
 function localDate(): string {
   const now = new Date()
@@ -32,13 +33,14 @@ function cardStatus(status: 'recognized' | 'unverified' | 'ambiguous' | 'outside
     catalog.scope.kind === 'sample' ? 'Nessuna corrispondenza nel campione' : 'Nessuna corrispondenza locale'
 }
 
-export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
-  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onConstrain(identityId: string): void
+export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onImport }: {
+  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onConstrain(identityId: string): void; onImport(): void
 }) {
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [loading, setLoading] = useState(true)
+  const [dataUnavailable, setDataUnavailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -53,6 +55,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   useEffect(() => {
     let active = true
     setLoading(true)
+    setDataUnavailable(false)
     void Promise.all([window.projectsApi.getCatalog(), window.projectsApi.getReconciliation(projectId),
       window.projectsApi.getStandardRuleAudit()])
       .then(([catalogResult, reconciliationResult, auditResult]) => {
@@ -64,7 +67,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
         setReconciliation(reconciliationResult.value)
         setRuleAudit(auditResult.value)
       })
-      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Lista non disponibile.') })
+      .catch((cause) => { if (active) { setDataUnavailable(true); setError(cause instanceof Error ? cause.message : 'Lista non disponibile.') } })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [projectId, baseline.importedAt])
@@ -81,6 +84,11 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   const promoByLine = new Map(promoAdmission.lines.map((line) => [line.lineNumber, line]))
   const standardDeck = useMemo(() => evaluateStandardDeck(baseline, catalog, asOf, ruleAudit), [baseline, catalog, asOf, ruleAudit])
   const reviewItems = useMemo(() => reviewSummary(standardDeck.toReview), [standardDeck])
+  const importProblems = baseline.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH')
+  const standardTone = loading || dataUnavailable ? 'neutral' : standardDeck.status === 'problem' ? 'problem' : standardDeck.legality === 'supported' ? 'success' : 'review'
+  const standardLabel = loading ? 'Standard: controllo…' : dataUnavailable ? 'Standard: non disponibile'
+    : standardDeck.status === 'problem' ? `Standard: ${standardDeck.problems.length} ${standardDeck.problems.length === 1 ? 'problema certo' : 'problemi certi'}`
+      : standardDeck.legality === 'supported' ? 'Standard: conforme allo snapshot' : 'Standard: da verificare'
 
   function jumpToGroup(id: string): void {
     const heading = document.getElementById(`deck-group-${id}`)
@@ -124,13 +132,24 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
 
   return <div className="deck-list-body">
     {error && <div className="error-banner" role="alert">{error}</div>}
-    {!loading && !catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
-    <section className={`standard-deck-panel ${standardDeck.status}`} aria-label="Esito Standard occidentale">
-      <strong>Standard: {standardDeck.status === 'problem' ? `${standardDeck.problems.length} ${standardDeck.problems.length === 1 ? 'problema certo' : 'problemi certi'}` :
-        standardDeck.status === 'review' ? 'da verificare' : 'controlli disponibili superati'}</strong>
-      {standardDeck.problems.length > 0 && <div><b>Problemi accertati</b><ul>{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
-      {reviewItems.length > 0 && <details className="standard-explanation"><summary>Controlli da verificare ({reviewItems.length})</summary><ul>{reviewItems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></details>}
-      <details className="standard-explanation"><summary>Copertura, fonti e controlli superati</summary>
+    <section className="standard-deck-panel" aria-label="Esito Standard occidentale">
+      <div className="deck-summary-heading">
+        <div className="deck-summary-title">
+          <h2>Lista corrente</h2>
+          <div className="deck-summary-status">
+            <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
+            <span className="standard-status" data-tone={standardTone} role="status">{standardLabel}</span>
+          </div>
+        </div>
+        <div className="deck-heading-actions">
+          <ExportButton baseline={baseline} />
+          <button type="button" className="secondary-button" onClick={onImport}>Importa / sostituisci</button>
+        </div>
+      </div>
+      {standardDeck.problems.length > 0 && <ul className="standard-problems" aria-label="Problemi accertati">{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
+      <details className="standard-details"><summary>Controlli e fonti</summary>
+      {reviewItems.length > 0 && <div className="standard-review"><h3>Da verificare ({reviewItems.length})</h3><ul>{reviewItems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
+      <h3>Copertura e fonti</h3>
       <p>Data {asOf}. Fonti del pacchetto: {ruleAudit?.status === 'matching' ? `coerenti al ${ruleAudit.checkedAt.slice(0, 10)}` : ruleAudit?.status === 'changed' ? 'da rivedere' : ruleAudit?.status === 'unavailable' ? 'non raggiungibili all’ultimo controllo' : 'non ricontrollate da questa installazione'}. {standardDeck.legality === 'supported'
         ? 'La lista è conforme ai controlli Standard coperti dal pacchetto incluso. La verifica riguarda la lista e le stampe riconosciute, non lingua, autenticità o condizioni delle carte fisiche.'
         : standardDeck.legality === 'invalid' ? 'La lista viola almeno una regola Standard verificata.'
@@ -141,6 +160,12 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       {standardDeck.passed.length > 0 && <details><summary>Controlli superati ({standardDeck.passed.length})</summary><ul>{standardDeck.passed.map((item) => <li key={item}>{item}</li>)}</ul></details>}
       </details>
     </section>
+    {baseline.declaredTotal !== null && baseline.declaredTotal !== baseline.interpretedTotal && <p className="diagnostics">Totale dichiarato: {baseline.declaredTotal}; interpretato: {baseline.interpretedTotal}.</p>}
+    {importProblems.length > 0 && <details className="diagnostics" role="status">
+      <summary>Testo importato · {importProblems.length} {importProblems.length === 1 ? 'problema' : 'problemi'} da correggere</summary>
+      <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
+    </details>}
+    {!loading && !catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
     <p className="content-note">Apri una carta per vedere stampe e righe importate.</p>
     {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-groups" aria-label="Carte della lista corrente">
       <nav className="deck-composition" aria-label="Composizione del mazzo">{groups.filter((group) => group.id !== 'unknown' || group.total > 0).map((group) =>

@@ -69,6 +69,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-060** | Eliminare la lista duplicata dalla vista Lista | UI/UX | R-03, R-08, R-10 / qualità pre-I4 | P0 / S | APP-059; conferma utente durante la revisione condivisa | Done |
 | **APP-061** | Selettore progetti con ricerca e creazione | UI/UX | R-03 / qualità pre-I4 | P0 / S | APP-060; selettore approvato dall'utente | Done |
 | **APP-062** | Lista per categorie con conteggi e miniature | UI/UX | R-02, R-03, R-04 / qualità pre-I4 | P0 / S | APP-061; preferenza utente confermata | Done |
+| **APP-063** | Riepilogo unico di totale e stato Standard nella Lista | UI/UX | R-02, R-03 / qualità pre-I4 | P0 / S | APP-062; riepilogo approvato dall'utente | Done |
 
 ## Task dettagliati I0–I2
 
@@ -541,6 +542,15 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Risultato:** Lista a righe con quantità, miniatura 36×50 px e nome a 16 px; sezioni Pokémon, Allenatori ed Energie con totali di copie e riepilogo cliccabile. I conteggi usano le carte riconciliate; categorie dal catalogo, in mancanza intestazioni esplicite dell'import con nota, altrimenti “Da classificare”. Immagini dalla stampa importata o dalla stessa identità, mai da semplici nomi ambigui; segnaposto stabile per miniature assenti o non leggibili. Nessuna modifica al modello, ai validatori o alle integrazioni.
 - **Verifiche Windows:** build/typecheck, quattro test mirati su conteggi/categorie conflittuali/scelta immagini, Electron riconciliazione/vincoli/isolamento e workspace passati. Layout 1440×900, 1280×720, 1241/1240×720, 1024×768 e 640×720; conteggi 16/33/11 con catalogo vuoto, navigazione tra sezioni e dettagli verificati. Corretto il salto alle categorie perché scorra soltanto l'area di lavoro; corretto un contrasto insufficiente dell'etichetta progetto nel selettore aperto. Immagine valida e immagine non leggibile provate con fixture; campione reale TCGdex acquisito nel solo profilo demo (41 stampe, 41 miniature), schermate Lista ispezionate a 1440/1280/640.
 - **Limiti:** il campione non copre tutte le carte della demo; quelle senza identità/immagine usano il segnaposto. Categorie dall'import non attestano legalità. Nessuna generazione AI o nuova prova Linux; nessun merge o release.
+
+### APP-063 — Intestazione e stato della Lista
+
+- **Autorizzazione:** l'utente approva un solo riepilogo con totale carte e stato Standard, con dettagli apribili. Task Ready circoscritto e avviato sul ramo del design system.
+- **Accettazione:** nella vista Lista sparisce “Pronta per controllo”; totale, stato Standard e azioni sono nello stesso riepilogo. Problemi certi subito leggibili; incertezze esplicite, fonti e dettagli apribili. Caricamento/errore non devono sembrare controlli positivi.
+- **Verifica prevista:** build; Electron per lista incerta, invalida e conforme allo snapshot, fonti consultabili, import/export e layout a 1440×900 e 1280×720.
+- **Risultato:** nella Lista totale, stato Standard e azioni sono raccolti in un'intestazione neutra; rimossa l'etichetta di progetto “Pronta per controllo”. “Controlli e fonti” apre incertezze, copertura e riferimenti; problemi certi restano visibili. Il badge positivo richiede conformità allo snapshot, il campione parziale resta da verificare. Caricamento e dati non disponibili hanno stati espliciti; un errore nel salvataggio di una correzione non altera lo stato di disponibilità dei controlli.
+- **Verifiche Windows:** build/typecheck, workspace UI, Standard legality, export, smoke offline e riconciliazione passati. Verificati totale unico, assenza del vecchio badge, apertura dettagli da tastiera, problema certo visibile, conformità dello snapshot e passaggio a data non coperta, copia/reimport e blocco su testo non interpretabile. Layout e contrasto a 1440×900, 1280×720 e viste compatte; schermate della demo con catalogo ispezionate e aggiornate.
+- **Limiti:** verifiche Standard con fixture dichiarate; nessuna modifica ai validatori, nessuna nuova generazione AI o prova Linux. Nessun merge o release.
 
 ## Regola per i blocchi
 

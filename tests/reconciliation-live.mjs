@@ -85,6 +85,7 @@ try {
   const standardDeck = page.getByRole('region', { name: 'Esito Standard occidentale' })
   assert.match(await standardDeck.textContent(), /1 problema certo/)
   assert.match(await standardDeck.textContent(), /7 copie: ne servono esattamente 60/)
+  assert.ok(await standardDeck.locator('.standard-problems').isVisible(), 'Il problema certo è nascosto')
   const rotation = page.getByRole('region', { name: 'Controllo della rotazione Standard occidentale' })
   await rotation.getByLabel('Data di riferimento').fill('2026-04-09')
   assert.match(await rotation.textContent(), /Marchio ammesso: 4 copie/)

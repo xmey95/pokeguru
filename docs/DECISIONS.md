@@ -77,6 +77,12 @@ L'utente sceglie righe con piccole miniature e sezioni Pokémon, Allenatori ed E
 
 La categoria del catalogo ha precedenza; in assenza si usano soltanto sezioni esplicite del testo importato, con nota. Categorie ignote o discordanti restano “Da classificare”. La miniatura privilegia una stampa importata, poi una della stessa identità; nessuna inferenza dall'omonimia. Immagine assente/non leggibile: segnaposto neutro delle stesse dimensioni. Nessuna modifica al catalogo di produzione o alle integrazioni; la demo usa il campione acquisito attraverso il connettore esistente.
 
+### T-52 — Riepilogo unico della Lista (APP-063)
+
+L'utente approva un solo riepilogo con totale carte e stato Standard. Nella vista Lista si rimuove il badge “Pronta per controllo”, che dipende dal totale e non dalla validazione. Intestazione neutra con titolo, totale, badge Standard e azioni; “Controlli e fonti” raccoglie dettagli e incertezze. I problemi certi restano fuori dalla disclosure.
+
+L'esito positivo è “Standard: conforme allo snapshot” soltanto quando il validatore restituisce conformità supportata. Campione parziale e casi indeterminati restano da verificare; caricamento e dati non disponibili sono espliciti. Nessun cambio al significato o al calcolo dei validatori; lo stato generico del progetto nelle altre viste sarà oggetto della loro revisione.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

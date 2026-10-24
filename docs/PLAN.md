@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-063 completato:** riepilogo unico di totale e stato Standard nella Lista; incertezze/fonti apribili e problemi certi visibili. Verifiche UI e import/export passate su Windows. Prossimo punto della revisione condivisa: dettaglio della carta, con proposta di dare precedenza a immagine e testo di gioco rispetto a stampe e righe importate.
+
 - **APP-062 completato:** righe con miniature e categorie Pokémon/Allenatori/Energie con conteggi, dati mancanti espliciti. Build, conteggi, riconciliazione, immagini e layout verificati su Windows; campione catalogo acquisito nel solo profilo demo per la prova con miniature reali. Prossimo punto proposto nella revisione condivisa: intestazione e stato della Lista, da discutere prima di modificare.
 
 - **APP-061 completato:** selettore progetti approvato, con ricerca e creazione nello stesso menu; verifiche Windows di tastiera, responsive e isolamento passate. Prossimo punto della revisione condivisa: struttura della Lista e rappresentazione delle carte; proposte da discutere prima di applicarle.

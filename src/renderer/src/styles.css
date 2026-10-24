@@ -112,20 +112,30 @@ details[open] > summary { margin-bottom: 8px; }
 .file-picker { cursor: pointer; }
 .original-text, .deck-technical { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 8px; }
 .original-text pre { margin-top: 8px; }
-.deck-list-body { display: flex; flex-direction: column; margin-top: 12px; }
+.deck-list-body { display: flex; flex-direction: column; }
 .deck-list-body > .error-banner { order: -3; }
 .deck-list-body > .standard-deck-panel { order: -2; }
 .deck-list-body > .diagnostics { order: -1; }
 .deck-list-body > .content-note { order: 1; }
 .deck-list-body > .deck-technical { order: 2; }
-.standard-deck-panel, .rotation-panel, .construction-panel, .constraint-legality { margin: 12px 0; padding: 12px 16px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: var(--text-sm); line-height: 1.6; }
-.standard-deck-panel.problem { color: var(--danger); background: var(--danger-soft); border-color: var(--danger-line); }
-.standard-deck-panel.review { color: var(--warning); background: var(--warning-soft); border-color: var(--warning-line); }
-.standard-deck-panel > strong { display: block; font-weight: 650; }
+.rotation-panel, .construction-panel, .constraint-legality { margin: 12px 0; padding: 12px 16px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: var(--text-sm); line-height: 1.6; }
+.standard-deck-panel { margin: 0 0 16px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-size: var(--text-sm); line-height: 1.6; }
+.deck-summary-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.deck-summary-title { display: grid; gap: 10px; }
+.deck-summary-title h2 { margin: 0; font-size: var(--text-lg); }
+.deck-summary-status { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.deck-summary-status > strong { font-size: var(--text-md); font-variant-numeric: tabular-nums; }
+.standard-status { padding: 4px 8px; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 600; color: var(--ink-secondary); background: var(--surface-hover); }
+.standard-status[data-tone=problem] { color: var(--danger); background: var(--danger-soft); }
+.standard-status[data-tone=review] { color: var(--warning); background: var(--warning-soft); }
+.standard-status[data-tone=success] { color: var(--success); background: var(--success-soft); }
+.standard-deck-panel .standard-problems { margin: 16px 0 8px; padding: 12px 16px 12px 32px; border-left: 3px solid var(--danger); border-radius: var(--radius-sm); background: var(--danger-soft); color: var(--danger); }
+.standard-details { margin-top: 8px; }
+.standard-details h3 { margin: 16px 0 8px; font-size: var(--text-base); }
+.standard-review { color: var(--warning); }
 .standard-deck-panel p, .rotation-panel p { margin: 8px 0; }
 .standard-deck-panel summary { color: inherit; }
 .standard-deck-panel ul { margin: 8px 0; }
-.standard-explanation { margin-top: 4px; }
 .construction-panel ul { list-style: none; padding: 0; display: grid; gap: 8px; }
 .construction-panel li { display: flex; align-items: baseline; gap: 12px; }
 .construction-status { min-width: 90px; font-weight: 600; }
@@ -350,12 +360,6 @@ details[open] > summary { margin-bottom: 8px; }
 @media (forced-colors: active) { button.active, button.selected { outline: 2px solid Highlight; outline-offset: -3px; } }
 
 .panel-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.baseline-panel > .panel-heading h2 { font-size: var(--text-lg); }
-.standard-deck-panel { display: flex; flex-wrap: wrap; gap: 0 20px; }
-.standard-deck-panel > strong, .standard-deck-panel > div, .standard-deck-panel > details[open] { width: 100%; }
-.standard-deck-panel > details:not([open]) { flex: 0 1 auto; }
-.standard-deck-panel > .standard-explanation { margin-top: 4px; }
-.standard-deck-panel > .standard-explanation > summary { font-size: var(--text-xs); }
 .deck-list-body > .diagnostics { margin: 0 0 4px; padding: 8px 12px; }
 .deck-card-toggle[aria-expanded=true] .deck-card-chevron { transform: rotate(90deg); }
 .meta-disclosure { display: block; padding: 4px 12px; }
