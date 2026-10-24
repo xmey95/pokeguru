@@ -27,8 +27,9 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 
 - **Navigazione:** progetti, tre aree del mazzo, risorse globali. Sidebar desktop di **224 px**.
 - **Lavoro:** contenuto centrale fluido con scorrimento indipendente. La larghezza delle singole componenti risponde allo spazio effettivo tramite container query.
-- **Lista principale:** **384 px fissi** sopra 1240 px di finestra. Quantità, sezioni e stato restano leggibili; nomi lunghi vanno a capo. Lo stato “Pronta per controllo” è neutro: non equivale a Standard verificato.
-- **Finestra stretta:** fino a 1240 px, navigazione a icone e lista in dock inferiore di 220 px, sempre parte della griglia. A 640 px la navigazione diventa orizzontale. Nessun pannello copre il contenuto.
+- **Vista Lista:** una sola lista nell'area di lavoro disponibile, senza riepilogo laterale o dock; decisione confermata dall'utente in APP-060.
+- **Lista persistente in Thread e Matchup:** **384 px fissi** sopra 1240 px di finestra. Quantità, sezioni e stato restano leggibili; nomi lunghi vanno a capo. Lo stato “Pronta per controllo” è neutro: non equivale a Standard verificato.
+- **Finestra stretta:** fino a 1240 px, navigazione a icone e lista in dock inferiore di 220 px solo in Thread e Matchup, sempre parte della griglia. A 640 px la navigazione diventa orizzontale. Nessun pannello copre il contenuto.
 - **Livelli informativi:** decisione e blocchi → dettaglio operativo → provenienza e diagnostica. I dati non vengono eliminati per rendere la schermata più breve.
 
 ## Fondazioni
@@ -73,7 +74,7 @@ Esiti dei comandi e limiti effettivi sono registrati in **APP-059 in BACKLOG.md*
 
 ## Percorso di prova
 
-Schermate registrate: [Lista desktop](design-review/lista-1440.png), [Thread](design-review/thread-1440.png), [Matchup 1280](design-review/matchup-1280.png), [dock a 640](design-review/lista-640.png), [Catalogo](design-review/catalogo-1440.png), [Eventi](design-review/eventi-1280.png), [conferma di adozione](design-review/adozione.png).
+Schermate registrate: [Lista 1440](design-review/lista-1440.png), [Lista 1280](design-review/lista-1280.png), [Thread](design-review/thread-1440.png), [Matchup 1280](design-review/matchup-1280.png), [Lista a 640](design-review/lista-640.png), [dock Thread a 640](design-review/thread-640.png), [Catalogo](design-review/catalogo-1440.png), [Eventi](design-review/eventi-1280.png), [conferma di adozione](design-review/adozione.png).
 
 1. **Lista:** leggere carte con nomi lunghi, aprire una carta, verificare lo stato Standard e provare “Importa / sostituisci”.
 2. **Thread → Piano più rapido:** confrontare principale e proposta; scorrere le due liste e il pannello persistente in modo indipendente; aprire e annullare l'adozione.

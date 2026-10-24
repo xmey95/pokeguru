@@ -31,9 +31,15 @@ async function checkGeometry(page, width, height, view) {
     return { sidebar: rect('.sidebar'), main: rect('.main-content'), deck: rect('.deck-companion'),
       documentWidth: document.documentElement.scrollWidth }
   })
-  assert.ok(boxes.deck && boxes.main && boxes.sidebar)
+  assert.ok(boxes.main && boxes.sidebar)
   assert.ok(boxes.documentWidth <= width + 1, `${view} ${width}: overflow orizzontale`)
-  if (width > 1240) {
+  const hasCompanion = view === 'thread' || view === 'matchup'
+  if (!hasCompanion) {
+    assert.equal(boxes.deck, null, `${view}: riepilogo lista duplicato`)
+    assert.equal(boxes.main.right, width, `${view}: spazio destro non recuperato`)
+    assert.equal(boxes.main.bottom, height, `${view}: spazio inferiore non recuperato`)
+  } else if (width > 1240) {
+    assert.ok(boxes.deck)
     assert.equal(boxes.deck.width, 384, `${view} ${width}: larghezza della lista`)
     assert.ok(boxes.main.right <= boxes.deck.left + 1, `${view} ${width}: lista sopra il contenuto`)
     assert.ok(boxes.sidebar.right <= boxes.main.left + 1, `${view} ${width}: barra sopra il contenuto`)
@@ -41,8 +47,8 @@ async function checkGeometry(page, width, height, view) {
     assert.ok(boxes.main.bottom <= boxes.deck.top + 1, `${view} ${width}: dock sopra il contenuto`)
     assert.equal(boxes.deck.bottom, height, `${view} ${width}: dock non ancorato al basso`)
   }
-  assert.ok(await page.getByTestId('deck-companion').isVisible())
-  if (width === 1440 && view === 'lista') {
+  if (hasCompanion) assert.ok(await page.getByTestId('deck-companion').isVisible())
+  if (width === 1440 && view === 'thread') {
     const ratios = await page.evaluate(() => {
       const channels = (color) => color.match(/\d+/g).slice(0, 3).map(Number)
       const luminance = (color) => channels(color).map((value) => {
@@ -63,7 +69,7 @@ async function checkGeometry(page, width, height, view) {
     assert.ok(ratios.every((value) => value >= 4.5), `Contrasto insufficiente: ${ratios.join(', ')}`)
   }
   await page.locator('.main-content').evaluate((element) => { element.scrollTop = 0 })
-  await page.locator('.companion-list').evaluate((element) => { element.scrollTop = 0 })
+  if (hasCompanion) await page.locator('.companion-list').evaluate((element) => { element.scrollTop = 0 })
   await auditDesignSystem(page, 'Design system '+width)
     await page.screenshot({ path: join(screenshots, `workspace-${view}-${width}.png`) })
 }
@@ -113,7 +119,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.getByLabel('Nome progetto').fill('Mega Absol / Mega Audino')
   await page.getByRole('button', { name: 'Crea progetto' }).click()
-  await page.getByTestId('deck-companion').waitFor()
+  await page.getByLabel('Testo lista').waitFor()
   await checkGeometry(page, 1440, 900, 'empty')
   await checkGeometry(page, 1280, 720, 'empty')
   assert.ok(await page.locator('.project-button').isVisible(), 'Il progetto sparisce a 1280×720')
@@ -129,6 +135,21 @@ try {
   assert.match(await firstCard.innerText(), /Rotazione: Catalogo locale non sincronizzato/)
   assert.match(await firstCard.innerText(), /Ammissione: Catalogo locale non sincronizzato/)
   await firstCard.locator('.deck-card-toggle').click()
+  for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
+    await checkGeometry(page, width, height, 'lista')
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.locator('.workspace-nav').getByRole('button', { name: 'Thread' }).focus()
+  assert.equal(await page.locator('.workspace-nav button:focus').evaluate((el) => getComputedStyle(el).outlineWidth), '3px')
+  await page.keyboard.press('Enter')
+  await page.getByTestId('deck-companion').waitFor()
+  await page.locator('.new-thread-details > summary').click()
+  await page.getByLabel('Titolo').fill('Piano più rapido')
+  await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.locator('.manual-candidate > summary').click()
+  await page.getByLabel('Lista completa proposta').fill(candidateDeck)
+  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await page.locator('.thread-candidate.featured > summary').waitFor()
   const scrolls = await page.evaluate(() => {
     const main = document.querySelector('.main-content')
     const list = document.querySelector('.companion-list')
@@ -141,27 +162,12 @@ try {
   })
   assert.ok(scrolls.listScrollable && scrolls.afterList[0] === 0 && scrolls.afterList[1] > 0)
   assert.ok(scrolls.afterMain[0] > 0 && scrolls.afterMain[1] === scrolls.afterList[1])
-  for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
-    await checkGeometry(page, width, height, 'lista')
-    assert.match(await page.getByTestId('deck-companion').textContent(), /Mega Absol ex/)
-  }
-  await page.setViewportSize({ width: 1440, height: 900 })
   await page.locator('.companion-list').focus()
   await page.keyboard.press('PageDown')
   await page.waitForFunction(() => document.querySelector('.companion-list').scrollTop > 0)
   await page.getByRole('button', { name: 'Vista breve', exact: true }).click()
   assert.match(await page.getByTestId('deck-companion').textContent(), /60.*Pokémon/s)
   await page.getByRole('button', { name: 'Vista completa', exact: true }).click()
-  await page.locator('.workspace-nav').getByRole('button', { name: 'Thread' }).focus()
-  assert.equal(await page.locator('.workspace-nav button:focus').evaluate((el) => getComputedStyle(el).outlineWidth), '3px')
-  await page.keyboard.press('Enter')
-  await page.locator('.new-thread-details > summary').click()
-  await page.getByLabel('Titolo').fill('Piano più rapido')
-  await page.getByRole('button', { name: 'Crea thread' }).click()
-  await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill(candidateDeck)
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
-  await page.locator('.thread-candidate.featured > summary').waitFor()
   assert.match(await page.locator('.thread-candidate.featured').textContent(), /Lista principale completa/)
   assert.match(await page.locator('.thread-candidate.featured').textContent(), /Lista proposta completa/)
   const reviewLabel = await page.locator('.thread-candidate.featured .thread-review details summary').textContent()

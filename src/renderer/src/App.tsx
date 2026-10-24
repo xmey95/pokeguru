@@ -213,9 +213,10 @@ export function App() {
   }
 
   const importProblems = baseline?.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH') ?? []
+  const showDeckCompanion = Boolean(selected && view === 'project' && activeTab !== 'deck')
 
   return (
-    <div className={`app-shell ${selected && view === 'project' ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
+    <div className={`app-shell ${showDeckCompanion ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
       <a className="skip-link" href="#main-content">Vai al contenuto</a>
       <header className="topbar">
         <span>Pokéguru <b aria-hidden="true">/</b> {view === 'project' ? activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup' : view === 'catalog' ? 'Catalogo' : view === 'tournament' ? 'Eventi' : 'Impostazioni AI'}</span>
@@ -396,7 +397,7 @@ export function App() {
             </section>
           )}
         </main>
-        {selected && view === 'project' && <DeckCompanion key={selected.id} baseline={baseline} loading={baselineLoading} />}
+        {selected && showDeckCompanion && <DeckCompanion key={selected.id} baseline={baseline} loading={baselineLoading} />}
       </div>
     </div>
   )

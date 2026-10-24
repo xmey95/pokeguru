@@ -63,6 +63,10 @@ Il feedback utente autorizza una rifinitura completa del renderer sul `dev` aggi
 
 Scelte reversibili nel renderer: nessuna modifica a schema, validatori, persistenza o integrazioni. Le prove UI con fixture non certificano le conclusioni AI. La resa Linux e ad alta scala del sistema resta da verificare; merge, I4 e release non inclusi nell'autorizzazione di APP-059.
 
+### T-49 — Lista unica nella vista Lista (APP-060)
+
+Durante la revisione condivisa l'utente riconosce il riepilogo destro come duplicazione nella vista Lista. In questa vista le carte occupano l'area di lavoro disponibile, anche quando la lista è vuota; nessun pannello destro o dock. Thread e Matchup conservano la lista persistente con larghezza e comportamento di T-48. La scelta modifica solo il layout del renderer.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

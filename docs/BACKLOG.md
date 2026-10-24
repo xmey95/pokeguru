@@ -66,6 +66,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-057** | Evidenze multi evento e guide Matchup verificabili | Funzionalità | R-06, R-10, R-13 / qualità pre-I4 | P0 / M | APP-054–056 | Done |
 | **APP-058** | Evidenze Catalogo ed Eventi per ogni turno AI dei Thread | Funzionalità | R-06, R-07, R-08, R-11 / qualità pre-I4 | P0 / M | APP-054–057, APP-041, C-19 | Done |
 | **APP-059** | Design system e rifinitura completa dell’interfaccia desktop | UI/UX | R-01–R-13 / qualità pre-I4 | P0 / M | APP-051–058; richiesta utente 24-10-2026 | Done |
+| **APP-060** | Eliminare la lista duplicata dalla vista Lista | UI/UX | R-03, R-08, R-10 / qualità pre-I4 | P0 / S | APP-059; conferma utente durante la revisione condivisa | Done |
 
 ## Task dettagliati I0–I2
 
@@ -513,6 +514,14 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Risultato:** audit approfondito in `DESIGN_SYSTEM.md`, token semantici, componenti e layout separati, icone SVG, sidebar 224 px, lista fissa 384 px e dock 220 px. Nomi lunghi a capo, tipografia sans, controlli uniformi, proposta distinta, metadati e meccaniche secondari apribili. Primo progetto creato nel contenuto; focus dell'importazione e dei vincoli, selettore Matchup responsive, ritorno del focus e visibilità degli errori nel dialogo di adozione corretti. Database, validatori e integrazioni invariati.
 - **Verifiche eseguite su Windows:** build/typecheck; 103 test locali passati, 13 live esclusi; `workspace-ui-live.mjs` a 1440×900, 1280×720, 1241/1240×720, 1024×768 e 640×720; risorse globali a 640×580. `catalog-ui-live.mjs`, `tournament-ui-live.mjs --offline` (Play e Regional con fixture), `ai-settings-offline.mjs`, `deck-adoption-live.mjs`, `threads-live.mjs`, `threads-ai-live.mjs --offline`, `electron-smoke.mjs --offline` passati. Audit del testo renderizzato: contrasto, minimo 12 px, bersagli e nomi accessibili; Tab/Shift+Tab, Escape, ritorno del focus, PageDown nella lista e scroll indipendenti. Piano Matchup leggibile nella prima schermata a 1280×720. Schermate ispezionate e salvate in `docs/design-review/`; avvio vuoto verificato anche a 1440/1280. `git diff --check` pulito.
 - **Limiti:** fixture dichiarate per guida, Catalogo ed Eventi; nessuna nuova generazione Codex o certificazione delle conclusioni. Prove eseguite su Windows; Linux, lettore di schermo e scala del sistema oltre il 100% non verificati in questa sessione. Ramo locale pronto alla prova; nessun merge, push di release o avvio I4.
+
+### APP-060 — Una sola lista nella vista Lista
+
+- **Autorizzazione:** durante la revisione condivisa, l'utente conferma che il pannello destro nella vista Lista è una duplicazione. Task circoscritto, criteri e dipendenze risolti; selezionato da Ready e avviato sul ramo del design system.
+- **Accettazione:** Lista, vuota o caricata, occupa l'area disponibile senza riepilogo destro o dock; Thread e Matchup conservano il pannello persistente da 384 px desktop e il dock responsive.
+- **Verifica prevista:** build e percorso Electron del workspace alle risoluzioni già coperte, con ispezione visiva di Lista a 1440×900 e 1280×720. Aggiornare le assunzioni del test esistente sul pannello.
+- **Risultato:** una sola lista nella vista Lista; pannello laterale e dock riservati a Thread e Matchup. Un'unica condizione governa sia la griglia sia il componente, senza colonne vuote.
+- **Verifiche:** build/typecheck e percorso Electron workspace Windows passati a 1440×900, 1280×720, 1241/1240×720, 1024×768 e 640×720; lista vuota/caricata, spazio recuperato, pannello nelle altre viste, tastiera e scroll indipendente. Schermate Lista desktop ispezionate. Guida di prova sintetica; nessuna nuova prova AI o Linux. Prosegue la revisione condivisa, senza merge o release.
 
 ## Regola per i blocchi
 
