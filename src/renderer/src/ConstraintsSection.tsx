@@ -54,7 +54,7 @@ export function ConstraintsSection({ projectId, baseline, selectedIdentityId, se
     setEditingId(null)
     setIdentityId(selectedIdentityId)
     setPrintId('')
-    document.getElementById('deck-constraints')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    document.getElementById('deck-constraints')?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }, [selectedIdentityId, selectionVersion])
 
   const cards = useMemo(() => baseline ? buildDeckCards(baseline, catalog, reconciliation) : [],
@@ -80,7 +80,8 @@ export function ConstraintsSection({ projectId, baseline, selectedIdentityId, se
     setKind(constraint.kind)
     setQuantity(String(constraint.quantity))
     setError(null)
-    document.getElementById('constraint-form')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    document.querySelector<HTMLElement>('#constraint-form select')?.focus({ preventScroll: true })
+    document.getElementById('constraint-form')?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }
 
   async function save(event: FormEvent<HTMLFormElement>): Promise<void> {

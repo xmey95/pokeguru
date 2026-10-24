@@ -1,3 +1,4 @@
+import { auditDesignSystem } from './design-system-audit.mjs'
 import assert from 'node:assert/strict'
 import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -21,6 +22,7 @@ try {
   for (const [width, height] of [[1440, 900], [1280, 720]]) {
     await page.setViewportSize({ width, height })
     assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
+    await auditDesignSystem(page, 'Design system '+width)
     await page.screenshot({ path: join(workspace, 'node_modules', `content-ai-${width}.png`) })
   }
   assert.match(await page.getByText('Codex non disponibile').textContent(), /Codex non disponibile/)

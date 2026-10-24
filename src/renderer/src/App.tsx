@@ -10,6 +10,7 @@ import { ConstraintsSection } from './ConstraintsSection'
 import { ExportButton } from './ExportButton'
 import { ThreadsSection } from './ThreadsSection'
 import { TournamentSection } from './TournamentSection'
+import { Icon } from './Icon'
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
@@ -52,6 +53,9 @@ export function App() {
   const [constraintSelectionVersion, setConstraintSelectionVersion] = useState(0)
   const [showCompactCreate, setShowCompactCreate] = useState(false)
   const selectionVersion = useRef(0)
+
+  useEffect(() => { document.getElementById('main-content')?.scrollTo(0, 0) }, [view, activeTab, selected?.id])
+  useEffect(() => { if (showCompactCreate) document.getElementById('compact-project-name')?.focus() }, [showCompactCreate])
 
   async function selectProject(id: string, known?: Project): Promise<void> {
     const version = ++selectionVersion.current
@@ -202,21 +206,27 @@ export function App() {
     }
   }
 
+  function focusImport() {
+    const input = document.getElementById('deck-text')
+    input?.focus({ preventScroll: true })
+    input?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }
+
   const importProblems = baseline?.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH') ?? []
 
   return (
     <div className={`app-shell ${selected && view === 'project' ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
       <a className="skip-link" href="#main-content">Vai al contenuto</a>
       <header className="topbar">
-        <span>POKÉGURU <b>/</b> {view === 'project' ? 'WORKSPACE DEL MAZZO' : view === 'catalog' ? 'CATALOGO' : view === 'tournament' ? 'EVENTI' : 'IMPOSTAZIONI AI'}</span>
-        <span>ARCHIVIO LOCALE</span>
+        <span>Pokéguru <b aria-hidden="true">/</b> {view === 'project' ? activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup' : view === 'catalog' ? 'Catalogo' : view === 'tournament' ? 'Eventi' : 'Impostazioni AI'}</span>
+        <span>Standard occidentale</span>
       </header>
 
       <div className="workspace">
         <aside className="sidebar" aria-label="Progetti di mazzo">
           <div className="brand">
-            <span className="brand-mark" aria-hidden="true">P<span>.</span></span>
-            <div><strong>Pokéguru</strong><span>DECK INTELLIGENCE</span></div>
+            <span className="brand-mark"><Icon name="brand" /></span>
+            <div><strong>Pokéguru</strong><span>Analisi competitiva</span></div>
           </div>
           <div className="sidebar-heading">
             <div>
@@ -224,28 +234,6 @@ export function App() {
             </div>
             <span className="count" aria-label={`${projects.length} progetti`}>{projects.length}</span>
           </div>
-
-          {!selected && view === 'project' && !showCompactCreate && <form className="create-form" onSubmit={(event) => void createProject(event)}>
-            <label htmlFor="project-name">Nome progetto</label>
-            <input
-              id="project-name"
-              name="project-name"
-              autoComplete="off"
-              maxLength={120}
-              placeholder="Es. Mega Absol / Mega Audino"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-            />
-            <label htmlFor="project-format">Formato</label>
-            <select id="project-format" defaultValue="STANDARD">
-              <option value="STANDARD">Standard</option>
-            </select>
-            <span className="fixed-circuit">Circuito: Occidentale / internazionale</span>
-            <button className="primary-button" type="submit" disabled={saving || loading || !name.trim()}>
-              {saving ? 'Salvataggio…' : 'Crea progetto'}
-            </button>
-          </form>}
 
           {loading ? <p className="sidebar-note">Caricamento…</p> : projects.length === 0 ? (
             <p className="sidebar-note">Nessun progetto.</p>
@@ -273,21 +261,21 @@ export function App() {
           )}
           <nav className="workspace-nav" aria-label="Aree del progetto">
             <span className="rail-caption">Area di lavoro</span>
-            <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('deck') }} title="Lista"><span className="nav-index" aria-hidden="true">01</span><span className="nav-abbrev" aria-hidden="true">L</span>Lista</button>
-            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('threads') }} title="Thread"><span className="nav-index" aria-hidden="true">02</span><span className="nav-abbrev" aria-hidden="true">T</span>Thread</button>
-            <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('matchups') }} title="Matchup"><span className="nav-index" aria-hidden="true">03</span><span className="nav-abbrev" aria-hidden="true">M</span>Matchup</button>
+            <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('deck') }} title="Lista" aria-label="Lista"><Icon name="deck" /><span className="nav-label">Lista</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('threads') }} title="Thread" aria-label="Thread"><Icon name="thread" /><span className="nav-label">Thread</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('matchups') }} title="Matchup" aria-label="Matchup"><Icon name="matchup" /><span className="nav-label">Matchup</span></button>
           </nav>
           <nav className="resource-nav" aria-label="Risorse globali">
             <span className="rail-caption">Risorse</span>
-            <button type="button" className={view === 'catalog' ? 'active' : ''} onClick={() => { setCatalogFocusIdentityId(null); setView('catalog') }} title="Catalogo"><span aria-hidden="true">⌕</span>Catalogo</button>
-            <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi"><span aria-hidden="true">◷</span>Eventi</button>
-            <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI"><span aria-hidden="true">⚙</span>Impostazioni AI</button>
+            <button type="button" className={view === 'catalog' ? 'active' : ''} onClick={() => { setCatalogFocusIdentityId(null); setView('catalog') }} title="Catalogo" aria-label="Catalogo" aria-current={view === 'catalog' ? 'page' : undefined}><Icon name="catalog" /><span className="nav-label">Catalogo</span></button>
+            <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi" aria-label="Eventi" aria-current={view === 'tournament' ? 'page' : undefined}><Icon name="event" /><span className="nav-label">Eventi</span></button>
+            <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI" aria-label="Impostazioni AI" aria-current={view === 'ai' ? 'page' : undefined}><Icon name="settings" /><span className="nav-label">Impostazioni AI</span></button>
           </nav>
-          <button type="button" className="compact-create-trigger" aria-expanded={showCompactCreate} onClick={() => { setView('project'); setShowCompactCreate((value) => !value) }} title="Nuovo progetto">＋ <span>Nuovo progetto</span></button>
+          <button type="button" className="compact-create-trigger" aria-expanded={showCompactCreate} onClick={() => { setView('project'); setShowCompactCreate((value) => !value) }} title="Nuovo progetto" aria-label="Nuovo progetto"><Icon name="plus" /><span>Nuovo progetto</span></button>
           <div className="local-indicator"><span aria-hidden="true" /> Archivio locale</div>
         </aside>
 
-        <main id="main-content" className="main-content">
+        <main id="main-content" className="main-content" tabIndex={-1}>
           {showCompactCreate && <form className="compact-create-panel" onSubmit={(event) => void createProject(event)}>
             <div className="panel-heading"><h2>Nuovo progetto</h2><button type="button" className="text-button" onClick={() => setShowCompactCreate(false)}>Chiudi</button></div>
             <label htmlFor="compact-project-name">Nome progetto</label>
@@ -321,26 +309,27 @@ export function App() {
                     <div className="deck-heading-actions">
                       <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
                       <ExportButton key={`${selected.id}:${baseline.importedAt}`} baseline={baseline} />
-                      <button type="button" className="secondary-button" onClick={() => document.getElementById('deck-text')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>Importa / sostituisci</button>
+                      <button type="button" className="secondary-button" onClick={() => focusImport()}>Importa / sostituisci</button>
                     </div>
                   </div>
-                  <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
                   {baseline.declaredTotal !== null && baseline.declaredTotal !== baseline.interpretedTotal && <p className="diagnostics">Totale dichiarato: {baseline.declaredTotal}; interpretato: {baseline.interpretedTotal}.</p>}
-                  {baseline.diagnostics.length > 0 && (
+                  {importProblems.length > 0 && (
                     <details className={importProblems.length ? 'diagnostics' : 'project-meta-details'} role={importProblems.length ? 'status' : undefined}>
                       <summary>{importProblems.length ? `Testo importato · ${importProblems.length} ${importProblems.length === 1 ? 'problema' : 'problemi'} da correggere` : 'Note sul testo importato'}</summary>
                       <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
                     </details>
                   )}
                   <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onConstrain={selectConstraintTarget} />
+                  <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
+                  {importProblems.length === 0 && baseline.diagnostics.length > 0 && <details className="project-meta-details"><summary>Note sul testo importato</summary><ul>{baseline.diagnostics.map((item, index) => <li key={index}>{item.message}</li>)}</ul></details>}
                   <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>
                 </div>
               ) : !error && (
                 <div className="empty-deck">
-                  <div className="empty-icon" aria-hidden="true">◇</div>
+                  <div className="empty-icon"><Icon name="deck" /></div>
                   <h2>Nessuna lista di carte</h2>
                   <p>Incolla una lista o scegli un file .txt.</p>
-                  <button type="button" className="primary-button" onClick={() => document.getElementById('deck-text')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>Aggiungi una lista</button>
+                  <button type="button" className="primary-button" onClick={() => focusImport()}>Aggiungi una lista</button>
                 </div>
               )}
               {!baselineLoading && <ConstraintsSection key={selected.id} projectId={selected.id} baseline={baseline}
@@ -375,12 +364,33 @@ export function App() {
           ) : (
             <section className="welcome" aria-label="Benvenuto">
               <span className="eyebrow">Inizia da qui</span>
-              <h1>Ogni mazzo parte da un’idea.</h1>
-              <p>Crea un progetto per conservarne il percorso. Potrai aprirlo di nuovo anche dopo aver chiuso l’app.</p>
+              <h1>Il tuo prossimo mazzo.</h1>
+              <p>Crea un progetto, importa la lista e confronta le varianti.</p>
               <button type="button" className="primary-button welcome-create" onClick={() => setShowCompactCreate(true)}>Inizia un progetto</button>
+              {!showCompactCreate && <form className="create-form" onSubmit={(event) => void createProject(event)}>
+                <label htmlFor="project-name">Nome progetto</label>
+                <input
+                  id="project-name"
+                  name="project-name"
+                  autoComplete="off"
+                  maxLength={120}
+                  placeholder="Es. Mega Absol / Mega Audino"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  required
+                />
+                <label htmlFor="project-format">Formato</label>
+                <select id="project-format" defaultValue="STANDARD">
+                  <option value="STANDARD">Standard</option>
+                </select>
+                <span className="fixed-circuit">Circuito: Occidentale / internazionale</span>
+                <button className="primary-button" type="submit" disabled={saving || loading || !name.trim()}>
+                  {saving ? 'Salvataggio…' : 'Crea progetto'}
+                </button>
+              </form>}
               <div className="welcome-steps">
                 <span>01 <strong>Crea un progetto</strong></span>
-                <span>02 <strong>Costruisci il mazzo</strong></span>
+                <span>02 <strong>Importa la lista</strong></span>
                 <span>03 <strong>Analizza e migliora</strong></span>
               </div>
             </section>

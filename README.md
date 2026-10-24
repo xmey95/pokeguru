@@ -26,6 +26,12 @@ Sul ramo `task/content-hierarchy`, derivato dal workspace integrato, la Lista mo
 
 L'integrazione del workspace e dei testi in `dev` è tracciata dalla [PR #4](https://github.com/xmey95/pokeguru/pull/4). `main` e la release v0.1.0 non cambiano con questa PR.
 
+### Design system (APP-059)
+
+Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con token condivisi, tipografia sans, icone SVG, controlli leggibili e stati coerenti. La sidebar desktop è larga **224 px**; la lista principale rimane fissa a **384 px**, con dock di 220 px sotto la soglia di 1240 px. Il primo progetto si crea nell'area centrale. Metadati e metodo precedono meno spesso carte, differenze e strategia; focus e scorrimento sono verificati anche da tastiera.
+
+L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.
+
 ## Versione scaricabile
 
 Scarica [Pokéguru v0.1.0](https://github.com/xmey95/pokeguru/releases/tag/v0.1.0): `Pokeguru-0.1.0-linux-x86_64.AppImage` su Linux oppure `Pokeguru-0.1.0-windows-x64-setup.exe` su Windows. Il file `SHA256SUMS.txt` permette di controllare il download. Su Linux rendi eseguibile l'AppImage (`chmod +x`) e avviala; su Windows usa l'installer. I pacchetti iniziali non sono firmati digitalmente. La [prova della validazione Standard occidentale](#prova-della-validazione-standard-occidentale) e le prove dei thread più avanti descrivono i percorsi da verificare prima di I4.

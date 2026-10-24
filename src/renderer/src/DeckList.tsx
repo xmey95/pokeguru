@@ -1,3 +1,4 @@
+import { Icon } from './Icon'
 import { useEffect, useMemo, useState } from 'react'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { CatalogView } from '../../shared/catalog'
@@ -137,7 +138,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
           <button type="button" className="deck-card-toggle" aria-expanded={open} onClick={() => setExpanded(open ? null : card.key)}>
             <span className="deck-card-quantity">{card.quantity}×</span>
             <span className="deck-card-title"><strong>{card.name}</strong>{cardStatus(card.status, catalog) && <small>{cardStatus(card.status, catalog)}</small>}</span>
-            <span className="deck-card-chevron" aria-hidden="true">{open ? '−' : '+'}</span>
+            <span className="deck-card-chevron"><Icon name="chevron" /></span>
           </button>
           {open && <div className="deck-card-detail">
             {card.identityId && <button type="button" className="secondary-button" onClick={() => onConstrain(card.identityId!)}>Aggiungi vincolo su questa carta</button>}

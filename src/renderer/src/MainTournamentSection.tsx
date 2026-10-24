@@ -82,7 +82,8 @@ export function MainTournamentSection() {
       <div className="catalog-filters"><label>Evento archiviato
         <select value={selectedEventId ?? snapshot.eventId} onChange={(event) => void choose(event.target.value)}>
           {events.map((item) => <option value={item.eventId} key={item.eventId}>{date(item.date)} · {item.name}</option>)}
-        </select></label><span className="content-note">{events.length} eventi disponibili offline</span></div>
+        </select></label><label>Filtra giocatore o mazzo<input value={query}
+        onChange={(event) => setQuery(event.target.value)} placeholder="Es. Hydrapple" /></label></div><p className="content-note">{events.length} {events.length === 1 ? 'evento disponibile offline' : 'eventi disponibili offline'}</p>
       <div className="meta-provenance"><strong>{snapshot.name}</strong>
         <span>{date(snapshot.date)} · {snapshot.country} · {snapshot.players} partecipanti dichiarati · Standard occidentale</span>
         <span>Acquisito {date(snapshot.fetchedAt)} · Limitless tournament database</span>
@@ -92,15 +93,9 @@ export function MainTournamentSection() {
         <div><strong>{snapshot.coverage.listedDecks}</strong><span>Archetipi indicati</span></div>
         <div><strong>{snapshot.coverage.complete60Lists}</strong><span>Liste da 60 acquisite</span></div>
       </div>
-      <details className="catalog-set-coverage"><summary>Copertura e metodo</summary>
-        <p className="content-note">{snapshot.coverage.returnedParticipants}/{snapshot.players} partecipanti dichiarati appaiono nella pagina risultati; {snapshot.coverage.fetchedLists} liste acquisite, {snapshot.coverage.noListLink} righe senza collegamento lista. Ogni blocco acquisisce fino a 7 pagine, con massimo 16 liste rappresentative per evento; i link delle altre liste restano disponibili nella fonte.</p>
-        <p className="content-note">La fonte principale non pubblica abbinamenti in questa pagina. Statistiche di matchup basate sui match richiedono la fonte Play con risultati espliciti.</p>
-      </details>
-      <div className="catalog-filters"><label>Filtra giocatore o mazzo<input value={query}
-        onChange={(event) => setQuery(event.target.value)} placeholder="Es. Hydrapple" /></label></div>
       <div className="tournament-layout"><div className="tournament-players" aria-label="Piazzamenti Regional">
         {filtered.map((item) => <button type="button" key={`${item.placing}:${item.playerName}`}
-          className={selected === item ? 'active' : ''} onClick={() => setSelectedPlace(item.placing)}>
+          className={selected === item ? 'active' : ''} aria-pressed={selected === item} onClick={() => setSelectedPlace(item.placing)}>
           <strong>{item.placing}° · {item.playerName}</strong><span>{item.deckName ?? 'Archetipo non indicato'} · {item.cardTotal === 60 ? '60 carte' : item.listUrl ? 'Lista da acquisire' : 'Nessuna lista'}</span>
         </button>)}
         {!filtered.length && <p className="content-note">Nessun piazzamento corrisponde al filtro.</p>}
@@ -113,6 +108,10 @@ export function MainTournamentSection() {
             <li key={`${card.set}:${card.number}:${index}`}><strong>{card.count}× {card.name}</strong><span>{card.set} {card.number}</span></li>)}</ul>
         </div>)}</div> : <p className="content-note">Lista non ancora acquisita in questo archivio.</p>}
       </> : <p className="content-note">Seleziona un piazzamento.</p>}</div></div>
+      <details className="catalog-set-coverage"><summary>Copertura e metodo</summary>
+        <p className="content-note">{snapshot.coverage.returnedParticipants}/{snapshot.players} partecipanti dichiarati appaiono nella pagina risultati; {snapshot.coverage.fetchedLists} liste acquisite, {snapshot.coverage.noListLink} righe senza collegamento lista. Ogni blocco acquisisce fino a 7 pagine, con massimo 16 liste rappresentative per evento; i link delle altre liste restano disponibili nella fonte.</p>
+        <p className="content-note">La fonte principale non pubblica abbinamenti in questa pagina. Statistiche di matchup basate sui match richiedono la fonte Play con risultati espliciti.</p>
+      </details>
     </>}
   </section>
 }

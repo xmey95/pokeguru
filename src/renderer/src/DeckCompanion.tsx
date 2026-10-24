@@ -49,17 +49,17 @@ export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | 
   return <aside className={`deck-companion ${brief ? 'brief' : ''}`} aria-label="Lista principale persistente" data-testid="deck-companion">
     <div className="companion-top">
       <h2>Lista principale</h2>
-      <button type="button" className="companion-view-button" onClick={() => setBrief((value) => !value)}>
+      <button type="button" className="companion-view-button" aria-pressed={brief} onClick={() => setBrief((value) => !value)}>
         {brief ? 'Vista completa' : 'Vista breve'}
       </button>
     </div>
     <div className="companion-summary">
-      <div className="companion-total"><strong>{baseline?.interpretedTotal ?? 0}<span>/60</span></strong><span className="companion-state">{deckState(baseline, loading)}</span></div>
+      <div className="companion-total"><strong>{baseline?.interpretedTotal ?? 0}<span>/60</span></strong><span className="companion-state" data-tone={baseline && (baseline.interpretedTotal !== 60 || baseline.diagnostics.some((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH')) ? 'warning' : 'neutral'}>{deckState(baseline, loading)}</span></div>
       {namedGroups.length > 0 ? <div className="companion-counts">{namedGroups.map((group, index) =>
         <div key={`${group.name}-${index}`}><strong>{group.total}</strong><span>{group.name}</span></div>)}</div>
         : baseline && <p className="companion-count-note">Sezioni non indicate nel testo.</p>}
     </div>
-    <div className="companion-list" aria-label={brief ? 'Prime carte della lista principale' : 'Carte della lista principale'}>
+    <div className="companion-list" tabIndex={0} role="region" aria-label={brief ? 'Prime carte della lista principale' : 'Carte della lista principale'}>
       {loading ? <p>Caricamento lista…</p> : !baseline ? <p>Aggiungi una lista dalla sezione Lista.</p>
         : brief ? <section className="companion-group"><h3>Prime carte</h3>{preview.map((line) => <div className="companion-row" key={line.lineNumber}>
           <strong>{line.quantity}</strong><span title={line.name}>{line.name}</span></div>)}</section>

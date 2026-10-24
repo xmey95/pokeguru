@@ -103,7 +103,7 @@ export function AiSettings() {
     <div className="settings-panel">
       <div className="panel-heading"><h2>Codex</h2>
         <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || busy}>Aggiorna stato</button></div>
-      <p className="connection-state">{loading ? 'Verifica in corso…' : connection?.account === 'chatgpt' ? `Connesso con ChatGPT${connection.plan ? ` · piano ${connection.plan}` : ''}` : connection?.account === 'apiKey' ? 'Connesso con chiave API Codex' : connection?.account === 'other' ? 'Modalità di accesso non supportata da questa versione' : connection ? 'Accesso richiesto' : 'Codex non disponibile'}</p>
+      <p className="connection-state" role="status" data-connected={connection?.account === 'chatgpt' || connection?.account === 'apiKey'}>{loading ? 'Verifica in corso…' : connection?.account === 'chatgpt' ? `Connesso con ChatGPT${connection.plan ? ` · piano ${connection.plan}` : ''}` : connection?.account === 'apiKey' ? 'Connesso con chiave API Codex' : connection?.account === 'other' ? 'Modalità di accesso non supportata da questa versione' : connection ? 'Accesso richiesto' : 'Codex non disponibile'}</p>
       <details><summary>Gestione delle credenziali</summary><p className="content-note">L’accesso è gestito da Codex sul computer. Pokéguru non salva password, chiavi o token nel proprio archivio.</p></details>
       <div className="settings-actions">
         {!connection?.account && <button type="button" className="secondary-button" onClick={() => void login()} disabled={busy || loading}>Accedi con ChatGPT</button>}

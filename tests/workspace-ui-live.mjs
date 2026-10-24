@@ -1,3 +1,4 @@
+import { auditDesignSystem } from './design-system-audit.mjs'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -63,7 +64,8 @@ async function checkGeometry(page, width, height, view) {
   }
   await page.locator('.main-content').evaluate((element) => { element.scrollTop = 0 })
   await page.locator('.companion-list').evaluate((element) => { element.scrollTop = 0 })
-  await page.screenshot({ path: join(screenshots, `workspace-${view}-${width}.png`) })
+  await auditDesignSystem(page, 'Design system '+width)
+    await page.screenshot({ path: join(screenshots, `workspace-${view}-${width}.png`) })
 }
 
 function seedMatchup() {
@@ -144,7 +146,14 @@ try {
     assert.match(await page.getByTestId('deck-companion').textContent(), /Mega Absol ex/)
   }
   await page.setViewportSize({ width: 1440, height: 900 })
+  await page.locator('.companion-list').focus()
+  await page.keyboard.press('PageDown')
+  await page.waitForFunction(() => document.querySelector('.companion-list').scrollTop > 0)
+  await page.getByRole('button', { name: 'Vista breve', exact: true }).click()
+  assert.match(await page.getByTestId('deck-companion').textContent(), /60.*Pokémon/s)
+  await page.getByRole('button', { name: 'Vista completa', exact: true }).click()
   await page.locator('.workspace-nav').getByRole('button', { name: 'Thread' }).focus()
+  assert.equal(await page.locator('.workspace-nav button:focus').evaluate((el) => getComputedStyle(el).outlineWidth), '3px')
   await page.keyboard.press('Enter')
   await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Piano più rapido')
@@ -198,7 +207,7 @@ try {
     assert.ok(await page.locator('.matchup-fields').isVisible())
     if (width === 1280) {
       const plan = await page.getByText('Come giocare il matchup').boundingBox()
-      assert.ok(plan && plan.y < height, 'Il piano Matchup non compare nella prima schermata a 1280×720')
+      assert.ok(plan && plan.y + 80 < height, 'Il testo del piano Matchup non compare nella prima schermata a 1280×720')
     }
   }
   for (const name of ['Catalogo', 'Eventi', 'Impostazioni AI']) {
@@ -211,5 +220,6 @@ try {
   console.log('WORKSPACE UI OK: 1440×900, 1280×720, 1241×720, 1240×720, 1024×768, 640×720; Lista, Thread, Matchup; Catalogo, Eventi e Impostazioni AI a 640×580; tastiera, lista persistente e assenza di sovrapposizioni.')
 } finally {
   await application?.close()
-  rmSync(profile, { recursive: true, force: true })
+  if (process.argv.includes('--keep-profile')) console.log('Profilo di prova con fixture UI: ' + profile)
+  else rmSync(profile, { recursive: true, force: true })
 }

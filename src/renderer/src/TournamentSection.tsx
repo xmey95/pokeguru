@@ -78,9 +78,9 @@ export function TournamentSection() {
 
   return <><div className="discussion-switcher" aria-label="Fonte tornei">
     <button type="button" className={`secondary-button ${sourceTab === 'play' ? 'selected' : ''}`}
-      onClick={() => setSourceTab('play')}>Tornei Play</button>
+      aria-pressed={sourceTab === 'play'} onClick={() => setSourceTab('play')}>Tornei Play</button>
     <button type="button" className={`secondary-button ${sourceTab === 'main' ? 'selected' : ''}`}
-      onClick={() => setSourceTab('main')}>Regional</button>
+      aria-pressed={sourceTab === 'main'} onClick={() => setSourceTab('main')}>Regional</button>
   </div>{sourceTab === 'main' ? <MainTournamentSection /> : <section className="tournament-section" aria-label="Evento Limitless Play">
     <div className="panel-heading">
       <div><span className="eyebrow">Tornei · archivio globale</span><h1>Eventi Standard</h1></div>
@@ -92,7 +92,7 @@ export function TournamentSection() {
           {busy ? 'Acquisizione…' : 'Aggiorna nuovi tornei'}</button>
           <button type="button" className="secondary-button" onClick={() => void refresh('full')} disabled={busy}>Scansione completa</button></>}</div>
     </div>
-    <p className="content-note">I tornei Limitless Play sono archiviati per l'app. I Regional del database principale sono nella scheda accanto.</p>
+    <p className="content-note">Tornei online e liste pubblicate su Limitless Play.</p>
     {progress && progress.status !== 'idle' && <p className="content-note" role="status">
       {progress.status === 'complete' ? 'Scansione completata' : progress.status === 'rate-limited'
         ? `Limite API raggiunto; riprendi dopo ${progress.cooldownUntil ? dateTime(progress.cooldownUntil) : 'la pausa'}`
@@ -106,7 +106,7 @@ export function TournamentSection() {
           {events.map((item) => <option key={item.eventId} value={item.eventId}>
             {new Date(item.date).toLocaleDateString('it-IT')} · {item.name} · {item.isOnline ? 'online' : 'in presenza'}
           </option>)}
-        </select></label><span className="content-note">{events.length} eventi disponibili offline</span></div>
+        </select></label><label>Filtra giocatore o mazzo<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Dragapult" /></label></div><p className="content-note">{events.length} {events.length === 1 ? 'evento disponibile offline' : 'eventi disponibili offline'}</p>
       <div className="meta-provenance">
         <strong>{snapshot.name}</strong>
         <span>{dateTime(snapshot.date)} · {snapshot.isOnline ? 'PTCGL online' : 'in presenza'} · {snapshot.circuit === 'WESTERN' ? 'Standard occidentale' : 'circuito da verificare'} · {snapshot.source}</span>
@@ -119,18 +119,11 @@ export function TournamentSection() {
         <div><strong>{snapshot.coverage.complete60Lists}</strong><span>Liste da 60 carte</span></div>
         <div><strong>{snapshot.pairingCoverage?.decided ?? 0}</strong><span>Partite con vincitore noto</span></div>
       </div>
-      <details className="catalog-set-coverage"><summary>Copertura e metodo</summary>
-        <p className="content-note" data-testid="tournament-coverage">{snapshot.coverage.availableLists}/{snapshot.coverage.returnedParticipants} liste leggibili; {snapshot.coverage.missingLists} assenti, {snapshot.coverage.invalidLists} non interpretabili. Partecipazioni e liste identiche restano record separati; le carte conservano codice e numero della fonte.</p>
-        <p className="content-note">Fasi: {snapshot.phases.map((phase) => `${phase.type} ${phase.rounds} round ${phase.mode}`).join(' · ') || 'non indicate'}. I risultati sono dei partecipanti; nessun winrate del tuo mazzo è inferito.</p>
-        <p className="content-note">Abbinamenti: {snapshot.pairingCoverage?.decided ?? 0} vittorie attribuibili e {snapshot.pairingCoverage?.tied ?? 0} pareggi su {snapshot.pairingCoverage?.betweenParticipants ?? 0} partite fra partecipanti identificati; {snapshot.pairingCoverage?.byes ?? 0} bye e {snapshot.pairingCoverage?.invalid ?? 0} righe non interpretabili. I record dei partecipanti non sono usati per inventare abbinamenti.</p>
-        <p className="content-note">Ogni blocco acquisisce fino a tre eventi pubblici Standard senza regole speciali. «Aggiorna nuovi» esamina il periodo successivo all'ultima scansione; al primo avvio, gli ultimi 90 giorni. La scansione completa percorre anche le pagine precedenti e può essere ripresa.</p>
-      </details>
-      <div className="catalog-filters"><label>Filtra giocatore o mazzo<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Dragapult" /></label></div>
       <div className="tournament-layout">
         <div className="tournament-players" aria-label="Partecipazioni evento">
           {filtered.map((entry) => <button type="button" key={entry.playerId}
             className={selected?.playerId === entry.playerId ? 'active' : ''}
-            onClick={() => setSelectedId(entry.playerId)}>
+            onClick={() => setSelectedId(entry.playerId)} aria-pressed={selected?.playerId === entry.playerId}>
             <strong>{entry.placing ? `${entry.placing}° · ` : ''}{entry.playerName}</strong>
             <span>{entry.deck?.name ?? 'Archetipo non indicato'} · {entry.listStatus === 'available' ? `${entry.cardTotal} carte` : 'Lista non disponibile'}</span>
           </button>)}
@@ -149,6 +142,12 @@ export function TournamentSection() {
           </> : <p className="content-note">Seleziona una partecipazione.</p>}
         </div>
       </div>
+      <details className="catalog-set-coverage"><summary>Copertura e metodo</summary>
+        <p className="content-note" data-testid="tournament-coverage">{snapshot.coverage.availableLists}/{snapshot.coverage.returnedParticipants} liste leggibili; {snapshot.coverage.missingLists} assenti, {snapshot.coverage.invalidLists} non interpretabili. Partecipazioni e liste identiche restano record separati; le carte conservano codice e numero della fonte.</p>
+        <p className="content-note">Fasi: {snapshot.phases.map((phase) => `${phase.type} ${phase.rounds} round ${phase.mode}`).join(' · ') || 'non indicate'}. I risultati sono dei partecipanti; nessun winrate del tuo mazzo è inferito.</p>
+        <p className="content-note">Abbinamenti: {snapshot.pairingCoverage?.decided ?? 0} vittorie attribuibili e {snapshot.pairingCoverage?.tied ?? 0} pareggi su {snapshot.pairingCoverage?.betweenParticipants ?? 0} partite fra partecipanti identificati; {snapshot.pairingCoverage?.byes ?? 0} bye e {snapshot.pairingCoverage?.invalid ?? 0} righe non interpretabili. I record dei partecipanti non sono usati per inventare abbinamenti.</p>
+        <p className="content-note">Ogni blocco acquisisce fino a tre eventi pubblici Standard senza regole speciali. «Aggiorna nuovi» esamina il periodo successivo all'ultima scansione; al primo avvio, gli ultimi 90 giorni. La scansione completa percorre anche le pagine precedenti e può essere ripresa.</p>
+      </details>
     </>}
   </section>}</>
 }

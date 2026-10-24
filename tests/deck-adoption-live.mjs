@@ -1,3 +1,4 @@
+import { auditDesignSystem } from './design-system-audit.mjs'
 import assert from 'node:assert/strict'
 import { mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -71,8 +72,15 @@ try {
   assert.match(await candidate.textContent(), /Legalità torneo da verificare/)
   await candidate.getByRole('button', { name: "Adotta l'intera lista candidata" }).click()
   await page.getByRole('dialog', { name: 'Adottare l’intera lista candidata?' }).waitFor()
+  await auditDesignSystem(page, 'Adozione')
+  await page.keyboard.press('Shift+Tab')
+  assert.equal(await page.getByRole('button', { name: 'Confermo: adotta l’intera lista' }).evaluate(el => el === document.activeElement), true)
+  await page.keyboard.press('Tab')
+  assert.equal(await page.getByRole('button', { name: 'Annulla', exact: true }).evaluate(el => el === document.activeElement), true)
+  await page.screenshot({ path: join(workspace, 'node_modules', 'design-adoption.png') })
   await page.keyboard.press('Escape')
   await page.getByRole('dialog', { name: 'Adottare l’intera lista candidata?' }).waitFor({ state: 'detached' })
+  assert.equal(await candidate.getByRole('button', { name: "Adotta l'intera lista candidata" }).evaluate(el => el === document.activeElement), true)
   assert.match(await page.locator('.thread-versions > summary').textContent(), /Versioni principali \(1\)/)
   await candidate.getByRole('button', { name: "Adotta l'intera lista candidata" }).click()
   await page.getByRole('dialog', { name: 'Adottare l’intera lista candidata?' }).waitFor()
@@ -82,6 +90,9 @@ try {
   await page.locator('.thread-picker').getByRole('button', { name: /Piano B/ }).click()
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
   assert.equal(await page.locator('.thread-candidate.featured').getByRole('button', { name: "Adotta l'intera lista candidata" }).isDisabled(), true)
+  await page.locator('.main-content').evaluate(el => { el.scrollTop = 0 })
+  await auditDesignSystem(page, 'Base superata')
+  await page.screenshot({ path: join(workspace, 'node_modules', 'design-stale.png') })
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   assert.equal(await page.getByLabel('Testo lista').inputValue(), adoptedText)
   await application.close()

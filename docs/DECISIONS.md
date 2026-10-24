@@ -57,6 +57,12 @@
 
 Le decisioni proposte fissano una base di lavoro modificabile. C-01–C-18 in `PRODUCT.md` fissano piattaforma iniziale, Standard, Codex iniziale con scelta AI futura, priorità del circuito competitivo rispetto alla lingua, adozione dell'intera lista da thread paralleli, sezione Matchup con revisioni iterative, configurazione AI nell'app, percorso `dev` → `main` → release GitHub, export immediato negli appunti provato su Limitless e Catalogo globale con aggiornamento rapido o scansione completa, senza gestione delle vecchie stampe fuori formato.
 
+### T-48 — Design system e qualità visiva (APP-059)
+
+Il feedback utente autorizza una rifinitura completa del renderer sul `dev` aggiornato. Token semantici unici, componenti condivisi e layout separato sostituiscono le sovrascritture precedenti. Sans di sistema, corpo 14 px e metadati almeno 12 px; sidebar 224 px e lista fissa 384 px, con dock 220 px sotto 1240 px. Selezione petrolio, proposta viola, incertezza ambra e blocchi rossi con testo esplicito. La creazione iniziale si sposta nel contenuto. Fonti e diagnosi sono consultabili senza precedere il compito principale; errore nel dialogo e ritorno del focus fanno parte del comportamento condiviso. Audit, regole e limiti in `DESIGN_SYSTEM.md`.
+
+Scelte reversibili nel renderer: nessuna modifica a schema, validatori, persistenza o integrazioni. Le prove UI con fixture non certificano le conclusioni AI. La resa Linux e ad alta scala del sistema resta da verificare; merge, I4 e release non inclusi nell'autorizzazione di APP-059.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

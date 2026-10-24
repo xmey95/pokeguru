@@ -1,3 +1,4 @@
+import { auditDesignSystem } from './design-system-audit.mjs'
 import assert from 'node:assert/strict'
 import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -36,6 +37,16 @@ try {
       cached: false }
     db.prepare('INSERT INTO tournament_snapshots (id, event_id, fetched_at, payload) VALUES (?, ?, ?, ?)')
       .run(snapshot.id, snapshot.eventId, snapshot.fetchedAt, JSON.stringify(snapshot))
+    const regional = { id: 'regional-ui-fixture', eventId: '999999', name: 'Regional · esempio UI',
+      date: '2026-10-17', country: 'FR', players: 128, url: 'https://limitlesstcg.com/tournaments/582',
+      fetchedAt: '2026-10-23T20:00:00.000Z', source: 'Limitless tournament database', circuit: 'WESTERN',
+      format: 'STANDARD', type: 'IN_PERSON', cached: false,
+      participants: [{ placing: 1, playerName: 'Giocatore esempio', country: 'IT', playerId: null,
+        deckId: null, deckName: 'Hydrapple ex · fixture', listId: null, listUrl: null,
+        cardTotal: 60, cards: [{ category: 'pokemon', count: 4, name: 'Teal Mask Ogerpon ex', set: 'TWM', number: '25' },
+          { category: 'energy', count: 56, name: 'Grass Energy', set: 'MEE', number: '9' }] }],
+      coverage: { returnedParticipants: 1, listedDecks: 1, fetchedLists: 1, complete60Lists: 1, noListLink: 0 } }
+    db.prepare('INSERT INTO main_tournament_snapshots VALUES (?, ?, ?, ?)').run(regional.id, regional.eventId, regional.fetchedAt, JSON.stringify(regional))
     db.close()
   }
   application = await launch()
@@ -56,8 +67,21 @@ try {
     for (const [width, height] of [[1440, 900], [1280, 720]]) {
       await page.setViewportSize({ width, height })
       assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
-      await page.screenshot({ path: join(workspace, 'node_modules', `content-eventi-${width}.png`) })
+      await auditDesignSystem(page, 'Design system '+width)
+    await page.screenshot({ path: join(workspace, 'node_modules', `content-eventi-${width}.png`) })
     }
+  }
+  if (offline) {
+    await page.getByRole('button', { name: 'Regional', exact: true }).click()
+    await page.getByRole('heading', { name: 'Regional e grandi eventi' }).waitFor()
+    await page.getByText('Giocatore esempio', { exact: true }).waitFor()
+    for (const [width, height] of [[1440, 900], [1280, 720], [640, 580]]) {
+      await page.setViewportSize({ width, height })
+      await auditDesignSystem(page, 'Regional ' + width)
+      assert.equal(await page.locator('.main-content').evaluate(el => el.scrollWidth > el.clientWidth + 1), false)
+      await page.screenshot({ path: join(workspace, 'node_modules', 'content-regional-' + width + '.png') })
+    }
+    await page.getByRole('button', { name: 'Tornei Play', exact: true }).click()
   }
   await page.getByText('Copertura e metodo', { exact: true }).click()
   await page.getByTestId('tournament-coverage').waitFor({ timeout: 60000 })

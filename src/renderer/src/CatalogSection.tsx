@@ -160,7 +160,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
 
   return <section className="catalog-section" aria-label="Catalogo occidentale">
     <div className="panel-heading">
-      <div><span className="eyebrow">Catalogo condiviso · Standard occidentale</span><h2>Carte e ristampe</h2></div>
+      <div><span className="eyebrow">Catalogo condiviso · Standard occidentale</span><h1>Carte e ristampe</h1></div>
       <div className="catalog-actions">
         {!standard && <button type="button" className="secondary-button" onClick={() => void sync()} disabled={busy}>
           {busy ? 'Sincronizzazione…' : catalog?.syncedAt ? 'Aggiorna campione' : 'Sincronizza campione'}
@@ -214,7 +214,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       </div>
       <div className="catalog-layout">
         <div className="catalog-list" aria-label="Risultati catalogo">
-          {filtered.length === 0 ? <p className="content-note">Nessuna carta locale corrisponde alla ricerca.</p> : <>{filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => setSelectedKey(group.key)}>
+          {filtered.length === 0 ? <p className="content-note">Nessuna carta locale corrisponde alla ricerca.</p> : <>{filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => setSelectedKey(group.key)} aria-pressed={selected?.key === group.key}>
             <strong>{group.name}</strong><span>{group.prints.length} {group.prints.length === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
           </button>)}</>}
         </div>
