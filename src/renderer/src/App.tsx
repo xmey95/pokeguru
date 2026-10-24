@@ -203,7 +203,7 @@ export function App() {
   }
 
   return (
-    <div className={`app-shell ${selected && view === 'project' ? 'with-deck' : ''}`}>
+    <div className={`app-shell ${selected && view === 'project' ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
       <a className="skip-link" href="#main-content">Vai al contenuto</a>
       <header className="topbar">
         <span>POKÉGURU <b>/</b> {view === 'project' ? 'WORKSPACE DEL MAZZO' : view === 'catalog' ? 'CATALOGO' : view === 'tournament' ? 'EVENTI' : 'IMPOSTAZIONI AI'}</span>
@@ -224,7 +224,7 @@ export function App() {
             <span className="count" aria-label={`${projects.length} progetti`}>{projects.length}</span>
           </div>
 
-          <form className="create-form" onSubmit={(event) => void createProject(event)}>
+          {!selected && <form className="create-form" onSubmit={(event) => void createProject(event)}>
             <label htmlFor="project-name">Nome progetto</label>
             <input
               id="project-name"
@@ -244,7 +244,7 @@ export function App() {
             <button className="primary-button" type="submit" disabled={saving || loading || !name.trim()}>
               {saving ? 'Salvataggio…' : 'Crea progetto'}
             </button>
-          </form>
+          </form>}
 
           <div className="project-list-heading">Elenco progetti</div>
           {loading ? <p className="sidebar-note">Caricamento…</p> : projects.length === 0 ? (
@@ -282,10 +282,7 @@ export function App() {
             <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi"><span aria-hidden="true">◷</span>Eventi</button>
             <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI"><span aria-hidden="true">⚙</span>Impostazioni AI</button>
           </nav>
-          <button type="button" className="compact-create-trigger" aria-expanded={showCompactCreate} onClick={() => {
-            if (window.matchMedia('(max-width: 1080px)').matches) setShowCompactCreate((value) => !value)
-            else document.getElementById('project-name')?.focus()
-          }} title="Nuovo progetto">＋ <span>Nuovo progetto</span></button>
+          <button type="button" className="compact-create-trigger" aria-expanded={showCompactCreate} onClick={() => setShowCompactCreate((value) => !value)} title="Nuovo progetto">＋ <span>Nuovo progetto</span></button>
           <div className="local-indicator"><span aria-hidden="true" /> Archivio locale</div>
         </aside>
 
@@ -382,6 +379,7 @@ export function App() {
               <span className="eyebrow">Inizia da qui</span>
               <h1>Ogni mazzo parte da un’idea.</h1>
               <p>Crea un progetto per conservarne il percorso. Potrai aprirlo di nuovo anche dopo aver chiuso l’app.</p>
+              <button type="button" className="primary-button welcome-create" onClick={() => setShowCompactCreate(true)}>Inizia un progetto</button>
               <div className="welcome-steps">
                 <span>01 <strong>Crea un progetto</strong></span>
                 <span>02 <strong>Costruisci il mazzo</strong></span>

@@ -35,6 +35,7 @@ try {
   await page.getByLabel('Nome progetto').fill('Mega Absol / Mega Audino')
   await page.getByRole('button', { name: 'Crea progetto' }).click()
   await expectSelected(page, 'Mega Absol / Mega Audino')
+  await page.locator('.compact-create-trigger').click()
   await page.getByLabel('Nome progetto').fill('Secondo mazzo')
   await page.getByRole('button', { name: 'Crea progetto' }).click()
   await expectSelected(page, 'Secondo mazzo')

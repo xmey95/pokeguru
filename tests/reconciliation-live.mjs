@@ -149,6 +149,7 @@ try {
   await page.locator('#constraint-form').getByLabel('Numero di copie').fill('4')
   await page.locator('#constraint-form').getByRole('button', { name: 'Salva modifica' }).click()
   await page.locator('.constraint-item').first().getByText('Non soddisfatto').waitFor()
+  await page.locator('.compact-create-trigger').click()
   await page.getByLabel('Nome progetto').fill('Altro progetto')
   await page.getByRole('button', { name: 'Crea progetto' }).click()
   await page.getByText('Nessun vincolo impostato.').waitFor()

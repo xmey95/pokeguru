@@ -69,6 +69,7 @@ try {
   await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Thread A')
   await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Thread B')
   await page.getByRole('button', { name: 'Crea thread' }).click()
 

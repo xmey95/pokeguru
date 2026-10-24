@@ -41,6 +41,7 @@ try {
   await page.getByLabel('Motivo o appunti (facoltativo)').fill('Cambio completo')
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
   await page.locator('.thread-candidate.featured > summary').waitFor()
+  await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Piano B')
   await page.getByRole('button', { name: 'Crea thread' }).click()
   await page.getByLabel('Lista completa proposta').fill('60 Carta C MEG 3')

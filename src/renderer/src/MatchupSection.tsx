@@ -41,6 +41,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [feedback, setFeedback] = useState('')
   const [reportsKey, setReportsKey] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [opponentQuery, setOpponentQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -208,6 +209,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
 
   const otherOpponents = historicalOpponents.filter((deck) => !snapshot?.decks.some((current) => current.id === deck.id))
   const allOpponents = [...(snapshot?.decks ?? []), ...otherOpponents]
+  const visibleOpponents = allOpponents.filter((deck) => deck.name.toLocaleLowerCase().includes(opponentQuery.trim().toLocaleLowerCase()))
   const selected = allOpponents.find((deck) => deck.id === selectedId)
   const selectedInCurrentMeta = !!snapshot?.decks.some((deck) => deck.id === selectedId)
   const currentReports = reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}` ? reports : []
@@ -225,6 +227,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const theirCatalogCards = report?.tournamentEvidence?.observedCards.filter((card) =>
     card.catalogIdentityId && mentioned(card.name, report.theirKeyCards)) ?? []
 
+  useEffect(() => {
+    document.querySelector('.meta-deck.active')?.scrollIntoView({ block: 'nearest', inline: 'center' })
+  }, [selectedId, opponentQuery])
+
   return <section className="matchup-section" aria-label="Matchup del progetto">
     <div className="panel-heading">
       <div><span className="eyebrow">Metagame e analisi AI</span><h2>Matchup</h2></div>
@@ -240,19 +246,26 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         <details><summary>Periodo e provenienza</summary><p>{snapshot.period} · Standard occidentale · acquisito {date(snapshot.fetchedAt)}. Quota del meta, non winrate.</p></details>
       </div>
       <div className="meta-layout">
-        <div className="meta-deck-list" aria-label="Archetipi Limitless">
-          {allOpponents.map((deck) => <button type="button" key={deck.id}
+        <div className="meta-picker">
+          <label className="meta-search" htmlFor="opponent-search"><span>Cerca avversario</span>
+            <input id="opponent-search" type="search" value={opponentQuery} onChange={(event) => setOpponentQuery(event.target.value)} placeholder="Nome archetipo" /></label>
+          <div className="meta-deck-list" aria-label="Archetipi Limitless">
+          {visibleOpponents.map((deck) => <button type="button" key={deck.id}
             className={`meta-deck ${selectedId === deck.id ? 'active' : ''}`}
             onClick={() => setSelectedId(deck.id)}>
             <strong>{deck.name}</strong><span>{snapshot.decks.some((current) => current.id === deck.id)
               ? `${deck.share.toFixed(2)}% quota · ${deck.points} punti${currentReports.some((item) => item.opponentId === deck.id) ? ' · Analisi AI' : ''}`
               : 'Solo nello storico · Analisi AI'}</span>
           </button>)}
+          {visibleOpponents.length === 0 && <p className="content-note">Nessun archetipo trovato.</p>}
+          </div>
         </div>
         <div className="meta-analysis">
           {selected && <>
             <div className="matchup-card-head"><div><h3>{selected.name}</h3><span className="note-source">{selectedInCurrentMeta ? 'Metagame Limitless · quota nel periodo, non percentuale di vittoria' : 'Archetipo presente in uno snapshot precedente'}</span></div></div>
-            <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(selected.url)}>Apri archetipo su Limitless ↗</button>
+            <div className="matchup-source-links"><button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(selected.url)}>Apri archetipo su Limitless ↗</button>
+              {report?.metaSourceUrl && <button type="button" className="text-button"
+                onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}</div>
             {visibleDiscussions.length > 0 && <div className="discussion-switcher" aria-label="Discussioni Matchup">
               {visibleDiscussions.map((item, index) => <button type="button" key={item.id}
                 className={`secondary-button ${discussion?.id === item.id ? 'selected' : ''}`}
@@ -262,11 +275,9 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
             </div>}
             {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p> : report ? <>
               {discussion && !discussion.current && <p className="stale-discussion">Questa discussione riguarda una lista o uno snapshot precedente. La guida resta consultabile come storico.</p>}
-              {report.metaSourceUrl && <button type="button" className="text-button"
-                onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}
               <div className="matchup-fields">
-                <div className="strategy-field matchup-trust"><strong>Limiti dell’analisi</strong><p>{report.limitations}</p></div>
                 <div className="strategy-field"><strong>Come giocare il matchup</strong><p>{report.strategy}</p></div>
+                <div className="strategy-field matchup-trust"><strong>Limiti dell’analisi</strong><p>{report.limitations}</p></div>
                 <div><strong>Le nostre carte chiave</strong><p>{report.ourKeyCards}</p>
                   {ourCatalogCards.map((card) => <button key={card.identityId} type="button" className="text-button"
                     onClick={() => onOpenCatalogCard(card.identityId!)}>Apri {card.name} nel Catalogo ↗</button>)}

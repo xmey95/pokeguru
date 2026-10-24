@@ -680,8 +680,8 @@ function registerProjectHandlers(): void {
 function createWindow(): void {
   const window = new BrowserWindow({
     title: 'Pokéguru',
-    width: 1120,
-    height: 760,
+    width: 1280,
+    height: 800,
     minWidth: 640,
     minHeight: 580,
     backgroundColor: '#edf1ed',

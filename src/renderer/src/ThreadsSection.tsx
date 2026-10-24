@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { DeckThread, DeckVersion } from '../../shared/deck-threads'
 import type { DeckCandidate } from '../../shared/deck-threads'
 import type { AiModel, AiPreferences } from '../../shared/ai'
@@ -57,8 +57,6 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
       {candidate.sources.length > 2 && <span>+{candidate.sources.length - 2} nei dettagli</span>}</div>}
     {current && <DiffView title={`Rispetto alla lista corrente v${current.sequence}`} diff={compareDecks(current.parsed, comparisonDeck)} />}
     {base && base.id !== current?.id && <DiffView title={`Rispetto alla base v${base.sequence}`} diff={compareDecks(base.parsed, comparisonDeck)} beforeLabel="BASE DEL THREAD" />}
-    <div className="comparison-lists"><ComparisonList title="Lista principale completa" parsed={current?.parsed ?? null} />
-      <ComparisonList title="Lista proposta completa" parsed={comparisonDeck} /></div>
     {review && review.conversions.length > 0 && <p className="candidate-conversions">Testo previsto per l'adozione: {review.conversions.map((item) =>
       `riga ${item.lineNumber} ${item.from} → ${item.to}`).join('; ')}. La proposta originale resta nel thread.</p>}
     {review && <div className="thread-review"><strong>Controlli prima dell'adozione</strong>
@@ -70,6 +68,8 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
     {!adopted && <div className="candidate-adoption"><div><strong>Decisione sul mazzo intero</strong><p>La proposta non modifica la lista principale senza una conferma esplicita.</p></div>
       <button type="button" className="primary-button" disabled={working || thread.stale || !current || !review || review.blockers.length > 0}
         onClick={() => onAdopt(candidate)}>Adotta l'intera lista candidata</button></div>}
+    <div className="comparison-lists"><ComparisonList title="Lista principale completa" parsed={current?.parsed ?? null} />
+      <ComparisonList title="Lista proposta completa" parsed={comparisonDeck} /></div>
     <details className="candidate-evidence"><summary>Motivi, fonti, dati tecnici e testo originale</summary>
       <p>Proposta {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {displayDate(candidate.createdAt)}</p>
       {candidate.aiConfig && <p className="content-note">AI: {candidate.aiConfig.model ?? 'Automatico'} / {candidate.aiConfig.reasoningEffort ?? 'predefinito'}</p>}
@@ -93,6 +93,7 @@ function displayDate(value: string): string {
 }
 
 export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
+  const newThreadDetails = useRef<HTMLDetailsElement>(null)
   const [versions, setVersions] = useState<DeckVersion[]>([])
   const [threads, setThreads] = useState<DeckThread[]>([])
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
@@ -180,6 +181,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       selectThread(result.value)
       setTitle('')
       setOpeningNote('')
+      newThreadDetails.current?.removeAttribute('open')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Thread non creato.') }
     finally { setWorking(false) }
   }
@@ -280,7 +282,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     {loading ? <p className="content-note">Caricamento thread…</p> : <>
       <div className="threads-layout">
         <aside className="threads-sidebar">
-          <details className="new-thread-details"><summary>＋ Nuovo thread</summary><form className="thread-form" onSubmit={(event) => void create(event)}>
+          <details ref={newThreadDetails} className="new-thread-details"><summary>＋ Nuovo thread</summary><form className="thread-form" onSubmit={(event) => void create(event)}>
             <h3>Nuovo thread</h3>
             <label htmlFor="thread-title">Titolo</label>
             <input id="thread-title" value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Es. Variante più veloce" required />

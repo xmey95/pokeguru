@@ -32,8 +32,8 @@ async function checkGeometry(page, width, height, view) {
   })
   assert.ok(boxes.deck && boxes.main && boxes.sidebar)
   assert.ok(boxes.documentWidth <= width + 1, `${view} ${width}: overflow orizzontale`)
-  if (width > 1080) {
-    assert.equal(boxes.deck.width, 320, `${view} ${width}: larghezza della lista`)
+  if (width > 1240) {
+    assert.equal(boxes.deck.width, 384, `${view} ${width}: larghezza della lista`)
     assert.ok(boxes.main.right <= boxes.deck.left + 1, `${view} ${width}: lista sopra il contenuto`)
     assert.ok(boxes.sidebar.right <= boxes.main.left + 1, `${view} ${width}: barra sopra il contenuto`)
   } else {
@@ -96,6 +96,11 @@ function seedMatchup() {
 try {
   application = await launch()
   let page = await application.firstWindow()
+  await page.setViewportSize({ width: 640, height: 720 })
+  await page.getByRole('button', { name: 'Inizia un progetto' }).click()
+  assert.ok(await page.locator('.compact-create-panel').isVisible(), 'Il progetto vuoto non apre la creazione a 640 px')
+  await page.getByRole('button', { name: 'Chiudi' }).click()
+  await page.setViewportSize({ width: 1280, height: 720 })
   await page.getByLabel('Nome progetto').fill('Mega Absol / Mega Audino')
   await page.getByRole('button', { name: 'Crea progetto' }).click()
   await page.getByTestId('deck-companion').waitFor()
@@ -117,7 +122,7 @@ try {
   })
   assert.ok(scrolls.listScrollable && scrolls.afterList[0] === 0 && scrolls.afterList[1] > 0)
   assert.ok(scrolls.afterMain[0] > 0 && scrolls.afterMain[1] === scrolls.afterList[1])
-  for (const [width, height] of [[1440, 900], [1280, 720], [1024, 768], [640, 720]]) {
+  for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'lista')
     assert.match(await page.getByTestId('deck-companion').textContent(), /Mega Absol ex/)
   }
@@ -139,7 +144,7 @@ try {
     return [elements[0].scrollTop, elements[1].scrollTop]
   })
   assert.ok(comparisonScrolls[0] > 0 && comparisonScrolls[1] === 0, 'Liste del confronto non scorrono separatamente')
-  for (const [width, height] of [[1440, 900], [1280, 720], [1024, 768], [640, 720]]) {
+  for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'thread')
     assert.match(await page.getByTestId('deck-companion').textContent(), /3\s*Mega Absol ex/)
   }
@@ -150,12 +155,19 @@ try {
   application = await launch()
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Matchup', exact: true }).click()
+  await page.getByLabel('Cerca avversario').fill('Gardevoir ex · fixture UI')
+  assert.equal(await page.locator('.meta-deck').count(), 1, 'La ricerca non filtra gli archetipi')
   await page.locator('.meta-deck').filter({ hasText: 'Gardevoir ex · fixture UI' }).click({ timeout: 30000 })
   await page.getByText('Come giocare il matchup').waitFor()
-  for (const [width, height] of [[1440, 900], [1280, 720], [1024, 768], [640, 720]]) {
+  await page.getByLabel('Cerca avversario').fill('')
+  for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'matchup')
     assert.match(await page.getByTestId('deck-companion').textContent(), /Mega Absol ex/)
     assert.ok(await page.locator('.matchup-fields').isVisible())
+    if (width === 1280) {
+      const plan = await page.getByText('Come giocare il matchup').boundingBox()
+      assert.ok(plan && plan.y < height, 'Il piano Matchup non compare nella prima schermata a 1280×720')
+    }
   }
   for (const name of ['Catalogo', 'Eventi', 'Impostazioni AI']) {
     await page.getByRole('button', { name, exact: true }).click()
@@ -164,7 +176,7 @@ try {
     const overflow = await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1)
     assert.equal(overflow, false, `${name}: overflow orizzontale nella vista compatta`)
   }
-  console.log('WORKSPACE UI OK: 1440×900, 1280×720, 1024×768, 640×720; Lista, Thread, Matchup; Catalogo, Eventi e Impostazioni AI a 640×580; tastiera, lista persistente e assenza di sovrapposizioni.')
+  console.log('WORKSPACE UI OK: 1440×900, 1280×720, 1241×720, 1240×720, 1024×768, 640×720; Lista, Thread, Matchup; Catalogo, Eventi e Impostazioni AI a 640×580; tastiera, lista persistente e assenza di sovrapposizioni.')
 } finally {
   await application?.close()
   rmSync(profile, { recursive: true, force: true })
