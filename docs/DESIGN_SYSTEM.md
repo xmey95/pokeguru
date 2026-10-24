@@ -39,6 +39,8 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 
 ## Fondazioni
 
+**Identità (APP-082):** simbolo originale con carte sovrapposte e G, petrolio/menta con accento oro. Nella sidebar 40 px, nella barra orizzontale 36 px, proporzioni quadrate e nome accessibile. Stesso master SVG per favicon e icone Windows/Linux; specifiche e verifiche in [BRAND.md](BRAND.md).
+
 | Elemento | Regola |
 | --- | --- |
 | Famiglia | Segoe UI Variable, Segoe UI, system-ui; fallback nativo Linux. Monospaziato solo per liste grezze |

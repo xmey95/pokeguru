@@ -199,6 +199,14 @@ Il Catalogo usa `acquired/expected` del job esistente; l'inventario senza totale
 
 Polling seriale con cleanup e risposte obsolete ignorate; animazione disattivata con movimento ridotto. Le etichette di attività sono live region, mentre secondi e contatori non vengono annunciati a ogni aggiornamento. Nessun nuovo canale di streaming, cancellazione remota, provider o modifica di archivio. Verifiche e demo isolate in `UI_LOADING_REVIEW.md`.
 
+### T-71 — Identità vettoriale unica per app e pacchetti (APP-082)
+
+L'utente autorizza creazione e integrazione del logo, compresa la favicon. Simbolo originale con due carte sovrapposte e G, palette petrolio/menta e accento oro. Il nome resta testo nell'interfaccia; nelle icone piccole compare solo il simbolo. Le proporzioni sono quadrate a ogni breakpoint e il nome accessibile non viene duplicato.
+
+Un master SVG in `resources/brand` genera gli asset PNG/ICO con Electron/Chromium già installato, senza dipendenze aggiuntive. I derivati sono versionati e vengono rigenerati con `npm run brand:generate`; nessun costo di rasterizzazione durante la build ordinaria. Favicon relative compatibili con `file://`, icona della finestra inclusa come risorsa esterna all'asar, ICO esplicito per Windows e PNG per Linux. AppId e dati dell'utente invariati.
+
+Pacchetto Windows locale, icona incorporata e caricamento delle favicon verificati; Linux e installer NSIS non attestati in esecuzione. Dettagli e limiti in `BRAND.md`. Nessun merge o release.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

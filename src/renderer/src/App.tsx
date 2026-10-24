@@ -277,8 +277,8 @@ export function App() {
       <div className="workspace">
         <aside className="sidebar" aria-label="Progetti di mazzo">
           <div className="brand">
-            <span className="brand-mark"><Icon name="brand" /></span>
-            <div><strong>Pokéguru</strong><span>Analisi competitiva</span></div>
+            <img className="brand-mark" src="./favicon.svg" alt="Pokéguru" width="40" height="40" />
+            <div><strong aria-hidden="true">Pokéguru</strong><span>Analisi competitiva</span></div>
           </div>
           <ProjectSwitcher projects={projects} selected={selected} loading={loading}
             onSelect={(id) => void openProject(id)}

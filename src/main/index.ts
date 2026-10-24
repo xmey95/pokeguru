@@ -893,6 +893,7 @@ function registerProjectHandlers(): void {
 function createWindow(): void {
   const window = new BrowserWindow({
     title: 'Pokéguru',
+    icon: app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(__dirname, '../../resources/icon.png'),
     width: 1280,
     height: 800,
     minWidth: 640,
@@ -921,6 +922,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'win32') app.setAppUserModelId('io.github.xmey95.pokeguru')
   try {
     const override = process.env.POKEGURU_DATA_DIR
     if (override) {

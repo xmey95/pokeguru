@@ -88,6 +88,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-079** | Impostazioni AI: connessione e preferenze chiare | UI/UX | R-11 / qualità pre-I4 | P1 / S | APP-023/072/075; revisione grafica autorizzata | Done |
 | **APP-080** | Revisione grafica finale e coerenza trasversale | UI/UX | R-01–R-08, R-10, R-11, R-13 / qualità pre-I4 | P1 / M | APP-059–079; revisione finale autorizzata | Done |
 | **APP-081** | Caricamenti, avanzamento Catalogo/Eventi e attività Codex | UI/UX | R-01/02/06/07/10/11/13 | P1 / M | APP-080; miglioramento autorizzato | Done |
+| **APP-082** | Logo Pokéguru, favicon e icone desktop | UI/UX | R-01/12 / identità visiva | P1 / S | APP-081; creazione e integrazione autorizzate | Done |
 
 ## Task dettagliati I0–I2
 
@@ -741,6 +742,15 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Risultato:** segnaposto strutturali all'apertura e spinner condivisi; riquadro attività con tempo trascorso, conservato nella sessione. Catalogo: progresso solo sul totale noto, pausa e ripresa diretta, completamento distinto. Eventi Play/Regional: conteggi aggiornati tramite API esistenti, attesa senza percentuali, cooldown e blocchi successivi distinguibili. Thread, generazione/revisione Matchup e prova AI con stato contestuale; contenuti salvati consultabili. Stato delle operazioni recuperabile dopo navigazione; correzione della conclusione AI fuori dalla vista. Polling seriale con cleanup, errore e recupero. Backend, provider e database invariati.
 - **Verifiche Windows:** build/typecheck e nove percorsi Electron passati: loading-startup, workspace, importazione, Catalogo, Eventi offline, scrittura Thread, Impostazioni AI, Matchup con discussione/navigazione e Matchup con opzioni/generazione. Aperture ritardate distinte dal vuoto, totale ignoto senza barra, errore/ripresa del polling e risposta tardiva dopo uscita; richieste bloccate contro doppi invii, timer conservato, errori/riprova e completamento fuori vista. 30 schermate di dieci stati a 1440×900, 1280×720 e 640×720; contrasto minimo testo 5,16:1, movimento ridotto e nessun overflow/sovrapposizione. Audit iniziale adattato al numero ridotto di testi, senza abbassare i limiti di contrasto. Rapporto e percorsi in `UI_LOADING_REVIEW.md`, demo separata aperta.
 - **Limiti:** attese, avanzamento remoto, account e risposte Codex simulati nei test/demo; nessuna nuova acquisizione o generazione reale attestata. Il tempo è trascorso, non stimato; non sono disponibili fasi interne di Codex o un totale globale dei tornei. Timer e stato UI durano nella sessione; ripresa dei job al riavvio segue il backend esistente. Linux, screen reader e scala OS elevata non provati. Nessun I4, merge o release.
+
+### APP-082 — Logo e icone dell'app
+
+- **Autorizzazione e Ready:** l'utente chiede creazione e integrazione del logo, compresa la favicon. Perimetro: asset vettoriale originale, navigazione, favicon, finestra e packaging Windows/Linux; nessun cambio ai flussi del prodotto.
+- **Accettazione:** identità coerente con petrolio/menta, leggibile a dimensioni piccole; sorgente SVG unica e derivati riproducibili. Logo nella sidebar estesa/compatta, favicon disponibile nella build, PNG/ICO corretti e configurazione dei pacchetti; nessun riferimento rotto.
+- **Verifica prevista:** generazione degli asset, build, ispezione a 16/32/48/256 px e nelle viewport desktop/compatta; avvio Electron e verifica di favicon/icone. Packaging Windows locale se disponibile; Linux dichiarato non provato in esecuzione. Demo aperta senza pubblicazione.
+- **Risultato:** master SVG originale con due carte e G, derivati riproducibili via `npm run brand:generate`. Logo nella sidebar estesa/compatta, favicon SVG/PNG/ICO, icona della finestra e configurazione esplicita per Windows/Linux e NSIS. Documentazione in `BRAND.md`, decisione T-71.
+- **Verifiche:** generazione e formati degli 11 PNG/12 frame ICO complessivi; ispezione 16/32/48/256 px. Build/typecheck e `workspace-ui-live.mjs` passati. Pacchetto Windows x64 locale creato senza pubblicazione; icona estratta dall'eseguibile, PNG della finestra identico alla sorgente. Nel pacchetto tutte le favicon decodificate, logo quadrato/accessibile a 1440/1280/1240/640 px; `package-smoke.mjs` passato per avvio, salvataggio, riapertura e migrazione. Demo separata riaperta.
+- **Limiti:** AppImage/Linux e installazione NSIS non provati; icone predisposte. Demo con dati di esempio e operazioni remote simulate. Nessun I4, merge o release.
 
 ## Regola per i blocchi
 

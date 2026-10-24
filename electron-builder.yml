@@ -1,22 +1,30 @@
 appId: io.github.xmey95.pokeguru
 productName: Pokeguru
 directories:
+  buildResources: build
   output: release
 files:
   - out/**/*
 asar: true
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
 linux:
+  icon: build/icons
   category: Game
   target:
     - target: AppImage
       arch: [x64]
   artifactName: Pokeguru-${version}-linux-${arch}.${ext}
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
   artifactName: Pokeguru-${version}-windows-${arch}-setup.${ext}
 nsis:
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false

@@ -8,10 +8,9 @@ const paths: Record<IconName, ReactNode> = {
   event: <><path d="M8 3h8v5a4 4 0 0 1-8 0V3ZM8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4M12 12v6m-5 3h10m-8-3h6v3H9Z" /></>,
   settings: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" fill="currentColor" /><circle cx="15" cy="12" r="2" fill="currentColor" /><circle cx="9" cy="18" r="2" fill="currentColor" /></>,
   plus: <path d="M12 5v14M5 12h14" />,
-  chevron: <path d="m9 5 7 7-7 7" />,
-  brand: <><path d="M5 20V4h8a5 5 0 0 1 0 10H5" /><path d="m14 20 3 2 4-5" /></>
+  chevron: <path d="m9 5 7 7-7 7" />
 }
-export type IconName = 'deck' | 'thread' | 'matchup' | 'catalog' | 'event' | 'settings' | 'plus' | 'chevron' | 'brand'
+export type IconName = 'deck' | 'thread' | 'matchup' | 'catalog' | 'event' | 'settings' | 'plus' | 'chevron'
 export function Icon({ name }: { name: IconName }) {
   return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths[name]}</svg>
 }

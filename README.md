@@ -80,6 +80,8 @@ Scarica [Pokéguru v0.1.0](https://github.com/xmey95/pokeguru/releases/tag/v0.1.
 
 ## Avvio per sviluppo
 
+Il logo, la favicon e le icone desktop derivano da `resources/brand/pokeguru.svg`. Per rigenerare gli asset: `npm run brand:generate`; usi, formati e verifiche in [Identità visiva](docs/BRAND.md).
+
 Servono Node.js **24 o successivo** e npm. Su Linux serve un ambiente desktop; i comandi sono gli stessi su Linux e Windows, dalla radice del repository:
 
 ```sh

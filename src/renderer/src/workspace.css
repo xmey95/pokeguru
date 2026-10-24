@@ -15,8 +15,7 @@
 @media (max-width: 640px) { .topbar { gap: 8px; } .topbar > span:last-child { display: none; } }
 .sidebar { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 24px 12px 16px; overflow: auto; background: var(--rail); color: var(--rail-text); scrollbar-width: thin; }
 .brand { order: 0; display: flex; align-items: center; gap: 12px; flex: none; padding: 0 8px; margin-bottom: 24px; }
-.brand-mark { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 10px; background: #c3e9da; color: var(--rail); }
-.brand-mark .icon { width: 24px; height: 24px; }
+.brand-mark { display: block; width: 40px; height: 40px; flex: none; object-fit: contain; }
 .brand > div { display: grid; gap: 2px; min-width: 0; }
 .brand strong { font-size: 19px; letter-spacing: -.04em; color: #fff; }
 .brand > div > span { color: var(--rail-muted); font-size: var(--text-xs); }
@@ -111,7 +110,7 @@
   .topbar { display: flex; grid-column: 1; grid-row: 2; padding: 0 16px; }
   .sidebar { grid-column: 1; grid-row: 1; flex-direction: row; gap: 8px; padding: 8px 12px; overflow-x: auto; overflow-y: hidden; }
   .brand { margin: 0; }
-  .brand-mark { width: 32px; height: 36px; }
+  .brand-mark { width: 36px; height: 36px; }
   .project-switcher { width: 48px; min-height: 40px; padding: 6px; margin: 0; }
   .project-switcher-chevron .icon { width: 12px; }
   .workspace-nav, .resource-nav { display: flex; flex: none; width: auto; margin: 0; padding: 0; border: 0; gap: 4px; }
