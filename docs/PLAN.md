@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-069 completato:** campo unico con Discuti / Proponi una lista, osservazione distinta, errori contestuali e anteprima unica con protezione dalle risposte tardive. Build e cinque percorsi Electron passati; risultati e limiti nel backlog. Prossimo punto proposto: APP-070, selezione dell'avversario nei Matchup, da discutere prima di applicare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
 - **APP-068 completato:** candidata compatta, confronto apribile nella pagina e intestazione senza duplicazioni; data e AI sotto la conversazione. Build e quattro percorsi Electron passati; riepilogo/confronto, blocchi/incertezze, adozione, focus e responsive verificati su Windows. Risultati e limiti nel backlog. Prossimo punto proposto: APP-069, unificazione dei campi di scrittura del Thread, da discutere prima di applicare. Ramo locale `task/production-design-system`; nessun I4, merge o release.
 
 - **APP-067 completato:** selettore Thread con titolo/stato e ricerca, modulo di creazione nel contenuto, annullamento e focus/errori contestuali. Build e cinque percorsi Electron passati; menu, tastiera, persistenza/isolamento e responsive verificati su Windows. Risultati e limiti nel backlog. Prossimo punto proposto: APP-068, gerarchia tra conversazione e candidata, da discutere prima di applicare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.

@@ -75,7 +75,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-066** | Importazione su richiesta e annullamento | UI/UX | R-03, R-04 / qualità pre-I4 | P1 / S | APP-065; proposta approvata dall'utente | Done |
 | **APP-067** | Revisione condivisa di selezione e creazione dei Thread | UI/UX | R-03, R-07 / qualità pre-I4 | P1 / S | APP-066; proposta approvata dall'utente | Done |
 | **APP-068** | Revisione condivisa della gerarchia tra conversazione e candidata | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-067; proposta approvata dall'utente | Done |
-| **APP-069** | Revisione condivisa della scrittura nel Thread | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-068; proposta da discutere con l'utente | Backlog |
+| **APP-069** | Revisione condivisa della scrittura nel Thread | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-068; proposta approvata dall'utente | Done |
+| **APP-070** | Revisione condivisa della scelta dell'avversario nei Matchup | UI/UX | R-10 / qualità pre-I4 | P1 / S | APP-069; proposta da discutere con l'utente | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -607,10 +608,20 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche Windows:** build/typecheck e quattro percorsi Electron passati: workspace UI, adozione, thread persistenti e AI offline. Riepilogo e confronto a 1440×900, 1280×720 e 640×720; workspace anche a 1241/1240×720 e 1024×768. Contrasto, tastiera, focus dopo chiusura/adozione, bozza conservata, scroll indipendente e lista persistente verificati. Il primo messaggio di esempio compare nella prima schermata desktop; quantità, sole stampe, nessuna variazione, nuova candidata, base superata, adozione esplicita, archivio delle candidate e riapertura controllati. Schermate demo/fixture ispezionate, contrasto minimo della demo 5,54:1. `git diff --check` pulito.
 - **Limiti:** dati UI di esempio e archivio temporaneo per i test; nessuna nuova generazione AI. Linux, lettore di schermo e scala OS elevata non verificati. Il percorso AI live è adattato al confronto apribile ma non rieseguito. Nessun merge o release.
 
-### APP-069 — Scrittura nel Thread, proposta da discutere
+### APP-069 — Scrittura nel Thread
 
 - **Osservazione:** scrittura del messaggio e richiesta di una lista completa usano due grandi campi separati, con istruzioni e anteprima dati ripetute.
-- **Proposta:** un campo di scrittura con scelta esplicita tra “Discuti” e “Proponi una lista”; mantenere salvataggio dell'osservazione e importazione manuale della candidata come azioni distinte. Preservare errori, bozza, anteprima dei dati e semantica delle API. Da discutere con l'utente prima di applicare.
+- **Autorizzazione e Ready:** proposta approvata dall'utente il 24-10-2026; perimetro S e dipendenze risolti, quindi avviata sul ramo locale `task/production-design-system`.
+- **Accettazione:** un campo con scelta esplicita “Discuti” / “Proponi una lista”; salvataggio dell'osservazione e importazione manuale della candidata distinti. Il cambio modalità conserva il testo; errori contestuali conservano la richiesta; anteprima unica e risultati tardivi ignorati dopo cambi di contesto. Contratti e semantica delle API invariati.
+- **Verifica prevista:** build, Electron con tastiera, modalità, osservazione persistita, errori e risposte tardive; regressioni Thread/adozione/workspace e AI offline. Layout/contrasto a 1440×900, 1280×720 e 640×720 con lista principale consultabile.
+- **Risultato:** unico campo con radio native “Discuti” / “Proponi una lista”, indicazione e pulsante principale coerenti con la modalità. “Salva osservazione” resta distinto e disponibile in entrambe, senza invio AI; una sola anteprima, in posizione secondaria. Testo conservato al cambio modalità e dopo errori, controlli pertinenti disabilitati durante invio/salvataggio. Errori contestuali portati in vista. Anteprime invalidate da testo, modalità, thread, versione principale, nuova candidata e smontaggio; risposte tardive ignorate. Il cambio thread riparte da campo vuoto e Discuti, come il precedente azzeramento delle bozze. Import manuale e contratti IPC invariati.
+- **Verifiche Windows:** build/typecheck e cinque percorsi Electron passati: `thread-composer-ui-live.mjs`, AI offline, workspace UI, thread persistenti e adozione. Tastiera/frecce, testo conservato, lista iniziale assente, osservazioni realmente persistite e isolate, errore SQLite e recupero nel solo archivio temporaneo, instradamento delle modalità e disabilitazione durante attesa verificati. Fixture dichiarate per risposte AI e ritardi: anteprime tardive dopo cambio modalità/testo/thread non ricompaiono. Layout/contrasto a 1440×900, 1280×720 e 640×720; workspace anche a 1241/1240×720 e 1024×768. Schermate ispezionate, lista persistente senza sovrapposizioni e contrasto minimo osservato 5,16:1. `git diff --check` pulito.
+- **Limiti:** nessuna nuova generazione AI; il test con risposte simulate verifica solo il renderer e l'instradamento, non l'integrazione. Prove Linux, lettore di schermo e scala OS elevata non eseguite. Bozze tra thread/riavvii fuori da questo task; nessun merge o release.
+
+### APP-070 — Scelta dell'avversario nei Matchup, proposta da discutere
+
+- **Osservazione:** ricerca permanente affiancata a una striscia orizzontale di archetipi; i riquadri nascondono parte delle opzioni e occupano spazio prima della guida.
+- **Proposta:** selettore unico ricercabile con nome avversario, quota meta e disponibilità della guida, coerente con progetti e Thread. Preservare distinzione fra meta corrente e storico, fonti e quota meta diversa dal winrate. Da discutere con l'utente prima di applicare.
 
 ## Regola per i blocchi
 

@@ -113,6 +113,12 @@ L'utente approva il riepilogo della candidata con “Apri confronto” e la rimo
 
 Il confronto resta nel flusso della pagina, con liste, fonti e controlli esistenti. L'apertura porta i contenuti in vista quando necessario, muovendo solo l'area centrale; chiusura ed Escape restituiscono il focus al comando. Dopo adozione il focus torna al selettore quando il caricamento è concluso. L'adozione resta esplicita e richiede la conferma dell'intera lista. Le candidate precedenti restano apribili nella cronologia; data di creazione e configurazione AI passano sotto la scrittura. Nessuna modifica a validatori, persistenza o integrazioni.
 
+### T-58 — Campo unico per scrivere nel Thread (APP-069)
+
+L'utente approva un campo con scelta “Discuti” / “Proponi una lista” e “Salva osservazione” distinto. Le due modalità usano radio native e condividono il testo: il cambio modalità non lo cancella. La modalità determina la chiamata AI esistente, l'indicazione sintetica e il pulsante principale; Salva osservazione conserva il testo nel thread senza chiamare Codex. La mancanza di una base del thread continua a impedire la proposta completa ed è spiegata vicino al campo.
+
+Una sola anteprima dei dati è secondaria rispetto alle azioni. Un contatore invalida risposte pendenti quando cambiano testo, modalità o contesto; un'anteprima vecchia non può ripristinare contenuti o errori sul nuovo thread. Durante invio/salvataggio il campo e la modalità sono disabilitati per evitare che il successo cancelli modifiche successive. Gli errori sono nel modulo e conservano la richiesta. Bozze per thread o persistenti non sono introdotte: il cambio thread azzera il campo, come prima. I test con ritardi/risposte AI simulate verificano la UI; osservazioni e errore SQLite usano lo storage reale temporaneo. Nessun cambio alle API di produzione.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

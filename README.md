@@ -46,6 +46,8 @@ APP-067 riunisce i **Thread** in un selettore con ricerca, titolo e stato, accan
 
 APP-068 mostra la candidata corrente in un **riepilogo compatto**, con stato, copie cambiate e controlli essenziali. **Apri confronto** espande liste, differenze, fonti e adozione manuale; Escape o **Chiudi confronto** riportano al riepilogo. Il titolo del thread compare nel solo selettore e la conversazione precede i dettagli AI.
 
+APP-069 usa un unico campo per **Discuti / Proponi una lista**, conservando il testo al cambio modalità. **Salva osservazione** registra il testo senza chiamare Codex; l'anteprima dei dati è unica. Errori contestuali conservano la richiesta e le anteprime tardive vengono ignorate dopo un cambio di contesto.
+
 Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con token condivisi, tipografia sans, icone SVG, controlli leggibili e stati coerenti. La sidebar desktop è larga **224 px**; la lista principale rimane fissa a **384 px**, con dock di 220 px sotto la soglia di 1240 px. Il primo progetto si crea nell'area centrale. Metadati e metodo precedono meno spesso carte, differenze e strategia; focus e scorrimento sono verificati anche da tastiera.
 
 L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.

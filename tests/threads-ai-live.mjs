@@ -96,12 +96,14 @@ try {
     const result = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
     assert.equal(result.ok, true)
     assert.equal(result.value.every((thread) => thread.aiSessionRef === null && thread.messages.length === 0), true)
-    await page.getByLabel('Modifica da valutare').fill('Migliora la consistenza')
+    await page.getByRole('radio', { name: 'Proponi una lista', exact: true }).check()
+    assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Valuta questa idea')
+    await page.getByLabel('Scrivi nel thread').fill('Migliora la consistenza')
     await page.getByRole('button', { name: 'Vedi dati inviati a Codex' }).last().click()
     await page.getByText('Anteprima dei dati locali').waitFor()
     await page.getByRole('button', { name: 'Genera proposta Codex' }).click()
     await page.getByRole('alert').getByText('Codex CLI non trovato.', { exact: false }).waitFor()
-    assert.equal(await page.getByLabel('Modifica da valutare').inputValue(), 'Migliora la consistenza')
+    assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Migliora la consistenza')
     const afterProposal = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
     assert.equal(afterProposal.ok, true)
     assert.equal(afterProposal.value.every((thread) => thread.candidates.length === 0), true)
@@ -167,7 +169,8 @@ try {
           ?? chosen.reasoningEfforts[0]
         await page.getByLabel('Ragionamento per questo thread').selectOption(effort.id)
       }
-      await page.getByLabel('Modifica da valutare').fill(
+      await page.getByRole('radio', { name: 'Proponi una lista', exact: true }).check()
+      await page.getByLabel('Scrivi nel thread').fill(
         `Prepara una candidata di prova: aggiungi esattamente ${count} Boss's Orders ME01 114, togli ${count} Psychic Energy SVE 005 e conserva Mega Absol ex. Restituisci l'intera lista di 60 carte usando i codici del catalogo; è una prova strutturale.`)
       await page.getByRole('button', { name: 'Genera proposta Codex' }).click()
       try {

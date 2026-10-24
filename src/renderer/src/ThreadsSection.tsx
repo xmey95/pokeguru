@@ -212,7 +212,10 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [title, setTitle] = useState('')
   const [openingNote, setOpeningNote] = useState('')
   const [message, setMessage] = useState('')
-  const [proposalRequest, setProposalRequest] = useState('')
+  const [composerMode, setComposerMode] = useState<'ask' | 'proposal'>('ask')
+  const [composerError, setComposerError] = useState<string | null>(null)
+  const composerErrorElement = useRef<HTMLDivElement>(null)
+  const previewRequest = useRef(0)
   const [preview, setPreview] = useState<{ kind: 'ask' | 'proposal'; prompt: string; packet: ThreadEvidencePacket } | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [candidateText, setCandidateText] = useState('')
@@ -233,6 +236,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   useEffect(() => {
     if (createError) focusInWorkspace(newThreadError.current)
   }, [createError])
+  useEffect(() => {
+    if (composerError) focusInWorkspace(composerErrorElement.current)
+  }, [composerError])
   useEffect(() => {
     if (!confirmCandidate && !loading && !working && adoptionTrigger.current) {
       if (adoptionTrigger.current.isConnected) focusInWorkspace(adoptionTrigger.current)
@@ -259,6 +265,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     let active = true
     setLoading(true)
     setError(null)
+    invalidatePreview()
     void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId),
       window.projectsApi.getCatalog(), window.projectsApi.listConstraints(projectId), window.projectsApi.getStandardRuleAudit()])
       .then(([versionResult, threadResult, catalogResult, constraintResult, auditResult]) => {
@@ -281,7 +288,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       })
       .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Impossibile leggere i thread.') })
       .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
+    return () => { active = false; previewRequest.current++ }
   }, [projectId, mainImportedAt])
 
   useEffect(() => {
@@ -298,8 +305,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       versions.find((version) => version.id === thread.baseVersionId)?.rawText ?? '')
     setCandidateNote('')
     setMessage('')
-    setProposalRequest('')
-    setPreview(null)
+    setComposerMode('ask')
+    setComposerError(null)
+    invalidatePreview()
   }
 
   function closeCreate(): void {
@@ -310,18 +318,33 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     setCreateError(null)
   }
 
-  async function previewEvidence(kind: 'ask' | 'proposal'): Promise<void> {
-    if (!selected || previewLoading) return
-    const prompt = kind === 'ask' ? message : proposalRequest
+  function invalidatePreview(): void {
+    previewRequest.current++
+    setPreview(null)
+    setPreviewLoading(false)
+  }
+
+  function changeComposerMode(mode: 'ask' | 'proposal'): void {
+    setComposerMode(mode)
+    setComposerError(null)
+    invalidatePreview()
+  }
+
+  async function previewEvidence(): Promise<void> {
+    if (!selected || previewLoading || working) return
+    const prompt = message
     if (!prompt.trim()) return
+    const request = ++previewRequest.current
     setPreviewLoading(true)
-    setError(null)
+    setComposerError(null)
     try {
       const result = await window.projectsApi.previewDeckThreadEvidence(projectId, selected.id, prompt)
+      if (request !== previewRequest.current) return
       if (!result.ok) throw new Error(result.error)
-      setPreview({ kind, prompt, packet: result.value })
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Anteprima non disponibile.') }
-    finally { setPreviewLoading(false) }
+      setPreview({ kind: composerMode, prompt, packet: result.value })
+    } catch (cause) {
+      if (request === previewRequest.current) setComposerError(cause instanceof Error ? cause.message : 'Anteprima non disponibile.')
+    } finally { if (request === previewRequest.current) setPreviewLoading(false) }
   }
 
   async function create(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -340,25 +363,27 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   }
 
   async function addMessage(): Promise<void> {
-    if (!selected || working) return
+    if (!selected || working || !message.trim()) return
     setWorking(true)
-    setError(null)
+    setComposerError(null)
+    invalidatePreview()
     try {
       const result = await window.projectsApi.addDeckThreadMessage(projectId, selected.id, message)
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setMessage('')
       setPreview(null)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Messaggio non salvato.') }
+    } catch (cause) { setComposerError(cause instanceof Error ? cause.message : 'Messaggio non salvato.') }
     finally { setWorking(false) }
   }
 
   async function ask(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working) return
+    if (!selected || working || !message.trim()) return
     setWorking(true)
     setAsking(true)
-    setError(null)
+    setComposerError(null)
+    invalidatePreview()
     try {
       const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
@@ -367,7 +392,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       setMessage('')
       setPreview(null)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
+      setComposerError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
       const current = await window.projectsApi.listDeckThreads(projectId)
       if (current.ok) setThreads(current.value)
     }
@@ -386,26 +411,28 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setCandidateNote('')
+      invalidatePreview()
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Candidata non salvata.') }
     finally { setWorking(false) }
   }
 
   async function propose(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working) return
+    if (!selected || working || !selected.baseVersionId || !message.trim()) return
     setWorking(true)
     setProposing(true)
-    setError(null)
+    setComposerError(null)
+    invalidatePreview()
     try {
-      const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, proposalRequest,
+      const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setCandidateText(result.value.candidates.at(-1)?.rawText ?? candidateText)
-      setProposalRequest('')
+      setMessage('')
       setPreview(null)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
+      setComposerError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
       const current = await window.projectsApi.listDeckThreads(projectId)
       if (current.ok) setThreads(current.value)
     }
@@ -469,14 +496,31 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={confirmAdoption} />)}
             </div>
-            <form className="thread-form" onSubmit={(event) => void ask(event)}>
+            <form className="thread-form thread-composer" onSubmit={(event) => void (composerMode === 'ask' ? ask(event) : propose(event))}>
+              <fieldset className="composer-mode" aria-label="Modalità di invio" disabled={working}>
+                <label><input type="radio" name="thread-composer-mode" value="ask" checked={composerMode === 'ask'}
+                  onChange={() => changeComposerMode('ask')} /><span>Discuti</span></label>
+                <label><input type="radio" name="thread-composer-mode" value="proposal" checked={composerMode === 'proposal'}
+                  onChange={() => changeComposerMode('proposal')} /><span>Proponi una lista</span></label>
+              </fieldset>
               <label htmlFor="thread-message">Scrivi nel thread</label>
-              <textarea id="thread-message" value={message} maxLength={5000} onChange={(event) => { setMessage(event.target.value); setPreview(null) }} />
-              <p className="content-note">Base, candidata e fonti locali sono incluse nella richiesta.</p>
-              <button type="button" className="secondary-button" disabled={!message.trim() || previewLoading || working} onClick={() => void previewEvidence('ask')}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
-              {preview?.kind === 'ask' && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
-              <div className="thread-form-actions"><button className="primary-button" disabled={working || !message.trim()}>{asking ? 'Codex sta rispondendo…' : 'Chiedi a Codex'}</button>
-              <button type="button" className="secondary-button" disabled={working || !message.trim()} onClick={() => void addMessage()}>Salva osservazione</button></div>
+              <textarea id="thread-message" value={message} maxLength={5000} disabled={working} aria-describedby="thread-composer-help"
+                onChange={(event) => { setMessage(event.target.value); invalidatePreview(); setComposerError(null) }} />
+              <p id="thread-composer-help" className="content-note">{composerMode === 'ask' ? 'Ricevi una risposta da Codex.'
+                : !selected.baseVersionId ? 'Per proporre una lista serve una lista iniziale del thread.' : 'Ricevi una lista completa da confrontare.'}</p>
+              {composerError && <div ref={composerErrorElement} className="error-banner" role="alert" tabIndex={-1}>{composerError}</div>}
+              <div className="composer-actions"><div className="thread-form-actions">
+                <button className="primary-button" disabled={working || !message.trim() || (composerMode === 'proposal' && !selected.baseVersionId)}>
+                  {asking ? 'Codex sta rispondendo…' : proposing ? 'Codex sta preparando la proposta…'
+                    : composerMode === 'ask' ? 'Chiedi a Codex' : 'Genera proposta Codex'}
+                </button>
+                <button type="button" className="secondary-button" disabled={working || !message.trim()}
+                  title="Salva il testo senza inviarlo a Codex" onClick={() => void addMessage()}>Salva osservazione</button>
+              </div>
+              <button type="button" className="text-button composer-preview" disabled={!message.trim() || previewLoading || working}
+                onClick={() => void previewEvidence()}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
+              </div>
+              {preview?.kind === composerMode && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
             </form>
             <details className="thread-ai-options"><summary>Dettagli del thread e AI</summary><div className="thread-form"><p className="content-note">Creato il {displayDate(selected.createdAt)}</p>
               <label htmlFor="thread-ai-model">Modello Codex per questo thread</label>
@@ -495,18 +539,6 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 {selectedModel?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
               </select>
             </div></details>
-            <form className="thread-form candidate-form" onSubmit={(event) => void propose(event)}>
-              <h4>Proposta completa con Codex</h4>
-              <p className="content-note">Descrivi cosa cambiare. Riceverai una lista completa da confrontare.</p>
-              <label htmlFor="thread-proposal-request">Modifica da valutare</label>
-              <textarea id="thread-proposal-request" value={proposalRequest} maxLength={5000}
-                onChange={(event) => { setProposalRequest(event.target.value); setPreview(null) }} />
-              <button type="button" className="secondary-button" disabled={!proposalRequest.trim() || previewLoading || working} onClick={() => void previewEvidence('proposal')}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
-              {preview?.kind === 'proposal' && preview.prompt === proposalRequest && <EvidencePreview packet={preview.packet} />}
-              <button className="primary-button" disabled={working || !selected.baseVersionId || !proposalRequest.trim()}>
-                {proposing ? 'Codex sta preparando la proposta…' : 'Genera proposta Codex'}
-              </button>
-            </form>
             <details className="manual-candidate"><summary>Incolla manualmente una candidata completa</summary><form className="thread-form candidate-form" onSubmit={(event) => void saveCandidate(event)}>
               <h4>Nuova candidata</h4>
               <p className="content-note">Incolla l'intera lista. Puoi salvare anche una bozza incompleta.</p>

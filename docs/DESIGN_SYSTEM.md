@@ -69,6 +69,8 @@ I token risiedono in `src/renderer/src/tokens.css`; `styles.css` descrive i comp
 
 ## Verifica
 
+**Scrittura Thread (APP-069):** un campo e due modalità con radio native, navigabili con Tab e frecce. Stesso testo al cambio modalità, azione primaria esplicita, osservazione separata e una sola anteprima secondaria. Azioni nella stessa riga quando lo spazio lo permette, a capo quando serve. Errori nel modulo, valori conservati e controlli disabilitati durante invio/salvataggio; nessuna anteprima tardiva in un contesto diverso.
+
 **Thread (APP-067/068):** selettore con titolo, base e stato sintetico accanto a “Nuovo thread”. Ricerca e opzioni riprendono i componenti del selettore progetti; il menu resta entro l'area di lavoro, con scorrimento proprio e titoli lunghi a capo. La creazione usa un modulo nel flusso, con annullamento/Escape, focus restituito ed errori conservativi portati in vista. La candidata corrente mostra un riepilogo con stato, copie cambiate, blocchi/incertezze e origine; il confronto completo si apre nella pagina e si richiude anche con Escape. Le candidate precedenti restano nella cronologia. Titolo/base duplicati sono rimossi, data e configurazione AI sono sotto la conversazione.
 
 La verifica usa Electron reale su Windows, con archivi separati. I dati di Catalogo/Eventi e la guida del test sono **fixture UI**, non nuove acquisizioni o generazioni AI. Il test Matchup può ricevere il metagame attraverso il connettore già esistente; la guida resta una fixture dichiarata.
@@ -100,6 +102,8 @@ Schermate registrate: [Lista 1440](design-review/lista-1440.png), [Lista 1280](d
 5. Ridimensionare tra 1440 e 1280 px, poi sotto 1240 px; provare Tab, Shift+Tab, Enter, Escape e PageDown nella lista.
 
 Per conservare il profilo creato dalla prova: `node tests/workspace-ui-live.mjs --keep-profile`. Il comando stampa la cartella temporanea da usare come `POKEGURU_DATA_DIR` durante la prova manuale.
+
+**Prova della scrittura (APP-069):** Thread → scrivere un testo → cambiare Discuti / Proponi una lista anche con le frecce → aprire l'anteprima. “Salva osservazione” salva realmente il testo nel thread; le azioni Codex richiedono il servizio disponibile. [Proposta 1440](design-review/thread-scrittura-1440.png), [1280](design-review/thread-scrittura-1280.png), [640](design-review/thread-scrittura-640.png), [Discuti](design-review/thread-discuti-1280.png), [errore 640](design-review/thread-scrittura-errore-640.png) usano fixture dichiarate; `node tests/thread-composer-ui-live.mjs` verifica anche persistenza, errore SQLite, instradamento e anteprime tardive. Non certifica nuove generazioni AI. Contrasto minimo osservato 5,16:1.
 
 ## Feedback utile
 
