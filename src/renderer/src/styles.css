@@ -164,6 +164,32 @@ details[open] > summary { margin-bottom: 8px; }
 .deck-card-chevron { flex: none; color: var(--ink-muted); }
 .deck-card-detail { border-top: 1px solid var(--line); padding: 16px; }
 .deck-card-detail h3 { margin: 20px 0 8px; font-size: var(--text-md); }
+.card-overview { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; margin-bottom: 20px; }
+.card-artwork { margin: 0; width: 180px; }
+.card-artwork > img, .card-artwork-empty { display: block; width: 180px; height: 252px; border-radius: var(--radius-sm); object-fit: contain; }
+.card-artwork-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: var(--surface-subtle); color: var(--ink-muted); text-align: center; font-size: var(--text-sm); }
+.card-artwork-empty .icon { width: 32px; height: 32px; }
+.card-artwork figcaption { margin-top: 8px; color: var(--ink-muted); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.card-gameplay { min-width: 0; max-width: 78ch; }
+.card-gameplay-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 16px; color: var(--ink-secondary); font-size: var(--text-sm); }
+.card-gameplay-meta > strong { color: var(--ink); font-size: var(--text-md); }
+.card-data-partial { padding: 3px 8px; border-radius: var(--radius-sm); background: var(--warning-soft); color: var(--warning); }
+.card-gameplay section + section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.card-gameplay h4 { margin: 0 0 8px; line-height: 1.4; }
+.card-gameplay p { font-size: 15px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.card-gameplay .card-rule-label { display: block; margin-bottom: 4px; font-size: var(--text-xs); color: var(--ink-muted); }
+.card-attack-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.card-attack-heading > strong { flex: none; color: var(--ink); font-size: var(--text-lg); }
+.card-gameplay .card-attack-cost { margin-bottom: 8px; color: var(--ink-secondary); font-size: var(--text-sm); }
+.card-battle-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0 12px; padding-top: 16px; border-top: 1px solid var(--line); }
+.card-battle-stats dt { color: var(--ink-muted); font-size: var(--text-xs); }
+.card-battle-stats dd { margin: 4px 0 0; font-size: var(--text-sm); overflow-wrap: anywhere; }
+.card-gameplay .card-evolves { color: var(--ink-secondary); font-size: var(--text-sm); }
+.card-gameplay-source { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 16px; color: var(--ink-muted); font-size: var(--text-xs); }
+.card-gameplay-source > span { overflow-wrap: anywhere; }
+.card-gameplay-missing p { margin-bottom: 8px; color: var(--ink-secondary); }
+.card-detail-actions { margin: 0 0 16px; }
+.deck-import-details, .deck-print-details { padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--text-sm); }
 .deck-source-lines { display: grid; gap: 8px; padding: 12px; border-radius: var(--radius-sm); background: var(--surface-subtle); color: var(--ink-secondary); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .deck-source-lines > div { display: grid; gap: 4px; }
 .deck-source-lines .text-button { justify-self: start; }

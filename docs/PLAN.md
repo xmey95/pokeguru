@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-064 completato:** dettaglio con immagine, testo di gioco e vincolo; stampe/provenienza/controlli apribili. Build, cinque test mirati e percorsi Electron passati; scheda reale del catalogo locale verificata a 1440/1280/640 px. Risultati e limiti nel backlog. Prossimo punto proposto per la revisione condivisa: APP-065, creazione contestuale dei vincoli, da discutere prima di implementare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
 - **APP-063 completato:** riepilogo unico di totale e stato Standard nella Lista; incertezze/fonti apribili e problemi certi visibili. Verifiche UI e import/export passate su Windows. Prossimo punto della revisione condivisa: dettaglio della carta, con proposta di dare precedenza a immagine e testo di gioco rispetto a stampe e righe importate.
 
 - **APP-062 completato:** righe con miniature e categorie Pokémon/Allenatori/Energie con conteggi, dati mancanti espliciti. Build, conteggi, riconciliazione, immagini e layout verificati su Windows; campione catalogo acquisito nel solo profilo demo per la prova con miniature reali. Prossimo punto proposto nella revisione condivisa: intestazione e stato della Lista, da discutere prima di modificare.

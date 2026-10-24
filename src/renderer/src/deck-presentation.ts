@@ -49,7 +49,18 @@ export function groupDeckCards(cards: DeckCardEntry[], baseline: DeckBaseline) {
   return { groups, usesImportHeadings }
 }
 
-export function deckThumbnail(card: DeckCardEntry): string | null {
+export function deckImagePrint(card: DeckCardEntry) {
   const imported = card.prints.find((print) => card.importedPrintIds.includes(print.id) && print.thumbnail)
-  return imported?.thumbnail ?? card.prints.find((print) => print.thumbnail)?.thumbnail ?? null
+  return imported ?? card.prints.find((print) => print.thumbnail) ?? null
+}
+
+export function deckThumbnail(card: DeckCardEntry): string | null {
+  return deckImagePrint(card)?.thumbnail ?? null
+}
+
+/** Keep gameplay tied to one known printing; never fill gaps by mixing card texts. */
+export function deckGameplayPrint(card: DeckCardEntry) {
+  const imported = card.prints.filter((print) => card.importedPrintIds.includes(print.id))
+  return imported.find((print) => print.gameplay) ?? card.prints.find((print) => print.gameplay)
+    ?? imported[0] ?? card.prints[0] ?? null
 }

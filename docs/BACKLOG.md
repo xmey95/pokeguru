@@ -70,6 +70,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-061** | Selettore progetti con ricerca e creazione | UI/UX | R-03 / qualità pre-I4 | P0 / S | APP-060; selettore approvato dall'utente | Done |
 | **APP-062** | Lista per categorie con conteggi e miniature | UI/UX | R-02, R-03, R-04 / qualità pre-I4 | P0 / S | APP-061; preferenza utente confermata | Done |
 | **APP-063** | Riepilogo unico di totale e stato Standard nella Lista | UI/UX | R-02, R-03 / qualità pre-I4 | P0 / S | APP-062; riepilogo approvato dall'utente | Done |
+| **APP-064** | Dettaglio carta con immagine e testo di gioco in primo piano | UI/UX | R-02, R-05 / qualità pre-I4 | P0 / S | APP-063; gerarchia approvata dall'utente | Done |
+| **APP-065** | Revisione condivisa del flusso dei vincoli | UI/UX | R-05 / qualità pre-I4 | P1 / S | APP-064; proposta da discutere con l'utente | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -551,6 +553,20 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Risultato:** nella Lista totale, stato Standard e azioni sono raccolti in un'intestazione neutra; rimossa l'etichetta di progetto “Pronta per controllo”. “Controlli e fonti” apre incertezze, copertura e riferimenti; problemi certi restano visibili. Il badge positivo richiede conformità allo snapshot, il campione parziale resta da verificare. Caricamento e dati non disponibili hanno stati espliciti; un errore nel salvataggio di una correzione non altera lo stato di disponibilità dei controlli.
 - **Verifiche Windows:** build/typecheck, workspace UI, Standard legality, export, smoke offline e riconciliazione passati. Verificati totale unico, assenza del vecchio badge, apertura dettagli da tastiera, problema certo visibile, conformità dello snapshot e passaggio a data non coperta, copia/reimport e blocco su testo non interpretabile. Layout e contrasto a 1440×900, 1280×720 e viste compatte; schermate della demo con catalogo ispezionate e aggiornate.
 - **Limiti:** verifiche Standard con fixture dichiarate; nessuna modifica ai validatori, nessuna nuova generazione AI o prova Linux. Nessun merge o release.
+
+### APP-064 — Dettaglio carta
+
+- **Autorizzazione:** approvata la gerarchia immagine leggibile, testo di gioco, vincolo, stampe/provenienza/diagnostica apribili. Task Ready circoscritto e avviato sul ramo del design system.
+- **Accettazione:** dettagli di Pokémon, Allenatori ed Energie dai dati locali; abilità, attacchi o effetti leggibili e fonte consultabile. Dati mancanti e identità ambigue espliciti, nessuna ricostruzione automatica. Immagine più grande, vincolo accessibile, dettagli tecnici secondari.
+- **Verifica prevista:** build; scelta della stampa coerente; Electron per effetti, attacchi, costi ignoti, immagini e campi mancanti, disclosure da tastiera, vincoli e riconciliazione; schermate a 1440×900, 1280×720 e vista compatta.
+- **Risultato:** dettaglio con immagine locale 180×252 px e testo leggibile a 15 px: PS, abilità, attacchi, costi ed effetti. Seguono vincolo e sezioni apribili per testo importato/controlli e stampe/varianti. Fonte del testo e stampa dell'immagine identificabili separatamente. Schede incomplete esplicite; costo assente distinto da costo gratuito e ritirata zero conservata. Sotto 700 px di spazio di lavoro, immagine sopra il testo. Database, validatori e integrazioni invariati.
+- **Verifiche Windows:** build/typecheck, cinque test di presentazione, `workspace-ui-live.mjs` e `reconciliation-live.mjs` passati. Fixture per Pokémon/Allenatori/Energie, immagine non leggibile, identità ambigua, testo assente, costo nullo/vuoto, disclosure con Invio/Spazio, vincoli, riapertura e isolamento. Demo con le 41 stampe TCGdex già acquisite: scheda Mega Absol ex ispezionata a 1440×900, 1280×720 e 640×720, nessun overflow o sovrapposizione, contrasto minimo misurato 5,16:1. Schermate in `design-review/carta-*.png`; `git diff --check` pulito.
+- **Limiti:** testi in inglese dal catalogo locale, senza traduzione o ricostruzione; qualità dell'immagine limitata alla miniatura già acquisita. Nessuna nuova prova di integrazione AI, Linux, lettore di schermo o scala OS elevata. Nessun merge o release.
+
+### APP-065 — Flusso dei vincoli, proposta da discutere
+
+- **Osservazione:** “Aggiungi vincolo su questa carta” sposta l'utente al modulo generale, lontano dalla carta aperta.
+- **Proposta:** impostazione contestuale vicino alla carta; riepilogo generale per vedere, modificare o eliminare i vincoli. Discutere con l'utente prima dell'implementazione; nessuna modifica autorizzata in APP-064.
 
 ## Regola per i blocchi
 

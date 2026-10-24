@@ -83,6 +83,12 @@ L'utente approva un solo riepilogo con totale carte e stato Standard. Nella vist
 
 L'esito positivo è “Standard: conforme allo snapshot” soltanto quando il validatore restituisce conformità supportata. Campione parziale e casi indeterminati restano da verificare; caricamento e dati non disponibili sono espliciti. Nessun cambio al significato o al calcolo dei validatori; lo stato generico del progetto nelle altre viste sarà oggetto della loro revisione.
 
+### T-53 — Dettaglio della carta orientato al gioco (APP-064)
+
+L'utente approva immagine e testo di gioco prima del vincolo, con stampe, provenienza e diagnostica in sezioni apribili. L'immagine usa la miniatura locale a 180×252 px; il testo affiancato è a 15 px con interlinea 1,65, sotto l'immagine quando il contenuto è stretto. Abilità, attacchi, effetti e caratteristiche sono quelli del catalogo, senza traduzione automatica o ricostruzione.
+
+Il testo proviene da una sola stampa della stessa identità, preferendo quella importata quando contiene gameplay; non si fondono campi di stampe diverse. Immagine e testo hanno ciascuno il proprio riferimento alla stampa. Costi ignoti non diventano gratuiti, ritirata zero resta zero, dati parziali e identità ambigue restano espliciti. Nessuna nuova acquisizione di immagini ad alta risoluzione o modifica al modello.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

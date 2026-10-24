@@ -12,6 +12,15 @@ const electronPath = require('electron')
 const workspace = resolve(import.meta.dirname, '..')
 const temporary = mkdtempSync(join(tmpdir(), 'pokeguru-deck-list-live-'))
 let application
+// Synthetic gameplay only for rendering and missing-data checks; no competitive assertions.
+const emptyGameplay = { hp: null, types: [], evolveFrom: null, attacks: [], abilities: [], effect: null,
+  trainerType: null, weaknesses: [], resistances: [], retreat: null }
+const pokemonGameplay = { ...emptyGameplay, hp: 280, types: ['Darkness'], retreat: 0,
+  abilities: [{ name: 'Fixture ability', effect: 'UI fixture: readable ability effect.', type: 'Ability' }],
+  attacks: [
+    { name: 'Fixture free attack', cost: [], damage: '0', effect: 'UI fixture: no energy required.' },
+    { name: 'Fixture unknown cost', cost: null, damage: '120+', effect: null }
+  ], weaknesses: [{ type: 'Grass', value: '×2' }] }
 function seedCatalog() {
   const db = new DatabaseSync(join(temporary, 'profile', 'data', 'pokeguru.sqlite'))
   const now = '2026-10-23T00:00:00.000Z'
@@ -27,11 +36,17 @@ function seedCatalog() {
     ['me01-125', 'me01', 'Mega Evolution', '125', 'Rare Candy', 'Common', 'trainer-candy', 'I'],
     ['me01-086', 'me01', 'Mega Evolution', '086', 'Mega Absol ex', 'Double rare', 'mega-absol', 'I'],
     ['me02.5-172', 'me02.5', 'Ascended Heroes', '172', 'Mega Audino ex', 'Double rare', 'mega-audino', 'J'],
-    ['mep-051', 'mep', 'MEP Promos', '051', 'Promo 051', 'Promo', 'promo-051', 'J']
+    ['mep-051', 'mep', 'MEP Promos', '051', 'Promo 051', 'Promo', 'promo-051', 'J'],
+    ['me01-999', 'me01', 'Mega Evolution', '999', 'Fixture Energy', 'Common', 'fixture-energy', 'I']
   ]) {
-    const print = { id, setId, setName, localId, name, category: name.startsWith('Mega ') ? 'Pokemon' : 'Trainer', rarity, regulationMark: mark,
+    const print = { id, setId, setName, localId, name, category: name.startsWith('Mega ') ? 'Pokemon' : name === 'Fixture Energy' ? 'Energy' : 'Trainer', rarity, regulationMark: mark,
       variants: { normal: true, reverse: true }, identityId,
       identityBasis: name.startsWith('Mega ') ? 'unverified' : 'trainer-text',
+      stage: name.startsWith('Mega ') ? 'Basic' : null,
+      energyType: name === 'Fixture Energy' ? 'Basic' : null,
+      gameplay: id === 'me01-086' ? pokemonGameplay
+        : name === 'Iono' ? { ...emptyGameplay, trainerType: 'Supporter', effect: 'UI fixture: each player shuffles their hand.' }
+          : name === 'Fixture Energy' ? emptyGameplay : null,
       imageBase: null, thumbnail: id === 'sv02-185'
         ? 'data:image/svg+xml;base64,' + Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="72" height="100"><rect width="72" height="100" rx="6" fill="#c6ded6"/><rect x="8" y="12" width="56" height="42" fill="#698e86"/><path d="M10 66h52M10 76h42M10 86h30" stroke="#304b47" stroke-width="4"/></svg>').toString('base64')
         : id === 'sv04.5-089' ? 'data:image/png;base64,invalid' : null,
@@ -103,13 +118,26 @@ try {
   assert.equal(await card.count(), 1)
   assert.match(await card.locator('.deck-card-toggle').textContent(), /3×\s*Iono/)
   await card.locator('.deck-card-toggle').click()
+  assert.ok(await card.getByText('UI fixture: each player shuffles their hand.').isVisible())
+  assert.ok(await card.locator('.card-artwork img').isVisible())
+  assert.match(await card.locator('.card-gameplay-source').innerText(), /Testo in inglese.*Paldea Evolved 185/)
+  assert.equal(await card.locator('.deck-import-details').getAttribute('open'), null)
+  assert.equal(await card.locator('.deck-print-details').getAttribute('open'), null)
+  await card.locator('.deck-import-details > summary').focus()
+  await page.keyboard.press('Enter')
+  assert.ok(await card.locator('.deck-source-lines').isVisible())
   assert.match(await card.locator('.deck-source-lines').textContent(), /2 Iono PAL 185/)
   assert.match(await card.locator('.deck-source-lines').textContent(), /1 Iono PAL 254/)
   assert.equal(await card.getByText('Indicata nel testo importato').count(), 2)
+  await card.locator('.deck-print-details > summary').focus()
+  await page.keyboard.press('Space')
+  assert.ok(await card.locator('.catalog-print-grid').isVisible())
   assert.match(await card.locator('.catalog-print-grid').textContent(), /Uncommon/)
   assert.match(await card.locator('.catalog-print-grid').textContent(), /Ultra Rare/)
   const candyCard = page.locator('.deck-card').filter({ has: page.locator('.deck-card-title strong', { hasText: /^Rare Candy$/ }) })
   await candyCard.locator('.deck-card-toggle').click()
+  await candyCard.getByText('Immagine non disponibile').waitFor()
+  assert.ok(await candyCard.getByText('Testo di gioco non disponibile nel catalogo locale.').isVisible())
   assert.match(await candyCard.locator('.deck-source-lines').textContent(), /stampe storiche non sono verificate/)
   await card.locator('.deck-card-toggle').click()
   await card.getByRole('button', { name: 'Aggiungi vincolo su questa carta' }).click()
@@ -178,6 +206,8 @@ try {
   const ambiguous = page.locator('.deck-card').first()
   await ambiguous.locator('.deck-card-toggle').click()
   assert.match(await ambiguous.textContent(), /Identità da chiarire/)
+  assert.ok(await ambiguous.getByText('Conferma l’identità per consultare il testo di gioco.').isVisible())
+  assert.equal(await ambiguous.locator('.card-gameplay section').count(), 0)
   await ambiguous.locator('.deck-identity-options summary').click()
   await ambiguous.getByRole('button', { name: 'Conferma identità' }).first().click()
   await page.locator('.deck-card').first().locator('.deck-card-toggle').getByText('Iono', { exact: true }).waitFor()
@@ -188,9 +218,23 @@ try {
   await page.getByText('Identità da chiarire').waitFor()
   assert.match(await page.locator('.deck-card').first().textContent(), /Identità da chiarire/)
   assert.equal(await page.getByLabel('Testo lista').inputValue(), '1 Iono ALT 12A')
+  await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 086\n1 Fixture Energy MEG 999')
+  await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  const pokemon = page.locator('.deck-card').filter({ has: page.locator('.deck-card-title strong', { hasText: /^Mega Absol ex$/ }) })
+  await pokemon.locator('.deck-card-toggle').click()
+  assert.ok(await pokemon.getByText('280 PS').isVisible())
+  assert.ok(await pokemon.getByText('Scheda parziale').isVisible())
+  assert.ok(await pokemon.getByText('UI fixture: readable ability effect.').isVisible())
+  assert.match(await pokemon.getByRole('region', { name: 'Attacco: Fixture free attack' }).innerText(), /Costo: Nessuno/)
+  assert.match(await pokemon.getByRole('region', { name: 'Attacco: Fixture unknown cost' }).innerText(), /Costo: Non indicato/)
+  assert.equal(await pokemon.locator('.card-battle-stats div').filter({ hasText: 'Ritirata' }).locator('dd').innerText(), '0')
+  const energy = page.locator('.deck-card').filter({ has: page.locator('.deck-card-title strong', { hasText: /^Fixture Energy$/ }) })
+  await energy.locator('.deck-card-toggle').click()
+  assert.ok(await energy.getByText('Nessun testo effetto riportato dal catalogo.').isVisible())
+  assert.equal(await energy.getByText('Scheda parziale').count(), 0)
   await application.close()
   application = undefined
-  console.log('E2E APP-006/007 OK: lista integrata, vincoli su carta e stampa, modifica, riapertura e isolamento.')
+  console.log('E2E APP-006/007/064 OK: gameplay e dati mancanti, disclosure da tastiera, riconciliazione, vincoli, riapertura e isolamento.')
 } finally {
   if (application) await application.close()
   if (process.env.KEEP_POKEGURU_E2E !== '1') {

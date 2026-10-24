@@ -14,6 +14,7 @@ import { reviewSummary } from './review-summary'
 import { CardThumbnail } from './CardThumbnail'
 import { deckThumbnail, groupDeckCards } from './deck-presentation'
 import { ExportButton } from './ExportButton'
+import { CardOverview } from './CardOverview'
 
 function localDate(): string {
   const now = new Date()
@@ -186,10 +187,12 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onIm
             <span className="deck-card-chevron"><Icon name="chevron" /></span>
           </button>
           {open && <div className="deck-card-detail">
-            {card.identityId && <button type="button" className="secondary-button" onClick={() => onConstrain(card.identityId!)}>Aggiungi vincolo su questa carta</button>}
+            <CardOverview card={card} onOpenCatalog={onOpenCatalog} />
+            {card.identityId && <div className="card-detail-actions"><button type="button" className="secondary-button" onClick={() => onConstrain(card.identityId!)}>Aggiungi vincolo su questa carta</button></div>}
             {card.staleCorrection && <p className="diagnostics">Una correzione precedente non corrisponde più al catalogo locale. Controlla l’identità prima di usarla nell’analisi.</p>}
             {card.status === 'ambiguous' && <p className="content-note">Le righe restano separate finché non confermi l’identità.</p>}
-            <div className="deck-source-lines"><strong>Nel testo importato</strong>{card.lines.map((line) => {
+            <details className="deck-import-details"><summary>Testo importato e controlli</summary>
+            <div className="deck-source-lines">{card.lines.map((line) => {
               const result = rotationByLine.get(line.lineNumber)
               const setResult = admissionByLine.get(line.lineNumber)
               const promoResult = promoByLine.get(line.lineNumber)
@@ -201,8 +204,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onIm
                   {rotationIssue && <li>Rotazione: {result.message}</li>}
                   {admissionIssue && <li>Ammissione: {admissionResult.message}</li>}
                 </ul></details>}</div>
-            })}</div>
-            {card.prints.length > 0 && <><h3>Stampe e varianti note ({card.prints.length})</h3>
+            })}</div></details>
+            {card.prints.length > 0 && <details className="deck-print-details"><summary>Stampe e varianti ({card.prints.length})</summary>
               <div className="catalog-print-grid">{card.prints.map((print) => <article className="catalog-print" key={print.id}>
                 {print.thumbnail ? <img src={print.thumbnail} alt={`Carta ${print.name}, ${print.setName} ${print.localId}`} /> : <div className="catalog-no-image">Miniatura assente</div>}
                 <div><strong>{print.setName}</strong><span>{print.setId} · N. {print.localId}</span>
@@ -210,7 +213,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onIm
                   {card.importedPrintIds.includes(print.id) && <span className="imported-print">Indicata nel testo importato</span>}
                   <button type="button" className="text-button" onClick={() => void window.projectsApi.openCatalogSource(print.sourceUrl)}>Apri scheda fonte ↗</button>
                 </div>
-              </article>)}</div></>}
+              </article>)}</div></details>}
             {(card.status === 'ambiguous' || card.staleCorrection || card.candidateIdentities.length > 1 ||
               card.lines.some((line) => reconciliation?.mappings.some((item) => item.lineNumber === line.lineNumber))) &&
               <details className="deck-identity-options">

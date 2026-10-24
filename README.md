@@ -36,6 +36,8 @@ APP-062 organizza la **Lista** in righe con miniature e sezioni **Pokémon, Alle
 
 APP-063 riunisce **totale e stato Standard** nell'intestazione della Lista, sostituendo il badge “Pronta per controllo”. **Controlli e fonti** apre gli approfondimenti; i problemi certi restano subito visibili.
 
+APP-064 mostra nel **dettaglio della carta** immagine, abilità, attacchi o effetto, poi il vincolo. Stampe e controlli sono apribili; testi in inglese dal catalogo locale e dati mancanti espliciti.
+
 Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con token condivisi, tipografia sans, icone SVG, controlli leggibili e stati coerenti. La sidebar desktop è larga **224 px**; la lista principale rimane fissa a **384 px**, con dock di 220 px sotto la soglia di 1240 px. Il primo progetto si crea nell'area centrale. Metadati e metodo precedono meno spesso carte, differenze e strategia; focus e scorrimento sono verificati anche da tastiera.
 
 L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.

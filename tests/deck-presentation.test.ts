@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { buildDeckCards } from '../src/shared/reconciliation'
-import { deckThumbnail, groupDeckCards } from '../src/renderer/src/deck-presentation'
+import { deckGameplayPrint, deckThumbnail, groupDeckCards } from '../src/renderer/src/deck-presentation'
 
 const print = (id: string, category: string, thumbnail: string | null = null): CatalogPrint => ({
   id, setId: 'sv02', setName: 'Fixture', localId: id.split('-')[1], name: 'Iono',
@@ -54,5 +54,19 @@ describe('Presentazione delle categorie della lista', () => {
     expect(deckThumbnail(card)).toBe('image-b')
     expect(deckThumbnail({ ...card, prints: [print('sv02-185', 'Trainer', 'image-a'), print('sv02-254', 'Trainer')] })).toBe('image-a')
     expect(deckThumbnail({ ...card, prints: [] })).toBeNull()
+  })
+
+  it('mostra il testo di una sola stampa della stessa identità, preferendo quella importata', () => {
+    const card = buildDeckCards(baseline('1 Iono PAL 254'), catalog)[0]
+    const gameplay = {
+      hp: null, types: [], evolveFrom: null, attacks: [], abilities: [],
+      effect: 'UI fixture', trainerType: 'Supporter', weaknesses: [], resistances: [], retreat: null
+    }
+    const other = { ...card.prints[0], gameplay }
+    const imported = { ...card.prints[1], gameplay: { ...gameplay, trainerType: null } }
+    expect(deckGameplayPrint({ ...card, prints: [other, imported] })).toBe(imported)
+    expect(deckGameplayPrint({ ...card, prints: [other, imported] })?.gameplay?.trainerType).toBeNull()
+    expect(deckGameplayPrint({ ...card, prints: [other, card.prints[1]] })).toBe(other)
+    expect(deckGameplayPrint({ ...card, prints: [] })).toBeNull()
   })
 })
