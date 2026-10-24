@@ -175,10 +175,10 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     </div>
     <p className="content-note">{standard ? 'Inventario Standard TCGdex · marchi H e successivi, promo ed Energie Base.' : 'Campione TCGdex condiviso fra i progetti.'}</p>
     {catalog?.rulePackageError && <p className="diagnostics" role="alert">{catalog.rulePackageError}</p>}
-    {ruleAudit?.status === 'changed' && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
+    {ruleAudit?.status === 'changed' && ruleAudit.packageVersion === catalog?.rulePackage?.version && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
     <details className="rotation-panel" aria-label="Fonti delle regole Standard">
-      <summary>Regole Standard v{catalog?.rulePackage?.version ?? '—'} · {!ruleAudit ? 'fonti non ricontrollate' : ruleAudit.status === 'matching' ? 'fonti coerenti' : ruleAudit.status === 'changed' ? 'revisione necessaria' : 'fonti non raggiungibili'}</summary>
-      <p>{!ruleAudit ? 'Fonti online non ancora ricontrollate da questa installazione.'
+      <summary>Regole Standard v{catalog?.rulePackage?.version ?? '—'} · {!ruleAudit || ruleAudit.packageVersion !== catalog?.rulePackage?.version ? 'fonti non ricontrollate' : ruleAudit.status === 'matching' ? 'fonti coerenti' : ruleAudit.status === 'changed' ? 'revisione necessaria' : 'fonti non raggiungibili'}</summary>
+      <p>{!ruleAudit || ruleAudit.packageVersion !== catalog?.rulePackage?.version ? 'Fonti online non ancora ricontrollate per questa versione delle regole.'
         : ruleAudit.status === 'matching' ? `Fonti coerenti con il pacchetto locale al ${date(ruleAudit.checkedAt)}.`
           : ruleAudit.status === 'changed' ? `Fonte cambiata o non interpretabile al ${date(ruleAudit.checkedAt)}: revisione delle regole necessaria.`
             : `Fonti non raggiungibili al ${date(ruleAudit.checkedAt)}; ultima verifica riuscita ${ruleAudit.verifiedAt ? date(ruleAudit.verifiedAt) : 'mai'}.`}</p>
@@ -232,7 +232,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
                     print.promoStatus?.state === 'unlisted' ? 'non elencata · da verificare' : 'non verificata'}
                   {print.promoStatus && ` · controllo ${date(print.promoStatus.checkedAt)}`}</span>}
                 {print.variants && <span>Varianti: {Object.entries(print.variants).filter(([, yes]) => yes).map(([name]) => name).join(', ') || 'nessuna indicata'}</span>}{print.highImageAvailable && <span>Immagine grande disponibile online</span>}{print.sourceUpdated && <span>Fonte aggiornata: {date(print.sourceUpdated)}</span>}{print.error && <span className="catalog-error">{print.error}</span>}
-                {print.gameplay ? <details><summary>Regole di gioco</summary><p>{gameplaySummary(print.gameplay)}</p></details>
+                {print.gameplay ? <details><summary>Regole di gioco</summary><p>{gameplaySummary(print.gameplay, print)}</p></details>
                   : <span>Regole di gioco non ancora acquisite</span>}
                 <button type="button" className="text-button" onClick={() => void openSource(print.sourceUrl)}>Apri scheda fonte ↗</button></div>
             </article>)}</div>

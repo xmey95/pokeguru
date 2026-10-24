@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "2026-10-24.1",
+  "version": "2026-10-24.2",
   "circuit": "WESTERN",
   "checkedAt": "2026-10-24",
   "standardBans": {
@@ -34,6 +34,7 @@
   "setAdmissions": [
     { "setId": "sv05", "legalDate": "2024-04-05", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
     { "setId": "sv06", "legalDate": "2024-06-07", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
+    { "setId": "sv06.5", "legalDate": "2024-08-16", "method": "explicit", "sourceUrl": "https://worlds.2024.pokemon.com/en-us/news/2024-worlds-tcg-power-rankings/" },
     { "setId": "sv07", "legalDate": "2024-09-27", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
     { "setId": "sv08", "legalDate": "2024-11-22", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
     { "setId": "sv09", "legalDate": "2025-04-11", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },

@@ -42,7 +42,7 @@ function officialSource(value: unknown): value is string {
   if (typeof value !== 'string') return false
   try {
     const url = new URL(value)
-    return url.protocol === 'https:' && ['www.pokemon.com', 'community.pokemon.com', 'press.pokemon.com', 'play.pokemon.com']
+    return url.protocol === 'https:' && ['www.pokemon.com', 'community.pokemon.com', 'press.pokemon.com', 'play.pokemon.com', 'worlds.2024.pokemon.com']
       .includes(url.hostname) && !url.username && !url.password
   } catch { return false }
 }

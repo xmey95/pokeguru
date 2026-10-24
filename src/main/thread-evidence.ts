@@ -177,7 +177,7 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
       setId: print?.setId ?? null, localId: print?.localId ?? null,
       category: print?.category ?? null, regulationMark: print?.regulationMark ?? null,
       identityStatus: chosen.status, gameplay: print?.gameplay ?? null,
-      gameplayText: print?.gameplay ? gameplaySummary(print.gameplay) : null,
+      gameplayText: print?.gameplay ? gameplaySummary(print.gameplay, print) : null,
       sourceId: print ? `card:${print.id}` : null, detailAt: print?.detailAt ?? null }
   })
   const eventMap = new Map<string, ThreadEventEvidence>()
