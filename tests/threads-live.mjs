@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -19,8 +20,7 @@ async function launch() {
 try {
   application = await launch()
   let page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Test thread')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Test thread')
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Da zero')

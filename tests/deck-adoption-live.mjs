@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -46,8 +47,7 @@ const secondCandidate = '1 Mega Absol ex MEG 86\n57 Basic Psychic Energy\n2 Iono
 try {
   application = await launch()
   let page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Adozione test')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Adozione test')
   seedCatalog()
   await page.getByLabel('Testo lista').fill(original)
   await page.getByRole('button', { name: 'Salva lista' }).click()
