@@ -73,7 +73,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-064** | Dettaglio carta con immagine e testo di gioco in primo piano | UI/UX | R-02, R-05 / qualità pre-I4 | P0 / S | APP-063; gerarchia approvata dall'utente | Done |
 | **APP-065** | Vincoli contestuali e riepilogo generale | UI/UX | R-05 / qualità pre-I4 | P1 / S | APP-064; proposta approvata dall'utente | Done |
 | **APP-066** | Importazione su richiesta e annullamento | UI/UX | R-03, R-04 / qualità pre-I4 | P1 / S | APP-065; proposta approvata dall'utente | Done |
-| **APP-067** | Revisione condivisa di selezione e creazione dei Thread | UI/UX | R-03, R-07 / qualità pre-I4 | P1 / S | APP-066; proposta da discutere con l'utente | Backlog |
+| **APP-067** | Revisione condivisa di selezione e creazione dei Thread | UI/UX | R-03, R-07 / qualità pre-I4 | P1 / S | APP-066; proposta approvata dall'utente | Done |
+| **APP-068** | Revisione condivisa della gerarchia tra conversazione e candidata | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-067; proposta da discutere con l'utente | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -585,10 +586,20 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche Windows:** build/typecheck, `import-ui-live.mjs`, workspace UI, export, riconciliazione, smoke offline e adozione passati. Annullamento senza nuove versioni, errore SQLite e rollback nel solo archivio temporaneo, recupero, estensione/dimensione file, letture tardive, cambio progetto, riapertura, copia/reimport e base del thread superata verificati. Modulo e tastiera a 1440×900, 1280×720 e 640×720; schermate demo e stato vuoto ispezionati, contrasto minimo osservato 5,16:1, nessun overflow/sovrapposizione. Percorsi di prova esistenti adattati al comando di apertura e alla lettura del testo originale salvato. `git diff --check` pulito.
 - **Limiti:** fixture UI per errore di storage e ritardo di lettura file; demo con lista di esempio, nessuna modifica salvata al suo mazzo. Prove Linux, lettore di schermo e scala OS elevata non eseguite; percorsi AI live adattati ma non rieseguiti. Nessun merge o release.
 
-### APP-067 — Selezione e creazione dei Thread, proposta da discutere
+### APP-067 — Selezione e creazione dei Thread
 
 - **Osservazione:** i thread sono pulsanti larghi 200 px in una striscia a scorrimento orizzontale; il modulo “Nuovo thread” si apre nella stessa striscia.
-- **Proposta:** selettore unico con titolo e stato del thread, accanto al comando “Nuovo thread”; creazione in un modulo nel contenuto. Da discutere con l'utente prima di implementare; conversazione e candidata saranno esaminate nei passaggi successivi.
+- **Autorizzazione e Ready:** proposta approvata dall'utente il 24-10-2026; dipendenze risolte e perimetro S. Avviato sul ramo locale `task/production-design-system`.
+- **Risultato atteso:** selettore unico con titolo e stato, ricerca e uso da tastiera, accanto a “Nuovo thread”; modulo nel contenuto con annullamento ed errori contestuali. Lista principale sempre consultabile. Conversazione e candidata saranno esaminate nei passaggi successivi.
+- **Verifica prevista:** build, percorsi Electron di selezione/creazione, persistenza e isolamento, regressione adozione/AI offline; layout e contrasto a 1440×900, 1280×720 e 640×720, senza sovrapposizioni al pannello lista.
+- **Risultato:** selettore con titolo, versione di base e stato; ricerca per titolo, opzione attiva riconoscibile, nomi lunghi a capo, elenco con scorrimento proprio. Il menu è confinato nell'area centrale, lasciando consultabile pannello o dock lista. “Nuovo thread” apre il modulo nel contenuto con focus sul titolo; Annulla/Escape non scrivono dati e restituiscono il focus. Errori contestuali portati in vista conservano titolo e osservazione; dopo il successo il nuovo thread è selezionato. Solo renderer: database, contratti IPC e integrazioni invariati.
+- **Verifiche Windows:** build/typecheck e cinque percorsi Electron passati: `thread-switcher-ui-live.mjs`, `threads-live.mjs`, workspace UI, adozione e Thread AI offline. Ricerca senza risultati, 13 thread, titolo lungo, frecce/Tab/Invio/Escape, ritorno del focus, annullamento, errore SQLite indotto nel solo profilo temporaneo e recupero, isolamento fra progetti, candidate separate, base superata e riapertura verificati. Menu/modulo a 1440×900, 1280×720 e 640×720; workspace anche a 1241/1240×720 e 1024×768, senza sovrapposizioni al mazzo. Schermate ispezionate; demo con dati di esempio e contrasto minimo osservato 5,38:1. `git diff --check` pulito.
+- **Limiti:** scenari UI con dati dichiarati e storage temporaneo; nessuna nuova generazione AI. Linux, lettore di schermo e scala OS elevata non verificati. Revisione della conversazione/candidata rinviata al confronto con l'utente; nessun merge o release.
+
+### APP-068 — Gerarchia tra conversazione e candidata, proposta da discutere
+
+- **Osservazione:** titolo e versione del thread sono ripetuti dopo il selettore; la candidata aperta con confronto e liste complete precede i messaggi e richiede molto scorrimento.
+- **Proposta:** intestazione senza ripetizioni e candidata in un riepilogo con stato, variazioni e “Apri confronto”, lasciando spazio alla conversazione. Blocchi e incertezze essenziali restano leggibili; confronto completo e adozione manuale esplicita restano accessibili. Da discutere prima dell'implementazione.
 
 ## Regola per i blocchi
 

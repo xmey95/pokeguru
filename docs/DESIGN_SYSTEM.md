@@ -69,6 +69,8 @@ I token risiedono in `src/renderer/src/tokens.css`; `styles.css` descrive i comp
 
 ## Verifica
 
+**Thread (APP-067):** selettore con titolo, base e stato sintetico accanto a “Nuovo thread”. Ricerca e opzioni riprendono i componenti del selettore progetti; il menu resta entro l'area di lavoro, con scorrimento proprio e titoli lunghi a capo. La creazione usa un modulo nel flusso, con annullamento/Escape, focus restituito ed errori conservativi portati in vista. La candidata e la conversazione mantengono per ora la gerarchia precedente.
+
 La verifica usa Electron reale su Windows, con archivi separati. I dati di Catalogo/Eventi e la guida del test sono **fixture UI**, non nuove acquisizioni o generazioni AI. Il test Matchup può ricevere il metagame attraverso il connettore già esistente; la guida resta una fixture dichiarata.
 
 `tests/design-system-audit.mjs` controlla testo effettivamente renderizzato, contrasto, dimensioni minime dei controlli e nomi dei pulsanti. È richiamato dai percorsi workspace, Catalogo, Eventi e AI. Sono esclusi elementi nascosti e controlli disabilitati. Non è una certificazione generale di accessibilità.
@@ -88,6 +90,8 @@ Esiti dei comandi e limiti effettivi sono registrati in **APP-059 in BACKLOG.md*
 **Importazione (APP-066):** Lista → Importa / sostituisci, modificare il testo e provare Annulla/Escape; riaprire per verificare il testo salvato. Provare anche un file `.txt` e il salvataggio esplicito. [Modulo 1440](design-review/importazione-1440.png), [1280](design-review/importazione-1280.png), [640](design-review/importazione-640.png), [errore file](design-review/importazione-errore-1280.png), [progetto vuoto](design-review/importazione-vuota-1280.png). Schermate su demo o fixture UI, senza nuove generazioni AI. `node tests/import-ui-live.mjs` verifica anche rollback e risposte tardive nel profilo isolato.
 
 Schermate registrate: [Lista 1440](design-review/lista-1440.png), [Lista 1280](design-review/lista-1280.png), [Thread](design-review/thread-1440.png), [Matchup 1280](design-review/matchup-1280.png), [Lista a 640](design-review/lista-640.png), [dock Thread a 640](design-review/thread-640.png), [Catalogo](design-review/catalogo-1440.png), [Eventi](design-review/eventi-1280.png), [conferma di adozione](design-review/adozione.png).
+
+**Selezione Thread (APP-067):** aprire “Piano più rapido”, cercare un titolo e scegliere con frecce/Invio; provare Escape e Tab. “Nuovo thread” apre il modulo; Annulla evita il salvataggio. [Menu 1440](design-review/thread-selettore-1440.png), [1280](design-review/thread-selettore-1280.png), [640](design-review/thread-selettore-640.png) e [creazione 1280](design-review/thread-creazione-1280.png) usano una fixture UI con 13 thread per verificare scorrimento e nomi lunghi. Le schermate Thread 1440/640 e [1280](design-review/thread-1280.png) sono aggiornate sulla demo esistente. `node tests/thread-switcher-ui-live.mjs` verifica anche errore SQLite, recupero e isolamento in archivio temporaneo.
 
 1. **Lista:** controllare conteggi e miniature, usare il riepilogo per raggiungere Allenatori o Energie, aprire una carta, verificare lo stato Standard e provare “Importa / sostituisci”. Le schermate Lista APP-062 usano il campione reale TCGdex nel profilo demo; non tutte le carte della lista hanno una miniatura disponibile.
 2. **Thread → Piano più rapido:** confrontare principale e proposta; scorrere le due liste e il pannello persistente in modo indipendente; aprire e annullare l'adozione.

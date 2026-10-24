@@ -6,7 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport, switchThread } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -55,18 +55,20 @@ try {
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await page.locator('.new-thread-details > summary').click()
+  await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano A')
   await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.locator('#new-thread-form').waitFor({ state: 'detached' })
   await page.locator('.manual-candidate > summary').click()
   await page.getByLabel('Lista completa proposta').fill(firstCandidate)
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
-  await page.locator('.new-thread-details > summary').click()
+  await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano B')
   await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.locator('#new-thread-form').waitFor({ state: 'detached' })
   await page.getByLabel('Lista completa proposta').fill(secondCandidate)
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
-  await page.locator('.thread-picker').getByRole('button', { name: /Piano A/ }).click()
+  await switchThread(page, /Piano A/)
   const candidate = page.locator('.thread-candidate.featured')
   assert.match(await candidate.textContent(), /Rispetto alla lista corrente v1: 60 → 60 carte/)
   assert.match(await candidate.textContent(), /0× Mega Audino ex.*\+1.*1× Mega Audino ex/s)
@@ -89,7 +91,7 @@ try {
   await page.getByRole('button', { name: 'Confermo: adotta l’intera lista' }).click()
   await page.locator('.thread-versions summary').first().click()
   await page.getByText(/v2 · corrente · adottata da un thread/).waitFor()
-  await page.locator('.thread-picker').getByRole('button', { name: /Piano B/ }).click()
+  await switchThread(page, /Piano B/)
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
   assert.equal(await page.locator('.thread-candidate.featured').getByRole('button', { name: "Adotta l'intera lista candidata" }).isDisabled(), true)
   await page.locator('.main-content').evaluate(el => { el.scrollTop = 0 })
@@ -105,7 +107,7 @@ try {
   await page.getByRole('heading', { name: 'Adozione test' }).waitFor()
   assert.equal(await page.locator('.original-text pre').textContent(), adoptedText)
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await page.locator('.thread-picker').getByRole('button', { name: /Piano B/ }).click()
+  await switchThread(page, /Piano B/)
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
   console.log('E2E APP-047 OK: diff, adozione intera, base superata e riapertura.')
 } finally {

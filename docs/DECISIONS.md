@@ -101,6 +101,12 @@ L'utente approva il modulo su richiesta per liste già caricate e l'accesso imme
 
 Errori di file e salvataggio restano nel modulo e conservano il testo. Un contatore del renderer invalida le letture file ancora pendenti dopo annullamento/cambio progetto; lettura e scrittura disabilitano i controlli pertinenti. Parser, persistenza e IPC restano invariati. Il file di prova simula il ritardo solo per verificare la UI e induce un errore SQLite solo nel profilo temporaneo; non certifica nuove integrazioni.
 
+### T-56 — Selettore Thread e creazione nel contenuto (APP-067)
+
+L'utente approva il selettore unico con titolo e stato accanto a “Nuovo thread”. Il menu usa ricerca, opzioni con titolo a capo, versione di base e stato sintetico; la base superata ha precedenza. Lo stile riprende il selettore progetti e il menu resta entro l'area centrale anche nel layout con dock, senza coprire la lista principale. Tab, frecce, Invio ed Escape permettono la scelta; focus e ricerca vengono ripristinati alla chiusura.
+
+La creazione avviene in un modulo nel contenuto, annullabile senza scritture; il selettore è disabilitato mentre il modulo è aperto. Un errore mantiene i valori e viene portato in vista muovendo solo l'area centrale. Il successo seleziona il nuovo thread e chiude il modulo. Il renderer usa le API esistenti; persistenza, sessioni AI, confronto e adozione non cambiano. La gerarchia tra conversazione e candidata sarà discussa separatamente in APP-068.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

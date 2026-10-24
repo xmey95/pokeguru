@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport, switchThread } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -53,7 +53,7 @@ async function launch() {
 
 async function openThread(page, name) {
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await page.locator('.thread-picker').getByRole('button', { name: new RegExp(name) }).click()
+  await switchThread(page, new RegExp(name))
 }
 
 try {
@@ -75,12 +75,14 @@ try {
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await page.locator('.new-thread-details > summary').click()
+  await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Thread A')
   await page.getByRole('button', { name: 'Crea thread' }).click()
-  await page.locator('.new-thread-details > summary').click()
+  await page.locator('#new-thread-form').waitFor({ state: 'detached' })
+  await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Thread B')
   await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.locator('#new-thread-form').waitFor({ state: 'detached' })
 
   if (offline) {
     await page.getByLabel('Scrivi nel thread').fill('Valuta questa idea')
@@ -106,7 +108,7 @@ try {
     console.log('E2E APP-040/041 offline OK: errori visibili, richieste preservate, nessuna candidata fittizia.')
   } else {
     for (const [name, code] of [['Thread A', 'ALFA'], ['Thread B', 'BETA']]) {
-      await page.locator('.thread-picker').getByRole('button', { name: new RegExp(name) }).click()
+      await switchThread(page, new RegExp(name))
       await page.getByLabel('Scrivi nel thread').fill(`Rispondi brevemente includendo il codice ${code}.`)
       await page.getByRole('button', { name: 'Chiedi a Codex' }).click()
       try {
@@ -151,7 +153,7 @@ try {
     assert.equal(main.ok, true)
     assert.equal(main.value.rawText, baseText)
     for (const [name, count] of [['Thread A', 1], ['Thread B', 2]]) {
-      await page.locator('.thread-picker').getByRole('button', { name: new RegExp(name) }).click()
+      await switchThread(page, new RegExp(name))
       if (name === 'Thread B') {
         const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
         assert.equal(connection.ok, true)

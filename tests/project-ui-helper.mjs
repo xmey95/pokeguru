@@ -21,6 +21,11 @@ export async function switchProject(page, name) {
   await page.getByRole('dialog', { name: 'Scegli progetto' }).getByRole('button', { name }).click()
 }
 
+export async function switchThread(page, name) {
+  await page.locator('#thread-switcher-trigger').click()
+  await page.getByRole('dialog', { name: 'Scegli thread' }).getByRole('button', { name }).click()
+}
+
 /** Loaded decks expose import on request; empty projects expose it immediately. */
 export async function openDeckImport(page) {
   const trigger = page.getByRole('button', { name: 'Importa / sostituisci', exact: true })

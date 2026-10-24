@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-067 completato:** selettore Thread con titolo/stato e ricerca, modulo di creazione nel contenuto, annullamento e focus/errori contestuali. Build e cinque percorsi Electron passati; menu, tastiera, persistenza/isolamento e responsive verificati su Windows. Risultati e limiti nel backlog. Prossimo punto proposto: APP-068, gerarchia tra conversazione e candidata, da discutere prima di applicare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
 - **APP-066 completato:** importazione su richiesta sopra la lista, Annulla/Escape, errori contestuali e modulo immediato nei progetti vuoti. Build e sei percorsi Electron passati: importazione, workspace, export, riconciliazione, smoke offline e adozione. Rollback, file tardivi, isolamento e responsive verificati su Windows; risultati e limiti nel backlog. Prossimo punto proposto per la revisione condivisa: APP-067, selezione e creazione dei Thread, da discutere prima di applicare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
 
 - **APP-065 completato:** creazione del vincolo nel dettaglio carta, anteprima degli esiti, modifica dentro il riepilogo e stato condiviso. Build, test dei vincoli e percorsi Electron passati; errore di storage, riapertura/isolamento e responsive verificati su Windows. Prossimo punto proposto: APP-066, importazione su richiesta nella lista già caricata, da discutere prima di implementare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.

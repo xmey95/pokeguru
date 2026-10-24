@@ -42,6 +42,8 @@ APP-065 apre **Aggiungi vincolo** direttamente nella carta, con anteprima di esi
 
 APP-066 mostra l'importazione su richiesta da **Importa / sostituisci**, sopra la lista, con testo precompilato e **Annulla**. Nei progetti vuoti il modulo è subito disponibile. Il salvataggio chiude il modulo; errori e letture file pendenti conservano l'isolamento fra progetti.
 
+APP-067 riunisce i **Thread** in un selettore con ricerca, titolo e stato, accanto a **Nuovo thread**. La creazione apre un modulo nel contenuto, annullabile con il pulsante o Escape. La lista principale resta consultabile anche quando il selettore è aperto.
+
 Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con token condivisi, tipografia sans, icone SVG, controlli leggibili e stati coerenti. La sidebar desktop è larga **224 px**; la lista principale rimane fissa a **384 px**, con dock di 220 px sotto la soglia di 1240 px. Il primo progetto si crea nell'area centrale. Metadati e metodo precedono meno spesso carte, differenze e strategia; focus e scorrimento sono verificati anche da tastiera.
 
 L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.

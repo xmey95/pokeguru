@@ -11,6 +11,8 @@ import { reviewCandidate } from '../../shared/candidate-review'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import type { ThreadEvidencePacket } from '../../shared/thread-evidence'
 import { reviewSummary } from './review-summary'
+import { ThreadSwitcher } from './ThreadSwitcher'
+import { Icon } from './Icon'
 
 interface Props {
   projectId: string
@@ -131,8 +133,22 @@ function displayDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
 }
 
+function focusInWorkspace(element: HTMLElement | null): void {
+  const main = element?.closest<HTMLElement>('.main-content')
+  if (!element || !main) return
+  element.focus({ preventScroll: true })
+  const bounds = main.getBoundingClientRect()
+  const target = element.getBoundingClientRect()
+  if (target.top < bounds.top || target.bottom > bounds.bottom) main.scrollTop += target.top - bounds.top - 24
+}
+
 export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
-  const newThreadDetails = useRef<HTMLDetailsElement>(null)
+  const newThreadTrigger = useRef<HTMLButtonElement>(null)
+  const newThreadTitle = useRef<HTMLInputElement>(null)
+  const newThreadError = useRef<HTMLDivElement>(null)
+  const returnCreateFocus = useRef(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const adoptionTrigger = useRef<HTMLElement | null>(null)
   const [versions, setVersions] = useState<DeckVersion[]>([])
   const [threads, setThreads] = useState<DeckThread[]>([])
@@ -156,6 +172,16 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [proposing, setProposing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmCandidate, setConfirmCandidate] = useState<DeckCandidate | null>(null)
+  useEffect(() => {
+    if (creating) focusInWorkspace(newThreadTitle.current)
+    else if (returnCreateFocus.current) {
+      focusInWorkspace(newThreadTrigger.current)
+      returnCreateFocus.current = false
+    }
+  }, [creating])
+  useEffect(() => {
+    if (createError) focusInWorkspace(newThreadError.current)
+  }, [createError])
   useEffect(() => {
     if (!confirmCandidate && adoptionTrigger.current) {
       if (adoptionTrigger.current.isConnected) adoptionTrigger.current.focus()
@@ -225,6 +251,14 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     setPreview(null)
   }
 
+  function closeCreate(): void {
+    returnCreateFocus.current = true
+    setCreating(false)
+    setTitle('')
+    setOpeningNote('')
+    setCreateError(null)
+  }
+
   async function previewEvidence(kind: 'ask' | 'proposal'): Promise<void> {
     if (!selected || previewLoading) return
     const prompt = kind === 'ask' ? message : proposalRequest
@@ -243,16 +277,14 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     event.preventDefault()
     if (working) return
     setWorking(true)
-    setError(null)
+    setCreateError(null)
     try {
       const result = await window.projectsApi.createDeckThread({ projectId, title, openingNote })
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => [result.value, ...current])
       selectThread(result.value)
-      setTitle('')
-      setOpeningNote('')
-      newThreadDetails.current?.removeAttribute('open')
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Thread non creato.') }
+      closeCreate()
+    } catch (cause) { setCreateError(cause instanceof Error ? cause.message : 'Thread non creato.') }
     finally { setWorking(false) }
   }
 
@@ -353,24 +385,29 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     {error && !confirmCandidate && <div className="error-banner" role="alert">{error}</div>}
     {loading ? <p className="content-note">Caricamento thread…</p> : <>
       <div className="threads-layout">
-        <aside className="threads-sidebar">
-          <details ref={newThreadDetails} className="new-thread-details"><summary>Nuovo thread</summary><form className="thread-form" onSubmit={(event) => void create(event)}>
-            <h3>Nuovo thread</h3>
+        <div className="threads-toolbar">
+          <ThreadSwitcher threads={threads} selected={selected} versions={versions} disabled={working || creating}
+            onSelect={selectThread} />
+          <button ref={newThreadTrigger} type="button" className="secondary-button" aria-expanded={creating}
+            aria-controls="new-thread-form" disabled={working} onClick={() => creating ? closeCreate() : setCreating(true)}>
+            <Icon name="plus" />Nuovo thread
+          </button>
+        </div>
+        {creating && <form id="new-thread-form" className="thread-form new-thread-form" aria-labelledby="new-thread-heading"
+          onSubmit={(event) => void create(event)} onKeyDown={(event) => {
+            if (event.key === 'Escape' && !working) { event.preventDefault(); closeCreate() }
+          }}>
+            <h3 id="new-thread-heading">Nuovo thread</h3>
             <label htmlFor="thread-title">Titolo</label>
-            <input id="thread-title" value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Es. Variante più veloce" required />
+            <input ref={newThreadTitle} id="thread-title" value={title} disabled={working} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Es. Variante più veloce" required />
             <label htmlFor="thread-opening">Prima osservazione (facoltativa)</label>
-            <textarea id="thread-opening" value={openingNote} maxLength={5000} onChange={(event) => setOpeningNote(event.target.value)} />
-            <button className="primary-button" disabled={working || !title.trim()}>Crea thread</button>
-          </form></details>
-          <div className="thread-picker" aria-label="Thread salvati">
-            {threads.length === 0 && <p className="content-note">Nessun thread creato.</p>}
-            {threads.map((thread) => <button key={thread.id} type="button" className={thread.id === selectedId ? 'active' : ''}
-              onClick={() => selectThread(thread)} aria-pressed={thread.id === selectedId}>
-              <strong>{thread.title}</strong>
-              <small>{thread.baseVersionNumber === null ? 'Senza lista iniziale' : `Base v${thread.baseVersionNumber}`} · {thread.candidates.length} candidate{thread.stale ? ' · Da confrontare' : ''}</small>
-            </button>)}
-          </div>
-        </aside>
+            <textarea id="thread-opening" value={openingNote} disabled={working} maxLength={5000} onChange={(event) => setOpeningNote(event.target.value)} />
+            {createError && <div ref={newThreadError} className="error-banner" role="alert" tabIndex={-1}>{createError}</div>}
+            <div className="thread-form-actions">
+              <button className="primary-button" disabled={working || !title.trim()}>{working ? 'Creazione…' : 'Crea thread'}</button>
+              <button type="button" className="secondary-button" disabled={working} onClick={closeCreate}>Annulla</button>
+            </div>
+        </form>}
         <div className="thread-detail">
           {selected ? <>
             <div className="thread-heading"><div><h3 tabIndex={-1}>{selected.title}</h3><p className="content-note">{selected.baseVersionNumber === null ? 'Senza lista iniziale' : `Base v${selected.baseVersionNumber}`} · {displayDate(selected.createdAt)}</p></div>
@@ -429,7 +466,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               <textarea id="candidate-note" value={candidateNote} maxLength={5000} onChange={(event) => setCandidateNote(event.target.value)} />
               <button className="primary-button" disabled={working || !candidateText.trim()}>Salva candidata nel thread</button>
             </form></details>
-          </> : <p className="content-note">Crea un thread per esplorare una variante del mazzo.</p>}
+          </> : !creating && <p className="content-note">Crea un thread per esplorare una variante del mazzo.</p>}
         </div>
       </div>
       <details className="thread-versions"><summary>Versioni principali ({versions.length})</summary>
