@@ -67,6 +67,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-058** | Evidenze Catalogo ed Eventi per ogni turno AI dei Thread | Funzionalità | R-06, R-07, R-08, R-11 / qualità pre-I4 | P0 / M | APP-054–057, APP-041, C-19 | Done |
 | **APP-059** | Correggere false lacune Standard e schede delle varianti nel Matchup | Dati/funzionalità | R-02, R-06, R-10 / feedback pre-I4 | P0 / S | APP-054/057, fonte ufficiale SFA e Premi | Done |
 | **APP-060** | Correggere i falsi controlli Standard della lista Hydrapple | Correzione | R-02, R-10 / feedback pre-I4 | P0 / S | APP-018/059, fonti ufficiali PRE e ristampe | Done |
+| **APP-061** | Correggere intestazioni italiane e contatori della lista | Correzione | R-03, R-04 / feedback pre-I4 | P0 / S | APP-002/003, lista Hydrapple fornita dall'utente | Done |
 
 ## Task dettagliati I0–I2
 
@@ -519,6 +520,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Accettazione:** la notazione Limitless `{G}` riconcilia solo una stampa Energia Base del tipo corrispondente; PRE 102 è ammessa dalla data ufficiale derivata; una stampa Trainer storica già salvata e identificata esattamente può usare una stampa corrente con identità di testo verificata e data di ammissione superata. Nome uguale, testo diverso, stampa assente o Energia speciale non ottengono l'eccezione. Il testo importato e le guide storiche non cambiano.
 - **Risultato e verifiche:** pacchetto regole `2026-10-24.3` con PRE dal 31-01-2025 (prodotto ufficiale 17-01 e attesa di due settimane). Le stampe storiche in cache restano fuori dal denominatore dell'inventario Standard e sono considerate solo se il codice importato le identifica. Test sintetici su energia simbolica, PRE, Trainer storico, ACE SPEC e non equivalenza: 110 test locali passati, 13 live esclusi; typecheck passato. La lista Hydrapple del profilo, letta in sola lettura, produce `checks-passed/supported`, zero problemi e zero controlli da verificare, con 60 carte, una ACE SPEC e 14 Energie Base.
 - **Limiti:** la ristampa storica deve già esistere nella cache con dettaglio e identità di testo; l'app non scarica tutte le vecchie stampe. Il controllo positivo è relativo alla lista e allo snapshot Standard, non una certificazione arbitrale. Le analisi Matchup già salvate restano storiche e vanno rigenerate per ricevere il nuovo controllo.
+
+### APP-061 — Intestazioni italiane e contatori della lista
+
+- **Origine e ambito:** la lista Hydrapple inviata dall'utente ha 11 righe Pokémon, 11 Allenatore e una Energia, per 21 + 25 + 14 copie. Il parser non riconosceva `Carte Allenatore: 11` né `Energia: 1`: segnava due righe non interpretate e la vista attribuiva 39 copie agli Allenatori, senza gruppo Energie.
+- **Accettazione:** importare la lista testuale invariata come 60 copie, senza diagnostiche spurie; mostrare 21 Pokémon, 25 Allenatori, 14 Energie. Riparare le interpretazioni già salvate al riavvio senza cambiare testo, data di importazione, ID delle versioni o associazioni delle carte.
+- **Risultato e verifiche:** riconosciute le due intestazioni italiane; la vista usa anche `Allenatore` singolare. Un riallineamento dei soli record interessati aggiorna baseline, versioni e candidate salvate. Test sulla lista esatta, sulla vista e su un archivio con interpretazione precedente: 113 test locali passati, 13 live esclusi; build Electron e typecheck passati.
+- **Limiti:** i numeri delle intestazioni descrivono righe distinte, mentre i contatori dell'app mostrano copie. Le guide Matchup già generate restano storiche.
 
 ## Regola per i blocchi
 
