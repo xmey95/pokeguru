@@ -67,6 +67,10 @@ Scelte reversibili nel renderer: nessuna modifica a schema, validatori, persiste
 
 Durante la revisione condivisa l'utente riconosce il riepilogo destro come duplicazione nella vista Lista. In questa vista le carte occupano l'area di lavoro disponibile, anche quando la lista è vuota; nessun pannello destro o dock. Thread e Matchup conservano la lista persistente con larghezza e comportamento di T-48. La scelta modifica solo il layout del renderer.
 
+### T-50 — Progetto attivo e selettore ricercabile (APP-061)
+
+L'utente conferma che è sufficiente un selettore. La sidebar mostra il solo progetto attivo; il menu contiene ricerca, tutti i progetti e “Nuovo progetto”. Il menu non occupa spazio quando è chiuso; a finestra stretta si apre da un pulsante dedicato. Popover nativo con chiusura esterna/Escape, focus sulla ricerca e frecce/Invio; nessuna nuova dipendenza o modifica al database.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

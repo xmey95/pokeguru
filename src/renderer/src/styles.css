@@ -29,6 +29,23 @@ ul { padding-left: 22px; }
 li + li { margin-top: 4px; }
 a { color: var(--accent); }
 .icon { width: 20px; height: 20px; display: inline-block; flex: none; vertical-align: middle; }
+.project-picker { position: fixed; inset: auto; margin: 0; padding: 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); box-shadow: 0 12px 36px #12273526; overflow: hidden; }
+.project-picker:popover-open { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px; }
+.project-picker-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.project-picker-head h2 { margin: 0; font-size: var(--text-md); }
+.project-picker-head > span { color: var(--ink-muted); font-size: var(--text-xs); }
+.project-picker-results { min-height: 0; overflow: auto; margin: 0 -4px; padding: 4px; }
+.project-picker-results ul { list-style: none; margin: 0; padding: 0; }
+.project-picker-results p { padding: 12px 4px; color: var(--ink-muted); }
+.project-option { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 12px; border: 1px solid transparent; border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); text-align: left; }
+.project-option:hover { background: var(--surface-hover); }
+.project-option[aria-current=true] { border-color: var(--accent-line); background: var(--accent-soft); }
+.project-option > span:first-child { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.project-option strong { font-size: var(--text-base); overflow-wrap: anywhere; }
+.project-option small { color: var(--ink-muted); }
+.project-current { flex: none; font-size: var(--text-xs); color: var(--accent); }
+.project-picker-create { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 12px 8px 4px; border: 0; border-top: 1px solid var(--line); background: var(--surface); color: var(--accent); font-weight: 600; text-align: left; }
+.project-picker-create:hover { background: var(--accent-soft); }
 .primary-button, .secondary-button, .text-button, .danger-button, .file-picker, .companion-view-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 8px 14px; border: 1px solid transparent; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 650; line-height: 1.4; text-align: center; }
 .primary-button { background: var(--accent); color: #fff; }
 .primary-button:hover:not(:disabled) { background: var(--accent-hover); }

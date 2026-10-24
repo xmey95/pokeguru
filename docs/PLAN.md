@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-061 completato:** selettore progetti approvato, con ricerca e creazione nello stesso menu; verifiche Windows di tastiera, responsive e isolamento passate. Prossimo punto della revisione condivisa: struttura della Lista e rappresentazione delle carte; proposte da discutere prima di applicarle.
+
 - **APP-060 completato:** prima decisione della revisione condivisa applicata: Lista usa l'area disponibile senza riepilogo duplicato; pannello e dock persistono in Thread e Matchup. Build e percorso Electron workspace Windows passati, schermate Lista 1440×900 e 1280×720 ispezionate. Prossimo punto da discutere: progetti e sidebar. Le altre scelte si analizzano con l'utente una alla volta.
 
 - **Checkpoint APP-059 completato:** rifinitura UI/UX sul ramo locale `task/production-design-system`, derivato da `dev` aggiornato e in worktree dedicato. Audit e regole in `DESIGN_SYSTEM.md`, schermate in `design-review/`; token/componenti condivisi e tutti i flussi principali verificati in Electron Windows, inclusi contrasto, tastiera e layout da 1440 a 640 px. Risultati e limiti nel backlog. Prossimo passo: prova utente della rifinitura prima di un eventuale merge esplicitamente richiesto; Linux e alta scala del sistema restano da verificare. I4 e release esclusi.

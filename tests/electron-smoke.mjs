@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openProjectPicker, startNewProject, switchProject } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const electronPath = require('electron')
@@ -36,13 +36,20 @@ try {
   await page.setViewportSize({ width: 1024, height: 768 })
   await createProjectFromStart(page, 'Mega Absol / Mega Audino')
   await expectSelected(page, 'Mega Absol / Mega Audino')
-  await page.locator('.compact-create-trigger').click()
+  await startNewProject(page)
   const createForm = page.locator('.compact-create-panel')
   await createForm.getByLabel('Nome progetto').fill('Secondo mazzo')
   await createForm.getByRole('button', { name: 'Crea progetto' }).click()
   await expectSelected(page, 'Secondo mazzo')
-  assert.equal(await page.locator('.project-button').count(), 2)
-  await page.getByRole('button', { name: /Mega Absol \/ Mega Audino/ }).click()
+  await openProjectPicker(page)
+  assert.equal(await page.locator('.project-option').count(), 2)
+  await page.getByLabel('Cerca progetti').fill('inesistente')
+  await page.getByText('Nessun progetto trovato.').waitFor()
+  assert.ok(await page.getByRole('button', { name: 'Nuovo progetto', exact: true }).isVisible())
+  await page.getByLabel('Cerca progetti').fill('mega ABSOL')
+  assert.equal(await page.locator('.project-option').count(), 1)
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
   await expectSelected(page, 'Mega Absol / Mega Audino')
   assert.match(await page.locator('.detail-meta').textContent(), /Occidentale \/ internazionale/)
   assert.match(await page.locator('.project-detail').textContent(), /Nessuna lista di carte/)
@@ -74,7 +81,7 @@ try {
   assert.match(await page.locator('.meta-provenance').textContent(), /Limitless/)
   await page.screenshot({ path: join(temporary, 'matchup.png'), fullPage: true })
   }
-  await page.getByRole('button', { name: /Secondo mazzo/ }).click()
+  await switchProject(page, /Secondo mazzo/)
   await expectSelected(page, 'Secondo mazzo')
   if (!offline) {
   await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
@@ -97,9 +104,10 @@ try {
 
   application = await launch(dataDirectory)
   page = await application.firstWindow()
-  await page.locator('.project-button').first().waitFor()
-  assert.equal(await page.locator('.project-button').count(), 2)
-  await page.getByRole('button', { name: /Mega Absol \/ Mega Audino/ }).click()
+  await page.getByTestId('selected-project-name').waitFor()
+  await openProjectPicker(page)
+  assert.equal(await page.locator('.project-option').count(), 2)
+  await page.getByRole('dialog', { name: 'Scegli progetto' }).getByRole('button', { name: /Mega Absol \/ Mega Audino/ }).click()
   await expectSelected(page, 'Mega Absol / Mega Audino')
   await page.getByTestId('card-total').filter({ hasText: '2 carte' }).waitFor()
   if (!offline) {
@@ -122,7 +130,7 @@ try {
   await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
   assert.equal(await page.getByLabel('Archetipo avversario').count(), 0)
   }
-  await page.getByRole('button', { name: /Secondo mazzo/ }).click()
+  await switchProject(page, /Secondo mazzo/)
   await expectSelected(page, 'Secondo mazzo')
   if (!offline) await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
@@ -138,7 +146,7 @@ try {
   await page.getByRole('alert').waitFor()
   assert.match(await page.getByRole('alert').textContent(), /Archivio locale non disponibile/)
   await createProjectFromStart(page, 'Non salvare')
-  assert.equal(await page.locator('.project-button').count(), 0)
+  assert.equal(await page.locator('.project-option').count(), 0)
   await application.close()
   application = undefined
 

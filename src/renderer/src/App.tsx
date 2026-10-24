@@ -11,6 +11,7 @@ import { ExportButton } from './ExportButton'
 import { ThreadsSection } from './ThreadsSection'
 import { TournamentSection } from './TournamentSection'
 import { Icon } from './Icon'
+import { ProjectSwitcher } from './ProjectSwitcher'
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
@@ -116,6 +117,7 @@ export function App() {
   }, [])
 
   async function openProject(id: string): Promise<void> {
+    setShowCompactCreate(false)
     setView('project')
     await selectProject(id)
   }
@@ -229,37 +231,9 @@ export function App() {
             <span className="brand-mark"><Icon name="brand" /></span>
             <div><strong>Pokéguru</strong><span>Analisi competitiva</span></div>
           </div>
-          <div className="sidebar-heading">
-            <div>
-              <h2>Progetti</h2>
-            </div>
-            <span className="count" aria-label={`${projects.length} progetti`}>{projects.length}</span>
-          </div>
-
-          {loading ? <p className="sidebar-note">Caricamento…</p> : projects.length === 0 ? (
-            <p className="sidebar-note">Nessun progetto.</p>
-          ) : (
-            <ul className="project-list">
-              {projects.map((project) => (
-                <li key={project.id}>
-                  <button
-                    type="button"
-                    className={`project-button ${selected?.id === project.id ? 'active' : ''}`}
-                    onClick={() => void openProject(project.id)}
-                    data-testid={`project-${project.id}`}
-                    aria-current={selected?.id === project.id ? 'page' : undefined}
-                      title={project.name}
-                  >
-                    <span className="project-avatar" aria-hidden="true">{project.name.charAt(0).toUpperCase()}</span>
-                    <span className="project-labels">
-                      <strong>{project.name}</strong>
-                      <small>{project.cardTotal === null ? statusLabel(project.status) : `${project.cardTotal} carte`}</small>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ProjectSwitcher projects={projects} selected={selected} loading={loading}
+            onSelect={(id) => void openProject(id)}
+            onCreate={() => { setView('project'); setShowCompactCreate(true) }} />
           <nav className="workspace-nav" aria-label="Aree del progetto">
             <span className="rail-caption">Area di lavoro</span>
             <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('deck') }} title="Lista" aria-label="Lista"><Icon name="deck" /><span className="nav-label">Lista</span></button>
@@ -272,13 +246,12 @@ export function App() {
             <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi" aria-label="Eventi" aria-current={view === 'tournament' ? 'page' : undefined}><Icon name="event" /><span className="nav-label">Eventi</span></button>
             <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI" aria-label="Impostazioni AI" aria-current={view === 'ai' ? 'page' : undefined}><Icon name="settings" /><span className="nav-label">Impostazioni AI</span></button>
           </nav>
-          <button type="button" className="compact-create-trigger" aria-expanded={showCompactCreate} onClick={() => { setView('project'); setShowCompactCreate((value) => !value) }} title="Nuovo progetto" aria-label="Nuovo progetto"><Icon name="plus" /><span>Nuovo progetto</span></button>
           <div className="local-indicator"><span aria-hidden="true" /> Archivio locale</div>
         </aside>
 
         <main id="main-content" className="main-content" tabIndex={-1}>
           {showCompactCreate && <form className="compact-create-panel" onSubmit={(event) => void createProject(event)}>
-            <div className="panel-heading"><h2>Nuovo progetto</h2><button type="button" className="text-button" onClick={() => setShowCompactCreate(false)}>Chiudi</button></div>
+            <div className="panel-heading"><h2>Nuovo progetto</h2><button type="button" className="text-button" onClick={() => { setShowCompactCreate(false); document.getElementById('project-switcher-trigger')?.focus() }}>Chiudi</button></div>
             <label htmlFor="compact-project-name">Nome progetto</label>
             <input id="compact-project-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required placeholder="Es. Mega Absol / Mega Audino" />
             <p>Standard · circuito occidentale / internazionale</p>

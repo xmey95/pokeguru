@@ -5,3 +5,18 @@ export async function createProjectFromStart(page, name) {
   await page.getByLabel('Nome progetto').fill(name)
   await page.getByRole('button', { name: 'Crea progetto' }).click()
 }
+
+export async function openProjectPicker(page) {
+  await page.locator('#project-switcher-trigger').click()
+  await page.getByRole('dialog', { name: 'Scegli progetto' }).waitFor()
+}
+
+export async function startNewProject(page) {
+  await openProjectPicker(page)
+  await page.getByRole('button', { name: 'Nuovo progetto', exact: true }).click()
+}
+
+export async function switchProject(page, name) {
+  await openProjectPicker(page)
+  await page.getByRole('dialog', { name: 'Scegli progetto' }).getByRole('button', { name }).click()
+}

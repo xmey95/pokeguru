@@ -25,7 +25,7 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 
 ## Architettura
 
-- **Navigazione:** progetti, tre aree del mazzo, risorse globali. Sidebar desktop di **224 px**.
+- **Navigazione:** selettore del progetto attivo, tre aree del mazzo, risorse globali. Sidebar desktop di **224 px**. Il selettore apre ricerca, elenco scorrevole e “Nuovo progetto”; a finestra stretta si compatta in un pulsante. Escape chiude e restituisce il focus; frecce e Invio consentono di scegliere. Decisione approvata in APP-061.
 - **Lavoro:** contenuto centrale fluido con scorrimento indipendente. La larghezza delle singole componenti risponde allo spazio effettivo tramite container query.
 - **Vista Lista:** una sola lista nell'area di lavoro disponibile, senza riepilogo laterale o dock; decisione confermata dall'utente in APP-060.
 - **Lista persistente in Thread e Matchup:** **384 px fissi** sopra 1240 px di finestra. Quantità, sezioni e stato restano leggibili; nomi lunghi vanno a capo. Lo stato “Pronta per controllo” è neutro: non equivale a Standard verificato.
@@ -73,6 +73,8 @@ Riferimenti per i criteri utilizzati: [contrasto del testo](https://www.w3.org/W
 Esiti dei comandi e limiti effettivi sono registrati in **APP-059 in BACKLOG.md**. Le prove a 1440×900 e 1280×720 sono integrate da 1241/1240×720, 1024×768 e 640×720; le risorse globali sono provate anche a 640×580.
 
 ## Percorso di prova
+
+**Progetti (APP-061):** aprire il nome in alto, cercare un progetto o scegliere “Nuovo progetto”. Provare anche Tab, frecce, Invio ed Escape. [Selettore desktop](design-review/progetti-1280.png) e [compatto](design-review/progetti-640.png).
 
 Schermate registrate: [Lista 1440](design-review/lista-1440.png), [Lista 1280](design-review/lista-1280.png), [Thread](design-review/thread-1440.png), [Matchup 1280](design-review/matchup-1280.png), [Lista a 640](design-review/lista-640.png), [dock Thread a 640](design-review/thread-640.png), [Catalogo](design-review/catalogo-1440.png), [Eventi](design-review/eventi-1280.png), [conferma di adozione](design-review/adozione.png).
 

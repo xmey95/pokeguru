@@ -67,6 +67,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-058** | Evidenze Catalogo ed Eventi per ogni turno AI dei Thread | Funzionalità | R-06, R-07, R-08, R-11 / qualità pre-I4 | P0 / M | APP-054–057, APP-041, C-19 | Done |
 | **APP-059** | Design system e rifinitura completa dell’interfaccia desktop | UI/UX | R-01–R-13 / qualità pre-I4 | P0 / M | APP-051–058; richiesta utente 24-10-2026 | Done |
 | **APP-060** | Eliminare la lista duplicata dalla vista Lista | UI/UX | R-03, R-08, R-10 / qualità pre-I4 | P0 / S | APP-059; conferma utente durante la revisione condivisa | Done |
+| **APP-061** | Selettore progetti con ricerca e creazione | UI/UX | R-03 / qualità pre-I4 | P0 / S | APP-060; selettore approvato dall'utente | Done |
 
 ## Task dettagliati I0–I2
 
@@ -522,6 +523,14 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifica prevista:** build e percorso Electron del workspace alle risoluzioni già coperte, con ispezione visiva di Lista a 1440×900 e 1280×720. Aggiornare le assunzioni del test esistente sul pannello.
 - **Risultato:** una sola lista nella vista Lista; pannello laterale e dock riservati a Thread e Matchup. Un'unica condizione governa sia la griglia sia il componente, senza colonne vuote.
 - **Verifiche:** build/typecheck e percorso Electron workspace Windows passati a 1440×900, 1280×720, 1241/1240×720, 1024×768 e 640×720; lista vuota/caricata, spazio recuperato, pannello nelle altre viste, tastiera e scroll indipendente. Schermate Lista desktop ispezionate. Guida di prova sintetica; nessuna nuova prova AI o Linux. Prosegue la revisione condivisa, senza merge o release.
+
+### APP-061 — Selettore progetti
+
+- **Autorizzazione:** l'utente preferisce un selettore all'elenco permanente. Risultato circoscritto e dipendenze risolte: task Ready selezionato e avviato sul ramo del design system.
+- **Accettazione:** progetto attivo in alto, ricerca nel selettore, creazione nello stesso punto; nomi leggibili, supporto tastiera, menu entro la finestra desktop e compatta; cambio progetto e isolamento conservati.
+- **Verifica prevista:** build, percorso Electron workspace e smoke offline di creazione/cambio/riapertura; ricerca, Escape e focus, 1440×900, 1280×720 e vista compatta.
+- **Risultato:** selettore in alto con nome del progetto su due righe, menu ricercabile e “Nuovo progetto” nello stesso punto. Versione compatta con pulsante dedicato; nomi completi nel menu, attivo indicato anche con testo, elenco scorrevole e altezza limitata alla finestra. Chiusura con Escape/clic esterno, focus iniziale sulla ricerca, frecce e Invio per scegliere. Popover nativo Electron, senza dipendenze aggiuntive; persistenza e selezione dei dati invariate.
+- **Verifiche Windows:** build/typecheck, workspace Electron e smoke offline passati. Geometria e audit contrasto del menu a 1440×900, 1280×720 e 640×580; Escape restituisce il focus, ricerca senza distinzione maiuscole/minuscole, nessun risultato, selezione da tastiera, creazione del secondo progetto, import, isolamento e riapertura verificati. Schermate ispezionate; limiti Linux/lettore di schermo/scala di APP-059 restano validi. Nessun merge o release.
 
 ## Regola per i blocchi
 
