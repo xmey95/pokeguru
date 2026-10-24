@@ -18,6 +18,16 @@ export interface TournamentParticipation {
   cardTotal: number | null
 }
 
+export interface TournamentPairing {
+  phase: number
+  round: number
+  table: number | null
+  match: string | null
+  player1: string
+  player2: string | null
+  winner: string | 0 | -1 | null
+}
+
 export interface TournamentSnapshot {
   id: string
   eventId: string
@@ -27,13 +37,24 @@ export interface TournamentSnapshot {
   publicUrl: string
   name: string
   date: string
-  circuit: 'WESTERN'
+  circuit: 'WESTERN' | 'UNVERIFIED'
   format: 'STANDARD'
-  platform: 'PTCGL'
-  isOnline: true
+  platform: string
+  isOnline: boolean
   reportedPlayers: number
   phases: { phase: number; type: string; rounds: number; mode: string }[]
   participations: TournamentParticipation[]
+  pairings?: TournamentPairing[]
+  pairingCoverage?: {
+    returned: number
+    betweenParticipants: number
+    decided: number
+    tied: number
+    byes: number
+    doubleLosses: number
+    unresolved: number
+    invalid: number
+  }
   coverage: {
     returnedParticipants: number
     availableLists: number
@@ -43,3 +64,22 @@ export interface TournamentSnapshot {
   }
   cached: boolean
 }
+
+export interface TournamentSyncProgress {
+  mode: 'new' | 'full' | null
+  status: 'idle' | 'running' | 'rate-limited' | 'complete'
+  page: number
+  pending: { id: string; date: string }[]
+  inspected: number
+  saved: number
+  skipped: number
+  watermark: string | null
+  previousWatermark: string | null
+  newestSeen: string | null
+  stopAfterPage: boolean
+  cooldownUntil: string | null
+  lastError: string | null
+}
+
+export type TournamentSummary = Pick<TournamentSnapshot,
+  'eventId' | 'name' | 'date' | 'circuit' | 'platform' | 'isOnline' | 'reportedPlayers' | 'coverage' | 'pairingCoverage'>

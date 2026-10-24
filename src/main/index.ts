@@ -10,7 +10,7 @@ import { reviewCandidate } from '../shared/candidate-review'
 import { auditStandardRuleSources } from './standard-rule-audit'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 import type { OperationResult, Project } from '../shared/projects'
-import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
+import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
 import type { AiConnection, AiPreferences, AiRunConfig } from '../shared/ai'
 import { fetchMeta, fetchOpponentSample } from './limitless-meta'
 import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
@@ -18,10 +18,11 @@ import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
 import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
   deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from './deck-ai'
-import { CatalogStore, fetchCatalogSample, syncStandardCatalog } from './catalog'
+import { CatalogStore, enrichCatalogPrints, fetchCatalogSample, syncStandardCatalog } from './catalog'
 import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
-import { matchupDeckContext, snapshotPrint, type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
-import { matchupTournamentEvidence } from '../shared/matchup-evidence'
+import { buildDeckCards, matchupDeckContext, snapshotPrint,
+  type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
+import { multiMatchupEvidence } from '../shared/matchup-evidence'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
 import { prepareDeckExport, type DeckExportPreview, type DeckExportRequest } from '../shared/deck-export'
 import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
@@ -30,9 +31,15 @@ import { OFFICIAL_SET_RELEASE_SOURCE } from './official-set-releases'
 import { SET_ADMISSION_OLDER_RULE_SOURCE, SET_ADMISSION_RULE_SOURCE } from '../shared/standard-admission'
 import { ACE_SPEC_SOURCE, DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../shared/western-rule-package'
+import { gameplaySummary } from '../shared/card-gameplay'
+import { OFFICIAL_SET_CODES } from '../shared/set-codes'
+import { evaluateStandardDeck } from '../shared/standard-deck'
 import { TournamentStore } from './tournament-store'
 import { fetchRecentWesternTournament } from './limitless-event'
-import type { TournamentSnapshot } from '../shared/tournament'
+import { syncTournamentBlock } from './tournament-sync'
+import { syncMainTournamentBlock } from './main-tournament-sync'
+import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../shared/tournament'
+import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
 
 app.setName('Pokeguru')
 
@@ -40,6 +47,8 @@ let mainWindow: BrowserWindow | null = null
 let projectStore: ProjectStore | null = null
 let catalogStore: CatalogStore | null = null
 let tournamentStore: TournamentStore | null = null
+let tournamentSyncBusy = false
+let mainTournamentSyncBusy = false
 let storageError: string | null = null
 let aiPreferencesStore: AiPreferencesStore | null = null
 const codexControl = new CodexControl()
@@ -96,6 +105,83 @@ function unavailableMessage(): string {
   return storageError ?? 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
 }
 
+function currentMatchupDeckContext(projectId: string, baseline: DeckBaseline): string {
+  const catalog = catalogStore?.view() ?? null
+  const asOf = new Date().toISOString().slice(0, 10)
+  const standard = evaluateStandardDeck(baseline, catalog, asOf,
+    projectStore?.getStandardRuleAudit() ?? null)
+  return matchupDeckContext(baseline, projectStore!.getReconciliation(projectId), catalog, standard)
+}
+
+async function enrichMatchupDeck(projectId: string, baseline: DeckBaseline): Promise<void> {
+  if (!catalogStore || !projectStore || catalogSyncing) return
+  const reconciliation = projectStore.getReconciliation(projectId)
+  const cards = buildDeckCards(baseline, catalogStore.view(), reconciliation)
+  const ids = [...new Set([
+    ...cards.flatMap((card) => card.importedPrintIds),
+    ...reconciliation.mappings.map((mapping) => mapping.print.id)
+  ])]
+  try { await enrichCatalogPrints(catalogStore, ids) }
+  catch { /* A source outage is reported through the resulting missing card data. */ }
+}
+
+function currentMatchupEvidence(snapshot: MetaSnapshot, opponent: MetaDeck): MatchupTournamentEvidence {
+  return multiMatchupEvidence(snapshot, opponent, tournamentStore?.list() ?? [],
+    tournamentStore?.listMain() ?? [], catalogStore?.view() ?? null)
+}
+
+async function enrichOpponentCards(snapshot: MetaSnapshot, opponent: MetaDeck): Promise<void> {
+  if (!catalogStore || catalogSyncing) return
+  const preview = currentMatchupEvidence(snapshot, opponent)
+  const catalog = catalogStore.view()
+  const prints = catalog.prints
+  const codes = new Map(catalog.sets.flatMap((set) =>
+    set.abbreviation ? [[set.id, set.abbreviation.toUpperCase()] as const] : []))
+  const names = new Set(preview.observedCards.slice(0, 24).map((card) => card.name.toLocaleLowerCase()))
+  const exactIds = preview.sampleLists.flatMap((sample) => sample.cards ?? []).flatMap((line) => {
+    const match = /^(?:\d+)\s+(.+)\s+([A-Z0-9.]+)\s+([A-Z0-9]+)$/i.exec(line)
+    if (!match || !names.has(match[1].toLocaleLowerCase())) return []
+    const matches = prints.filter((candidate) => candidate.name.toLocaleLowerCase() === match[1].toLocaleLowerCase() &&
+      (codes.get(candidate.setId) ?? OFFICIAL_SET_CODES[candidate.setId]) === match[2].toUpperCase() &&
+      candidate.localId.replace(/^0+/, '') === match[3].replace(/^0+/, ''))
+    return matches.length === 1 ? [matches[0].id] : []
+  })
+  const fallbackIds = preview.observedCards.filter((card) => !card.gameplay).slice(0, 24).flatMap((card) => {
+    const print = prints.find((candidate) => candidate.name.toLocaleLowerCase() === card.name.toLocaleLowerCase() &&
+      candidate.detailAt !== null && candidate.gameplaySchemaVersion !== 1)
+    return print ? [print.id] : []
+  })
+  try { await enrichCatalogPrints(catalogStore, [...new Set([...exactIds, ...fallbackIds])]) }
+  catch { /* The evidence packet keeps each remaining mechanics gap explicit. */ }
+}
+
+async function opponentSampleWithMechanics(sample: { url: string | null; cards: string[] },
+  evidence: MatchupTournamentEvidence): Promise<{
+  url: string | null; cards: string[]; mechanics: { name: string; text: string; sourceUrl: string }[]
+}> {
+  if (!catalogStore || catalogSyncing) return { ...sample, mechanics: [] }
+  const names = [...new Set(sample.cards.map((line) => line.replace(/^\d+\s+/, '').trim()).filter(Boolean))].slice(0, 60)
+  const initial = catalogStore.view().prints
+  const ids = names.flatMap((name) => {
+    const print = initial.find((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase() &&
+      item.detailAt !== null && !item.gameplay)
+    return print ? [print.id] : []
+  })
+  try { await enrichCatalogPrints(catalogStore, ids) }
+  catch { /* The prompt receives only the mechanics actually present after this attempt. */ }
+  const prints = catalogStore.view().prints
+  const mechanics = names.flatMap((name) => {
+    const observed = evidence.observedCards.find((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())
+    if (observed?.gameplay && observed.cardSourceUrl) return [{ name,
+      text: observed.gameplay, sourceUrl: observed.cardSourceUrl }]
+    const comparable = prints.filter((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase() && item.gameplay)
+    const summaries = new Set(comparable.map((item) => gameplaySummary(item.gameplay!)))
+    return summaries.size === 1 && comparable[0]
+      ? [{ name, text: [...summaries][0], sourceUrl: comparable[0].sourceUrl }] : []
+  })
+  return { ...sample, mechanics }
+}
+
 function withStore<T>(operation: () => T): OperationResult<T> {
   if (!projectStore) {
     return { ok: false, error: unavailableMessage() }
@@ -140,6 +226,86 @@ function registerProjectHandlers(): void {
     catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Evento Limitless Play non disponibile.' }
     }
+  })
+
+  ipcMain.handle('tournament:list', (event): OperationResult<TournamentSummary[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: tournamentStore.summaries() } }
+    catch { return { ok: false, error: 'Archivio tornei non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:get-event', (event, eventId: unknown): OperationResult<TournamentSnapshot | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    if (typeof eventId !== 'string' || !/^[a-f0-9]{24}$/.test(eventId))
+      return { ok: false, error: 'ID evento non valido.' }
+    try { return { ok: true, value: tournamentStore.getEvent(eventId) } }
+    catch { return { ok: false, error: 'Evento salvato non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:sync-status', (event): OperationResult<TournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: tournamentStore.progress() } }
+    catch { return { ok: false, error: 'Stato aggiornamento tornei non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:sync', async (event, mode: unknown): Promise<OperationResult<TournamentSyncProgress>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità aggiornamento non valida.' }
+    if (tournamentSyncBusy) return { ok: false, error: 'Aggiornamento tornei già in corso.' }
+    tournamentSyncBusy = true
+    try { return { ok: true, value: await syncTournamentBlock(tournamentStore, mode) } }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento tornei non riuscito.' } }
+    finally { tournamentSyncBusy = false }
+  })
+
+  ipcMain.handle('tournament:main-list', (event): OperationResult<MainTournamentSummary[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: tournamentStore.mainSummaries() } }
+    catch { return { ok: false, error: 'Archivio Regional non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:main-get', (event, eventId: unknown): OperationResult<MainTournamentSnapshot | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    if (typeof eventId !== 'string' || !/^\d{1,10}$/.test(eventId)) return { ok: false, error: 'ID Regional non valido.' }
+    try { return { ok: true, value: tournamentStore.getMain(eventId) } }
+    catch { return { ok: false, error: 'Regional salvato non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:main-sync-status', (event): OperationResult<MainTournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: tournamentStore.mainProgress() } }
+    catch { return { ok: false, error: 'Stato Regional non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:main-sync', async (event, mode: unknown): Promise<OperationResult<MainTournamentSyncProgress>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità Regional non valida.' }
+    if (mainTournamentSyncBusy) return { ok: false, error: 'Aggiornamento Regional già in corso.' }
+    mainTournamentSyncBusy = true
+    try { return { ok: true, value: await syncMainTournamentBlock(tournamentStore, mode) } }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento Regional non riuscito.' } }
+    finally { mainTournamentSyncBusy = false }
+  })
+
+  ipcMain.handle('tournament:open-main-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event) || typeof input !== 'string' || input.length > 300)
+      return { ok: false, error: 'URL Regional non valido.' }
+    try {
+      const url = new URL(input)
+      if (url.protocol !== 'https:' || url.hostname !== 'limitlesstcg.com' ||
+        !/^\/(tournaments|decks\/list)\/\d+$/.test(url.pathname))
+        return { ok: false, error: 'URL Regional non consentito.' }
+      await shell.openExternal(url.toString())
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Fonte Regional non apribile.' } }
   })
 
   ipcMain.handle('tournament:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
@@ -530,6 +696,18 @@ function registerProjectHandlers(): void {
     }
   })
 
+  ipcMain.handle('matchups:evidence-preview', (event, metaId: unknown,
+    opponentId: unknown): OperationResult<MatchupTournamentEvidence> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || !tournamentStore) return { ok: false, error: unavailableMessage() }
+    const meta = projectStore.getLatestMetaSnapshot()
+    const opponent = meta?.decks.find((item) => item.id === opponentId)
+    if (typeof metaId !== 'string' || meta?.id !== metaId || !opponent)
+      return { ok: false, error: 'Snapshot Meta non disponibile.' }
+    try { return { ok: true, value: currentMatchupEvidence(meta, opponent) } }
+    catch { return { ok: false, error: 'Evidenze torneo non leggibili.' } }
+  })
+
   ipcMain.handle('matchups:list-reports', (event, projectId: unknown, metaId: unknown): OperationResult<MatchupReport[]> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.listMatchupReports(projectId as string, metaId as string))
@@ -563,10 +741,12 @@ function registerProjectHandlers(): void {
     generatingProjects.add(projectId)
     try {
       const config = await runConfig(override)
-      const sample = await fetchOpponentSample(opponent)
-      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(projectId), catalogStore?.view())
-      const evidence = matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null,
-        catalogStore?.view() ?? null)
+      const sampleDeck = await fetchOpponentSample(opponent)
+      await enrichMatchupDeck(projectId, baseline)
+      await enrichOpponentCards(snapshot, opponent)
+      const sample = await opponentSampleWithMechanics(sampleDeck, currentMatchupEvidence(snapshot, opponent))
+      const deckContext = currentMatchupDeckContext(projectId, baseline)
+      const evidence = currentMatchupEvidence(snapshot, opponent)
       const report = await generateMatchup(projectId, hash, deckContext, snapshot, opponent, sample, config, evidence)
       projectStore.saveMatchupReport(report)
       return { ok: true, value: report }
@@ -600,10 +780,16 @@ function registerProjectHandlers(): void {
         throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
       const config = await runConfig(override)
       const context = await prepareMatchupHistory(pending, config)
-      const sample = await fetchOpponentSample(opponent)
-      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(discussion.projectId), catalogStore?.view())
-      const evidence = [...context.turns].reverse().find((turn) => turn.report)?.report?.tournamentEvidence ??
-        matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null, catalogStore?.view() ?? null)
+      const previousReport = [...context.turns].reverse().find((turn) => turn.report)?.report
+      const sample = previousReport?.sampleDeckCards
+        ? { url: previousReport.sampleDeckUrl, cards: previousReport.sampleDeckCards,
+          mechanics: previousReport.sampleDeckMechanics ?? [] }
+        : await opponentSampleWithMechanics(await fetchOpponentSample(opponent),
+          currentMatchupEvidence(snapshot, opponent))
+      await enrichMatchupDeck(discussion.projectId, baseline)
+      const deckContext = currentMatchupDeckContext(discussion.projectId, baseline)
+      const evidence = previousReport?.tournamentEvidence ??
+        currentMatchupEvidence(snapshot, opponent)
       const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot, opponent, sample, config, evidence)
       return { ok: true, value: projectStore.completeMatchupFeedback(discussion.id, target.id, revised.report, revised.changeSummary) }
     } catch (error) {
@@ -645,10 +831,12 @@ function registerProjectHandlers(): void {
         throw new Error('Esiste già una discussione per la base corrente.')
       const config = await runConfig(override)
       const context = await prepareMatchupHistory(parent, config)
-      const sample = await fetchOpponentSample(opponent)
-      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(parent.projectId), catalogStore?.view())
-      const evidence = matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null,
-        catalogStore?.view() ?? null)
+      const sampleDeck = await fetchOpponentSample(opponent)
+      await enrichMatchupDeck(parent.projectId, baseline)
+      await enrichOpponentCards(snapshot, opponent)
+      const sample = await opponentSampleWithMechanics(sampleDeck, currentMatchupEvidence(snapshot, opponent))
+      const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
+      const evidence = currentMatchupEvidence(snapshot, opponent)
       const report = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
         config, evidence, matchupHistoryContext(context))
       return { ok: true, value: projectStore.saveContinuedMatchupReport(report, parent.id) }

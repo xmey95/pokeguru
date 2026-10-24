@@ -1,12 +1,13 @@
 import type { DeckBaseline, ImportDeckInput } from './deck-import'
-import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from './meta-matchups'
+import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from './meta-matchups'
 import type { AiConnection, AiPreferences } from './ai'
 import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from './catalog'
 import type { ClearLineMappingInput, DeckReconciliation, SaveLineMappingInput } from './reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from './constraints'
 import type { DeckExportRequest } from './deck-export'
 import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
-import type { TournamentSnapshot } from './tournament'
+import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from './tournament'
+import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from './main-tournament'
 import type { StandardRuleAudit } from './standard-rule-audit'
 
 export type ProjectFormat = 'STANDARD'
@@ -64,6 +65,7 @@ export interface ProjectsApi {
   saveConstraint(input: SaveConstraintInput): Promise<OperationResult<DeckConstraint>>
   deleteConstraint(input: DeleteConstraintInput): Promise<OperationResult<DeckConstraint[]>>
   getMeta(): Promise<OperationResult<MetaSnapshot>>
+  getMatchupEvidence(metaId: string, opponentId: string): Promise<OperationResult<MatchupTournamentEvidence>>
   listMatchupReports(projectId: string, metaId: string): Promise<OperationResult<MatchupReport[]>>
   generateMatchup(projectId: string, metaId: string, opponentId: string, override?: AiPreferences | null): Promise<OperationResult<MatchupReport>>
   listMatchupDiscussions(projectId: string, opponentId: string): Promise<OperationResult<MatchupDiscussion[]>>
@@ -74,6 +76,15 @@ export interface ProjectsApi {
   openLimitless(url: string): Promise<OperationResult<boolean>>
   getTournament(): Promise<OperationResult<TournamentSnapshot | null>>
   refreshTournament(): Promise<OperationResult<TournamentSnapshot>>
+  listTournaments(): Promise<OperationResult<TournamentSummary[]>>
+  getTournamentEvent(eventId: string): Promise<OperationResult<TournamentSnapshot | null>>
+  getTournamentSync(): Promise<OperationResult<TournamentSyncProgress>>
+  syncTournaments(mode: 'new' | 'full'): Promise<OperationResult<TournamentSyncProgress>>
+  listMainTournaments(): Promise<OperationResult<MainTournamentSummary[]>>
+  getMainTournament(eventId: string): Promise<OperationResult<MainTournamentSnapshot | null>>
+  getMainTournamentSync(): Promise<OperationResult<MainTournamentSyncProgress>>
+  syncMainTournaments(mode: 'new' | 'full'): Promise<OperationResult<MainTournamentSyncProgress>>
+  openMainTournament(url: string): Promise<OperationResult<boolean>>
   openTournament(url: string): Promise<OperationResult<boolean>>
   getAiPreferences(): Promise<OperationResult<AiPreferences>>
   saveAiPreferences(value: AiPreferences): Promise<OperationResult<AiPreferences>>

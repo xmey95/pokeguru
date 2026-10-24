@@ -41,6 +41,29 @@ const catalog: CatalogView = {
 }
 
 describe('Riconciliazione APP-006', () => {
+  it('passa al Matchup le regole della stampa e il vero esito Standard', () => {
+    const baseline = {
+      projectId: 'project', importedAt: '2026-10-23T00:00:00.000Z', rawText: '2 Iono PAL 185',
+      source: 'paste' as const, fileName: null, ...parseDeck('2 Iono PAL 185')
+    }
+    const print: CatalogPrint = { ...ionoA, gameplaySchemaVersion: 1,
+      gameplay: { hp: null, types: [], evolveFrom: null, attacks: [], abilities: [],
+        effect: 'Each player shuffles their hand and draws.', trainerType: 'Supporter',
+        weaknesses: [], resistances: [], retreat: null } }
+    const context = matchupDeckContext(baseline, { projectId: 'project', importedAt: baseline.importedAt,
+      mappings: [], identityTotals: [], resolvedLines: 0, unresolvedLines: 0,
+      resolvedCopies: 0, unresolvedCopies: 0 }, { ...catalog, prints: [print],
+      rulePackage: { schema: 1, version: '2026-10-24.1', circuit: 'WESTERN', checkedAt: '2026-10-24',
+        standardBans: { checkedAt: '2026-10-24', sourceUrl: 'https://www.pokemon.com', cardNames: [] },
+        errata: { checkedAt: '2026-10-24', sourceUrl: 'https://play.pokemon.com', lastUpdated: '2024-11-07' },
+        rotations: [], setAdmissions: [] } },
+    { status: 'checks-passed', legality: 'supported', asOf: '2026-10-24',
+      problems: [], toReview: [], passed: ['60 carte'] })
+    expect(context).toContain('Each player shuffles their hand and draws.')
+    expect(context).toContain('CONTROLLO STANDARD (2026-10-24, pacchetto 2026-10-24.1): supported')
+    expect(context).not.toContain('legalità Standard ed errata non sono ancora verificate')
+  })
+
   it('mostra una sola carta di gioco per due rarità e tutte le varianti al clic, senza scelta di stampa', () => {
     const baseline = {
       projectId: 'project', importedAt: '2026-10-23T00:00:00.000Z', rawText: '2 Iono PAL 185\n1 Iono PAL 254',

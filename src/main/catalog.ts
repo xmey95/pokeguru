@@ -4,10 +4,11 @@ import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { isDeepStrictEqual } from 'node:util'
 import {
-  CATALOG_NAMES, CATALOG_SET_IDS, CATALOG_SOURCE,
-  type CatalogPrint, type CatalogSet, type CatalogView, type PromoAudit,
+  CATALOG_GAMEPLAY_SCHEMA_VERSION, CATALOG_NAMES, CATALOG_SET_IDS, CATALOG_SOURCE,
+  type CardGameplay, type CatalogPrint, type CatalogSet, type CatalogView, type PromoAudit,
   type CatalogSyncMode, type CatalogSyncStatus
 } from '../shared/catalog'
+import { extractCardGameplay, hasComparableGameplay } from '../shared/card-gameplay'
 import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
 import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
@@ -17,6 +18,7 @@ import { BUNDLED_WESTERN_RULE_PACKAGE,
 
 type SetResponse = {
   id: string; name: string; cardCount: { total: number }; releaseDate?: string
+  abbreviation?: { official?: string }
   cards: CardBrief[]
 }
 type CardBrief = { id: string; localId: string; name: string; image?: string }
@@ -27,6 +29,11 @@ type CardResponse = {
   stage?: string; energyType?: string
   trainerType?: string; effect?: string; image?: string; updated?: string
   variants?: Record<string, boolean>
+  hp?: number; types?: string[]; evolveFrom?: string; retreat?: number
+  attacks?: { name?: string; cost?: string[]; damage?: number | string; effect?: string }[]
+  abilities?: { name?: string; effect?: string; type?: string }[]
+  weaknesses?: { type?: string; value?: string }[]
+  resistances?: { type?: string; value?: string }[]
 }
 
 const apiOrigin = 'https://api.tcgdex.net/v2/en'
@@ -84,12 +91,23 @@ function setReleaseDate(value: unknown): string | null {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : null
 }
 
-function identity(card: CardResponse): Pick<CatalogPrint, 'identityId' | 'identityBasis'> {
-  // The shared identity is a provisional gameplay-text match, never a legality ruling.
-  // For Pokémon or absent rules text, keep every printing separate pending review.
+function setAbbreviation(value: SetResponse): string | null {
+  const code = value.abbreviation?.official
+  return typeof code === 'string' && /^[A-Z0-9]{2,8}$/.test(code) ? code : null
+}
+
+function identity(card: CardResponse, gameplay: CardGameplay | null): Pick<CatalogPrint, 'identityId' | 'identityBasis'> {
+  // Shared identity concerns gameplay only; Standard legality remains a separate, dated evaluation.
   if (card.category === 'Trainer' && card.name && card.trainerType && card.effect?.trim()) {
     const signature = [card.category, card.name.trim(), card.trainerType, card.effect.trim()].join('\u001f')
     return { identityId: `trainer-${createHash('sha256').update(signature).digest('hex').slice(0, 24)}`, identityBasis: 'trainer-text' }
+  }
+  if (hasComparableGameplay(card.category ?? null, card.stage ?? null, card.energyType ?? null, gameplay)) {
+    const basis = card.category === 'Pokemon' ? 'pokemon-text' : 'energy-text'
+    const signature = JSON.stringify({ category: card.category, name: card.name.trim(),
+      stage: card.stage ?? null, energyType: card.energyType ?? null, gameplay })
+    return { identityId: `${basis}-${createHash('sha256').update(signature).digest('hex').slice(0, 24)}`,
+      identityBasis: basis }
   }
   return { identityId: card.id, identityBasis: 'unverified' }
 }
@@ -131,12 +149,14 @@ async function details(brief: CardBrief, set: Pick<SetResponse, 'id' | 'name'>,
     if (card.id !== brief.id || card.name !== brief.name || card.localId !== brief.localId) {
       throw new Error('Dettaglio incoerente con l’indice.')
     }
+    const gameplay = extractCardGameplay(card)
     const images = includeImages ? await imageStatus(card.image) : { thumbnail: null, highImageAvailable: null }
     return {
       ...base, category: card.category ?? null, stage: card.stage ?? null,
       energyType: card.energyType ?? null, rarity: card.rarity ?? null,
       regulationMark: /^[A-Z]$/i.test(card.regulationMark ?? '') ? card.regulationMark!.toUpperCase() : null,
-      variants: card.variants ?? null, ...identity(card),
+      variants: card.variants ?? null, gameplay,
+      gameplaySchemaVersion: CATALOG_GAMEPLAY_SCHEMA_VERSION, ...identity(card, gameplay),
       imageBase: card.image ?? null, ...images,
       sourceUpdated: card.updated ?? null, detailAt: fetchedAt, error: null
     }
@@ -165,7 +185,7 @@ export async function fetchCatalogSample(): Promise<{ sets: CatalogSet[]; prints
     return value
   }))
   const sets = responses.map((set) => ({
-    id: set.id, name: set.name, sourceTotal: set.cardCount.total,
+    id: set.id, name: set.name, abbreviation: setAbbreviation(set), sourceTotal: set.cardCount.total,
     sampleTotal: set.cards.filter((card) => selectedNames.has(card.name)).length,
     fetchedAt, releaseDate: setReleaseDate(set.releaseDate)
   }))
@@ -222,7 +242,7 @@ export async function fetchStandardManifest(): Promise<StandardManifest> {
   const sets = [...groups].map(([id, group]) => {
     const set = detailedSets.get(id)!
     if (group.length > set.cardCount.total) throw new Error(`Indice TCGdex incoerente per ${id}.`)
-    return { id, name: set.name, sourceTotal: set.cardCount.total,
+    return { id, name: set.name, abbreviation: setAbbreviation(set), sourceTotal: set.cardCount.total,
       sampleTotal: group.length, fetchedAt, releaseDate: setReleaseDate(set.releaseDate) }
   }).sort((a, b) => a.id.localeCompare(b.id))
   const officialSeries = new Set(promoResult.registry?.series ?? [])
@@ -288,6 +308,20 @@ export async function syncStandardCatalog(store: CatalogStore,
   }
 }
 
+/** Upgrade only exact printings needed by an imminent analysis. The full catalog
+ * remains under the user's explicit global update action.
+ */
+export async function enrichCatalogPrints(store: CatalogStore, ids: readonly string[]): Promise<void> {
+  const pending = [...new Set(ids)].slice(0, 120).map((id) => store.getPrint(id))
+    .filter((print): print is CatalogPrint => !!print && !!print.detailAt &&
+      print.gameplaySchemaVersion !== CATALOG_GAMEPLAY_SCHEMA_VERSION)
+  const results = await mapLimited(pending, 2, async (print) =>
+    details({ id: print.id, localId: print.localId, name: print.name,
+      image: print.imageBase ?? undefined }, { id: print.setId, name: print.setName },
+    new Date().toISOString(), false, print))
+  if (results.length) store.savePrints(results)
+}
+
 export class CatalogStore {
   private readonly db: DatabaseSync
   readonly dataDir: string
@@ -300,7 +334,8 @@ export class CatalogStore {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS catalog_sets (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, source_total INTEGER NOT NULL,
-        sample_total INTEGER NOT NULL, fetched_at TEXT NOT NULL, release_date TEXT
+        sample_total INTEGER NOT NULL, fetched_at TEXT NOT NULL, release_date TEXT,
+        abbreviation TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS catalog_prints (
         id TEXT PRIMARY KEY, set_id TEXT NOT NULL REFERENCES catalog_sets(id), payload TEXT NOT NULL
@@ -338,6 +373,7 @@ export class CatalogStore {
     const setColumns = this.db.prepare('PRAGMA table_info(catalog_sets)').all()
       .map((row) => (row as { name: string }).name)
     if (!setColumns.includes('release_date')) this.db.exec('ALTER TABLE catalog_sets ADD COLUMN release_date TEXT')
+    if (!setColumns.includes('abbreviation')) this.db.exec('ALTER TABLE catalog_sets ADD COLUMN abbreviation TEXT')
     // A process killed during a batch leaves only committed targets completed.
     this.db.prepare("UPDATE catalog_job SET state = 'paused', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
   }
@@ -381,7 +417,7 @@ export class CatalogStore {
       let expected = 0
       for (const row of targets) {
         const print = JSON.parse((row as { payload: string }).payload) as CatalogPrint
-        if (mode === 'full' || !print.detailAt) {
+        if (mode === 'full' || !print.detailAt || print.gameplaySchemaVersion !== CATALOG_GAMEPLAY_SCHEMA_VERSION) {
           this.db.prepare('INSERT INTO catalog_job_targets VALUES (?)').run(print.id)
           expected++
         }
@@ -450,10 +486,12 @@ export class CatalogStore {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       for (const set of sample.sets) {
-        this.db.prepare(`INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date) VALUES (?, ?, ?, ?, ?, ?)
+        this.db.prepare(`INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date, abbreviation) VALUES (?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET name=excluded.name, source_total=excluded.source_total,
-          sample_total=excluded.sample_total, fetched_at=excluded.fetched_at, release_date=excluded.release_date`)
-          .run(set.id, set.name, set.sourceTotal, set.sampleTotal, set.fetchedAt, set.releaseDate ?? null)
+          sample_total=excluded.sample_total, fetched_at=excluded.fetched_at,
+          release_date=excluded.release_date, abbreviation=COALESCE(excluded.abbreviation, catalog_sets.abbreviation)`)
+          .run(set.id, set.name, set.sourceTotal, set.sampleTotal, set.fetchedAt,
+            set.releaseDate ?? null, set.abbreviation ?? null)
       }
       for (const print of sample.prints) this.upsertPrint(print)
       if (kind === 'standard-marks') {
@@ -521,11 +559,12 @@ export class CatalogStore {
 
   view(): CatalogView {
     const rules = this.rulePackage()
-    const sets = this.db.prepare('SELECT id, name, source_total, sample_total, fetched_at, release_date FROM catalog_sets ORDER BY id')
+    const sets = this.db.prepare('SELECT id, name, source_total, sample_total, fetched_at, release_date, abbreviation FROM catalog_sets ORDER BY id')
       .all().map((row) => {
-        const item = row as { id: string; name: string; source_total: number; sample_total: number; fetched_at: string; release_date: string | null }
+        const item = row as { id: string; name: string; source_total: number; sample_total: number;
+          fetched_at: string; release_date: string | null; abbreviation: string | null }
         return { id: item.id, name: item.name, sourceTotal: item.source_total, sampleTotal: item.sample_total,
-          fetchedAt: item.fetched_at, releaseDate: item.release_date }
+          fetchedAt: item.fetched_at, releaseDate: item.release_date, abbreviation: item.abbreviation }
       })
     const promoRegistry = loadPromoPackage().registry
     const prints = this.db.prepare('SELECT payload FROM catalog_prints ORDER BY id')
@@ -544,6 +583,10 @@ export class CatalogStore {
       .all().map((row) => (row as { print_id: string }).print_id)) : null
     const targetPrints = targetIds ? prints.filter((print) => targetIds.has(print.id)) : []
     const acquiredTargets = targetPrints.filter((print) => print.detailAt !== null).length
+    const hasGameplay = (print: CatalogPrint): boolean =>
+      print.gameplaySchemaVersion === CATALOG_GAMEPLAY_SCHEMA_VERSION &&
+      hasComparableGameplay(print.category, print.stage ?? null, print.energyType ?? null, print.gameplay ?? null)
+    const gameplayTargets = targetPrints.filter(hasGameplay).length
     const promoTargets = targetPrints.filter((print) => print.isPromo)
     const acquiredPromos = promoTargets.filter((print) => print.detailAt !== null).length
     const targetSetIds = [...new Set(targetPrints.map((print) => print.setId))].sort()
@@ -559,10 +602,12 @@ export class CatalogStore {
     const bySet = sets.filter((set) => printsBySet.has(set.id)).map((set) => {
       const group = printsBySet.get(set.id)!
       const acquired = group.filter((print) => print.detailAt !== null).length
+      const gameplayAcquired = group.filter(hasGameplay).length
       const promos = group.filter((print) => print.isPromo)
       return { setId: set.id, name: set.name, sourceTotal: set.sourceTotal, releaseDate: set.releaseDate,
         officialReleaseDate: officialSetRelease(set.id),
         expected: group.length, acquired, missing: group.length - acquired,
+        gameplayAcquired, gameplayMissing: group.length - gameplayAcquired,
         promo: promos.length > 0, promoVerified: promos.filter((print) => !!print.promoStatus).length,
         promoUnchecked: promos.filter((print) => !print.promoStatus).length }
     })
@@ -574,7 +619,9 @@ export class CatalogStore {
         : { setIds: targetSetIds, names: [], kind },
       standardCoverage: targetIds
         ? { expected: targetIds.size, acquired: acquiredTargets,
-          missing: targetIds.size - acquiredTargets, marks: candidateMarks, bySet,
+          missing: targetIds.size - acquiredTargets,
+          gameplayAcquired: gameplayTargets, gameplayMissing: targetIds.size - gameplayTargets,
+          marks: candidateMarks, bySet,
           releaseSource: { url: OFFICIAL_SET_RELEASE_SOURCE, version: OFFICIAL_SET_RELEASE_VERSION,
             checkedAt: OFFICIAL_SET_RELEASE_CHECKED_AT },
           officialSets: { expected: officialReleased.length,

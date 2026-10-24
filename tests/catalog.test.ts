@@ -1,8 +1,9 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CatalogStore, fetchCatalogSample } from '../src/main/catalog'
+import { CatalogStore, enrichCatalogPrints, fetchCatalogSample } from '../src/main/catalog'
 
 const folders: string[] = []
 afterEach(() => {
@@ -17,6 +18,9 @@ function path(): string {
 }
 
 function fixtureFetch(): ReturnType<typeof vi.fn> {
+  const abbreviations: Record<string, string> = {
+    sv01: 'SVI', sv02: 'PAL', 'sv04.5': 'PAF', me01: 'MEG', 'me02.5': 'ASC'
+  }
   const sets: Record<string, { name: string; total: number; cards: { id: string; localId: string; name: string }[] }> = {
     sv01: { name: 'Scarlet & Violet', total: 258, cards: [
       { id: 'sv01-191', localId: '191', name: 'Rare Candy' },
@@ -36,7 +40,8 @@ function fixtureFetch(): ReturnType<typeof vi.fn> {
       { id: 'me01-125', localId: '125', name: 'Rare Candy' },
       { id: 'me01-114', localId: '114', name: "Boss's Orders" },
       { id: 'me01-086', localId: '086', name: 'Mega Absol ex' },
-      { id: 'me01-161', localId: '161', name: 'Mega Absol ex' }
+      { id: 'me01-161', localId: '161', name: 'Mega Absol ex' },
+      { id: 'me01-162', localId: '162', name: 'Mega Absol ex' }
     ] },
     'me02.5': { name: 'Ascended Heroes', total: 295, cards: [
       { id: 'me02.5-172', localId: '172', name: 'Mega Audino ex' },
@@ -54,8 +59,15 @@ function fixtureFetch(): ReturnType<typeof vi.fn> {
     'sv04.5-080': { name: 'Iono', category: 'Trainer', trainerType: 'Supporter', effect: 'A different effect.', rarity: 'Uncommon' },
     'me01-125': { name: 'Rare Candy', category: 'Trainer', trainerType: 'Item', effect: 'Evolve a Pokémon.', rarity: 'Common', regulationMark: 'I' },
     'me01-114': { name: "Boss's Orders", category: 'Trainer', trainerType: 'Supporter', effect: 'Switch their Active Pokémon.', rarity: 'Uncommon', regulationMark: 'I' },
-    'me01-086': { name: 'Mega Absol ex', category: 'Pokemon', stage: 'Basic', rarity: 'Double rare', regulationMark: 'I' },
-    'me01-161': { name: 'Mega Absol ex', category: 'Pokemon', stage: 'Basic', rarity: 'Ultra Rare', regulationMark: 'I' },
+    'me01-086': { name: 'Mega Absol ex', category: 'Pokemon', stage: 'Basic', rarity: 'Double rare', regulationMark: 'I',
+      hp: 280, types: ['Darkness'], retreat: 2, attacks: [{ name: 'Darkness Attack', cost: ['Darkness', 'Colorless'], damage: 180,
+        effect: 'Discard an Energy from this Pokémon.' }] },
+    'me01-161': { name: 'Mega Absol ex', category: 'Pokemon', stage: 'Basic', rarity: 'Ultra Rare', regulationMark: 'I',
+      hp: 280, types: ['Darkness'], retreat: 2, attacks: [{ name: 'Darkness Attack', cost: ['Darkness', 'Colorless'], damage: 180,
+        effect: 'Discard an Energy from this Pokémon.' }] },
+    'me01-162': { name: 'Mega Absol ex', category: 'Pokemon', stage: 'Basic', rarity: 'Ultra Rare', regulationMark: 'I',
+      hp: 280, types: ['Darkness'], retreat: 2, attacks: [{ name: 'Darkness Attack', cost: ['Darkness', 'Colorless'], damage: 190,
+        effect: 'Discard an Energy from this Pokémon.' }] },
     'me02.5-172': { name: 'Mega Audino ex', category: 'Pokemon', stage: 'Basic', rarity: 'Double rare', regulationMark: 'J' },
     'me02.5-253': { name: 'Mega Audino ex', category: 'Pokemon', stage: 'Basic', rarity: 'Ultra Rare', regulationMark: 'J' }
   }
@@ -64,7 +76,9 @@ function fixtureFetch(): ReturnType<typeof vi.fn> {
     const id = url.split('/').at(-1)!
     if (url.includes('/sets/')) {
       const set = sets[id]
-      return new Response(JSON.stringify({ id, name: set.name, cardCount: { total: set.total }, cards: set.cards }), { status: 200 })
+      return new Response(JSON.stringify({ id, name: set.name,
+        abbreviation: { official: abbreviations[id] }, cardCount: { total: set.total },
+        cards: set.cards }), { status: 200 })
     }
     if (url.includes('/cards/')) {
       if (!cards[id]) return new Response('', { status: 404 })
@@ -82,7 +96,7 @@ describe('Catalogo occidentale', () => {
     fixtureFetch()
     const sample = await fetchCatalogSample()
     expect(sample.sets.map((set) => [set.id, set.sourceTotal, set.sampleTotal])).toEqual([
-      ['sv01', 258, 2], ['sv02', 279, 5], ['sv04.5', 245, 1], ['me01', 188, 4], ['me02.5', 295, 2]
+      ['sv01', 258, 2], ['sv02', 279, 5], ['sv04.5', 245, 1], ['me01', 188, 5], ['me02.5', 295, 2]
     ])
     const iono = sample.prints.filter((print) => print.name === 'Iono')
     expect(iono[0].identityId).toBe(iono[1].identityId)
@@ -94,6 +108,13 @@ describe('Catalogo occidentale', () => {
     expect(iono[0].thumbnail).toMatch(/^data:image\/webp;base64,/)
     expect(iono[0].highImageAvailable).toBe(true)
     expect(sample.prints.find((print) => print.id === 'me01-086')).toMatchObject({ stage: 'Basic', regulationMark: 'I' })
+    expect(sample.prints.find((print) => print.id === 'me01-086')?.gameplay?.attacks[0])
+      .toMatchObject({ cost: ['Darkness', 'Colorless'], damage: '180' })
+    expect(sample.prints.find((print) => print.id === 'me01-086')?.identityId)
+      .toBe(sample.prints.find((print) => print.id === 'me01-161')?.identityId)
+    expect(sample.prints.find((print) => print.id === 'me01-086')?.identityId)
+      .not.toBe(sample.prints.find((print) => print.id === 'me01-162')?.identityId)
+    expect(sample.prints.find((print) => print.id === 'me01-086')?.identityBasis).toBe('pokemon-text')
     expect(sample.prints.find((print) => print.id === 'me02.5-172')).toMatchObject({ stage: 'Basic', regulationMark: 'J' })
     expect(sample.prints.find((print) => print.id === 'sv01-191')?.identityId)
       .toBe(sample.prints.find((print) => print.id === 'me01-125')?.identityId)
@@ -106,7 +127,7 @@ describe('Catalogo occidentale', () => {
     const first = await fetchCatalogSample()
     store.save(first)
     store.save(await fetchCatalogSample())
-    expect(store.view().prints).toHaveLength(14)
+    expect(store.view().prints).toHaveLength(15)
     mock.mockImplementation(async () => { throw new Error('offline') })
     await expect(fetchCatalogSample()).rejects.toThrow('offline')
     store.close()
@@ -116,7 +137,23 @@ describe('Catalogo occidentale', () => {
     expect(view.prints.find((print) => print.id === 'sv02-185')?.thumbnail).toMatch(/^data:image\/webp;base64,/)
     expect(view.prints.find((print) => print.id === 'sv02-185')?.regulationMark).toBe('G')
     expect(view.sets.reduce((total, set) => total + set.sourceTotal, 0)).toBe(1265)
+    expect(view.sets.find((set) => set.id === 'me02.5')?.abbreviation).toBe('ASC')
     reopened.close()
+  })
+
+  it('apre il catalogo precedente e aggiunge il codice set alla scansione successiva', async () => {
+    const database = path()
+    const old = new DatabaseSync(database)
+    old.exec(`CREATE TABLE catalog_sets (id TEXT PRIMARY KEY, name TEXT NOT NULL,
+      source_total INTEGER NOT NULL, sample_total INTEGER NOT NULL,
+      fetched_at TEXT NOT NULL, release_date TEXT) STRICT`)
+    old.close()
+    fixtureFetch()
+    const store = new CatalogStore(database)
+    expect(store.view().sets).toEqual([])
+    store.save(await fetchCatalogSample())
+    expect(store.view().sets.find((set) => set.id === 'sv02')?.abbreviation).toBe('PAL')
+    store.close()
   })
 
   it('non cancella dettagli già acquisiti quando un singolo dettaglio fallisce al refresh', async () => {
@@ -135,6 +172,33 @@ describe('Catalogo occidentale', () => {
     store.save({ ...sample, prints: sample.prints.map((print) => print.id === old.id
       ? { ...print, thumbnail: null, highImageAvailable: null } : print) })
     expect(store.view().prints.find((print) => print.id === old.id)?.thumbnail).toBe(old.thumbnail)
+    store.close()
+  })
+
+  it('rimette in coda le schede vecchie prive delle proprietà di gioco', async () => {
+    fixtureFetch()
+    const store = new CatalogStore(path())
+    const sample = await fetchCatalogSample()
+    store.save({ ...sample, prints: sample.prints.map((print) => print.id === 'me01-086'
+      ? { ...print, gameplay: undefined, gameplaySchemaVersion: undefined } : print) }, 'standard-marks')
+    store.startJob('new')
+    store.queueJob('new')
+    expect(store.nextJobBatch(20).map((print) => print.id)).toContain('me01-086')
+    store.close()
+  })
+
+  it('arricchisce prima dell’analisi una stampa esatta già salvata senza regole', async () => {
+    const mock = fixtureFetch()
+    const store = new CatalogStore(path())
+    const sample = await fetchCatalogSample()
+    store.save({ ...sample, prints: sample.prints.map((print) => print.id === 'me01-086'
+      ? { ...print, gameplay: undefined, gameplaySchemaVersion: undefined,
+        identityId: print.id, identityBasis: 'unverified' as const } : print) })
+    mock.mockClear()
+    await enrichCatalogPrints(store, ['me01-086', 'me01-086'])
+    expect(mock).toHaveBeenCalledTimes(1)
+    expect(store.getPrint('me01-086')).toMatchObject({ gameplaySchemaVersion: 1,
+      identityBasis: 'pokemon-text', gameplay: { hp: 280 } })
     store.close()
   })
 })

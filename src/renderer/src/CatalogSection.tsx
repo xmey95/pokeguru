@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
+import { gameplaySummary } from '../../shared/card-gameplay'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -153,7 +154,8 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
   const variantCount = acquired.filter((print) => print.variants !== null).length
   const thumbnailCount = acquired.filter((print) => print.thumbnail !== null).length
   const highCount = acquired.filter((print) => print.highImageAvailable === true).length
-  const confirmedGroups = groups.filter((group) => group.basis === 'trainer-text').length
+  const confirmedGroups = groups.filter((group) => group.basis &&
+    group.basis !== 'unverified').length
   const standard = catalog?.scope.kind === 'standard-marks'
 
   return <section className="catalog-section" aria-label="Catalogo occidentale">
@@ -196,6 +198,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
         {standard ? <>
           <div><strong>{catalog.standardCoverage?.acquired ?? 0}/{catalog.standardCoverage?.expected ?? 0}</strong><span>Stampe acquisite</span></div>
           <div><strong>{catalog.standardCoverage?.missing ?? 0}</strong><span>Dettagli mancanti</span></div>
+          <div><strong>{catalog.standardCoverage?.gameplayAcquired ?? 0}/{catalog.standardCoverage?.expected ?? 0}</strong><span>Regole di gioco disponibili</span></div>
           <div><strong>{catalog.standardCoverage?.promos.acquired ?? 0}/{catalog.standardCoverage?.promos.expected ?? 0}</strong><span>Promo acquisite</span></div>
         </> : <>
         <div><strong>{catalog.sets.length}/{catalog.scope.setIds.length}</strong><span>Set acquisiti</span></div>
@@ -212,7 +215,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       <div className="catalog-layout">
         <div className="catalog-list" aria-label="Risultati catalogo">
           {filtered.length === 0 ? <p className="content-note">Nessuna carta locale corrisponde alla ricerca.</p> : <>{filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => setSelectedKey(group.key)}>
-            <strong>{group.name}</strong><span>{group.prints.length} {group.prints.length === 1 ? 'stampa' : 'stampe'}{group.basis === 'trainer-text' ? '' : ' · equivalenza da verificare'}</span>
+            <strong>{group.name}</strong><span>{group.prints.length} {group.prints.length === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
           </button>)}</>}
         </div>
         <div className="catalog-detail">
@@ -220,7 +223,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
             <h3>{selected.name}</h3>
             {onConstrain && selected.prints.some((print) => print.detailAt && print.identityId) &&
               <button type="button" className="secondary-button" onClick={() => onConstrain(selected.key)}>Aggiungi vincolo su questa carta</button>}
-            {selected.basis === 'trainer-text' && <p className="content-note">Testo Trainer coincidente; errata da verificare.</p>}
+            {selected.basis && selected.basis !== 'unverified' && <p className="content-note">Stampe collegate per regole di gioco coincidenti.</p>}
             <div className="catalog-print-grid">{selectedPrints.map((print) => <article key={print.id} className="catalog-print">
               {print.thumbnail ? <img src={print.thumbnail} alt={`Carta ${print.name}, ${print.setName} ${print.localId}`} /> : <div className="catalog-no-image">Miniatura assente</div>}
               <div><strong>{print.setName}</strong><span>{print.setId} · N. {print.localId}</span>{print.rarity && <span>Rarità: {print.rarity}</span>}<span>Marchio: {print.regulationMark ?? 'non indicato'}</span>
@@ -228,7 +231,10 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
                   print.promoStatus?.state === 'upcoming' ? `futura · ${print.promoStatus.legalDate ? `dal ${legalDate(print.promoStatus.legalDate)}` : print.promoStatus.dateNote ?? 'data da verificare'}` :
                     print.promoStatus?.state === 'unlisted' ? 'non elencata · da verificare' : 'non verificata'}
                   {print.promoStatus && ` · controllo ${date(print.promoStatus.checkedAt)}`}</span>}
-                {print.variants && <span>Varianti: {Object.entries(print.variants).filter(([, yes]) => yes).map(([name]) => name).join(', ') || 'nessuna indicata'}</span>}{print.highImageAvailable && <span>Immagine grande disponibile online</span>}{print.sourceUpdated && <span>Fonte aggiornata: {date(print.sourceUpdated)}</span>}{print.error && <span className="catalog-error">{print.error}</span>}<button type="button" className="text-button" onClick={() => void openSource(print.sourceUrl)}>Apri scheda fonte ↗</button></div>
+                {print.variants && <span>Varianti: {Object.entries(print.variants).filter(([, yes]) => yes).map(([name]) => name).join(', ') || 'nessuna indicata'}</span>}{print.highImageAvailable && <span>Immagine grande disponibile online</span>}{print.sourceUpdated && <span>Fonte aggiornata: {date(print.sourceUpdated)}</span>}{print.error && <span className="catalog-error">{print.error}</span>}
+                {print.gameplay ? <details><summary>Regole di gioco</summary><p>{gameplaySummary(print.gameplay)}</p></details>
+                  : <span>Regole di gioco non ancora acquisite</span>}
+                <button type="button" className="text-button" onClick={() => void openSource(print.sourceUrl)}>Apri scheda fonte ↗</button></div>
             </article>)}</div>
           </>}
         </div>
@@ -256,12 +262,12 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       </details>}
       <details className="catalog-set-coverage"><summary>Metodo, promo e dati delle stampe</summary>
       {standard ? <>
-        <p className="content-note">Perimetro: stampe TCGdex con marchio H–Z ed Energie Base `sve`/`mee`. «Aggiorna nuove carte» scarica i dettagli mancanti; «Scansione completa» li ricontrolla tutti. Miniature non scaricate in massa.</p>
+        <p className="content-note">Perimetro: stampe TCGdex con marchio H–Z ed Energie Base `sve`/`mee`. «Aggiorna nuove carte» completa anche le schede già presenti ma prive delle regole di gioco; «Scansione completa» ricontrolla tutti i dettagli. Miniature non scaricate in massa.</p>
         <p className="content-note">Promo: {catalog.standardCoverage?.promos.available ?? 0} disponibili · {catalog.standardCoverage?.promos.upcoming ?? 0} future · {catalog.standardCoverage?.promos.unlisted ?? 0} non elencate · {catalog.standardCoverage?.promos.unchecked ?? 0} non verificate. Registro v{catalog.promoAudit?.packageVersion ?? '—'}, controllato il {catalog.promoAudit?.checkedAt ? date(catalog.promoAudit.checkedAt) : 'mai'}. Nuovi stati richiedono una release.
           {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('promo')}>Registro promo ufficiale ↗</button>
         </p>
       </>
-        : <p className="content-note">Set TCGdex: {catalog.sets.map((set) => `${set.id}: ${set.sourceTotal}`).join('; ')}. Rarità {rarityCount}/{sampled}, varianti {variantCount}/{sampled}, miniature {thumbnailCount}/{sampled}, immagini grandi {highCount}/{sampled}. {confirmedGroups} gruppi Trainer collegati per testo; le altre equivalenze richiedono verifica.</p>}
+        : <p className="content-note">Set TCGdex: {catalog.sets.map((set) => `${set.id}: ${set.sourceTotal}`).join('; ')}. Rarità {rarityCount}/{sampled}, varianti {variantCount}/{sampled}, miniature {thumbnailCount}/{sampled}, immagini grandi {highCount}/{sampled}. {confirmedGroups} gruppi collegati per regole di gioco; le altre equivalenze richiedono verifica.</p>}
       </details>
       {missing.length > 0 && <details className="diagnostics"><summary>Dettagli mancanti ({missing.length})</summary><ul>{missing.slice(0, 12).map((print) => <li key={print.id}>{print.id}: {print.error ?? 'Non ancora acquisito'}</li>)}</ul>{missing.length > 12 && <p>Mostrati i primi 12; gli altri saranno ripresi al prossimo aggiornamento.</p>}</details>}
     </>}
