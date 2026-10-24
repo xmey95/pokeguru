@@ -42,7 +42,8 @@ export async function catalogManagementScenarios(page, application, workspace) {
   }
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.getByRole('button', { name: 'Chiudi gestione' }).click()
-  await application.evaluate(({ ipcMain }) => {
+  const rulePackageVersion = await page.evaluate(async () => (await window.projectsApi.getCatalog()).value.rulePackage.version)
+  await application.evaluate(({ ipcMain }, packageVersion) => {
     globalThis.catalogUiOriginals = new Map()
     globalThis.catalogUiRequests = []
     globalThis.catalogUiStatus = { state: 'idle', mode: null, running: false, phase: '', acquired: 3, expected: 4, error: null }
@@ -57,7 +58,7 @@ export async function catalogManagementScenarios(page, application, workspace) {
       'standard:get-rule-audit': () => ({ ok: true, value: globalThis.catalogUiAudit }),
       'standard:check-rule-sources': () => {
         globalThis.catalogUiRequests.push('audit')
-        globalThis.catalogUiAudit = { packageVersion: 'fixture', checkedAt: new Date().toISOString(), verifiedAt: null,
+        globalThis.catalogUiAudit = { packageVersion, checkedAt: new Date().toISOString(), verifiedAt: null,
           status: 'changed', sources: [] }
         return { ok: true, value: globalThis.catalogUiAudit }
       }
@@ -66,7 +67,7 @@ export async function catalogManagementScenarios(page, application, workspace) {
       globalThis.catalogUiOriginals.set(route, ipcMain._invokeHandlers.get(route))
       ipcMain.removeHandler(route); ipcMain.handle(route, handler)
     }
-  })
+  }, rulePackageVersion)
   await page.getByRole('button', { name: 'Aggiorna nuove carte' }).click()
   await page.locator('.catalog-sync-status').filter({ hasText: 'Aggiornamento in corso' }).waitFor()
   assert.equal(await page.getByRole('progressbar', { name: 'dettagli acquisiti' }).getAttribute('value'), '3')
@@ -117,6 +118,15 @@ export async function catalogManagementScenarios(page, application, workspace) {
   await page.getByRole('status').filter({ hasText: 'Fonti Standard non raggiungibili' }).waitFor()
   assert.equal(await trigger.getAttribute('aria-expanded'), 'false')
   assert.equal(await search.inputValue(), 'Carta')
+  await application.evaluate(() => { globalThis.catalogUiAudit = { ...globalThis.catalogUiAudit, packageVersion: 'previous-fixture', status: 'changed' } })
+  await page.locator('.sidebar').getByRole('button', { name: 'Impostazioni AI', exact: true }).click()
+  await ready()
+  await page.getByRole('button', { name: 'Indietro', exact: true }).click()
+  await ready()
+  assert.equal(await page.getByRole('alert').filter({ hasText: 'Fonti Standard cambiate' }).count(), 0)
+  await trigger.click()
+  assert.match(await page.locator('.rotation-panel > summary').innerText(), /fonti non ricontrollate/)
+  await page.getByRole('button', { name: 'Chiudi gestione' }).click()
   await application.evaluate(({ ipcMain }) => {
     for (const [route, handler] of globalThis.catalogUiOriginals) {
       ipcMain.removeHandler(route); ipcMain.handle(route, handler)

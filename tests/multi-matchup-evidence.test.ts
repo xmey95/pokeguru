@@ -92,3 +92,38 @@ it('matches a new printing through the official set code saved by catalog update
   expect(evidence.observedCards.find((item) => item.name === 'Hydrapple ex'))
     .toMatchObject({ catalogStatus: 'recognized', cardSourceUrl: catalog.prints[0].sourceUrl })
 })
+
+it('include le schede dei Pokémon di variante anche oltre le 24 carte più frequenti', () => {
+  const event = play('aaaaaaaaaaaaaaaaaaaaaaaa', '2026-10-20T12:00:00.000Z', 'apple')
+  const staples = Array.from({ length: 24 }, (_, index) => ({ category: 'trainer' as const,
+    count: 1, name: `Staple ${index}`, set: 'MEG', number: String(index + 1) }))
+  const rare = [
+    { category: 'pokemon' as const, count: 1, name: 'Bastiodon', set: 'PBL', number: '62' },
+    { category: 'pokemon' as const, count: 1, name: 'Dudunsparce ex', set: 'JTG', number: '121' },
+    { category: 'pokemon' as const, count: 1, name: 'Riolu', set: 'PRE', number: '50' },
+    { category: 'pokemon' as const, count: 1, name: 'Riolu', set: 'MEG', number: '76' }
+  ]
+  event.participations[0].cards = [...staples, ...rare,
+    { category: 'energy', count: 32, name: 'Fighting Energy', set: 'MEE', number: '6' }]
+  const example = catalog.prints[0]
+  const variantPrints = [
+    { ...example, id: 'me05-062', setId: 'me05', localId: '062', name: 'Bastiodon',
+      gameplay: { ...example.gameplay!, hp: 160 }, identityId: 'bastiodon' },
+    { ...example, id: 'sv09-121', setId: 'sv09', localId: '121', name: 'Dudunsparce ex',
+      gameplay: { ...example.gameplay!, hp: 260 }, identityId: 'dudunsparce-ex' },
+    { ...example, id: 'sv08.5-050', setId: 'sv08.5', localId: '050', name: 'Riolu',
+      gameplay: { ...example.gameplay!, hp: 70 }, identityId: 'riolu-pre' },
+    { ...example, id: 'me01-076', setId: 'me01', localId: '076', name: 'Riolu',
+      gameplay: { ...example.gameplay!, hp: 80 }, identityId: 'riolu-meg' }
+  ]
+  const evidence = multiMatchupEvidence(meta, opponent, [event], [],
+    { ...catalog, prints: [...catalog.prints, ...variantPrints] })
+  expect(evidence.observedCards.find((card) => card.name === 'Bastiodon')?.gameplay)
+    .toContain('HP 160')
+  expect(evidence.observedCards.find((card) => card.name === 'Dudunsparce ex')?.gameplay)
+    .toContain('Premi concessi al KO 2')
+  const riolu = evidence.observedCards.find((card) => card.name === 'Riolu')
+  expect(riolu?.catalogStatus).toBe('ambiguous')
+  expect(riolu?.gameplay).toContain('PRE 050: HP 70')
+  expect(riolu?.gameplay).toContain('MEG 076: HP 80')
+})

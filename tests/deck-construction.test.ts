@@ -22,6 +22,7 @@ const catalog: CatalogView = {
     print('sv04.5-216', 'Mew ex', 'Pokemon', 'Basic'),
     print('sv02-001', 'Floragato', 'Pokemon', 'Stage1'),
     print('sv02-002', 'Psychic Energy', 'Energy', null, 'Normal'),
+    print('mee-001', 'Grass Energy', 'Energy', null, 'Normal'),
     print('sv05-154', 'Maximum Belt', 'Trainer', null, null, 'ACE SPEC Rare'),
     print('sv05-157', 'Prime Catcher', 'Trainer', null, null, 'ACE SPEC Rare')
   ]
@@ -75,6 +76,15 @@ describe('Costruzione generale del mazzo', () => {
     expect(result.copyLimit.status).toBe('met')
     expect(result.basicPokemon.status).toBe('problem')
     expect(result.cardCount.status).toBe('met')
+  })
+
+  it('riconosce la notazione Limitless Basic {G} Energy senza esentare le Energie speciali', () => {
+    const result = evaluateDeckConstruction(baseline('14 Basic {G} Energy MEE 1\n1 Prime Catcher SV05 157'), catalog)
+    expect(result.copyLimit.status).toBe('met')
+    expect(result.aceSpec.status).toBe('met')
+    expect(result.aceSpec.message).toContain('1 copie ACE SPEC')
+    expect(evaluateDeckConstruction(baseline('5 Growing Grass Energy ME03 086'), catalog)
+      .copyLimit.status).toBe('problem')
   })
 
   it('limita a una sola carta ACE SPEC totale, anche con nomi diversi', () => {

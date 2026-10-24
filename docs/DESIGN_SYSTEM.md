@@ -1,4 +1,4 @@
-# Design system Pokéguru — APP-059
+# Design system Pokéguru — APP-083
 
 24 ottobre 2026 · checkpoint di qualità prima di I4.
 Base: `dev` al commit `d59aeaa`. Implementazione: `task/production-design-system`.
@@ -25,9 +25,9 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 
 ## Architettura
 
-- **Navigazione:** selettore del progetto attivo, tre aree del mazzo, risorse globali. Sidebar desktop di **224 px**. Il selettore apre ricerca, elenco scorrevole e “Nuovo progetto”; a finestra stretta si compatta in un pulsante. Escape chiude e restituisce il focus; frecce e Invio consentono di scegliere. Decisione approvata in APP-061.
+- **Navigazione:** selettore del progetto attivo, tre aree del mazzo, risorse globali. Sidebar desktop di **224 px**. Il selettore apre ricerca, elenco scorrevole e “Nuovo progetto”; a finestra stretta si compatta in un pulsante. Escape chiude e restituisce il focus; frecce e Invio consentono di scegliere. Decisione approvata in APP-085.
 - **Lavoro:** contenuto centrale fluido con scorrimento indipendente. La larghezza delle singole componenti risponde allo spazio effettivo tramite container query.
-- **Vista Lista:** una sola lista nell'area di lavoro disponibile, senza riepilogo laterale o dock; decisione confermata dall'utente in APP-060.
+- **Vista Lista:** una sola lista nell'area di lavoro disponibile, senza riepilogo laterale o dock; decisione confermata dall'utente in APP-084.
 - **Intestazione Lista (APP-063):** titolo, totale e stato Standard nello stesso riepilogo, azioni a destra quando lo spazio lo consente. Nessun badge “Pronta per controllo” in questa vista. “Controlli e fonti” apre dettagli e incertezze; problemi certi subito visibili. Conformità positiva sempre qualificata dallo snapshot, campione parziale da verificare.
 - **Carte della Lista (APP-062):** righe di almeno 72 px, miniatura 36×50 px, quantità e nome a 16 px. Sezioni Pokémon/Allenatori/Energie con conteggi delle copie; riepilogo cliccabile per raggiungerle. Categoria dal catalogo o dalle intestazioni esplicite dell'import, con nota; altrimenti “Da classificare”. Miniature esistenti della stessa identità, segnaposto stabile quando assenti o non leggibili.
 - **Lista persistente in Thread e Matchup:** **384 px fissi** sopra 1240 px di finestra. Tutte le carte restano consultabili per gruppi, con scorrimento indipendente anche nel dock: APP-074 rimuove Vista breve. Quantità, sezioni e stato restano leggibili; nomi lunghi vanno a capo. Lo stato “Pronta per controllo” è neutro: non equivale a Standard verificato.
@@ -99,11 +99,11 @@ La verifica usa Electron reale su Windows, con archivi separati. I dati di Catal
 
 Riferimenti per i criteri utilizzati: [contrasto del testo](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html), [dimensione dei bersagli](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html), [focus visibile](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html). Il design adotta controlli più grandi del minimo di 24 px citato dal criterio sui bersagli.
 
-Esiti dei comandi e limiti effettivi sono registrati in **APP-059 in BACKLOG.md**. Le prove a 1440×900 e 1280×720 sono integrate da 1241/1240×720, 1024×768 e 640×720; le risorse globali sono provate anche a 640×580.
+Esiti dei comandi e limiti effettivi sono registrati in **APP-083 in BACKLOG.md**. Le prove a 1440×900 e 1280×720 sono integrate da 1241/1240×720, 1024×768 e 640×720; le risorse globali sono provate anche a 640×580.
 
 ## Percorso di prova
 
-**Progetti (APP-061):** aprire il nome in alto, cercare un progetto o scegliere “Nuovo progetto”. Provare anche Tab, frecce, Invio ed Escape. [Selettore desktop](design-review/progetti-1280.png) e [compatto](design-review/progetti-640.png).
+**Progetti (APP-085):** aprire il nome in alto, cercare un progetto o scegliere “Nuovo progetto”. Provare anche Tab, frecce, Invio ed Escape. [Selettore desktop](design-review/progetti-1280.png) e [compatto](design-review/progetti-640.png).
 
 **Dettaglio carta (APP-064):** in Lista aprire Mega Absol ex per leggere gli attacchi; aprire un Allenatore per l'effetto. “Testo importato e controlli” e “Stampe e varianti” si aprono anche con Invio/Spazio. [Carta 1440](design-review/carta-1440.png), [1280](design-review/carta-1280.png) e [640](design-review/carta-640.png) usano il campione TCGdex già acquisito nel solo profilo demo. La miniatura ingrandita conserva i limiti della risoluzione originale.
 

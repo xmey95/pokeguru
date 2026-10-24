@@ -10,7 +10,7 @@ interface DeckGroup {
 
 function sectionName(raw: string): string {
   if (/pok[eé]mon/i.test(raw)) return 'Pokémon'
-  if (/trainer|allenatori/i.test(raw)) return 'Allenatori'
+  if (/trainer|allenator[ei]/i.test(raw)) return 'Allenatori'
   if (/energ/i.test(raw)) return 'Energie'
   return 'Altre carte'
 }

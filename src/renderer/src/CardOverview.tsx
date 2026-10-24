@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { CatalogPrint } from '../../shared/catalog'
 import type { DeckCardEntry } from '../../shared/reconciliation'
-import { hasComparableGameplay } from '../../shared/card-gameplay'
+import { hasComparableGameplay, prizeCardsOnKnockOut } from '../../shared/card-gameplay'
 import { deckGameplayPrint, deckImagePrint } from './deck-presentation'
 import { Icon } from './Icon'
 
@@ -37,6 +37,7 @@ export function CardFace({ print, imagePrint, missingMessage, onOpenCatalog, onO
   onOpenSource?(url: string): void
 }) {
   const gameplay = print?.gameplay
+  const prizes = prizeCardsOnKnockOut(print ?? undefined)
   const hasText = gameplay && (gameplay.attacks.length > 0 || gameplay.abilities.length > 0 || !!gameplay.effect)
   const basicEnergy = print?.category === 'Energy' && (print.energyType === 'Normal' || print.energyType === 'Basic')
   const partial = gameplay && !hasComparableGameplay(print.category, print.stage ?? null, print.energyType ?? null, gameplay)
@@ -75,6 +76,7 @@ export function CardFace({ print, imagePrint, missingMessage, onOpenCatalog, onO
         <div><dt>Debolezza</dt><dd>{gameplay.weaknesses.map((item) => `${item.type} ${item.value}`).join(' · ') || 'Non riportata'}</dd></div>
         <div><dt>Resistenza</dt><dd>{gameplay.resistances.map((item) => `${item.type} ${item.value}`).join(' · ') || 'Non riportata'}</dd></div>
         <div><dt>Ritirata</dt><dd>{gameplay.retreat ?? 'Non indicata'}</dd></div>
+        {prizes !== null && <div><dt>Premi al KO</dt><dd>{prizes}</dd></div>}
       </dl>}
       {gameplay?.evolveFrom && <p className="card-evolves">Evolve da {gameplay.evolveFrom}</p>}
       {print && <div className="card-gameplay-source"><span>{hasText ? 'Testo in inglese' : 'Scheda TCGdex'} · {print.setName} {print.localId}</span>

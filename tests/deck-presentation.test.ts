@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { hydrappleItalianDeck } from './fixtures/hydrapple-italian'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { buildDeckCards } from '../src/shared/reconciliation'
@@ -20,6 +21,11 @@ function baseline(rawText: string): DeckBaseline {
 }
 
 describe('Presentazione delle categorie della lista', () => {
+  it('conserva i conteggi italiani nella lista principale anche senza catalogo', () => {
+    const deck = baseline(hydrappleItalianDeck)
+    const result = groupDeckCards(buildDeckCards(deck, { ...catalog, prints: [] }), deck)
+    expect(result.groups.map(group => group.total)).toEqual([21, 25, 14, 0])
+  })
   it('conta le copie dopo la riconciliazione e preferisce il catalogo alle intestazioni errate', () => {
     const deck = baseline('1 Sconosciuta\nPokémon: 99\n2 Iono PAL 185\nAllenatori: 0\n1 Iono PAL 254\nEnergy: 999\n4 Energia non identificata')
     const cards = buildDeckCards(deck, catalog)

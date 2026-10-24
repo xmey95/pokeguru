@@ -242,6 +242,7 @@ export class ProjectStore {
     if (!evidenceColumns.has('evidence_json')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN evidence_json TEXT')
     if (!evidenceColumns.has('cited_source_ids_json')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN cited_source_ids_json TEXT')
     this.migrateDeckVersions()
+    this.repairTrainerSectionImports()
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS matchup_notes (
         id TEXT PRIMARY KEY,
@@ -319,6 +320,39 @@ export class ProjectStore {
           .run(id, row.project_id, row.source, row.file_name, row.raw_text, row.parsed_json, row.imported_at)
         this.db.prepare('INSERT INTO deck_main_heads (project_id, version_id) VALUES (?, ?)')
           .run(row.project_id, id)
+      }
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+  }
+
+  private repairTrainerSectionImports(): void {
+    const tables = [
+      { name: 'deck_baselines', key: 'project_id' },
+      { name: 'deck_versions', key: 'id' },
+      { name: 'deck_thread_candidates', key: 'id' },
+      { name: 'deck_ai_candidates', key: 'id' }
+    ] as const
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      for (const table of tables) {
+        const rows = this.db.prepare(`SELECT ${table.key} AS key, raw_text, parsed_json FROM ${table.name}
+          WHERE raw_text LIKE '%Carte Allenator%' OR raw_text LIKE '%Energia:%'`)
+          .all() as { key: string; raw_text: string; parsed_json: string }[]
+        for (const row of rows) {
+          const stored = JSON.parse(row.parsed_json) as ParsedDeck
+          if (!stored.lines.some((line) => line.kind === 'unparsed' &&
+            parseDeck(line.raw).lines[0]?.kind === 'section')) continue
+          const parsed = parseDeck(row.raw_text)
+          if (table.name === 'deck_baselines') {
+            const problemCount = parsed.diagnostics.filter((diagnostic) =>
+              diagnostic.code === 'UNPARSED' || diagnostic.code === 'TOTAL_MISMATCH').length
+            this.db.prepare(`UPDATE deck_baselines SET parsed_json = ?, interpreted_total = ?, problem_count = ?
+              WHERE project_id = ?`).run(JSON.stringify(parsed), parsed.interpretedTotal, problemCount, row.key)
+          } else {
+            this.db.prepare(`UPDATE ${table.name} SET parsed_json = ? WHERE ${table.key} = ?`)
+              .run(JSON.stringify(parsed), row.key)
+          }
+        }
       }
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }

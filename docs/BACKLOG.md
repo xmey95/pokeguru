@@ -65,10 +65,10 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-056** | Tornei in presenza del database principale Limitless | Ricerca/integrazione | R-06, R-10 / qualità pre-I4 | P0 / M | Verifica Q-03 di accesso sostenibile, APP-055 | Done |
 | **APP-057** | Evidenze multi evento e guide Matchup verificabili | Funzionalità | R-06, R-10, R-13 / qualità pre-I4 | P0 / M | APP-054–056 | Done |
 | **APP-058** | Evidenze Catalogo ed Eventi per ogni turno AI dei Thread | Funzionalità | R-06, R-07, R-08, R-11 / qualità pre-I4 | P0 / M | APP-054–057, APP-041, C-19 | Done |
-| **APP-059** | Design system e rifinitura completa dell’interfaccia desktop | UI/UX | R-01–R-13 / qualità pre-I4 | P0 / M | APP-051–058; richiesta utente 24-10-2026 | Done |
-| **APP-060** | Eliminare la lista duplicata dalla vista Lista | UI/UX | R-03, R-08, R-10 / qualità pre-I4 | P0 / S | APP-059; conferma utente durante la revisione condivisa | Done |
-| **APP-061** | Selettore progetti con ricerca e creazione | UI/UX | R-03 / qualità pre-I4 | P0 / S | APP-060; selettore approvato dall'utente | Done |
-| **APP-062** | Lista per categorie con conteggi e miniature | UI/UX | R-02, R-03, R-04 / qualità pre-I4 | P0 / S | APP-061; preferenza utente confermata | Done |
+| **APP-059** | Correggere false lacune Standard e schede delle varianti nel Matchup | Dati/funzionalità | R-02, R-06, R-10 / feedback pre-I4 | P0 / S | APP-054/057, fonte ufficiale SFA e Premi | Done |
+| **APP-060** | Correggere i falsi controlli Standard della lista Hydrapple | Correzione | R-02, R-10 / feedback pre-I4 | P0 / S | APP-018/059, fonti ufficiali PRE e ristampe | Done |
+| **APP-061** | Correggere intestazioni italiane e contatori della lista | Correzione | R-03, R-04 / feedback pre-I4 | P0 / S | APP-002/003, lista Hydrapple fornita dall'utente | Done |
+| **APP-062** | Lista per categorie con conteggi e miniature | UI/UX | R-02, R-03, R-04 / qualità pre-I4 | P0 / S | APP-085; preferenza utente confermata | Done |
 | **APP-063** | Riepilogo unico di totale e stato Standard nella Lista | UI/UX | R-02, R-03 / qualità pre-I4 | P0 / S | APP-062; riepilogo approvato dall'utente | Done |
 | **APP-064** | Dettaglio carta con immagine e testo di gioco in primo piano | UI/UX | R-02, R-05 / qualità pre-I4 | P0 / S | APP-063; gerarchia approvata dall'utente | Done |
 | **APP-065** | Vincoli contestuali e riepilogo generale | UI/UX | R-05 / qualità pre-I4 | P1 / S | APP-064; proposta approvata dall'utente | Done |
@@ -86,9 +86,17 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-077** | Dettaglio carta nel Catalogo con testo di gioco prioritario | UI/UX | R-02, R-05 / qualità pre-I4 | P1 / S | APP-064/076; gerarchia approvata dall'utente | Done |
 | **APP-078** | Eventi: tornei, giocatori e liste prioritari | UI/UX | R-06 / qualità pre-I4 | P1 / S | APP-055/056/072/076; impostazione approvata | Done |
 | **APP-079** | Impostazioni AI: connessione e preferenze chiare | UI/UX | R-11 / qualità pre-I4 | P1 / S | APP-023/072/075; revisione grafica autorizzata | Done |
-| **APP-080** | Revisione grafica finale e coerenza trasversale | UI/UX | R-01–R-08, R-10, R-11, R-13 / qualità pre-I4 | P1 / M | APP-059–079; revisione finale autorizzata | Done |
+| **APP-080** | Revisione grafica finale e coerenza trasversale | UI/UX | R-01–R-08, R-10, R-11, R-13 / qualità pre-I4 | P1 / M | APP-062–079, APP-083–085; revisione finale autorizzata | Done |
 | **APP-081** | Caricamenti, avanzamento Catalogo/Eventi e attività Codex | UI/UX | R-01/02/06/07/10/11/13 | P1 / M | APP-080; miglioramento autorizzato | Done |
 | **APP-082** | Logo Pokéguru, favicon e icone desktop | UI/UX | R-01/12 / identità visiva | P1 / S | APP-081; creazione e integrazione autorizzate | Done |
+| **APP-083** | Design system e rifinitura completa dell’interfaccia desktop | UI/UX | R-01–R-13 / qualità pre-I4 | P0 / M | APP-051–058; richiesta utente 24-10-2026 | Done |
+| **APP-084** | Eliminare la lista duplicata dalla vista Lista | UI/UX | R-03, R-08, R-10 / qualità pre-I4 | P0 / S | APP-083; conferma utente durante la revisione condivisa | Done |
+| **APP-085** | Selettore progetti con ricerca e creazione | UI/UX | R-03 / qualità pre-I4 | P0 / S | APP-084; selettore approvato dall'utente | Done |
+| **APP-086** | Compatibilità e preparazione integrazione redesign in dev | Integrazione | R-01–R-13 / qualità pre-I4 | P0 / S | APP-059–085; merge in dev autorizzato | Done |
+
+### Corrispondenza degli ID assegnati sui rami paralleli
+
+Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzioni funzionali. Il ramo locale del redesign aveva usato gli stessi numeri per tre attività diverse: alla prima integrazione vengono registrate come APP-083 (design system), APP-084 (Lista unica) e APP-085 (selettore progetti). I commit storici mantengono i riferimenti originali; i documenti correnti usano questi ID univoci. La decisione del design system già chiamata T-48 nel ramo locale è T-72; T-48 rimane la decisione sulle ristampe pubblicata in `dev`.
 
 ## Task dettagliati I0–I2
 
@@ -528,7 +536,27 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche:** `npm run typecheck`, `npm run build`, `npm test` (103 passati, 13 live esclusi), `node tests/threads-live.mjs`, `node tests/threads-ai-live.mjs --offline`, `node tests/threads-ai-live.mjs` con due sessioni Codex reali e due candidate complete, e `POKEGURU_CODEX_PROPOSAL_LIVE=1` sul test mirato (due candidate) passati. Il test di selezione copre due Play, un Regional, un evento non pertinente, aggiornamento scheda/fonti, riapertura e isolamento. `git diff --check` pulito. PR #6 sul commit `d410220`: quattro check CI verdi su Ubuntu 24.04 e Windows 2022, inclusi build, suite, prove Electron offline e pacchetti.
 - **Limiti:** vengono usati solo dati già acquisiti localmente; il pacchetto ha un limite dichiarato di 36 schede e sei liste. Le liste osservate non dimostrano un winrate del mazzo utente; fonti citate dal modello non verificano automaticamente le sue conclusioni. I turni precedenti restano snapshot, senza aggiornamento retroattivo.
 
-### APP-059 — Design system e qualità visiva
+### APP-059 — Diagnostica Standard e schede di variante nel Matchup
+
+- **Origine e ambito:** feedback utente su una guida Mega Lucario ex. Il controllo reale sulla lista importata indicava `Riga 9` indeterminata per **Genesect SFA 40**, mentre Codex la attribuiva a **Battle Cage PFL 116**. Battle Cage era già coperta; nel pacchetto mancava Shrouded Fable. La selezione delle 24 carte avversarie più frequenti escludeva Bastiodon e Dudunsparce ex dalle otto liste campione, benché le schede fossero nel Catalogo; la sintesi delle schede ometteva la regola dei Premi.
+- **Accettazione:** Standard sulla lista riprodotta non segnala Battle Cage né Genesect come date ignote; le segnalazioni per riga contengono la carta; le varianti Pokémon presenti nelle liste campione ricevono le proprie schede per codice quando disponibili; Mega Lucario ex e Meowth ex indicano rispettivamente tre e due Premi al KO. Le guide storiche rimangono snapshot e le statistiche Limitless non diventano winrate del matchup.
+- **Risultato e verifiche:** pacchetto regole `2026-10-24.2` con SFA ammesso dal 16-08-2024 secondo fonte ufficiale dei Mondiali; vecchi audit legati alla versione precedente non invalidano il nuovo pacchetto. La lista reale, letta in sola lettura dal profilo, passa da `review/indeterminate` a `checks-passed/supported`; le schede reali di Bastiodon, Dudunsparce ex, tre stampe Riolu, Mega Lucario ex e Meowth ex entrano nel nuovo pacchetto di evidenze. Test mirati 19/19, suite locale 107 passati con 13 live esclusi, typecheck e build Electron superati. I test diagnostici sul profilo personale sono stati rimossi dal repository.
+- **Limiti:** l'esito `supported` riguarda i controlli locali e lo snapshot Standard, non certifica automaticamente l'ammissione del mazzo a un torneo. Le guide già salvate mantengono il proprio pacchetto: per usare le nuove schede e regole occorre generare una nuova analisi. L'esito di una nuova generazione Codex sul profilo personale resta da provare nell'app; un modello può ancora formulare un'ipotesi errata, da confrontare con le fonti esposte.
+
+### APP-060 — Controlli Standard della lista Hydrapple
+
+- **Origine e ambito:** feedback utente su quattro avvisi «da verificare» per una lista Hydrapple da 60 carte. Nel profilo di prova, `Basic {G} Energy MEE 1` non veniva riconosciuta come Energia Base, PRE non aveva data nel pacchetto e `Boss's Orders PAL 265` era presente nella cache ma esclusa dalla vista Standard. Correzione della validazione occidentale prima di I4, senza acquisizione massiva delle vecchie stampe.
+- **Accettazione:** la notazione Limitless `{G}` riconcilia solo una stampa Energia Base del tipo corrispondente; PRE 102 è ammessa dalla data ufficiale derivata; una stampa Trainer storica già salvata e identificata esattamente può usare una stampa corrente con identità di testo verificata e data di ammissione superata. Nome uguale, testo diverso, stampa assente o Energia speciale non ottengono l'eccezione. Il testo importato e le guide storiche non cambiano.
+- **Risultato e verifiche:** pacchetto regole `2026-10-24.3` con PRE dal 31-01-2025 (prodotto ufficiale 17-01 e attesa di due settimane). Le stampe storiche in cache restano fuori dal denominatore dell'inventario Standard e sono considerate solo se il codice importato le identifica. Test sintetici su energia simbolica, PRE, Trainer storico, ACE SPEC e non equivalenza: 110 test locali passati, 13 live esclusi; typecheck passato. La lista Hydrapple del profilo, letta in sola lettura, produce `checks-passed/supported`, zero problemi e zero controlli da verificare, con 60 carte, una ACE SPEC e 14 Energie Base.
+- **Limiti:** la ristampa storica deve già esistere nella cache con dettaglio e identità di testo; l'app non scarica tutte le vecchie stampe. Il controllo positivo è relativo alla lista e allo snapshot Standard, non una certificazione arbitrale. Le analisi Matchup già salvate restano storiche e vanno rigenerate per ricevere il nuovo controllo.
+
+### APP-061 — Intestazioni italiane e contatori della lista
+
+- **Origine e ambito:** la lista Hydrapple inviata dall'utente ha 11 righe Pokémon, 11 Allenatore e una Energia, per 21 + 25 + 14 copie. Il parser non riconosceva `Carte Allenatore: 11` né `Energia: 1`: segnava due righe non interpretate e la vista attribuiva 39 copie agli Allenatori, senza gruppo Energie.
+- **Accettazione:** importare la lista testuale invariata come 60 copie, senza diagnostiche spurie; mostrare 21 Pokémon, 25 Allenatori, 14 Energie. Riparare le interpretazioni già salvate al riavvio senza cambiare testo, data di importazione, ID delle versioni o associazioni delle carte.
+- **Risultato e verifiche:** riconosciute le due intestazioni italiane; la vista usa anche `Allenatore` singolare. Un riallineamento dei soli record interessati aggiorna baseline, versioni e candidate salvate. Test sulla lista esatta, sulla vista e su un archivio con interpretazione precedente: 113 test locali passati, 13 live esclusi; build Electron e typecheck passati.
+- **Limiti:** i numeri delle intestazioni descrivono righe distinte, mentre i contatori dell'app mostrano copie. Le guide Matchup già generate restano storiche.
+### APP-083 — Design system e qualità visiva
 
 - **Autorizzazione:** richiesta di analisi approfondita e rifinitura di tutti i dettagli dell’applicativo. Ramo `task/production-design-system` da `dev` aggiornato, worktree isolato per preservare modifiche documentali aperte altrove. I4, merge e release esclusi.
 - **Accettazione:** fondazioni e componenti coerenti per Lista, Thread, Matchup, Catalogo, Eventi e Impostazioni AI; testi leggibili, stati distinguibili, focus visibile, controlli utilizzabili da tastiera, gerarchia delle informazioni e dettagli secondari accessibili. Lista persistente con larghezza fissa desktop, scorrimento autonomo e nessuna sovrapposizione. Audit e regole documentati.
@@ -537,7 +565,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche eseguite su Windows:** build/typecheck; 103 test locali passati, 13 live esclusi; `workspace-ui-live.mjs` a 1440×900, 1280×720, 1241/1240×720, 1024×768 e 640×720; risorse globali a 640×580. `catalog-ui-live.mjs`, `tournament-ui-live.mjs --offline` (Play e Regional con fixture), `ai-settings-offline.mjs`, `deck-adoption-live.mjs`, `threads-live.mjs`, `threads-ai-live.mjs --offline`, `electron-smoke.mjs --offline` passati. Audit del testo renderizzato: contrasto, minimo 12 px, bersagli e nomi accessibili; Tab/Shift+Tab, Escape, ritorno del focus, PageDown nella lista e scroll indipendenti. Piano Matchup leggibile nella prima schermata a 1280×720. Schermate ispezionate e salvate in `docs/design-review/`; avvio vuoto verificato anche a 1440/1280. `git diff --check` pulito.
 - **Limiti:** fixture dichiarate per guida, Catalogo ed Eventi; nessuna nuova generazione Codex o certificazione delle conclusioni. Prove eseguite su Windows; Linux, lettore di schermo e scala del sistema oltre il 100% non verificati in questa sessione. Ramo locale pronto alla prova; nessun merge, push di release o avvio I4.
 
-### APP-060 — Una sola lista nella vista Lista
+### APP-084 — Una sola lista nella vista Lista
 
 - **Autorizzazione:** durante la revisione condivisa, l'utente conferma che il pannello destro nella vista Lista è una duplicazione. Task circoscritto, criteri e dipendenze risolti; selezionato da Ready e avviato sul ramo del design system.
 - **Accettazione:** Lista, vuota o caricata, occupa l'area disponibile senza riepilogo destro o dock; Thread e Matchup conservano il pannello persistente da 384 px desktop e il dock responsive.
@@ -545,13 +573,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Risultato:** una sola lista nella vista Lista; pannello laterale e dock riservati a Thread e Matchup. Un'unica condizione governa sia la griglia sia il componente, senza colonne vuote.
 - **Verifiche:** build/typecheck e percorso Electron workspace Windows passati a 1440×900, 1280×720, 1241/1240×720, 1024×768 e 640×720; lista vuota/caricata, spazio recuperato, pannello nelle altre viste, tastiera e scroll indipendente. Schermate Lista desktop ispezionate. Guida di prova sintetica; nessuna nuova prova AI o Linux. Prosegue la revisione condivisa, senza merge o release.
 
-### APP-061 — Selettore progetti
+### APP-085 — Selettore progetti
 
 - **Autorizzazione:** l'utente preferisce un selettore all'elenco permanente. Risultato circoscritto e dipendenze risolte: task Ready selezionato e avviato sul ramo del design system.
 - **Accettazione:** progetto attivo in alto, ricerca nel selettore, creazione nello stesso punto; nomi leggibili, supporto tastiera, menu entro la finestra desktop e compatta; cambio progetto e isolamento conservati.
 - **Verifica prevista:** build, percorso Electron workspace e smoke offline di creazione/cambio/riapertura; ricerca, Escape e focus, 1440×900, 1280×720 e vista compatta.
 - **Risultato:** selettore in alto con nome del progetto su due righe, menu ricercabile e “Nuovo progetto” nello stesso punto. Versione compatta con pulsante dedicato; nomi completi nel menu, attivo indicato anche con testo, elenco scorrevole e altezza limitata alla finestra. Chiusura con Escape/clic esterno, focus iniziale sulla ricerca, frecce e Invio per scegliere. Popover nativo Electron, senza dipendenze aggiuntive; persistenza e selezione dei dati invariate.
-- **Verifiche Windows:** build/typecheck, workspace Electron e smoke offline passati. Geometria e audit contrasto del menu a 1440×900, 1280×720 e 640×580; Escape restituisce il focus, ricerca senza distinzione maiuscole/minuscole, nessun risultato, selezione da tastiera, creazione del secondo progetto, import, isolamento e riapertura verificati. Schermate ispezionate; limiti Linux/lettore di schermo/scala di APP-059 restano validi. Nessun merge o release.
+- **Verifiche Windows:** build/typecheck, workspace Electron e smoke offline passati. Geometria e audit contrasto del menu a 1440×900, 1280×720 e 640×580; Escape restituisce il focus, ricerca senza distinzione maiuscole/minuscole, nessun risultato, selezione da tastiera, creazione del secondo progetto, import, isolamento e riapertura verificati. Schermate ispezionate; limiti Linux/lettore di schermo/scala di APP-083 restano validi. Nessun merge o release.
 
 ### APP-062 — Righe, miniature e categorie
 
@@ -751,6 +779,14 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Risultato:** master SVG originale con due carte e G, derivati riproducibili via `npm run brand:generate`. Logo nella sidebar estesa/compatta, favicon SVG/PNG/ICO, icona della finestra e configurazione esplicita per Windows/Linux e NSIS. Documentazione in `BRAND.md`, decisione T-71.
 - **Verifiche:** generazione e formati degli 11 PNG/12 frame ICO complessivi; ispezione 16/32/48/256 px. Build/typecheck e `workspace-ui-live.mjs` passati. Pacchetto Windows x64 locale creato senza pubblicazione; icona estratta dall'eseguibile, PNG della finestra identico alla sorgente. Nel pacchetto tutte le favicon decodificate, logo quadrato/accessibile a 1440/1280/1240/640 px; `package-smoke.mjs` passato per avvio, salvataggio, riapertura e migrazione. Demo separata riaperta.
 - **Limiti:** AppImage/Linux e installazione NSIS non provati; icone predisposte. Demo con dati di esempio e operazioni remote simulate. Nessun I4, merge o release.
+
+### APP-086 — Compatibilità del redesign con dev e preparazione della PR
+
+- **Autorizzazione e Ready:** l'utente richiede il merge di tutte le modifiche in `dev`. Task circoscritto alla preparazione del ramo integrato, risoluzione dei conflitti con le PR #8–10, tracciabilità e verifiche. Nessun avanzamento di I4 o release.
+- **Accettazione:** conservare regole Standard e schede delle varianti, conteggi italiani 21/25/14 e riparazione delle interpretazioni salvate; esporre i Premi al KO nel nuovo dettaglio; ignorare audit riferiti a un altro pacchetto. ID documentali univoci, build e test pertinenti passati. La PR verso `dev` deve rispettare i due check obbligatori Linux/Windows prima del merge.
+- **Risultato:** correzioni delle PR #8–10 unite al redesign; conteggi italiani conservati anche nelle nuove categorie della Lista, regola Premi condivisa fra schede AI e dettaglio grafico, audit datati esclusi dagli avvisi della versione corrente. Collisioni documentali risolte con corrispondenza esplicita degli ID, senza cambiare quelli pubblicati in dev.
+- **Verifiche locali:** build/typecheck, suite 128 test passati e 13 live esclusi; dopo il test aggiuntivo sul dettaglio Premi, nove test mirati passati. Percorsi Electron Catalogo (compreso audit di un'altra versione), workspace responsive e Matchup con discussione/navigazione passati. Profili isolati, fixture dichiarate, nessuna nuova generazione AI reale attestata.
+- **Consegna:** ramo pronto per PR verso dev. Protezioni lette da GitHub: branch aggiornato, conversazioni risolte e Verify Ubuntu/Windows obbligatori anche per amministratori. Il merge autorizzato viene eseguito solo dopo questi check; esito definitivo tracciato nella PR e nella cronologia Git. Nessuna release o I4.
 
 ## Regola per i blocchi
 

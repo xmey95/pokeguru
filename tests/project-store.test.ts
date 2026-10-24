@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { parseDeck } from '../src/shared/deck-import'
+import { hydrappleItalianDeck } from './fixtures/hydrapple-italian'
 import type { MatchupReport } from '../src/shared/meta-matchups'
 
 const tempDirectories: string[] = []
@@ -62,6 +63,38 @@ describe('ProjectStore', () => {
     expect(reopened.getBaseline(first.id)?.diagnostics.map(({ code }) => code)).toEqual(['UNPARSED', 'TOTAL_MISMATCH'])
     expect(reopened.getBaseline(second.id)).toMatchObject({ rawText: '60 Carta senza stampa', fileName: 'secondo.txt', interpretedTotal: 60 })
     expect(reopened.getBaseline(first.id)?.rawText).not.toBe(reopened.getBaseline(second.id)?.rawText)
+    reopened.close()
+  })
+
+  it('ripara le liste italiane già salvate senza creare una nuova versione', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Hydrapple', format: 'STANDARD' })
+    const baseline = store.importDeck({ projectId: project.id, rawText: hydrappleItalianDeck, source: 'paste' })
+    const version = store.listDeckVersions(project.id)[0]
+    store.close()
+
+    const stale = parseDeck(hydrappleItalianDeck)
+    for (const header of ['Carte Allenatore: 11', 'Energia: 1']) {
+      const line = stale.lines.find((item) => item.raw === header)!
+      line.kind = 'unparsed'
+      stale.diagnostics.push({ lineNumber: line.lineNumber, code: 'UNPARSED', message: 'Riga non interpretata' })
+    }
+    const db = new DatabaseSync(path)
+    db.prepare('UPDATE deck_baselines SET parsed_json = ?, problem_count = 2 WHERE project_id = ?')
+      .run(JSON.stringify(stale), project.id)
+    db.prepare('UPDATE deck_versions SET parsed_json = ? WHERE project_id = ?')
+      .run(JSON.stringify(stale), project.id)
+    db.close()
+
+    const reopened = new ProjectStore(path)
+    expect(reopened.get(project.id)?.status).toBe('PRONTA_PER_CONTROLLO')
+    expect(reopened.getBaseline(project.id)).toMatchObject({ rawText: hydrappleItalianDeck,
+      importedAt: baseline.importedAt, interpretedTotal: 60, diagnostics: [] })
+    expect(reopened.getBaseline(project.id)?.lines.find((line) => line.raw === 'Carte Allenatore: 11')?.kind).toBe('section')
+    expect(reopened.listDeckVersions(project.id)).toMatchObject([{
+      id: version.id, createdAt: version.createdAt, parsed: { diagnostics: [] }
+    }])
     reopened.close()
   })
 

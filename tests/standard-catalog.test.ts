@@ -114,6 +114,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   reopened.savePrints([{ ...standardPrint, id: 'sv05-099', localId: '099', regulationMark: 'G' }])
   expect(reopened.getPrint('sv05-099')).not.toBeNull()
   expect(reopened.view().prints.some((print) => print.id === 'sv05-099')).toBe(false)
+  expect(reopened.view().referencePrints?.some((print) => print.id === 'sv05-099')).toBe(true)
   expect(reopened.view().standardCoverage?.bySet.find((set) => set.setId === 'sv05')?.expected).toBe(1)
   updatedRarity = true
   await syncStandardCatalog(reopened)

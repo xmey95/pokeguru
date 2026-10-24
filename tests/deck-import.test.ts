@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseDeck } from '../src/shared/deck-import'
+import { hydrappleItalianDeck } from './fixtures/hydrapple-italian'
 
 describe('parseDeck', () => {
   it('conserva ogni riga, interpreta quantità e stampe senza fidarsi del totale dichiarato', () => {
@@ -20,5 +21,15 @@ describe('parseDeck', () => {
     expect(result.lines[1]).toMatchObject({ setCode: 'PR-SV', cardNumber: '001a' })
     expect(result.lines[3]).toMatchObject({ raw: 'nota libera', kind: 'unparsed' })
     expect(result.diagnostics.map(({ code }) => code)).toEqual(['ALT_PRINT', 'PRINT_UNKNOWN', 'UNPARSED'])
+  })
+
+  it('riconosce le sezioni italiane e conta le copie invece delle righe distinte', () => {
+    const result = parseDeck(hydrappleItalianDeck)
+    expect(result.lines.filter((line) => line.kind === 'section').map((line) => line.raw))
+      .toEqual(['Pokémon: 11', 'Carte Allenatore: 11', 'Energia: 1'])
+    expect(result.lines.filter((line) => line.kind === 'card').length).toBe(23)
+    expect(result.interpretedTotal).toBe(60)
+    expect(result.declaredTotal).toBe(60)
+    expect(result.diagnostics).toEqual([])
   })
 })

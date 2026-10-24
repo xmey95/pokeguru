@@ -165,8 +165,23 @@ export function multiMatchupEvidence(meta: MetaSnapshot, opponent: MetaDeck,
       seen.set(key, current)
     }
   }
+  const sampledRows: typeof rows = []
+  const sampledEvents = new Map<string, number>()
+  for (const row of rows) {
+    if (sampledRows.length >= 8) break
+    const key = `${row.source}:${row.eventId}`
+    if ((sampledEvents.get(key) ?? 0) >= 2) continue
+    sampledRows.push(row)
+    sampledEvents.set(key, (sampledEvents.get(key) ?? 0) + 1)
+  }
+  // Keep uncommon Pokémon from the displayed variants, even when staples occupy the top 24.
+  const samplePokemon = new Set(sampledRows.flatMap((row) => row.cards)
+    .filter((card) => catalog?.prints.some((print) => print.category === 'Pokemon' &&
+      print.name.toLocaleLowerCase() === card.name.toLocaleLowerCase()))
+    .map((card) => card.name.toLocaleLowerCase()))
   const observedCards = [...seen.values()].sort((a, b) => b.lists - a.lists || a.name.localeCompare(b.name))
-    .slice(0, 24).map(({ name, lists, examples }) => {
+    .filter((item, index) => index < 24 || samplePokemon.has(item.name.toLocaleLowerCase()))
+    .slice(0, 48).map(({ name, lists, examples }) => {
       const prints = catalog?.prints.filter((print) => print.name.toLocaleLowerCase() === name.toLocaleLowerCase() &&
         print.detailAt !== null) ?? []
       const exactPrints = examples.map((card) => {
@@ -181,24 +196,23 @@ export function multiMatchupEvidence(meta: MetaSnapshot, opponent: MetaDeck,
         exactIdentities.size === 1
       const identities = new Set(prints.map((print) => print.identityId).filter(Boolean))
       const chosen = exactPrints.find((print) => print?.gameplay) ?? prints.find((print) => print.gameplay)
+      const exactWithGameplay = [...new Map(exactPrints.flatMap((print) =>
+        print?.gameplay ? [[print.id, print] as const] : [])).values()]
+      const mechanics = exactWithGameplay.length
+        ? exactWithGameplay.map((print) =>
+          `${setCodes.get(print.setId) ?? OFFICIAL_SET_CODES[print.setId] ?? print.setId.toUpperCase()} ${print.localId}: ${gameplaySummary(print.gameplay!, print)}; fonte ${print.sourceUrl}`).join(' | ')
+        : chosen?.gameplay ? gameplaySummary(chosen.gameplay, chosen) : null
       const recognized = !!chosen?.identityId && !!chosen.gameplay &&
         (exactComparable || (identities.size === 1 && prints.every((print) => !!print.gameplay)))
       return { name, lists, catalogIdentityId: recognized ? chosen!.identityId : null,
         catalogStatus: recognized ? 'recognized' as const : prints.length ? 'ambiguous' as const
           : 'not-in-catalog' as const,
-        gameplay: chosen?.gameplay ? gameplaySummary(chosen.gameplay) : null,
+        gameplay: mechanics,
         cardSourceUrl: chosen?.gameplay ? chosen.sourceUrl : null }
     })
-  const samples: MatchupTournamentEvidence['sampleLists'] = []
-  const sampledEvents = new Map<string, number>()
-  for (const row of rows) {
-    if (samples.length >= 8) break
-    const key = `${row.source}:${row.eventId}`
-    if ((sampledEvents.get(key) ?? 0) >= 2) continue
-    samples.push({ url: row.url, placing: row.placing, eventName: row.eventName,
-      source: row.source, cards: row.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) })
-    sampledEvents.set(key, (sampledEvents.get(key) ?? 0) + 1)
-  }
+  const samples: MatchupTournamentEvidence['sampleLists'] = sampledRows.map((row) =>
+    ({ url: row.url, placing: row.placing, eventName: row.eventName,
+      source: row.source, cards: row.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) }))
   const first = eventDetails[0]
   const opponentFieldRecord = wins + losses + ties > 0 ? {
     wins, losses, ties, denominator: wins + losses + ties, eligiblePairings,

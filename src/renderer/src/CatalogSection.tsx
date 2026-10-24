@@ -190,6 +190,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     standard && coverage?.gameplayMissing ? `${coverage.gameplayMissing} ${coverage.gameplayMissing === 1 ? 'scheda di gioco mancante' : 'schede di gioco mancanti'}` : null,
     standard && coverage?.officialSets.missing ? `${coverage.officialSets.missing} set ${coverage.officialSets.missing === 1 ? 'assente' : 'assenti'} dall’inventario` : null
   ].filter(Boolean)
+  const currentRuleAudit = ruleAudit?.packageVersion === catalog?.rulePackage?.version ? ruleAudit : null
   const management = <section id="catalog-management" className="catalog-management" aria-labelledby="catalog-management-heading"
     hidden={!managementOpen} onKeyDown={(event) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeManagement() }
@@ -208,13 +209,13 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     </div>
     {syncStatus?.phase && syncStatus.state !== 'idle' && <p className="content-note">{syncStatus.phase}</p>}
     <details className="rotation-panel" aria-label="Fonti delle regole Standard">
-      <summary>Regole Standard v{catalog?.rulePackage?.version ?? '—'} · {!ruleAudit ? 'fonti non ricontrollate' : ruleAudit.status === 'matching' ? 'fonti coerenti' : ruleAudit.status === 'changed' ? 'revisione necessaria' : 'fonti non raggiungibili'}</summary>
-      <p>{!ruleAudit ? 'Fonti online non ancora ricontrollate da questa installazione.'
-        : ruleAudit.status === 'matching' ? `Fonti coerenti con il pacchetto locale al ${date(ruleAudit.checkedAt)}.`
-          : ruleAudit.status === 'changed' ? `Fonte cambiata o non interpretabile al ${date(ruleAudit.checkedAt)}: revisione delle regole necessaria.`
-            : `Fonti non raggiungibili al ${date(ruleAudit.checkedAt)}; ultima verifica riuscita ${ruleAudit.verifiedAt ? date(ruleAudit.verifiedAt) : 'mai'}.`}</p>
+      <summary>Regole Standard v{catalog?.rulePackage?.version ?? '—'} · {!currentRuleAudit ? 'fonti non ricontrollate' : currentRuleAudit.status === 'matching' ? 'fonti coerenti' : currentRuleAudit.status === 'changed' ? 'revisione necessaria' : 'fonti non raggiungibili'}</summary>
+      <p>{!currentRuleAudit ? 'Fonti online non ancora ricontrollate per questa versione delle regole.'
+        : currentRuleAudit.status === 'matching' ? `Fonti coerenti con il pacchetto locale al ${date(currentRuleAudit.checkedAt)}.`
+          : currentRuleAudit.status === 'changed' ? `Fonte cambiata o non interpretabile al ${date(currentRuleAudit.checkedAt)}: revisione delle regole necessaria.`
+            : `Fonti non raggiungibili al ${date(currentRuleAudit.checkedAt)}; ultima verifica riuscita ${currentRuleAudit.verifiedAt ? date(currentRuleAudit.verifiedAt) : 'mai'}.`}</p>
       <p>Le regole sono incluse nella release dell’app; aggiornare le carte non le cambia. Le promo usano il registro locale.</p>
-      {ruleAudit?.sources.map((source) => <p key={source.id}>{source.id === 'rotation-2026' ? 'Rotazione 2026' : 'Attesa dei prodotti'}: {source.status === 'matching' ? 'coerente' : source.status === 'changed' ? 'da rivedere' : 'non raggiungibile'} · {source.detail}{' '}
+      {currentRuleAudit?.sources.map((source) => <p key={source.id}>{source.id === 'rotation-2026' ? 'Rotazione 2026' : 'Attesa dei prodotti'}: {source.status === 'matching' ? 'coerente' : source.status === 'changed' ? 'da rivedere' : 'non raggiungibile'} · {source.detail}{' '}
         <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(source.id === 'rotation-2026' ? 'play-2026-01-09' : 'set-admission')}>Fonte ↗</button></p>)}
       <button type="button" className="secondary-button" disabled={checkingRules} onClick={() => void checkRules()}>{checkingRules && <Spinner />}{checkingRules ? 'Controllo in corso…' : 'Controlla fonti Standard'}</button>
     </details>
@@ -284,8 +285,8 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       </div>
     </div>
     {catalog?.rulePackageError && <p className="diagnostics" role="alert">{catalog.rulePackageError}</p>}
-    {ruleAudit?.status === 'changed' && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
-    {ruleAudit?.status === 'unavailable' && <p className="catalog-gap-summary" role="status">Fonti Standard non raggiungibili · ultimo controllo riuscito {ruleAudit.verifiedAt ? date(ruleAudit.verifiedAt) : 'mai'}.</p>}
+    {currentRuleAudit?.status === 'changed' && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
+    {currentRuleAudit?.status === 'unavailable' && <p className="catalog-gap-summary" role="status">Fonti Standard non raggiungibili · ultimo controllo riuscito {currentRuleAudit.verifiedAt ? date(currentRuleAudit.verifiedAt) : 'mai'}.</p>}
     <CatalogActivity status={syncStatus} requesting={requesting} startedAt={startedAt} onResume={() => void syncStandard(syncStatus?.mode ?? 'new')} />
     {progressError && <p className="warning-banner" role="status">{progressError}</p>}
     {checkingRules && <ActivityStatus title="Controllo delle fonti Standard…" />}

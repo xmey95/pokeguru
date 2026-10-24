@@ -63,7 +63,15 @@ export function hasComparableGameplay(category: string | null, stage: string | n
     gameplay.attacks.every((attack) => attack.cost !== null)
 }
 
-export function gameplaySummary(gameplay: CardGameplay): string {
+/** Prize rules are printed on cards but omitted by the TCGdex gameplay fields. */
+export function prizeCardsOnKnockOut(card?: { name: string; category: string | null }): number | null {
+  return card?.category === 'Pokemon' && /\sex$/u.test(card.name)
+    ? (card.name.startsWith('Mega ') ? 3 : 2) : null
+}
+
+export function gameplaySummary(gameplay: CardGameplay,
+  card?: { name: string; category: string | null }): string {
+  const prizes = prizeCardsOnKnockOut(card)
   const pieces = [
     gameplay.hp === null ? '' : `HP ${gameplay.hp}`,
     gameplay.types.length ? `tipi ${gameplay.types.join('/')}` : '',
@@ -78,7 +86,8 @@ export function gameplaySummary(gameplay: CardGameplay): string {
       : gameplay.hp !== null ? 'debolezza non riportata nella scheda' : '',
     gameplay.resistances.length ? `resistenza ${gameplay.resistances.map((item) => `${item.type} ${item.value}`).join(', ')}`
       : gameplay.hp !== null ? 'resistenza non riportata nella scheda' : '',
-    gameplay.retreat === null ? '' : `ritirata ${gameplay.retreat}`
+    gameplay.retreat === null ? '' : `ritirata ${gameplay.retreat}`,
+    prizes === null ? '' : `Premi concessi al KO ${prizes}`
   ].filter(Boolean)
   return pieces.join('; ')
 }

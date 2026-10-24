@@ -20,7 +20,7 @@ export function groupDeckCards(cards: DeckCardEntry[], baseline: DeckBaseline) {
   for (const line of baseline.lines) {
     if (line.kind === 'section') {
       const heading = line.raw.trim()
-      section = /^pok[eé]mon/i.test(heading) ? 'pokemon' : /^(?:trainer|allenatori)/i.test(heading) ? 'trainer' : /^energ/i.test(heading) ? 'energy' : 'unknown'
+      section = /^pok[eé]mon/i.test(heading) ? 'pokemon' : /^(?:trainer|(?:carte\s+)?allenator[ei])/i.test(heading) ? 'trainer' : /^energ/i.test(heading) ? 'energy' : 'unknown'
     } else if (line.kind === 'card') importedGroups.set(line.lineNumber, section)
   }
   const groups: DeckCardGroup[] = [

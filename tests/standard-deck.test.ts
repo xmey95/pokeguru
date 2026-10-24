@@ -4,6 +4,7 @@ import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { evaluateStandardDeck } from '../src/shared/standard-deck'
 import type { StandardRuleAudit } from '../src/shared/standard-rule-audit'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../src/shared/western-rule-package'
+import { buildDeckCards } from '../src/shared/reconciliation'
 
 function print(id: string, name: string, options: Partial<CatalogPrint> = {}): CatalogPrint {
   const [setId, localId] = id.split('-')
@@ -19,6 +20,8 @@ const prints = [print('me01-001', 'Base One', { category: 'Pokemon', stage: 'Bas
   print('me03-200', 'Future Trainer'), print('sv05-154', 'Maximum Belt', { rarity: 'ACE SPEC Rare', regulationMark: 'H' }),
   print('sv05-157', 'Prime Catcher', { rarity: 'ACE SPEC Rare', regulationMark: 'H' }),
   print('sv02-185', 'Iono', { regulationMark: 'G' }),
+  print('sv06.5-040', 'Genesect', { category: 'Pokemon', stage: 'Basic', regulationMark: 'H' }),
+  print('me02-116', 'Battle Cage'),
   print('30th-001', 'Special Card'),
   print('mep-051', 'Promo Waiting', { isPromo: true, promoStatus: {
     state: 'upcoming', legalDate: '2026-11-01', dateNote: null, checkedAt: '2026-10-23T00:00:00.000Z'
@@ -77,6 +80,41 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
     expect(result.legality).toBe('indeterminate')
   })
 
+  it('non attribuisce a Battle Cage una lacuna della riga Genesect SFA', () => {
+    const coveredCatalog: CatalogView = { ...catalog,
+      scope: { ...catalog.scope, kind: 'standard-marks' }, rulePackage: BUNDLED_WESTERN_RULE_PACKAGE }
+    const deck = baseline([...raw.slice(0, 58), '1 Genesect SFA 40', '1 Battle Cage PFL 116'])
+    const staleAudit: StandardRuleAudit = { packageVersion: '2026-10-24.1',
+      checkedAt: '2026-10-24T12:00:00.000Z', verifiedAt: null, status: 'unavailable', sources: [] }
+    const result = evaluateStandardDeck(deck, coveredCatalog, '2026-10-24', staleAudit)
+    expect(result.legality).toBe('supported')
+    expect(result.toReview).toEqual([])
+  })
+
+  it('copre PRE, Energia {G} e Boss PAL quando una ristampa corrente identica è ammessa', () => {
+    const bossIdentity = 'boss-orders-text'
+    const oldBoss = print('sv02-265', "Boss's Orders", { regulationMark: 'G',
+      identityId: bossIdentity, identityBasis: 'trainer-text' })
+    const newBoss = print('me01-114', "Boss's Orders", { identityId: bossIdentity,
+      identityBasis: 'trainer-text' })
+    const energy = print('mee-001', 'Grass Energy', { category: 'Energy', energyType: 'Normal',
+      regulationMark: null })
+    const coveredCatalog: CatalogView = { ...catalog,
+      scope: { ...catalog.scope, kind: 'standard-marks' }, rulePackage: BUNDLED_WESTERN_RULE_PACKAGE,
+      prints: [...prints, newBoss, energy,
+        print('sv08.5-102', 'Bug Catching Set', { regulationMark: 'H' }),
+        print('sv06-165', 'Unfair Stamp', { regulationMark: 'H', rarity: 'ACE SPEC Rare' })],
+      referencePrints: [oldBoss] }
+    const deck = baseline([...raw.slice(0, 39), '4 Bug Catching Set PRE 102',
+      "2 Boss's Orders PAL 265", '14 Basic {G} Energy MEE 1', '1 Unfair Stamp TWM 165'])
+    const result = evaluateStandardDeck(deck, coveredCatalog, '2026-10-24')
+    expect(result.problems).toEqual([])
+    expect(result.toReview).toEqual([])
+    expect(result.legality).toBe('supported')
+    expect(buildDeckCards(deck, coveredCatalog).find((card) => card.name === "Boss's Orders")
+      ?.importedPrintIds).toEqual(['sv02-265'])
+  })
+
   it('segnala come certi 59 carte, due ACE SPEC e ammissione futura', () => {
     const short = evaluateStandardDeck(baseline(raw.slice(0, 59)), catalog, '2026-10-23')
     expect(short.status).toBe('problem')
@@ -112,7 +150,7 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
   })
 
   it('riporta da verificare una fonte ufficiale cambiata', () => {
-    const audit: StandardRuleAudit = { packageVersion: 'western-2026-10-23-v1', checkedAt: '2026-10-23T12:00:00.000Z',
+    const audit: StandardRuleAudit = { packageVersion: BUNDLED_WESTERN_RULE_PACKAGE.version, checkedAt: '2026-10-23T12:00:00.000Z',
       verifiedAt: null, status: 'changed', sources: [] }
     const result = evaluateStandardDeck(baseline(raw), catalog, '2026-10-23', audit)
     expect(result.status).toBe('review')
