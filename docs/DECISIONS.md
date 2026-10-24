@@ -71,6 +71,12 @@ Durante la revisione condivisa l'utente riconosce il riepilogo destro come dupli
 
 L'utente conferma che è sufficiente un selettore. La sidebar mostra il solo progetto attivo; il menu contiene ricerca, tutti i progetti e “Nuovo progetto”. Il menu non occupa spazio quando è chiuso; a finestra stretta si apre da un pulsante dedicato. Popover nativo con chiusura esterna/Escape, focus sulla ricerca e frecce/Invio; nessuna nuova dipendenza o modifica al database.
 
+### T-51 — Righe con miniature e categorie (APP-062)
+
+L'utente sceglie righe con piccole miniature e sezioni Pokémon, Allenatori ed Energie con conteggi. La Lista usa righe intere, miniatura 36×50 px e nome a 16 px; il riepilogo di composizione porta alla categoria scorrendo soltanto il contenuto. I conteggi sono copie effettive delle carte già riconciliate, senza reinterpretare i totali scritti nelle intestazioni.
+
+La categoria del catalogo ha precedenza; in assenza si usano soltanto sezioni esplicite del testo importato, con nota. Categorie ignote o discordanti restano “Da classificare”. La miniatura privilegia una stampa importata, poi una della stessa identità; nessuna inferenza dall'omonimia. Immagine assente/non leggibile: segnaposto neutro delle stesse dimensioni. Nessuna modifica al catalogo di produzione o alle integrazioni; la demo usa il campione acquisito attraverso il connettore esistente.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

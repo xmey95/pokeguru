@@ -32,6 +32,8 @@ La revisione condivisa APP-060 elimina il riepilogo duplicato nella vista **List
 
 APP-061 sostituisce l'elenco permanente dei progetti con un **selettore in alto**: clic sul progetto attivo per cercare gli altri o crearne uno nuovo. Nella barra compatta il selettore usa un pulsante dedicato.
 
+APP-062 organizza la **Lista** in righe con miniature e sezioni **Pokémon, Allenatori ed Energie**, con conteggi delle copie e riepilogo cliccabile. Le immagini disponibili provengono dal catalogo locale; quelle mancanti hanno un segnaposto. Le categorie seguono il catalogo o, con nota, le intestazioni dell'import; i casi ignoti restano “Da classificare”.
+
 Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con token condivisi, tipografia sans, icone SVG, controlli leggibili e stati coerenti. La sidebar desktop è larga **224 px**; la lista principale rimane fissa a **384 px**, con dock di 220 px sotto la soglia di 1240 px. Il primo progetto si crea nell'area centrale. Metadati e metodo precedono meno spesso carte, differenze e strategia; focus e scorrimento sono verificati anche da tastiera.
 
 L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.

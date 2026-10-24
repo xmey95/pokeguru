@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-062 completato:** righe con miniature e categorie Pokémon/Allenatori/Energie con conteggi, dati mancanti espliciti. Build, conteggi, riconciliazione, immagini e layout verificati su Windows; campione catalogo acquisito nel solo profilo demo per la prova con miniature reali. Prossimo punto proposto nella revisione condivisa: intestazione e stato della Lista, da discutere prima di modificare.
+
 - **APP-061 completato:** selettore progetti approvato, con ricerca e creazione nello stesso menu; verifiche Windows di tastiera, responsive e isolamento passate. Prossimo punto della revisione condivisa: struttura della Lista e rappresentazione delle carte; proposte da discutere prima di applicarle.
 
 - **APP-060 completato:** prima decisione della revisione condivisa applicata: Lista usa l'area disponibile senza riepilogo duplicato; pannello e dock persistono in Thread e Matchup. Build e percorso Electron workspace Windows passati, schermate Lista 1440×900 e 1280×720 ispezionate. Prossimo punto da discutere: progetti e sidebar. Le altre scelte si analizzano con l'utente una alla volta.

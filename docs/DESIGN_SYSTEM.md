@@ -15,7 +15,7 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 | Numeri e glifi Unicode nella navigazione | Le aree non hanno una grammatica visiva comune | Piccolo set SVG locale, tratto e dimensioni uniformi, nomi accessibili anche nella barra compatta |
 | Ambra sia per selezione sia per avvisi | La selezione può sembrare una condizione da correggere | Petrolio per navigazione/azioni; ambra per incertezza; rosso per blocchi; viola per proposta |
 | Titoli, origine dell'import e note occupano il primo schermo | Le carte e il piano tattico arrivano troppo tardi | Metadati import sotto le carte; metagame apribile; rimossi sottotitoli ridondanti |
-| Carta con nome lungo troncato in due colonne strette | Serve aprire la riga per riconoscere una carta | Nomi a capo, griglia guidata dalla larghezza effettiva del contenuto, una colonna quando serve |
+| Carta con nome lungo troncato in due colonne strette | Serve aprire la riga per riconoscere una carta | APP-062: righe intere con miniature, nomi a capo a 16 px e categorie con conteggi |
 | Ogni informazione in un ulteriore riquadro verde | Controlli, proposta, conversazione e spiegazioni competono per attenzione | Superfici neutre, bordi strutturali e separatori; tinta solo dove comunica uno stato |
 | Principale e candidata troppo simili | Il cambiamento è difficile da distinguere a colpo d'occhio | Etichette esplicite, proposta viola, differenze con segno e conteggi, conferma dell'intera lista |
 | Guide e fonti estese prima della discussione | Lo studio del piano richiede scorrimento eccessivo | Strategia prima, limiti visibili, carte osservate e meccaniche in dettagli apribili |
@@ -28,6 +28,7 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 - **Navigazione:** selettore del progetto attivo, tre aree del mazzo, risorse globali. Sidebar desktop di **224 px**. Il selettore apre ricerca, elenco scorrevole e “Nuovo progetto”; a finestra stretta si compatta in un pulsante. Escape chiude e restituisce il focus; frecce e Invio consentono di scegliere. Decisione approvata in APP-061.
 - **Lavoro:** contenuto centrale fluido con scorrimento indipendente. La larghezza delle singole componenti risponde allo spazio effettivo tramite container query.
 - **Vista Lista:** una sola lista nell'area di lavoro disponibile, senza riepilogo laterale o dock; decisione confermata dall'utente in APP-060.
+- **Carte della Lista (APP-062):** righe di almeno 72 px, miniatura 36×50 px, quantità e nome a 16 px. Sezioni Pokémon/Allenatori/Energie con conteggi delle copie; riepilogo cliccabile per raggiungerle. Categoria dal catalogo o dalle intestazioni esplicite dell'import, con nota; altrimenti “Da classificare”. Miniature esistenti della stessa identità, segnaposto stabile quando assenti o non leggibili.
 - **Lista persistente in Thread e Matchup:** **384 px fissi** sopra 1240 px di finestra. Quantità, sezioni e stato restano leggibili; nomi lunghi vanno a capo. Lo stato “Pronta per controllo” è neutro: non equivale a Standard verificato.
 - **Finestra stretta:** fino a 1240 px, navigazione a icone e lista in dock inferiore di 220 px solo in Thread e Matchup, sempre parte della griglia. A 640 px la navigazione diventa orizzontale. Nessun pannello copre il contenuto.
 - **Livelli informativi:** decisione e blocchi → dettaglio operativo → provenienza e diagnostica. I dati non vengono eliminati per rendere la schermata più breve.
@@ -78,7 +79,7 @@ Esiti dei comandi e limiti effettivi sono registrati in **APP-059 in BACKLOG.md*
 
 Schermate registrate: [Lista 1440](design-review/lista-1440.png), [Lista 1280](design-review/lista-1280.png), [Thread](design-review/thread-1440.png), [Matchup 1280](design-review/matchup-1280.png), [Lista a 640](design-review/lista-640.png), [dock Thread a 640](design-review/thread-640.png), [Catalogo](design-review/catalogo-1440.png), [Eventi](design-review/eventi-1280.png), [conferma di adozione](design-review/adozione.png).
 
-1. **Lista:** leggere carte con nomi lunghi, aprire una carta, verificare lo stato Standard e provare “Importa / sostituisci”.
+1. **Lista:** controllare conteggi e miniature, usare il riepilogo per raggiungere Allenatori o Energie, aprire una carta, verificare lo stato Standard e provare “Importa / sostituisci”. Le schermate Lista APP-062 usano il campione reale TCGdex nel profilo demo; non tutte le carte della lista hanno una miniatura disponibile.
 2. **Thread → Piano più rapido:** confrontare principale e proposta; scorrere le due liste e il pannello persistente in modo indipendente; aprire e annullare l'adozione.
 3. **Matchup → cercare “fixture UI”:** leggere la guida, aprire una revisione precedente e le opzioni AI; tenere la lista principale a vista.
 4. **Catalogo / Eventi / AI:** confrontare filtri, pulsanti, dettagli apribili e messaggi di stato.

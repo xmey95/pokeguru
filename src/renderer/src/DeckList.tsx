@@ -11,6 +11,8 @@ import { evaluateStandardDeck } from '../../shared/standard-deck'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../../shared/western-rule-package'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { reviewSummary } from './review-summary'
+import { CardThumbnail } from './CardThumbnail'
+import { deckThumbnail, groupDeckCards } from './deck-presentation'
 
 function localDate(): string {
   const now = new Date()
@@ -68,6 +70,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   }, [projectId, baseline.importedAt])
 
   const cards = useMemo(() => buildDeckCards(baseline, catalog, reconciliation), [baseline, catalog, reconciliation])
+  const { groups, usesImportHeadings } = useMemo(() => groupDeckCards(cards, baseline), [cards, baseline])
   const asOf = referenceDate ?? today
   const rotation = useMemo(() => evaluateWesternRotation(baseline, catalog, asOf), [baseline, catalog, asOf])
   const construction = useMemo(() => evaluateDeckConstruction(baseline, catalog), [baseline, catalog])
@@ -78,6 +81,14 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   const promoByLine = new Map(promoAdmission.lines.map((line) => [line.lineNumber, line]))
   const standardDeck = useMemo(() => evaluateStandardDeck(baseline, catalog, asOf, ruleAudit), [baseline, catalog, asOf, ruleAudit])
   const reviewItems = useMemo(() => reviewSummary(standardDeck.toReview), [standardDeck])
+
+  function jumpToGroup(id: string): void {
+    const heading = document.getElementById(`deck-group-${id}`)
+    const main = heading?.closest('.main-content')
+    if (!heading || !main) return
+    main.scrollTop += heading.getBoundingClientRect().top - main.getBoundingClientRect().top - 20
+    heading.focus({ preventScroll: true })
+  }
 
   async function confirmIdentity(lineNumber: number, printId: string): Promise<void> {
     const line = baseline.lines.find((item) => item.lineNumber === lineNumber)
@@ -131,12 +142,21 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       </details>
     </section>
     <p className="content-note">Apri una carta per vedere stampe e righe importate.</p>
-    {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-list" aria-label="Carte della lista corrente">
-      {cards.map((card) => {
+    {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-groups" aria-label="Carte della lista corrente">
+      <nav className="deck-composition" aria-label="Composizione del mazzo">{groups.filter((group) => group.id !== 'unknown' || group.total > 0).map((group) =>
+        group.total > 0 ? <a key={group.id} href={`#deck-group-${group.id}`} onClick={(event) => { event.preventDefault(); jumpToGroup(group.id) }}><span>{group.name}</span><strong>{group.total}</strong></a>
+          : <span key={group.id}><span>{group.name}</span><strong>0</strong></span>
+      )}</nav>
+      {usesImportHeadings && <p className="deck-group-note">Le categorie non riconosciute dal catalogo seguono le sezioni del testo importato.</p>}
+      {groups.filter((group) => group.cards.length > 0).map((group) => <section className="deck-card-group" key={group.id} aria-labelledby={`deck-group-${group.id}`}>
+        <h3 id={`deck-group-${group.id}`} tabIndex={-1}>{group.name}<span>{group.total} {group.total === 1 ? 'carta' : 'carte'}</span></h3>
+        <div className="deck-card-list">{group.cards.map((card) => {
         const open = expanded === card.key
+        const thumbnail = deckThumbnail(card)
         return <article className="deck-card" key={card.key} data-testid={card.identityId ? `deck-card-${card.identityId}` : `deck-line-${card.lines[0].lineNumber}`}>
           <button type="button" className="deck-card-toggle" aria-expanded={open} onClick={() => setExpanded(open ? null : card.key)}>
             <span className="deck-card-quantity">{card.quantity}×</span>
+            <CardThumbnail key={thumbnail} src={thumbnail} />
             <span className="deck-card-title"><strong>{card.name}</strong>{cardStatus(card.status, catalog) && <small>{cardStatus(card.status, catalog)}</small>}</span>
             <span className="deck-card-chevron"><Icon name="chevron" /></span>
           </button>
@@ -184,7 +204,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
               </details>}
           </div>}
         </article>
-      })}
+      })}</div>
+      </section>)}
     </div>}
     <details className="deck-technical"><summary>Rotazione, ammissione e costruzione del mazzo</summary>
     <section className="rotation-panel" aria-label="Controllo della rotazione Standard occidentale">

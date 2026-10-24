@@ -32,7 +32,10 @@ function seedCatalog() {
     const print = { id, setId, setName, localId, name, category: name.startsWith('Mega ') ? 'Pokemon' : 'Trainer', rarity, regulationMark: mark,
       variants: { normal: true, reverse: true }, identityId,
       identityBasis: name.startsWith('Mega ') ? 'unverified' : 'trainer-text',
-      imageBase: null, thumbnail: null, highImageAvailable: null, sourceUpdated: null,
+      imageBase: null, thumbnail: id === 'sv02-185'
+        ? 'data:image/svg+xml;base64,' + Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="72" height="100"><rect width="72" height="100" rx="6" fill="#c6ded6"/><rect x="8" y="12" width="56" height="42" fill="#698e86"/><path d="M10 66h52M10 76h42M10 86h30" stroke="#304b47" stroke-width="4"/></svg>').toString('base64')
+        : id === 'sv04.5-089' ? 'data:image/png;base64,invalid' : null,
+      highImageAvailable: null, sourceUpdated: null,
       sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`, detailAt: now, error: null,
       isPromo: id === 'mep-051', promoStatus: id === 'mep-051'
         ? { state: 'available', legalDate: null, dateNote: null, checkedAt: now } : null }
@@ -65,6 +68,15 @@ try {
   await page.getByRole('button', { name: 'Salva lista' }).click()
   const card = await iono(page)
   await card.first().waitFor()
+  assert.match(await page.locator('.deck-composition').innerText(), /Pokémon\s*0\s*Allenatori\s*7\s*Energie\s*0/)
+  await card.locator('.card-thumbnail img').scrollIntoViewIfNeeded()
+  await page.waitForFunction(() => {
+    const image = document.querySelector('.deck-card .card-thumbnail img')
+    return image?.complete && image.naturalWidth === 72
+  })
+  const brokenThumbnail = page.locator('.deck-card').filter({ has: page.locator('.deck-card-title strong', { hasText: /^Rare Candy$/ }) }).locator('.card-thumbnail')
+  await brokenThumbnail.scrollIntoViewIfNeeded()
+  await brokenThumbnail.locator('svg').waitFor()
   await page.locator('.deck-technical > summary').click()
   const construction = page.getByRole('region', { name: 'Controlli di costruzione del mazzo' })
   assert.match(await construction.textContent(), /7 copie: ne servono esattamente 60/)

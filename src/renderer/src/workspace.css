@@ -18,6 +18,7 @@
 .project-switcher:hover, .project-switcher[aria-expanded=true] { background: var(--rail-selected); }
 .project-switcher-label { display: grid; gap: 4px; flex: 1; min-width: 0; }
 .project-switcher-label small { color: var(--rail-muted); }
+.project-switcher:hover .project-switcher-label small, .project-switcher[aria-expanded=true] .project-switcher-label small { color: var(--rail-text); }
 .project-switcher-label strong { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: var(--text-base); line-height: 1.4; overflow-wrap: anywhere; }
 .project-switcher-icon { display: none; }
 .project-switcher-chevron { display: flex; flex: none; }
@@ -63,7 +64,7 @@
 /* Adapt components to their available content width, not the whole screen. */
 @container workspace (max-width: 700px) {
   .baseline-panel, .import-panel, .constraints-panel, .thread-detail, .meta-analysis, .settings-panel { padding: 20px; }
-  .deck-card-list, .comparison-lists, .catalog-layout, .tournament-layout, .tournament-cards { grid-template-columns: minmax(0, 1fr); }
+  .comparison-lists, .catalog-layout, .tournament-layout, .tournament-cards { grid-template-columns: minmax(0, 1fr); }
   .catalog-list, .tournament-players { max-height: 250px; }
   .detail-headline { flex-wrap: wrap; }
   .detail-headline h1 { font-size: var(--text-xl); }

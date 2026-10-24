@@ -68,6 +68,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-059** | Design system e rifinitura completa dell’interfaccia desktop | UI/UX | R-01–R-13 / qualità pre-I4 | P0 / M | APP-051–058; richiesta utente 24-10-2026 | Done |
 | **APP-060** | Eliminare la lista duplicata dalla vista Lista | UI/UX | R-03, R-08, R-10 / qualità pre-I4 | P0 / S | APP-059; conferma utente durante la revisione condivisa | Done |
 | **APP-061** | Selettore progetti con ricerca e creazione | UI/UX | R-03 / qualità pre-I4 | P0 / S | APP-060; selettore approvato dall'utente | Done |
+| **APP-062** | Lista per categorie con conteggi e miniature | UI/UX | R-02, R-03, R-04 / qualità pre-I4 | P0 / S | APP-061; preferenza utente confermata | Done |
 
 ## Task dettagliati I0–I2
 
@@ -531,6 +532,15 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifica prevista:** build, percorso Electron workspace e smoke offline di creazione/cambio/riapertura; ricerca, Escape e focus, 1440×900, 1280×720 e vista compatta.
 - **Risultato:** selettore in alto con nome del progetto su due righe, menu ricercabile e “Nuovo progetto” nello stesso punto. Versione compatta con pulsante dedicato; nomi completi nel menu, attivo indicato anche con testo, elenco scorrevole e altezza limitata alla finestra. Chiusura con Escape/clic esterno, focus iniziale sulla ricerca, frecce e Invio per scegliere. Popover nativo Electron, senza dipendenze aggiuntive; persistenza e selezione dei dati invariate.
 - **Verifiche Windows:** build/typecheck, workspace Electron e smoke offline passati. Geometria e audit contrasto del menu a 1440×900, 1280×720 e 640×580; Escape restituisce il focus, ricerca senza distinzione maiuscole/minuscole, nessun risultato, selezione da tastiera, creazione del secondo progetto, import, isolamento e riapertura verificati. Schermate ispezionate; limiti Linux/lettore di schermo/scala di APP-059 restano validi. Nessun merge o release.
+
+### APP-062 — Righe, miniature e categorie
+
+- **Autorizzazione:** l'utente preferisce righe con piccola miniatura, divise in Pokémon, Allenatori ed Energie con conteggi. Task Ready circoscritto e avviato sul ramo del design system.
+- **Accettazione:** righe leggibili con quantità, miniatura disponibile nel catalogo e nome; tre categorie con totali delle copie; categorie ignote esplicite, nessuna immagine associata a identità ambigue; dettaglio e riconciliazione conservati.
+- **Verifica prevista:** build, verifica dei conteggi e delle categorie con fonti conflittuali, Electron con/senza catalogo e immagini, dettaglio e riconciliazione, layout desktop e compatto.
+- **Risultato:** Lista a righe con quantità, miniatura 36×50 px e nome a 16 px; sezioni Pokémon, Allenatori ed Energie con totali di copie e riepilogo cliccabile. I conteggi usano le carte riconciliate; categorie dal catalogo, in mancanza intestazioni esplicite dell'import con nota, altrimenti “Da classificare”. Immagini dalla stampa importata o dalla stessa identità, mai da semplici nomi ambigui; segnaposto stabile per miniature assenti o non leggibili. Nessuna modifica al modello, ai validatori o alle integrazioni.
+- **Verifiche Windows:** build/typecheck, quattro test mirati su conteggi/categorie conflittuali/scelta immagini, Electron riconciliazione/vincoli/isolamento e workspace passati. Layout 1440×900, 1280×720, 1241/1240×720, 1024×768 e 640×720; conteggi 16/33/11 con catalogo vuoto, navigazione tra sezioni e dettagli verificati. Corretto il salto alle categorie perché scorra soltanto l'area di lavoro; corretto un contrasto insufficiente dell'etichetta progetto nel selettore aperto. Immagine valida e immagine non leggibile provate con fixture; campione reale TCGdex acquisito nel solo profilo demo (41 stampe, 41 miniature), schermate Lista ispezionate a 1440/1280/640.
+- **Limiti:** il campione non copre tutte le carte della demo; quelle senza identità/immagine usano il segnaposto. Categorie dall'import non attestano legalità. Nessuna generazione AI o nuova prova Linux; nessun merge o release.
 
 ## Regola per i blocchi
 
