@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { TournamentParticipation, TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../../shared/tournament'
 import { MainTournamentSection } from './MainTournamentSection'
 import { useNavigation, useViewState } from './Navigation'
+import { TournamentCoverage, TournamentWorkspace } from './TournamentWorkspace'
+import { TournamentDeck } from './TournamentDeck'
 
 function dateTime(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -10,7 +12,6 @@ function dateTime(value: string): string {
 export function TournamentSection() {
   const nav = useNavigation()
   const [sourceTab] = useViewState<'play' | 'main'>('events.source', 'play')
-  const setSourceTab = (source: 'play' | 'main') => nav.visit({ 'events.source': source }, source === 'play' ? 'Eventi · Play' : 'Eventi · Regional')
   const [loading, setLoading] = useState(true)
   const [snapshot, setSnapshot] = useState<TournamentSnapshot | null>(null)
   const [events, setEvents] = useState<TournamentSummary[]>([])
@@ -34,7 +35,10 @@ export function TournamentSection() {
         if (selectedEventId && !first) setError('Questo evento non è più disponibile. Scegli un altro evento oppure torna indietro.')
         if (first) {
           const result = await window.projectsApi.getTournamentEvent(first.eventId)
-          if (active && result.ok) { setSnapshot(result.value); setSelectedEventId(first.eventId) }
+          if (active) {
+            if (!result.ok) throw new Error(result.error)
+            setSnapshot(result.value); setSelectedEventId(first.eventId)
+          }
         }
       }).catch(() => { if (active) setError('Archivio tornei non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
@@ -43,6 +47,7 @@ export function TournamentSection() {
   async function selectEvent(eventId: string): Promise<void> {
     setError(null)
     const result = await window.projectsApi.getTournamentEvent(eventId)
+    if (!nav.isCurrent()) return
     if (!result.ok) { setError(result.error); return }
     setSnapshot(result.value)
     setSelectedEventId(eventId)
@@ -55,9 +60,11 @@ export function TournamentSection() {
     setError(null)
     try {
       const result = await window.projectsApi.syncTournaments(mode)
+      if (!nav.isCurrent()) return
       if (!result.ok) throw new Error(result.error)
       setProgress(result.value)
       const listed = await window.projectsApi.listTournaments()
+      if (!nav.isCurrent()) return
       if (!listed.ok) throw new Error(listed.error)
       setEvents(listed.value)
       const next = listed.value.find((item) => item.eventId === selectedEventId) ?? listed.value[0]
@@ -78,52 +85,36 @@ export function TournamentSection() {
     a.playerName.localeCompare(b.playerName)), [snapshot])
   const filtered = sorted.filter((entry) => `${entry.playerName} ${entry.deck?.name ?? ''}`.toLocaleLowerCase()
     .includes(query.toLocaleLowerCase()))
-  const selected: TournamentParticipation | null = sorted.find((entry) => entry.playerId === selectedId) ??
-    sorted.find((entry) => entry.listStatus === 'available') ?? sorted[0] ?? null
+  const selected: TournamentParticipation | null = filtered.find((entry) => entry.playerId === selectedId) ??
+    filtered.find((entry) => entry.listStatus === 'available') ?? filtered[0] ?? null
 
-  return <><div className="discussion-switcher" aria-label="Fonte tornei" data-nav-loading={sourceTab === 'play' && loading}>
-    <button type="button" className={`secondary-button ${sourceTab === 'play' ? 'selected' : ''}`}
-      aria-pressed={sourceTab === 'play'} onClick={() => setSourceTab('play')}>Tornei Play</button>
-    <button type="button" className={`secondary-button ${sourceTab === 'main' ? 'selected' : ''}`}
-      aria-pressed={sourceTab === 'main'} onClick={() => setSourceTab('main')}>Regional</button>
-  </div>{sourceTab === 'main' ? <MainTournamentSection /> : <section className="tournament-section" aria-label="Evento Limitless Play">
-    <div className="panel-heading">
-      <div><span className="eyebrow">Tornei · archivio globale</span><h1>Eventi Standard</h1></div>
-      <div className="panel-actions">{progress?.status === 'running' || progress?.status === 'rate-limited'
-        ? <button type="button" className="primary-button" onClick={() => void refresh(progress.mode ?? 'new')}
-          disabled={busy || (progress.status === 'rate-limited' && !!progress.cooldownUntil && Date.parse(progress.cooldownUntil) > Date.now())}>
-          {busy ? 'Acquisizione…' : 'Continua blocco'}</button>
-        : <><button type="button" className="primary-button" onClick={() => void refresh('new')} disabled={busy}>
-          {busy ? 'Acquisizione…' : 'Aggiorna nuovi tornei'}</button>
-          <button type="button" className="secondary-button" onClick={() => void refresh('full')} disabled={busy}>Scansione completa</button></>}</div>
-    </div>
-    <p className="content-note">Tornei online e liste pubblicate su Limitless Play.</p>
-    {progress && progress.status !== 'idle' && <p className="content-note" role="status">
-      {progress.status === 'complete' ? 'Scansione completata' : progress.status === 'rate-limited'
-        ? `Limite API raggiunto; riprendi dopo ${progress.cooldownUntil ? dateTime(progress.cooldownUntil) : 'la pausa'}`
-        : 'Scansione da continuare'} · {progress.inspected} eventi controllati, {progress.saved} archiviati,
-      {progress.skipped} fuori perimetro · prossima pagina {progress.page}.
-      {progress.lastError ? ` Ultimo problema: ${progress.lastError}` : ''}</p>}
-    {error && <div className="error-banner" role="alert">{error}</div>}
-    {!snapshot ? <div className="matchup-empty">Nessun evento salvato.</div> : <>
-      <div className="catalog-filters"><label>Evento archiviato
-        <select value={selectedEventId ?? snapshot.eventId} onChange={(event) => nav.visit({ 'events.play.event': event.target.value, 'events.play.player': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Play'}`)}>
+  if (sourceTab === 'main') return <MainTournamentSection />
+  return <TournamentWorkspace source="play" count={events.length} loading={loading} busy={busy} progress={progress} error={error}
+    onRefresh={refresh} management={<>
+      {progress && progress.status !== 'idle' && <p className="content-note">{progress.inspected} eventi controllati · {progress.saved} archiviati · {progress.skipped} fuori perimetro · prossima pagina {progress.page}.</p>}
+      <p className="content-note">Ogni blocco acquisisce fino a tre eventi pubblici Standard senza regole speciali. L’aggiornamento cerca nuovi tornei dall’ultima scansione; al primo avvio, negli ultimi 90 giorni. La scansione completa percorre anche le pagine precedenti.</p>
+    </>}>
+    {events.length > 0 && <div className="catalog-filters event-filters"><label>Evento archiviato
+        <select value={selectedEventId ?? ''} onChange={(event) => nav.visit({ 'events.play.event': event.target.value, 'events.play.player': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Play'}`)}>
+          {!events.some((item) => item.eventId === selectedEventId) && <option value={selectedEventId ?? ''} disabled>Scegli un evento</option>}
           {events.map((item) => <option key={item.eventId} value={item.eventId}>
             {new Date(item.date).toLocaleDateString('it-IT')} · {item.name} · {item.isOnline ? 'online' : 'in presenza'}
           </option>)}
-        </select></label><label>Filtra giocatore o mazzo<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Dragapult" /></label></div><p className="content-note">{events.length} {events.length === 1 ? 'evento disponibile offline' : 'eventi disponibili offline'}</p>
-      <div className="meta-provenance">
-        <strong>{snapshot.name}</strong>
-        <span>{dateTime(snapshot.date)} · {snapshot.isOnline ? 'PTCGL online' : 'in presenza'} · {snapshot.circuit === 'WESTERN' ? 'Standard occidentale' : 'circuito da verificare'} · {snapshot.source}</span>
-        <span>{snapshot.cached ? 'Snapshot locale' : 'Acquisito ora'}: {dateTime(snapshot.fetchedAt)}</span>
-        <button type="button" className="text-button" onClick={() => void openSource()}>Apri fonte ↗</button>
-      </div>
-      <div className="catalog-metrics">
-        <div><strong>{snapshot.reportedPlayers}</strong><span>Partecipanti dichiarati</span></div>
-        <div><strong>{snapshot.coverage.availableLists}</strong><span>Liste leggibili</span></div>
-        <div><strong>{snapshot.coverage.complete60Lists}</strong><span>Liste da 60 carte</span></div>
-        <div><strong>{snapshot.pairingCoverage?.decided ?? 0}</strong><span>Partite con vincitore noto</span></div>
-      </div>
+        </select></label><label>Filtra giocatore o mazzo<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Dragapult" /></label></div>}
+    {!loading && !snapshot ? <div className="matchup-empty">{events.length ? 'Seleziona un evento disponibile.' : 'Nessun evento salvato. Aggiorna nuovi tornei per iniziare.'}</div> : snapshot && <>
+      {snapshot.circuit !== 'WESTERN' && <p className="diagnostics" role="status">Evento in presenza · circuito da verificare.</p>}
+      <TournamentCoverage participants={snapshot.coverage.returnedParticipants} reported={snapshot.reportedPlayers} lists={snapshot.coverage.complete60Lists}
+        partial={snapshot.coverage.returnedParticipants < snapshot.reportedPlayers || snapshot.coverage.complete60Lists < snapshot.coverage.returnedParticipants}>
+        <div className="meta-provenance">
+          <strong>{snapshot.name}</strong>
+          <span>{dateTime(snapshot.date)} · {snapshot.isOnline ? 'PTCGL online' : 'in presenza'} · {snapshot.circuit === 'WESTERN' ? 'Standard occidentale' : 'circuito da verificare'} · {snapshot.source}</span>
+          <span>{snapshot.cached ? 'Snapshot locale' : 'Acquisito ora'}: {dateTime(snapshot.fetchedAt)}</span>
+          <button type="button" className="text-button" onClick={() => void openSource()}>Apri fonte ↗</button>
+        </div>
+        <p className="content-note" data-testid="tournament-coverage">{snapshot.coverage.availableLists}/{snapshot.coverage.returnedParticipants} liste leggibili; {snapshot.coverage.missingLists} assenti, {snapshot.coverage.invalidLists} non interpretabili. Partecipazioni e liste identiche restano record separati; le carte conservano codice e numero della fonte.</p>
+        <p className="content-note">Fasi: {snapshot.phases.map((phase) => `${phase.type} ${phase.rounds} round ${phase.mode}`).join(' · ') || 'non indicate'}. I risultati sono dei partecipanti; nessun winrate del tuo mazzo è inferito.</p>
+        <p className="content-note">{snapshot.pairingCoverage ? `Abbinamenti: ${snapshot.pairingCoverage.decided} vittorie attribuibili e ${snapshot.pairingCoverage.tied} pareggi su ${snapshot.pairingCoverage.betweenParticipants} partite fra partecipanti identificati; ${snapshot.pairingCoverage.byes} bye e ${snapshot.pairingCoverage.invalid} righe non interpretabili.` : 'Abbinamenti non acquisiti.'} I record dei partecipanti non sono usati per inventare abbinamenti.</p>
+      </TournamentCoverage>
       <div className="tournament-layout">
         <div className="tournament-players" aria-label="Partecipazioni evento">
           {filtered.map((entry) => <button type="button" key={entry.playerId}
@@ -138,21 +129,10 @@ export function TournamentSection() {
           {selected ? <>
             <h2>{selected.playerName}</h2>
             <p className="content-note">{selected.deck?.name ?? 'Archetipo non indicato'} · {selected.placing ? `${selected.placing}° posto` : 'Piazzamento non indicato'} · {selected.record ? `${selected.record.wins}V / ${selected.record.losses}S / ${selected.record.ties}P` : 'Record non indicato'}</p>
-            {selected.listStatus !== 'available' ? <p className="content-note">Lista {selected.listStatus === 'missing' ? 'assente' : 'non interpretabile'} nella risposta pubblica.</p> :
-              <div className="tournament-cards">{(['pokemon', 'trainer', 'energy'] as const).map((category) => <div key={category}>
-                <h3>{category === 'pokemon' ? 'Pokémon' : category === 'trainer' ? 'Allenatori' : 'Energie'}</h3>
-                <ul>{selected.cards.filter((card) => card.category === category).map((card, index) =>
-                  <li key={`${card.set}:${card.number}:${index}`}><strong>{card.count}× {card.name}</strong><span>{card.set} {card.number}</span></li>)}</ul>
-              </div>)}</div>}
-          </> : <p className="content-note">Seleziona una partecipazione.</p>}
+            {selected.listStatus !== 'available' ? <p className="content-note">Lista {selected.listStatus === 'missing' ? 'assente' : 'non interpretabile'} nella risposta pubblica.</p> : <TournamentDeck cards={selected.cards} />}
+          </> : <p className="content-note">Nessuna lista da mostrare con questo filtro.</p>}
         </div>
       </div>
-      <details className="catalog-set-coverage"><summary>Copertura e metodo</summary>
-        <p className="content-note" data-testid="tournament-coverage">{snapshot.coverage.availableLists}/{snapshot.coverage.returnedParticipants} liste leggibili; {snapshot.coverage.missingLists} assenti, {snapshot.coverage.invalidLists} non interpretabili. Partecipazioni e liste identiche restano record separati; le carte conservano codice e numero della fonte.</p>
-        <p className="content-note">Fasi: {snapshot.phases.map((phase) => `${phase.type} ${phase.rounds} round ${phase.mode}`).join(' · ') || 'non indicate'}. I risultati sono dei partecipanti; nessun winrate del tuo mazzo è inferito.</p>
-        <p className="content-note">Abbinamenti: {snapshot.pairingCoverage?.decided ?? 0} vittorie attribuibili e {snapshot.pairingCoverage?.tied ?? 0} pareggi su {snapshot.pairingCoverage?.betweenParticipants ?? 0} partite fra partecipanti identificati; {snapshot.pairingCoverage?.byes ?? 0} bye e {snapshot.pairingCoverage?.invalid ?? 0} righe non interpretabili. I record dei partecipanti non sono usati per inventare abbinamenti.</p>
-        <p className="content-note">Ogni blocco acquisisce fino a tre eventi pubblici Standard senza regole speciali. «Aggiorna nuovi» esamina il periodo successivo all'ultima scansione; al primo avvio, gli ultimi 90 giorni. La scansione completa percorre anche le pagine precedenti e può essere ripresa.</p>
-      </details>
     </>}
-  </section>}</>
+  </TournamentWorkspace>
 }

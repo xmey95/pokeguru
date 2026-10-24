@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-078 completato:** Eventi con selezione/filtri prioritari, liste a righe con conteggi e copertura/fonti apribili. Gestione e aggiornamento coerenti fra Play online e Regional; errori e pausa visibili, ritorno al contesto e filtro del dettaglio corretti. Build, percorso Electron Eventi offline con scenari di sync controllati e regressione workspace passati; demo aperta con record di esempio separati. Verifiche e limiti nel backlog. Prossimo passo: prova utente di Eventi e scelta condivisa del successivo blocco grafico. Ramo locale; I4, merge e release esclusi.
+
 - **APP-077 completato:** dettaglio carta del Catalogo con immagine e testo di gioco prioritari, componente condiviso con la Lista e stampe/metadati apribili. Selezione coerente con filtro e fonte, dati mancanti/incerti visibili, vincolo dopo il testo. Build e quattro percorsi Electron passati, layout 1440/1280/640 e demo Mega Absol ispezionati; risultati e limiti nel backlog. Prossimo passo: prova utente del dettaglio e scelta condivisa del successivo blocco grafico. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
 
 - **APP-076 completato:** ricerca Catalogo prioritaria, Aggiorna nuove carte sempre visibile e Gestisci catalogo con manutenzione/copertura/fonti. Avvisi essenziali esterni, filtri e navigazione conservati. Build e percorsi Electron Catalogo/workspace passati; verifiche e limiti nel backlog. Prossimo blocco da discutere insieme: dettaglio carta nel Catalogo, ancora centrato sui metadati delle stampe. Ramo locale `task/production-design-system`; I4, merge e release esclusi.

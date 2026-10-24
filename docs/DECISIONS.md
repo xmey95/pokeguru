@@ -173,6 +173,12 @@ L'utente approva immagine e testo subito visibili, con stampe e metadati negli a
 
 Stampe e metadati sono una disclosure nativa chiusa inizialmente. Mostra questa stampa aggiorna la scheda e porta il focus al titolo; la cronologia conserva stampa, disclosure e punto di lettura. Equivalenza incerta, promo da verificare, errori e testo mancante restano visibili. Il vincolo segue la scheda e usa il percorso esistente. Immagine 180×252 px, testo 15 px/1,65; sotto 500 px di spazio nel dettaglio l'immagine precede il testo. Nessun cambio a persistenza, identità, validatori o integrazioni. Prove con fixture UI, regressioni Lista/Matchup e scheda Mega Absol del catalogo già acquisito nella demo.
 
+### T-67 — Eventi: consultazione prima della manutenzione (APP-078)
+
+L'utente approva il riordino di Eventi con selezione, risultati e liste prioritari, mantenendo Play online e Regional distinti. `TournamentWorkspace` condivide intestazione, cambio fonte, azione rapida, gestione e stati; `TournamentDeck` presenta righe a tutta larghezza con quantità, nome e stampa, divise per categoria e conteggi. Il filtro governa anche il dettaglio: nessuna lista non corrispondente resta visibile quando si restringono i risultati. Se un evento non è leggibile, il selettore degli altri rimane disponibile.
+
+La sintesi Copertura e fonti espone partecipanti osservati/dichiarati, liste da 60 e parzialità; al suo interno rimangono data, fonte, lacune e limiti dei risultati. I piazzamenti Regional non diventano percentuali di matchup; abbinamenti Play assenti non sono descritti come zero match osservati. Gestisci eventi apre la scansione completa e il metodo di acquisizione nel normale flusso. Errori, avanzamento e pausa restano esterni; il pulsante di ripresa si abilita alla scadenza della pausa, mostrata con l'orario. Escape richiude la gestione con focus restituito; cronologia e stato sono separati per fonte. Nessun cambiamento a schema, API o acquisizione. Le prove di sincronizzazione sono controllate nel processo di test; la demo contiene record esplicitamente illustrativi.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

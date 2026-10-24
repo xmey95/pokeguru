@@ -72,7 +72,7 @@
   .card-overview { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .card-artwork { justify-self: center; }
   .baseline-panel, .import-panel, .constraints-panel, .thread-detail, .meta-analysis, .settings-panel { padding: 20px; }
-  .comparison-lists, .catalog-layout, .tournament-layout, .tournament-cards { grid-template-columns: minmax(0, 1fr); }
+  .comparison-lists, .catalog-layout, .tournament-layout { grid-template-columns: minmax(0, 1fr); }
   .catalog-list, .tournament-players { max-height: 250px; }
   .detail-headline { flex-wrap: wrap; }
   .detail-headline h1 { font-size: var(--text-xl); }
