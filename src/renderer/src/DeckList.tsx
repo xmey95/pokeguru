@@ -36,8 +36,8 @@ function cardStatus(status: 'recognized' | 'unverified' | 'ambiguous' | 'outside
     catalog.scope.kind === 'sample' ? 'Nessuna corrispondenza nel campione' : 'Nessuna corrispondenza locale'
 }
 
-export function DeckList({ projectId, baseline, onOpenCatalog, onImport }: {
-  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void
+export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importOpen }: {
+  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void; importOpen: boolean
 }) {
   const { setReconciliation: updateConstraintReconciliation } = useDeckConstraints()
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
@@ -149,7 +149,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport }: {
         </div>
         <div className="deck-heading-actions">
           <ExportButton baseline={baseline} />
-          <button type="button" className="secondary-button" onClick={onImport}>Importa / sostituisci</button>
+          {!importOpen && <button id="deck-import-trigger" type="button" className="secondary-button" onClick={onImport}>Importa / sostituisci</button>}
         </div>
       </div>
       {standardDeck.problems.length > 0 && <ul className="standard-problems" aria-label="Problemi accertati">{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}

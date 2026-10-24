@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart, openProjectPicker, startNewProject, switchProject } from './project-ui-helper.mjs'
+import { createProjectFromStart, openProjectPicker, startNewProject, switchProject, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const electronPath = require('electron')
@@ -52,9 +52,11 @@ try {
   await page.keyboard.press('Enter')
   await expectSelected(page, 'Mega Absol / Mega Audino')
   assert.match(await page.locator('.detail-meta').textContent(), /Occidentale \/ internazionale/)
-  assert.match(await page.locator('.project-detail').textContent(), /Nessuna lista di carte/)
+  assert.match(await page.locator('.project-detail').textContent(), /Aggiungi una lista/)
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 60\nnota libera')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '2 carte' }).waitFor()
   assert.match(await page.getByTestId('baseline-panel').textContent(), /Riga non interpretata/)
   assert.match(await page.getByTestId('baseline-panel').textContent(), /Totale dichiarato 60/)
@@ -92,9 +94,10 @@ try {
   await page.getByText('Importa una lista nel progetto per generare').waitFor()
   }
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
-  await page.getByRole('heading', { name: 'Nessuna lista di carte' }).waitFor()
+  await page.getByRole('heading', { name: 'Aggiungi una lista' }).waitFor()
   await page.locator('#deck-file').setInputFiles({ name: 'secondo.txt', mimeType: 'text/plain', buffer: Buffer.from('60 Carta senza stampa') })
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '60 carte' }).waitFor()
   assert.equal(await page.locator('.detail-headline .status-pill').count(), 0)
   await page.locator('.standard-status').getByText('Standard: da verificare', { exact: true }).waitFor()
@@ -117,14 +120,16 @@ try {
   assert.match(await page.locator('.catalog-detail').textContent(), /Paldea Evolved/)
   assert.ok(await page.locator('.catalog-print img').count() >= 1)
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), 'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 60\nnota libera')
+  assert.equal(await page.locator('.original-text pre').textContent(), 'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 60\nnota libera')
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
   assert.equal(await page.getByLabel('Archetipo avversario').count(), 0)
   }
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('3 Mega Absol ex MEG 86')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '3 carte' }).waitFor()
   if (!offline) {
   await page.getByRole('button', { name: 'Matchup' }).click()
@@ -136,7 +141,7 @@ try {
   if (!offline) await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByTestId('card-total').filter({ hasText: '60 carte' }).waitFor()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), '60 Carta senza stampa')
+  assert.equal(await page.locator('.original-text pre').textContent(), '60 Carta senza stampa')
   await application.close()
   application = undefined
 

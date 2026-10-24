@@ -95,6 +95,12 @@ L'utente approva la creazione del vincolo direttamente nel dettaglio carta e il 
 
 Il riepilogo apre la modifica nella riga selezionata e la creazione soltanto su richiesta; resta possibile imporre una carta fuori dalla lista tramite il Catalogo. Un provider del renderer condivide dati e mutazioni tra carta e riepilogo, con blocco dei salvataggi concorrenti; una correzione d'identità aggiorna la valutazione. I contratti IPC, il database e il validatore restano invariati. Lo scorrimento per il focus muove solo l'area di lavoro.
 
+### T-55 — Importazione apribile e annullabile (APP-066)
+
+L'utente approva il modulo su richiesta per liste già caricate e l'accesso immediato nel progetto vuoto. Il comando nell'intestazione apre il modulo sopra le carte, nel flusso della pagina; il testo salvato è precompilato. “Sostituisci lista” esplicita l'effetto del salvataggio. Annulla/Escape ripristinano testo e provenienza salvati, chiudono senza scritture e restituiscono il focus al comando. Dopo un salvataggio riuscito si torna alla lista con conferma breve; il progetto vuoto mostra direttamente il modulo.
+
+Errori di file e salvataggio restano nel modulo e conservano il testo. Un contatore del renderer invalida le letture file ancora pendenti dopo annullamento/cambio progetto; lettura e scrittura disabilitano i controlli pertinenti. Parser, persistenza e IPC restano invariati. Il file di prova simula il ritardo solo per verificare la UI e induce un errore SQLite solo nel profilo temporaneo; non certifica nuove integrazioni.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

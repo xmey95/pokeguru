@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -27,8 +27,10 @@ try {
   await page.getByRole('button', { name: 'Crea thread' }).click()
   await page.getByText('Senza lista iniziale').first().waitFor()
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('60 Carta A MEG 1')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
@@ -50,9 +52,11 @@ try {
   assert.match(await page.locator('.thread-candidate').textContent(), /Carta B/)
   assert.doesNotMatch(await page.locator('.thread-candidate').textContent(), /Carta C/)
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), '60 Carta A MEG 1')
+  assert.equal(await page.locator('.original-text pre').textContent(), '60 Carta A MEG 1')
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('60 Carta D MEG 4')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
   await application.close()

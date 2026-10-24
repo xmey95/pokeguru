@@ -40,6 +40,8 @@ APP-064 mostra nel **dettaglio della carta** immagine, abilità, attacchi o effe
 
 APP-065 apre **Aggiungi vincolo** direttamente nella carta, con anteprima di esito e conflitti. Il riepilogo si aggiorna al salvataggio e consente modifica nella riga ed eliminazione. Annulla/Escape chiudono il modulo senza scritture; gli errori conservano i valori inseriti.
 
+APP-066 mostra l'importazione su richiesta da **Importa / sostituisci**, sopra la lista, con testo precompilato e **Annulla**. Nei progetti vuoti il modulo è subito disponibile. Il salvataggio chiude il modulo; errori e letture file pendenti conservano l'isolamento fra progetti.
+
 Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con token condivisi, tipografia sans, icone SVG, controlli leggibili e stati coerenti. La sidebar desktop è larga **224 px**; la lista principale rimane fissa a **384 px**, con dock di 220 px sotto la soglia di 1240 px. Il primo progetto si crea nell'area centrale. Metadati e metodo precedono meno spesso carte, differenze e strategia; focus e scorrimento sono verificati anche da tastiera.
 
 L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.

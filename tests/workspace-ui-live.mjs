@@ -141,6 +141,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.getByLabel('Testo lista').fill(deck)
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
   await page.locator('#deck-group-pokemon').waitFor()
   assert.equal(await page.locator('.detail-headline .status-pill').count(), 0, 'Stato progetto duplicato nella Lista')

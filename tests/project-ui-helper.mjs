@@ -20,3 +20,10 @@ export async function switchProject(page, name) {
   await openProjectPicker(page)
   await page.getByRole('dialog', { name: 'Scegli progetto' }).getByRole('button', { name }).click()
 }
+
+/** Loaded decks expose import on request; empty projects expose it immediately. */
+export async function openDeckImport(page) {
+  const trigger = page.getByRole('button', { name: 'Importa / sostituisci', exact: true })
+  if (await trigger.count()) await trigger.click()
+  await page.getByLabel('Testo lista').waitFor()
+}

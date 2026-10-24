@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -47,8 +47,10 @@ try {
   application = await launch()
   let page = await application.firstWindow()
   await createProjectFromStart(page, 'Conformità Standard')
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 086\n59 Psychic Energy SVE 005')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.locator('.deck-technical > summary').click()
   const rotation = page.getByRole('region', { name: 'Controllo della rotazione Standard occidentale' })
   await rotation.getByLabel('Data di riferimento').fill('2026-10-24')
@@ -67,7 +69,7 @@ try {
   application = await launch()
   page = await application.firstWindow()
   await page.getByRole('heading', { name: 'Conformità Standard' }).waitFor()
-  assert.match(await page.getByLabel('Testo lista').inputValue(), /59 Psychic Energy SVE 005/)
+  assert.match(await page.locator('.original-text pre').textContent(), /59 Psychic Energy SVE 005/)
   await application.close()
   application = undefined
   console.log('Standard Electron OK: lista coperta, Energie Base, data fuori regole e riapertura.')

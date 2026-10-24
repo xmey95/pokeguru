@@ -72,7 +72,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-063** | Riepilogo unico di totale e stato Standard nella Lista | UI/UX | R-02, R-03 / qualità pre-I4 | P0 / S | APP-062; riepilogo approvato dall'utente | Done |
 | **APP-064** | Dettaglio carta con immagine e testo di gioco in primo piano | UI/UX | R-02, R-05 / qualità pre-I4 | P0 / S | APP-063; gerarchia approvata dall'utente | Done |
 | **APP-065** | Vincoli contestuali e riepilogo generale | UI/UX | R-05 / qualità pre-I4 | P1 / S | APP-064; proposta approvata dall'utente | Done |
-| **APP-066** | Revisione condivisa dell'importazione della lista | UI/UX | R-02 / qualità pre-I4 | P1 / S | APP-065; proposta da discutere con l'utente | Backlog |
+| **APP-066** | Importazione su richiesta e annullamento | UI/UX | R-03, R-04 / qualità pre-I4 | P1 / S | APP-065; proposta approvata dall'utente | Done |
+| **APP-067** | Revisione condivisa di selezione e creazione dei Thread | UI/UX | R-03, R-07 / qualità pre-I4 | P1 / S | APP-066; proposta da discutere con l'utente | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -574,10 +575,20 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche Windows:** build/typecheck, quattro test dei vincoli, workspace UI e percorso Electron di riconciliazione passati. Creazione su identità e stampa, preview e salvataggio di conflitti, errore SQLite indotto nel solo archivio temporaneo e recupero, annullamento senza scritture, modifica/eliminazione, riapertura, isolamento e aggiornamento dopo rimozione della correzione verificati. Form contestuale e modifica controllati a 1440×900, 1280×720 e 640×720 con audit di contrasto/geometria; schermate ispezionate. Demo su campione TCGdex locale, senza aggiungere vincoli al profilo; contrasto minimo osservato 5,16:1. `git diff --check` pulito.
 - **Limiti:** fixture dichiarate per i casi deterministici e l'errore di storage. Linux, lettore di schermo e scala OS elevata non verificati; nessuna nuova integrazione AI, merge o release.
 
-### APP-066 — Importazione della lista, proposta da discutere
+### APP-066 — Importazione su richiesta e annullamento
 
 - **Osservazione:** con una lista già caricata, il grande modulo “Aggiorna la lista” resta sempre aperto in fondo alla vista, oltre al comando nell'intestazione.
-- **Proposta:** aprire il modulo su richiesta da “Importa / sostituisci”, con annullamento e indicazione chiara dell'effetto del salvataggio; mantenere l'accesso immediato nel progetto vuoto. Da discutere con l'utente prima dell'implementazione.
+- **Autorizzazione:** l'utente approva il modulo su richiesta con annullamento, disponibile subito nel progetto vuoto. Task reso Ready per ambito circoscritto e dipendenze risolte, quindi avviato.
+- **Accettazione:** modulo sopra la lista, aperto da “Importa / sostituisci”; salvataggio esplicito, Annulla/Escape senza scritture, focus restituito e messaggio di esito. Errori vicini al testo senza perdere il lavoro. File, reimport, cambio progetto e risposte asincrone preservano identità e isolamento.
+- **Verifica prevista:** build, Electron con lista vuota/caricata, testo/file, errore e recupero, annullamento, riapertura e due progetti, round trip export; tastiera e schermate 1440×900, 1280×720 e 640×720.
+- **Risultato:** nella lista caricata il modulo è chiuso e si apre sopra le carte dal comando “Importa / sostituisci”. Nel progetto vuoto il modulo è subito disponibile, senza invito duplicato. Salvataggio esplicito, chiusura e conferma breve; Annulla/Escape ripristinano il testo salvato e restituiscono il focus. Errori nel modulo conservano il testo. Le letture file tardive vengono ignorate dopo annullamento o cambio progetto; durante lettura/salvataggio i controlli pertinenti sono disabilitati. Nessuna modifica al parser, al database o ai contratti IPC.
+- **Verifiche Windows:** build/typecheck, `import-ui-live.mjs`, workspace UI, export, riconciliazione, smoke offline e adozione passati. Annullamento senza nuove versioni, errore SQLite e rollback nel solo archivio temporaneo, recupero, estensione/dimensione file, letture tardive, cambio progetto, riapertura, copia/reimport e base del thread superata verificati. Modulo e tastiera a 1440×900, 1280×720 e 640×720; schermate demo e stato vuoto ispezionati, contrasto minimo osservato 5,16:1, nessun overflow/sovrapposizione. Percorsi di prova esistenti adattati al comando di apertura e alla lettura del testo originale salvato. `git diff --check` pulito.
+- **Limiti:** fixture UI per errore di storage e ritardo di lettura file; demo con lista di esempio, nessuna modifica salvata al suo mazzo. Prove Linux, lettore di schermo e scala OS elevata non eseguite; percorsi AI live adattati ma non rieseguiti. Nessun merge o release.
+
+### APP-067 — Selezione e creazione dei Thread, proposta da discutere
+
+- **Osservazione:** i thread sono pulsanti larghi 200 px in una striscia a scorrimento orizzontale; il modulo “Nuovo thread” si apre nella stessa striscia.
+- **Proposta:** selettore unico con titolo e stato del thread, accanto al comando “Nuovo thread”; creazione in un modulo nel contenuto. Da discutere con l'utente prima di implementare; conversazione e candidata saranno esaminate nei passaggi successivi.
 
 ## Regola per i blocchi
 

@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const directory = mkdtempSync(join(tmpdir(), 'pokeguru-ai-live-'))
@@ -15,8 +15,10 @@ try {
     cwd: resolve(import.meta.dirname, '..'), env: { ...process.env, POKEGURU_DATA_DIR: directory } })
   const page = await application.firstWindow()
   await createProjectFromStart(page, 'Prova analisi AI')
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('Pokémon: 4\n4 Mega Absol ex MEG 86\nTrainer: 8\n4 Rare Candy\n4 Iono')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '12 carte' }).waitFor()
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
@@ -59,8 +61,10 @@ try {
     assert.match(await page.locator('.discussion-timeline').textContent(), /Cosa è cambiato/)
   }
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('Pokémon: 5\n4 Mega Absol ex MEG 86\n1 Mega Audino ex MEG 84\nTrainer: 8\n4 Rare Candy\n4 Iono')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '13 carte' }).waitFor()
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.getByRole('button', { name: 'Continua sulla nuova base' }).waitFor({ timeout: 30000 })

@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 import { auditDesignSystem } from './design-system-audit.mjs'
 
 const require = createRequire(import.meta.url)
@@ -80,8 +80,10 @@ try {
   let page = await application.firstWindow()
   await createProjectFromStart(page, 'Lista integrata test')
   seedCatalog()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(rawText)
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   const card = await iono(page)
   await card.first().waitFor()
   assert.match(await page.locator('.deck-composition').innerText(), /Pokémon\s*0\s*Allenatori\s*7\s*Energie\s*0/)
@@ -217,7 +219,7 @@ try {
   const alt = page.locator('.deck-card').filter({ hasText: "Boss's Orders" })
   await alt.locator('.deck-card-toggle').click()
   assert.match(await alt.locator('.deck-source-lines').textContent(), /SWSHALT 127/)
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), rawText)
+  assert.equal(await page.locator('.original-text pre').textContent(), rawText)
   await application.close()
   application = undefined
 
@@ -259,13 +261,17 @@ try {
   await page.getByLabel('Nome progetto').fill('Altro progetto')
   await page.getByRole('button', { name: 'Crea progetto' }).click()
   await page.getByText('Nessun vincolo impostato.').waitFor()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('1 Iono PAL 185')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   const second = await iono(page)
   await second.first().waitFor()
   assert.match(await second.locator('.deck-card-toggle').textContent(), /1×\s*Iono/)
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('1 Iono ALT 12A')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByText('Identità da chiarire').waitFor()
   const ambiguous = page.locator('.deck-card').first()
   await ambiguous.locator('.deck-card-toggle').click()
@@ -285,9 +291,11 @@ try {
   await page.getByText('Identità da chiarire').waitFor()
   await page.locator('.constraint-item').getByText('Indeterminato').waitFor()
   assert.match(await page.locator('.deck-card').first().textContent(), /Identità da chiarire/)
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), '1 Iono ALT 12A')
+  assert.equal(await page.locator('.original-text pre').textContent(), '1 Iono ALT 12A')
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 086\n1 Fixture Energy MEG 999')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   const pokemon = page.locator('.deck-card').filter({ has: page.locator('.deck-card-title strong', { hasText: /^Mega Absol ex$/ }) })
   await pokemon.locator('.deck-card-toggle').click()
   assert.ok(await pokemon.getByText('280 PS').isVisible())

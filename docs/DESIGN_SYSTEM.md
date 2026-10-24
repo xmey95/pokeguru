@@ -35,6 +35,7 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 - **Finestra stretta:** fino a 1240 px, navigazione a icone e lista in dock inferiore di 220 px solo in Thread e Matchup, sempre parte della griglia. A 640 px la navigazione diventa orizzontale. Nessun pannello copre il contenuto.
 - **Livelli informativi:** decisione e blocchi → dettaglio operativo → provenienza e diagnostica. I dati non vengono eliminati per rendere la schermata più breve.
 - **Vincoli (APP-065):** creazione dentro la carta con identità fissata, esito e conflitti in anteprima. Modifica dentro la riga del riepilogo; creazione generale apribile su richiesta. Modulo condiviso, campi di almeno 40 px, stampa facoltativa a tutta larghezza. Errori mantengono i valori, Annulla/Escape restituiscono il focus; scroll confinato al contenuto.
+- **Importazione (APP-066):** modulo sopra la lista, aperto dal comando nell'intestazione e sempre presente nei progetti vuoti. Testo salvato precompilato, textarea con altezza responsive e scorrimento interno; file a sinistra, Annulla e salvataggio esplicito a destra quando lo spazio lo permette. Nessuna sovraimpressione. Errori contestuali, ritorno del focus e nessuna scrittura all'annullamento.
 
 ## Fondazioni
 
@@ -56,7 +57,7 @@ I token risiedono in `src/renderer/src/tokens.css`; `styles.css` descrive i comp
 ## Comportamenti e stati
 
 - **Senza progetti:** primo modulo nel contenuto, con formato e circuito espliciti.
-- **Senza lista:** azione “Aggiungi una lista” porta il focus al campo di importazione.
+- **Senza lista:** modulo “Aggiungi una lista” subito disponibile sopra i vincoli, senza invito duplicato.
 - **Lista caricata:** carte, totale e verifica essenziale; origine e testo originale restano consultabili.
 - **Catalogo incompleto:** stato breve con azione; lacune ufficiali e problemi certi non sono nascosti.
 - **Nuova proposta:** identità delle due liste e differenze in primo piano; confronto completo con scroll separati.
@@ -83,6 +84,8 @@ Esiti dei comandi e limiti effettivi sono registrati in **APP-059 in BACKLOG.md*
 **Dettaglio carta (APP-064):** in Lista aprire Mega Absol ex per leggere gli attacchi; aprire un Allenatore per l'effetto. “Testo importato e controlli” e “Stampe e varianti” si aprono anche con Invio/Spazio. [Carta 1440](design-review/carta-1440.png), [1280](design-review/carta-1280.png) e [640](design-review/carta-640.png) usano il campione TCGdex già acquisito nel solo profilo demo. La miniatura ingrandita conserva i limiti della risoluzione originale.
 
 **Vincoli (APP-065):** Lista → carta → Aggiungi vincolo; scegliere Almeno N e osservare l'esito prima di salvare. “Gestisci vincoli” raggiunge il riepilogo; Modifica apre il modulo nella riga. Provare Annulla/Escape. [Creazione 1440](design-review/vincolo-1440.png), [1280](design-review/vincolo-1280.png), [640](design-review/vincolo-640.png) sul catalogo locale della demo; [modifica a 640](design-review/vincolo-modifica-640.png) su fixture dichiarata di Iono.
+
+**Importazione (APP-066):** Lista → Importa / sostituisci, modificare il testo e provare Annulla/Escape; riaprire per verificare il testo salvato. Provare anche un file `.txt` e il salvataggio esplicito. [Modulo 1440](design-review/importazione-1440.png), [1280](design-review/importazione-1280.png), [640](design-review/importazione-640.png), [errore file](design-review/importazione-errore-1280.png), [progetto vuoto](design-review/importazione-vuota-1280.png). Schermate su demo o fixture UI, senza nuove generazioni AI. `node tests/import-ui-live.mjs` verifica anche rollback e risposte tardive nel profilo isolato.
 
 Schermate registrate: [Lista 1440](design-review/lista-1440.png), [Lista 1280](design-review/lista-1280.png), [Thread](design-review/thread-1440.png), [Matchup 1280](design-review/matchup-1280.png), [Lista a 640](design-review/lista-640.png), [dock Thread a 640](design-review/thread-640.png), [Catalogo](design-review/catalogo-1440.png), [Eventi](design-review/eventi-1280.png), [conferma di adozione](design-review/adozione.png).
 

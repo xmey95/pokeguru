@@ -6,7 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -50,8 +50,10 @@ try {
   let page = await application.firstWindow()
   await createProjectFromStart(page, 'Adozione test')
   seedCatalog()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(original)
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Piano A')
@@ -94,14 +96,14 @@ try {
   await auditDesignSystem(page, 'Base superata')
   await page.screenshot({ path: join(workspace, 'node_modules', 'design-stale.png') })
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), adoptedText)
+  assert.equal(await page.locator('.original-text pre').textContent(), adoptedText)
   await application.close()
   application = undefined
 
   application = await launch()
   page = await application.firstWindow()
   await page.getByRole('heading', { name: 'Adozione test' }).waitFor()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), adoptedText)
+  assert.equal(await page.locator('.original-text pre').textContent(), adoptedText)
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.locator('.thread-picker').getByRole('button', { name: /Piano B/ }).click()
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)

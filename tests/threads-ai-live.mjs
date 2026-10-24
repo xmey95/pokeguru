@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -69,8 +69,10 @@ try {
   })
   if (!offline) seedCatalog()
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(baseText)
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.locator('.new-thread-details > summary').click()

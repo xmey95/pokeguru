@@ -46,6 +46,10 @@ export function App() {
   const [source, setSource] = useState<DeckImportSource>('paste')
   const [fileName, setFileName] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [readingFile, setReadingFile] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importNotice, setImportNotice] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'deck' | 'threads' | 'matchups'>('deck')
   const [view, setView] = useState<'project' | 'ai' | 'catalog' | 'tournament'>('project')
@@ -54,6 +58,7 @@ export function App() {
   const [constraintSelectionVersion, setConstraintSelectionVersion] = useState(0)
   const [showCompactCreate, setShowCompactCreate] = useState(false)
   const selectionVersion = useRef(0)
+  const importDraftVersion = useRef(0)
 
   useEffect(() => { document.getElementById('main-content')?.scrollTo(0, 0) }, [view, activeTab, selected?.id])
   useEffect(() => { if (showCompactCreate) document.getElementById('compact-project-name')?.focus() }, [showCompactCreate])
@@ -61,6 +66,7 @@ export function App() {
   async function selectProject(id: string, known?: Project): Promise<void> {
     const version = ++selectionVersion.current
     setConstraintTargetId(null)
+    resetImportUi()
     setError(null)
     setBaselineLoading(true)
     setBaseline(null)
@@ -141,6 +147,7 @@ export function App() {
       }
       setProjects((current) => [result.value, ...current])
       selectionVersion.current++
+      resetImportUi()
       setSelected(result.value)
       setBaseline(null)
       setBaselineLoading(false)
@@ -161,39 +168,42 @@ export function App() {
   async function loadTextFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.target.files?.[0]
     const version = selectionVersion.current
+    const draftVersion = ++importDraftVersion.current
     event.target.value = ''
     if (!file) return
+    setReadingFile(false)
     if (!/\.txt$/i.test(file.name)) {
-      setError('Seleziona un file .txt.')
+      setImportError('Seleziona un file .txt.')
       return
     }
     if (file.size > 400_000) {
-      setError('Il file è troppo grande per una lista di mazzo.')
+      setImportError('Il file è troppo grande per una lista di mazzo.')
       return
     }
     try {
+      setReadingFile(true)
+      setImportError(null)
       const text = await file.text()
-      if (version !== selectionVersion.current) return
+      if (version !== selectionVersion.current || draftVersion !== importDraftVersion.current) return
       setDraft(text)
       setSource('file')
       setFileName(file.name)
-      setError(null)
     } catch {
-      if (version === selectionVersion.current) setError('Impossibile leggere il file selezionato.')
-    }
+      if (version === selectionVersion.current && draftVersion === importDraftVersion.current) setImportError('Impossibile leggere il file selezionato.')
+    } finally { if (draftVersion === importDraftVersion.current) setReadingFile(false) }
   }
 
   async function importDeck(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || importing) return
+    if (!selected || importing || readingFile || baselineLoading) return
     const projectId = selected.id
     const importVersion = selectionVersion.current
     setImporting(true)
-    setError(null)
+    setImportError(null)
     try {
       const result = await window.projectsApi.importDeck({ projectId, rawText: draft, source, fileName })
       if (!result.ok) {
-        if (selectionVersion.current === importVersion) setError(result.error)
+        if (selectionVersion.current === importVersion) setImportError(result.error)
         return
       }
       const updated = projectWithBaseline(selected, result.value)
@@ -201,17 +211,59 @@ export function App() {
       if (selectionVersion.current !== importVersion) return
       setBaseline(result.value)
       setSelected(updated)
+      setDraft(result.value.rawText)
+      setSource(result.value.source)
+      setFileName(result.value.fileName)
+      setImportOpen(false)
+      setImportNotice(baseline ? 'Lista sostituita.' : 'Lista salvata.')
+      requestAnimationFrame(focusList)
     } catch {
-      if (selectionVersion.current === importVersion) setError('Importazione non riuscita. La lista precedente è rimasta salvata.')
+      if (selectionVersion.current === importVersion) setImportError('Importazione non riuscita. Riprova il salvataggio.')
     } finally {
       setImporting(false)
     }
   }
 
-  function focusImport() {
-    const input = document.getElementById('deck-text')
-    input?.focus({ preventScroll: true })
-    input?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  function resetImportUi(): void {
+    importDraftVersion.current++
+    setImportOpen(false)
+    setReadingFile(false)
+    setImportError(null)
+    setImportNotice('')
+  }
+
+  function focusList(): void {
+    const trigger = document.getElementById('deck-import-trigger')
+    if (!trigger) return
+    trigger.focus({ preventScroll: true })
+    trigger.closest('.main-content')?.scrollTo(0, 0)
+  }
+
+  function cancelImport(): void {
+    if (importing || !baseline) return
+    resetImportUi()
+    setDraft(baseline.rawText)
+    setSource(baseline.source)
+    setFileName(baseline.fileName)
+    requestAnimationFrame(focusList)
+  }
+
+  function focusImport(): void {
+    if (!importOpen) {
+      importDraftVersion.current++
+      setDraft(baseline?.rawText ?? '')
+      setSource(baseline?.source ?? 'paste')
+      setFileName(baseline?.fileName ?? null)
+      setImportError(null)
+      setImportNotice('')
+      setImportOpen(true)
+    }
+    requestAnimationFrame(() => {
+      const panel = document.getElementById('deck-import')
+      const main = panel?.closest('.main-content')
+      document.getElementById('deck-text')?.focus({ preventScroll: true })
+      if (panel && main) main.scrollTop += panel.getBoundingClientRect().top - main.getBoundingClientRect().top - 20
+    })
   }
 
   const importProblems = baseline?.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH') ?? []
@@ -274,41 +326,44 @@ export function App() {
               </div></details>
               {selected.circuitAssignment === 'MIGRATED' && <p className="migration-note">Profilo occidentale assegnato a questo progetto esistente. La lista è rimasta invariata.</p>}
               {activeTab === 'deck' ? <DeckConstraintsProvider key={`${selected.id}:${baseline?.importedAt ?? 'empty'}`} projectId={selected.id} baseline={baseline}>
+              {importNotice && <p className="import-notice" role="status">{importNotice}</p>}
+              {!baselineLoading && !error && (!baseline || importOpen) && <form id="deck-import" className="import-panel" aria-labelledby="deck-import-title" aria-describedby="deck-import-note"
+                onSubmit={(event) => void importDeck(event)} onKeyDown={(event) => {
+                  if (event.key === 'Escape' && baseline && !importing) { event.preventDefault(); event.stopPropagation(); cancelImport() }
+                }}>
+                <div className="panel-heading"><h2 id="deck-import-title">{baseline ? 'Sostituisci la lista' : 'Aggiungi una lista'}</h2></div>
+                <p id="deck-import-note" className="content-note">{baseline ? 'Il salvataggio sostituisce la lista corrente.' : 'Incolla una lista o scegli un file .txt.'}</p>
+                <label htmlFor="deck-text">Testo lista</label>
+                <textarea id="deck-text" value={draft} disabled={importing || readingFile} onChange={(event) => {
+                  importDraftVersion.current++; setDraft(event.target.value); setSource('paste'); setFileName(null)
+                }} placeholder={'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 2'} spellCheck={false} />
+                {importError && <p className="error-banner" role="alert">{importError}</p>}
+                <div className="import-actions">
+                  <label className="file-picker" htmlFor="deck-file" aria-disabled={importing || readingFile}>Scegli file .txt</label>
+                  <input id="deck-file" type="file" accept=".txt,text/plain" disabled={importing || readingFile} onChange={(event) => void loadTextFile(event)} />
+                  {fileName && <span className="selected-file">{fileName}</span>}
+                  {readingFile && <span role="status">Lettura file…</span>}
+                  <div className="import-submit-actions">
+                    {baseline && <button type="button" className="secondary-button" disabled={importing} onClick={cancelImport}>Annulla</button>}
+                    <button className="primary-button" type="submit" disabled={importing || readingFile || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
+                  </div>
+                </div>
+              </form>}
               {baselineLoading ? <p className="content-note">Caricamento lista…</p> : baseline ? (
                 <div className="baseline-panel" data-testid="baseline-panel">
-                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} />
+                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} importOpen={importOpen} />
                   <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
                   {importProblems.length === 0 && baseline.diagnostics.length > 0 && <details className="project-meta-details"><summary>Note sul testo importato</summary><ul>{baseline.diagnostics.map((item, index) => <li key={index}>{item.message}</li>)}</ul></details>}
                   <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>
                 </div>
-              ) : !error && (
-                <div className="empty-deck">
-                  <div className="empty-icon"><Icon name="deck" /></div>
-                  <h2>Nessuna lista di carte</h2>
-                  <p>Incolla una lista o scegli un file .txt.</p>
-                  <button type="button" className="primary-button" onClick={() => focusImport()}>Aggiungi una lista</button>
-                </div>
-              )}
+              ) : null}
               {!baselineLoading && <ConstraintsSection key={selected.id}
                 selectedIdentityId={constraintTargetId} selectionVersion={constraintSelectionVersion}
                 onTargetConsumed={() => setConstraintTargetId(null)}
                 onOpenCatalog={() => setView('catalog')} />}
-              <form className="import-panel" onSubmit={(event) => void importDeck(event)}>
-                <div className="panel-heading">
-                  <div><span className="eyebrow">Importazione</span><h2>{baseline ? 'Aggiorna la lista' : 'Aggiungi una lista'}</h2></div>
-                </div>
-                {baseline && <p className="content-note">Il salvataggio sostituisce la lista corrente.</p>}
-                <label htmlFor="deck-text">Testo lista</label>
-                <textarea id="deck-text" value={draft} onChange={(event) => { setDraft(event.target.value); setSource('paste'); setFileName(null) }} placeholder={'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 2'} spellCheck={false} />
-                <div className="import-actions">
-                  <label className="file-picker" htmlFor="deck-file">Scegli file .txt</label>
-                  <input id="deck-file" type="file" accept=".txt,text/plain" onChange={(event) => void loadTextFile(event)} />
-                  {fileName && <span className="selected-file">{fileName}</span>}
-                  <button className="primary-button" type="submit" disabled={importing || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
-                </div>
-              </form>
               </DeckConstraintsProvider> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
                 onAdopt={(adopted) => {
+                  resetImportUi()
                   const updated = projectWithBaseline(selected, adopted)
                   setBaseline(adopted)
                   setDraft(adopted.rawText)
