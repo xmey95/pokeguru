@@ -11,6 +11,10 @@ import { reviewCandidate } from '../../shared/candidate-review'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import type { ThreadEvidencePacket } from '../../shared/thread-evidence'
 import { reviewSummary } from './review-summary'
+import { ThreadSwitcher } from './ThreadSwitcher'
+import { Icon } from './Icon'
+import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
+import { ActivityStatus, InlineLoading, LoadingSkeleton, Spinner } from './Loading'
 
 interface Props {
   projectId: string
@@ -21,10 +25,10 @@ interface Props {
 function DiffView({ title, diff, beforeLabel = 'PRINCIPALE' }: { title: string; diff: DeckDiff; beforeLabel?: string }) {
   return <div className="thread-diff"><strong>{title}: {diff.beforeTotal} → {diff.afterTotal} carte</strong>
     {diff.byName.length === 0 ? <p>Nessuna variazione nelle quantità per nome.</p> : <div className="diff-table" role="table" aria-label={title}>
-      <div className="diff-row diff-header" role="row"><span>{beforeLabel}</span><span>CAMBIO</span><span>PROPOSTA</span></div>
+      <div className="diff-row diff-header" role="row"><span role="columnheader">{beforeLabel}</span><span role="columnheader">CAMBIO</span><span role="columnheader">PROPOSTA</span></div>
       {diff.byName.map((item) => <div className="diff-row" role="row" key={item.name}>
-        <span>{item.before}× {item.name}</span><strong className={`delta ${item.delta > 0 ? 'plus' : 'minus'}`}>{item.delta > 0 ? '+' : ''}{item.delta}</strong>
-        <span>{item.after}× {item.name}</span></div>)}</div>}
+        <span role="cell">{item.before}× {item.name}</span><strong role="cell" className={`delta ${item.delta > 0 ? 'plus' : 'minus'}`}>{item.delta > 0 ? '+' : ''}{item.delta}</strong>
+        <span role="cell">{item.after}× {item.name}</span></div>)}</div>}
     {diff.byPrint.length > 0 && <details><summary>Stampe indicate ({diff.byPrint.length} variazioni)</summary><ul>{diff.byPrint.map((item) =>
       <li key={item.name}>{item.name}: {item.before} → {item.after}</li>)}</ul></details>}
   </div>
@@ -32,7 +36,7 @@ function DiffView({ title, diff, beforeLabel = 'PRINCIPALE' }: { title: string; 
 
 function ComparisonList({ title, parsed }: { title: string; parsed: ParsedDeck | null }) {
   return <section className="comparison-list"><div className="comparison-list-title"><strong>{title}</strong><span>{parsed?.interpretedTotal ?? 0} carte</span></div>
-    <div className="comparison-list-scroll">{parsed ? parsed.lines.filter((line) => line.kind === 'card').map((line) =>
+    <div className="comparison-list-scroll" role="region" aria-label={title} tabIndex={0}>{parsed ? parsed.lines.filter((line) => line.kind === 'card').map((line) =>
       <div className="comparison-card" key={line.lineNumber}><strong>{line.quantity}×</strong><span>{line.name}</span><small>{line.setCode ? `${line.setCode} ${line.cardNumber}` : 'stampa non indicata'}</small></div>)
       : <p>Nessuna lista principale.</p>}</div></section>
 }
@@ -79,6 +83,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
   candidate: DeckCandidate; thread: DeckThread; versions: DeckVersion[]; catalog: CatalogView | null
   constraints: DeckConstraint[]; audit: StandardRuleAudit | null; working: boolean; featured?: boolean; onAdopt(candidate: DeckCandidate): void
 }) {
+  const comparison = useRef<HTMLDetailsElement>(null)
   const base = versions.find((version) => version.id === thread.baseVersionId)
   const current = versions[0]
   const adopted = versions.find((version) => version.adoption?.candidateId === candidate.id)
@@ -86,17 +91,30 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
     new Date().toLocaleDateString('sv-SE'), audit) : null
   const comparisonDeck = review ? parseDeck(review.normalizedRawText) : candidate.parsed
   const reviewItems = review ? reviewSummary(review.toReview) : []
-  return <details className={`thread-candidate ${featured ? 'featured' : ''}`} open={featured || undefined}>
-    <summary>Candidata {candidate.sequence} · {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {candidate.parsed.interpretedTotal} carte · {adopted ? `adottata in v${adopted.sequence}` : thread.stale ? 'base superata' : 'proposta nuova'}</summary>
-    <div className="candidate-identities"><div><span>01 · PRINCIPALE</span><strong>{current ? `v${current.sequence} · ${current.parsed.interpretedTotal}/60` : 'Nessuna lista principale'}</strong></div>
-      <b aria-hidden="true">→</b><div><span>02 · PROPOSTA</span><strong>Candidata {candidate.sequence} · {candidate.parsed.interpretedTotal}/60</strong></div></div>
+  const diff = current ? compareDecks(current.parsed, comparisonDeck) : null
+  const added = diff?.byName.reduce((sum, item) => sum + Math.max(0, item.delta), 0) ?? 0
+  const removed = diff?.byName.reduce((sum, item) => sum + Math.max(0, -item.delta), 0) ?? 0
+  const blockers = adopted ? [] : [
+    ...(thread.stale ? ['Base superata: apri un nuovo thread dalla lista principale.'] : []),
+    ...(!current ? ['Manca una lista principale.'] : []),
+    ...(!review ? ['Controlli non disponibili.'] : review.blockers)
+  ]
+  const status = adopted ? `Adottata in v${adopted.sequence}` : thread.stale ? 'Base superata' : 'Proposta nuova'
+  function closeComparison() {
+    if (!comparison.current) return
+    comparison.current.open = false
+    focusInWorkspace(comparison.current.querySelector('summary'))
+  }
+  const content = <>
+    <div className="candidate-identities"><div><span>LISTA PRINCIPALE</span><strong>{current ? `v${current.sequence} · ${current.parsed.interpretedTotal}/60` : 'Nessuna lista principale'}</strong></div>
+      <b aria-hidden="true">→</b><div><span>LISTA PROPOSTA</span><strong>Candidata {candidate.sequence} · {candidate.parsed.interpretedTotal}/60</strong></div></div>
     {candidate.note && <p>{candidate.note}</p>}
     {candidate.origin === 'ai' && <div className="candidate-source-strip"><strong>Fonti della proposta</strong>
       {candidate.sources.length === 0 ? <span>Nessuna fonte collegata</span> : candidate.sources.slice(0, 2).map((source) => source.url
         ? <button key={source.id} type="button" className="text-button" onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
         : <span key={source.id}>{source.label}</span>)}
       {candidate.sources.length > 2 && <span>+{candidate.sources.length - 2} nei dettagli</span>}</div>}
-    {current && <DiffView title={`Rispetto alla lista corrente v${current.sequence}`} diff={compareDecks(current.parsed, comparisonDeck)} />}
+    {current && diff && <DiffView title={`Rispetto alla lista principale v${current.sequence}`} diff={diff} />}
     {base && base.id !== current?.id && <DiffView title={`Rispetto alla base v${base.sequence}`} diff={compareDecks(base.parsed, comparisonDeck)} beforeLabel="BASE DEL THREAD" />}
     {review && review.conversions.length > 0 && <p className="candidate-conversions">Codici adattati per l'adozione: {review.conversions.map((item) =>
       `riga ${item.lineNumber} ${item.from} → ${item.to}`).join('; ')}.</p>}
@@ -105,7 +123,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
       {reviewItems.length > 0 && <details><summary>Da verificare ({reviewItems.length})</summary><ul>{reviewItems.map((item, index) => <li key={index}>{item}</li>)}</ul></details>}
       <p>Legalità torneo da verificare.</p>
     </div>}
-    {thread.stale && <p className="diagnostics">Base superata · adozione bloccata. Confronta la proposta con la lista corrente e apri un nuovo thread.</p>}
+    {thread.stale && <p className="diagnostics">Base superata · adozione bloccata. Confronta la proposta con la lista principale e apri un nuovo thread.</p>}
     {!adopted && <div className="candidate-adoption">
       <button type="button" className="primary-button" disabled={working || thread.stale || !current || !review || review.blockers.length > 0}
         onClick={() => onAdopt(candidate)}>Adotta l'intera lista candidata</button></div>}
@@ -124,38 +142,127 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
         <pre>{review.normalizedRawText}</pre></div>}
       <pre>{candidate.rawText}</pre>
     </details>
+  </>
+  if (!featured) return <details className="thread-candidate">
+    <summary>Candidata {candidate.sequence} · {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {candidate.parsed.interpretedTotal} carte · {status}</summary>
+    <div className="candidate-comparison-body">{content}</div>
   </details>
+  return <section className="thread-candidate featured" aria-labelledby={`candidate-title-${candidate.id}`}>
+    <div className="candidate-brief">
+      <div className="candidate-brief-heading">
+        <h3 id={`candidate-title-${candidate.id}`}>Candidata {candidate.sequence} <span>· {candidate.parsed.interpretedTotal} carte</span></h3>
+        <span className="candidate-state">{status}</span>
+      </div>
+      <p className="candidate-change-summary">{diff ? <>
+        {added || removed ? <strong>+{added} / −{removed} copie</strong>
+          : <strong>{diff.byPrint.length ? 'Cambiano solo le stampe' : 'Nessuna variazione'}</strong>}
+        <span> rispetto alla principale v{current!.sequence}</span>
+      </> : 'Nessuna lista principale da confrontare.'}</p>
+      {blockers.length > 0 && <p className="candidate-blocked"><strong>Adozione bloccata.</strong> {blockers[0]}
+        {blockers.length > 1 && <span> Altri {blockers.length - 1} blocchi nel confronto.</span>}</p>}
+      <p className="candidate-caution">{reviewItems.length > 0 && <span>{reviewItems.length} verifiche aperte · </span>}Legalità torneo da verificare.</p>
+      <span className="candidate-origin">{candidate.origin === 'ai'
+        ? `Codex · ${candidate.sources.length ? `${candidate.sources.length} fonti nel confronto` : 'nessuna fonte collegata'}` : 'Proposta manuale'}</span>
+    </div>
+    <details ref={comparison} className="candidate-comparison" onToggle={(event) => {
+      if (event.target !== event.currentTarget || !event.currentTarget.open) return
+      const main = event.currentTarget.closest<HTMLElement>('.main-content')
+      const heading = event.currentTarget.querySelector('summary')?.getBoundingClientRect()
+      if (!main || !heading) return
+      const bounds = main.getBoundingClientRect()
+      if (heading.bottom > bounds.bottom - 200) main.scrollTop += heading.top - bounds.top - 16
+    }} onKeyDown={(event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeComparison() }
+    }}>
+      <summary><span className="comparison-closed-label">Apri confronto</span><span className="comparison-open-label">Chiudi confronto</span></summary>
+      <div className="candidate-comparison-body">{content}
+        <button type="button" className="secondary-button close-comparison" onClick={closeComparison}>Chiudi confronto</button>
+      </div>
+    </details>
+  </section>
 }
 
 function displayDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
 }
 
+function focusInWorkspace(element: HTMLElement | null): void {
+  const main = element?.closest<HTMLElement>('.main-content')
+  if (!element || !main) return
+  element.focus({ preventScroll: true })
+  const bounds = main.getBoundingClientRect()
+  const target = element.getBoundingClientRect()
+  if (target.top < bounds.top || target.bottom > bounds.bottom) main.scrollTop += target.top - bounds.top - 24
+}
+
 export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
-  const newThreadDetails = useRef<HTMLDetailsElement>(null)
+  const nav = useNavigation()
+  const newThreadTrigger = useRef<HTMLButtonElement>(null)
+  const newThreadTitle = useRef<HTMLInputElement>(null)
+  const newThreadError = useRef<HTMLDivElement>(null)
+  const hasLoaded = useRef(false)
+  const returnCreateFocus = useRef(false)
+  const [creating, setCreating] = useViewState('thread.creating', false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const adoptionTrigger = useRef<HTMLElement | null>(null)
   const [versions, setVersions] = useState<DeckVersion[]>([])
   const [threads, setThreads] = useState<DeckThread[]>([])
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [constraints, setConstraints] = useState<DeckConstraint[]>([])
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [aiModels, setAiModels] = useState<AiModel[]>([])
-  const [overrides, setOverrides] = useState<Record<string, AiPreferences>>({})
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
-  const [openingNote, setOpeningNote] = useState('')
-  const [message, setMessage] = useState('')
-  const [proposalRequest, setProposalRequest] = useState('')
+  const [aiModelsLoading, setAiModelsLoading] = useState(true)
+  const [aiModelsError, setAiModelsError] = useState<string | null>(null)
+  const aiModelsRequest = useRef(0)
+  const [overrides, setOverrides] = useDraftState<Record<string, AiPreferences>>(`thread.overrides:${projectId}`, {})
+  const [selectedId, setSelectedId] = useViewState<string | null>('thread.selected', null)
+  const [title, setTitle] = useDraftState(`thread.title:${projectId}`, '')
+  const [openingNote, setOpeningNote] = useDraftState(`thread.opening:${projectId}`, '')
+  const [message, setMessage] = useDraftState(`thread.message:${projectId}:${selectedId}`, '')
+  const [composerMode, setComposerMode] = useDraftState<'ask' | 'proposal'>(`thread.mode:${projectId}:${selectedId}`, 'ask')
+  const [composerError, setComposerError] = useDraftState<string | null>(`thread.error:${projectId}:${selectedId}`, null)
+  const composerErrorElement = useRef<HTMLDivElement>(null)
+  const previewRequest = useRef(0)
   const [preview, setPreview] = useState<{ kind: 'ask' | 'proposal'; prompt: string; packet: ThreadEvidencePacket } | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
-  const [candidateText, setCandidateText] = useState('')
-  const [candidateNote, setCandidateNote] = useState('')
+  const [candidateDraft, setCandidateText] = useDraftState<string | null>(`thread.candidate:${projectId}:${selectedId}`, null)
+  const [candidateNote, setCandidateNote] = useDraftState(`thread.candidateNote:${projectId}:${selectedId}`, '')
   const [loading, setLoading] = useState(true)
-  const [working, setWorking] = useState(false)
-  const [asking, setAsking] = useState(false)
-  const [proposing, setProposing] = useState(false)
+  const [working, setWorking] = useBusyState(`thread:${projectId}:${selectedId}`)
+  const [asking, setAsking] = useBusyState(`thread.ask:${projectId}:${selectedId}`)
+  const [proposing, setProposing] = useBusyState(`thread.propose:${projectId}:${selectedId}`)
+  const startedAt = useBusyStartedAt(`thread:${projectId}:${selectedId}`)
   const [error, setError] = useState<string | null>(null)
   const [confirmCandidate, setConfirmCandidate] = useState<DeckCandidate | null>(null)
+  useEffect(() => {
+    if (creating) focusInWorkspace(newThreadTitle.current)
+    else if (returnCreateFocus.current) {
+      focusInWorkspace(newThreadTrigger.current)
+      returnCreateFocus.current = false
+    }
+  }, [creating])
+  useEffect(() => {
+    if (createError) focusInWorkspace(newThreadError.current)
+  }, [createError])
+  useEffect(() => {
+    if (composerError) focusInWorkspace(composerErrorElement.current)
+  }, [composerError])
+  useEffect(() => {
+    if (!confirmCandidate && !loading && !working && adoptionTrigger.current) {
+      if (adoptionTrigger.current.isConnected) focusInWorkspace(adoptionTrigger.current)
+      else focusInWorkspace(document.getElementById('thread-switcher-trigger'))
+      adoptionTrigger.current = null
+    }
+  }, [confirmCandidate, loading, working])
+
+  function confirmAdoption(candidate: DeckCandidate) {
+    adoptionTrigger.current = document.activeElement as HTMLElement
+    setConfirmCandidate(candidate)
+  }
+
   const selected = threads.find((thread) => thread.id === selectedId) ?? null
+  const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
+  useEffect(() => { if (selected) nav.entry.label = `Thread · ${selected.title}` }, [selected?.id])
   const featuredCandidate = selected?.candidates.at(-1) ?? null
   const selectedOverride = selected ? overrides[selected.id] ?? { model: null, reasoningEffort: null } : null
   const selectedModel = aiModels.find((model) => model.id === selectedOverride?.model)
@@ -166,8 +273,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
 
   useEffect(() => {
     let active = true
-    setLoading(true)
+    setLoading(!hasLoaded.current)
     setError(null)
+    invalidatePreview()
     void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId),
       window.projectsApi.getCatalog(), window.projectsApi.listConstraints(projectId), window.projectsApi.getStandardRuleAudit()])
       .then(([versionResult, threadResult, catalogResult, constraintResult, auditResult]) => {
@@ -182,86 +290,113 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         setCatalog(catalogResult.value)
         setConstraints(constraintResult.value)
         setRuleAudit(auditResult.value)
-        setSelectedId((current) => threadResult.value.some((thread) => thread.id === current)
-          ? current : threadResult.value[0]?.id ?? null)
-        const first = threadResult.value[0]
-        setCandidateText(first?.candidates.at(-1)?.rawText ??
-          versionResult.value.find((version) => version.id === first?.baseVersionId)?.rawText ?? '')
+        if (selectedId && !threadResult.value.some((thread) => thread.id === selectedId)) setError('Il thread non è più disponibile. Scegli un altro thread oppure torna indietro.')
+        else setSelectedId((current) => current ?? threadResult.value[0]?.id ?? null)
       })
       .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Impossibile leggere i thread.') })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [projectId, mainImportedAt])
+      .finally(() => { if (active) { hasLoaded.current = true; setLoading(false) } })
+    return () => { active = false; previewRequest.current++ }
+  }, [projectId, mainImportedAt, working])
 
+  async function refreshAiModels() {
+    const request = ++aiModelsRequest.current
+    setAiModelsLoading(true)
+    try {
+      const result = await window.projectsApi.getAiConnection()
+      if (request !== aiModelsRequest.current) return
+      if (!result.ok) throw new Error(result.error)
+      setAiModels(result.value.models)
+      setAiModelsError(null)
+    } catch (cause) {
+      if (request !== aiModelsRequest.current) return
+      setAiModels([])
+      setAiModelsError(cause instanceof Error ? cause.message : 'Modelli Codex non disponibili.')
+    } finally { if (request === aiModelsRequest.current) setAiModelsLoading(false) }
+  }
   useEffect(() => {
-    let active = true
-    void window.projectsApi.getAiConnection().then((result) => {
-      if (active && result.ok) setAiModels(result.value.models)
-    }).catch(() => undefined)
-    return () => { active = false }
+    void refreshAiModels()
+    return () => { aiModelsRequest.current++ }
   }, [])
 
-  function selectThread(thread: DeckThread): void {
-    setSelectedId(thread.id)
-    setCandidateText(thread.candidates.at(-1)?.rawText ??
-      versions.find((version) => version.id === thread.baseVersionId)?.rawText ?? '')
-    setCandidateNote('')
-    setMessage('')
-    setProposalRequest('')
-    setPreview(null)
+  function selectThread(thread: DeckThread, focus = '#thread-switcher-trigger'): void {
+    if (thread.id === selectedId && !creating) return
+    nav.visit({ 'thread.selected': thread.id, 'thread.creating': false, 'nav.focus': focus }, `Thread · ${thread.title}`)
   }
 
-  async function previewEvidence(kind: 'ask' | 'proposal'): Promise<void> {
-    if (!selected || previewLoading) return
-    const prompt = kind === 'ask' ? message : proposalRequest
+  function closeCreate(): void {
+    returnCreateFocus.current = true
+    setCreating(false)
+    setTitle('')
+    setOpeningNote('')
+    setCreateError(null)
+  }
+
+  function invalidatePreview(): void {
+    previewRequest.current++
+    setPreview(null)
+    setPreviewLoading(false)
+  }
+
+  function changeComposerMode(mode: 'ask' | 'proposal'): void {
+    setComposerMode(mode)
+    setComposerError(null)
+    invalidatePreview()
+  }
+
+  async function previewEvidence(): Promise<void> {
+    if (!selected || previewLoading || working) return
+    const prompt = message
     if (!prompt.trim()) return
+    const request = ++previewRequest.current
     setPreviewLoading(true)
-    setError(null)
+    setComposerError(null)
     try {
       const result = await window.projectsApi.previewDeckThreadEvidence(projectId, selected.id, prompt)
+      if (request !== previewRequest.current) return
       if (!result.ok) throw new Error(result.error)
-      setPreview({ kind, prompt, packet: result.value })
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Anteprima non disponibile.') }
-    finally { setPreviewLoading(false) }
+      setPreview({ kind: composerMode, prompt, packet: result.value })
+    } catch (cause) {
+      if (request === previewRequest.current) setComposerError(cause instanceof Error ? cause.message : 'Anteprima non disponibile.')
+    } finally { if (request === previewRequest.current) setPreviewLoading(false) }
   }
 
   async function create(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     if (working) return
     setWorking(true)
-    setError(null)
+    setCreateError(null)
     try {
       const result = await window.projectsApi.createDeckThread({ projectId, title, openingNote })
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => [result.value, ...current])
-      selectThread(result.value)
-      setTitle('')
-      setOpeningNote('')
-      newThreadDetails.current?.removeAttribute('open')
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Thread non creato.') }
+      closeCreate()
+      selectThread(result.value, '#new-thread-trigger')
+    } catch (cause) { setCreateError(cause instanceof Error ? cause.message : 'Thread non creato.') }
     finally { setWorking(false) }
   }
 
   async function addMessage(): Promise<void> {
-    if (!selected || working) return
+    if (!selected || working || !message.trim()) return
     setWorking(true)
-    setError(null)
+    setComposerError(null)
+    invalidatePreview()
     try {
       const result = await window.projectsApi.addDeckThreadMessage(projectId, selected.id, message)
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setMessage('')
       setPreview(null)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Messaggio non salvato.') }
+    } catch (cause) { setComposerError(cause instanceof Error ? cause.message : 'Messaggio non salvato.') }
     finally { setWorking(false) }
   }
 
   async function ask(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working) return
+    if (!selected || working || !message.trim()) return
     setWorking(true)
     setAsking(true)
-    setError(null)
+    setComposerError(null)
+    invalidatePreview()
     try {
       const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
@@ -270,7 +405,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       setMessage('')
       setPreview(null)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
+      setComposerError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
       const current = await window.projectsApi.listDeckThreads(projectId)
       if (current.ok) setThreads(current.value)
     }
@@ -289,26 +424,28 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setCandidateNote('')
+      invalidatePreview()
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Candidata non salvata.') }
     finally { setWorking(false) }
   }
 
   async function propose(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working) return
+    if (!selected || working || !selected.baseVersionId || !message.trim()) return
     setWorking(true)
     setProposing(true)
-    setError(null)
+    setComposerError(null)
+    invalidatePreview()
     try {
-      const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, proposalRequest,
+      const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
       setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
       setCandidateText(result.value.candidates.at(-1)?.rawText ?? candidateText)
-      setProposalRequest('')
+      setMessage('')
       setPreview(null)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
+      setComposerError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
       const current = await window.projectsApi.listDeckThreads(projectId)
       if (current.ok) setThreads(current.value)
     }
@@ -334,78 +471,97 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     finally { setWorking(false) }
   }
 
-  return <><section className="threads-section" aria-label="Thread del mazzo">
-    <div className="panel-heading"><div><span className="eyebrow">Esplora in parallelo</span><h2>Thread del mazzo</h2></div></div>
-    {error && <div className="error-banner" role="alert">{error}</div>}
-    {loading ? <p className="content-note">Caricamento thread…</p> : <>
+  return <><section className="threads-section" aria-label="Thread del mazzo" data-nav-loading={loading}>
+    <div className="panel-heading"><h2>Thread</h2></div>
+    {error && !confirmCandidate && <div className="error-banner" role="alert">{error}</div>}
+    {loading ? <LoadingSkeleton label="Caricamento thread…" rows={3} /> : <>
       <div className="threads-layout">
-        <aside className="threads-sidebar">
-          <details ref={newThreadDetails} className="new-thread-details"><summary>＋ Nuovo thread</summary><form className="thread-form" onSubmit={(event) => void create(event)}>
-            <h3>Nuovo thread</h3>
+        <div className="threads-toolbar">
+          <ThreadSwitcher threads={threads} selected={selected} versions={versions} disabled={working || creating}
+            onSelect={selectThread} />
+          <button ref={newThreadTrigger} id="new-thread-trigger" type="button" className="secondary-button" aria-expanded={creating}
+            aria-controls="new-thread-form" disabled={working} onClick={() => creating ? closeCreate() : setCreating(true)}>
+            <Icon name="plus" />Nuovo thread
+          </button>
+        </div>
+        {creating && <form id="new-thread-form" className="thread-form new-thread-form" aria-labelledby="new-thread-heading"
+          onSubmit={(event) => void create(event)} onKeyDown={(event) => {
+            if (event.key === 'Escape' && !working) { event.preventDefault(); closeCreate() }
+          }}>
+            <h3 id="new-thread-heading">Nuovo thread</h3>
             <label htmlFor="thread-title">Titolo</label>
-            <input id="thread-title" value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Es. Variante più veloce" required />
+            <input ref={newThreadTitle} id="thread-title" value={title} disabled={working} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Es. Variante più veloce" required />
             <label htmlFor="thread-opening">Prima osservazione (facoltativa)</label>
-            <textarea id="thread-opening" value={openingNote} maxLength={5000} onChange={(event) => setOpeningNote(event.target.value)} />
-            <button className="primary-button" disabled={working || !title.trim()}>Crea thread</button>
-          </form></details>
-          <div className="thread-picker" aria-label="Thread salvati">
-            {threads.length === 0 && <p className="content-note">Nessun thread creato.</p>}
-            {threads.map((thread) => <button key={thread.id} type="button" className={thread.id === selectedId ? 'active' : ''}
-              onClick={() => selectThread(thread)}>
-              <strong>{thread.title}</strong>
-              <small>{thread.baseVersionNumber === null ? 'Senza lista iniziale' : `Base v${thread.baseVersionNumber}`} · {thread.candidates.length} candidate{thread.stale ? ' · Da confrontare' : ''}</small>
-            </button>)}
-          </div>
-        </aside>
+            <textarea id="thread-opening" value={openingNote} disabled={working} maxLength={5000} onChange={(event) => setOpeningNote(event.target.value)} />
+            {createError && <div ref={newThreadError} className="error-banner" role="alert" tabIndex={-1}>{createError}</div>}
+            <div className="thread-form-actions">
+              <button className="primary-button" disabled={working || !title.trim()}>{working && <Spinner />}{working ? 'Creazione…' : 'Crea thread'}</button>
+              <button type="button" className="text-button" disabled={working} onClick={closeCreate}>Annulla</button>
+            </div>
+        </form>}
         <div className="thread-detail">
           {selected ? <>
-            <div className="thread-heading"><div><h3>{selected.title}</h3><p className="content-note">{selected.baseVersionNumber === null ? 'Senza lista iniziale' : `Base v${selected.baseVersionNumber}`} · {displayDate(selected.createdAt)}</p></div>
-              {selected.stale && <span className="matchup-freshness stale">Base da confrontare</span>}</div>
+            {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
-              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured onAdopt={setConfirmCandidate} />
-              : <div className="thread-no-candidate"><strong>Nessuna proposta salvata</strong><p>Chiedi a Codex una lista completa o incollane una.</p></div>}
-            <details className="thread-ai-options"><summary>Modello e ragionamento</summary><div className="thread-form">
+              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured onAdopt={confirmAdoption} />
+              : <p className="thread-no-candidate">Nessuna proposta salvata.</p>}
+            <div className="thread-timeline"><h4>Conversazione</h4>
+              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
+                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={confirmAdoption} />)}
+            </div>
+            {(asking || proposing) && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
+              title={proposing ? 'Codex sta preparando la proposta…' : 'Codex sta rispondendo…'}
+              detail={proposing ? 'La lista principale resta invariata. Potrai confrontare la proposta quando sarà pronta.' : 'Puoi consultare la lista o cambiare sezione durante l’attesa.'} />}
+            <form className="thread-form thread-composer" onSubmit={(event) => void (composerMode === 'ask' ? ask(event) : propose(event))}>
+              <fieldset className="composer-mode" aria-label="Modalità di invio" disabled={working}>
+                <label><input type="radio" name="thread-composer-mode" value="ask" checked={composerMode === 'ask'}
+                  onChange={() => changeComposerMode('ask')} /><span>Discuti</span></label>
+                <label><input type="radio" name="thread-composer-mode" value="proposal" checked={composerMode === 'proposal'}
+                  onChange={() => changeComposerMode('proposal')} /><span>Proponi una lista</span></label>
+              </fieldset>
+              <label htmlFor="thread-message">Scrivi nel thread</label>
+              <textarea id="thread-message" value={message} maxLength={5000} disabled={working} aria-describedby="thread-composer-help"
+                onChange={(event) => { setMessage(event.target.value); invalidatePreview(); setComposerError(null) }} />
+              <p id="thread-composer-help" className="content-note">{composerMode === 'ask' ? 'Ricevi una risposta da Codex.'
+                : !selected.baseVersionId ? 'Per proporre una lista serve una lista iniziale del thread.' : 'Ricevi una lista completa da confrontare.'}</p>
+              {composerError && <div ref={composerErrorElement} className="error-banner" role="alert" tabIndex={-1}>{composerError}</div>}
+              <div className="composer-actions"><div className="thread-form-actions">
+                <button className="primary-button" disabled={working || !message.trim() || (composerMode === 'proposal' && !selected.baseVersionId)}>
+                  {(asking || proposing) && <Spinner />}{asking ? 'Risposta in corso…' : proposing ? 'Proposta in corso…'
+                    : composerMode === 'ask' ? 'Chiedi a Codex' : 'Genera proposta Codex'}
+                </button>
+                <button type="button" className="secondary-button" disabled={working || !message.trim()}
+                  title="Salva il testo senza inviarlo a Codex" onClick={() => void addMessage()}>Salva osservazione</button>
+              </div>
+              <button type="button" className="text-button composer-preview" disabled={!message.trim() || previewLoading || working}
+                onClick={() => void previewEvidence()}>{previewLoading && <Spinner />}{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
+              </div>
+              {preview?.kind === composerMode && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
+            </form>
+            <details className="thread-ai-options"><summary>Dettagli del thread e AI{selectedOverride?.model && <span className="thread-ai-choice"> · Personalizzata</span>}</summary><div className="thread-form"><p className="content-note">Creato il {displayDate(selected.createdAt)}</p>
               <label htmlFor="thread-ai-model">Modello Codex per questo thread</label>
-              <select id="thread-ai-model" value={selectedOverride?.model ?? ''} disabled={working}
+              <select id="thread-ai-model" value={selectedOverride?.model ?? ''} disabled={working || aiModelsLoading}
                 onChange={(event) => setOverrides((current) => ({ ...current, [selected.id]: {
                   model: event.target.value || null, reasoningEffort: null } }))}>
                 <option value="">Usa preferenze globali</option>
+                {selectedOverride?.model && !selectedModel && <option value={selectedOverride.model}>{selectedOverride.model} · disponibilità da verificare</option>}
                 {aiModels.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}
               </select>
               <label htmlFor="thread-ai-effort">Ragionamento per questo thread</label>
               <select id="thread-ai-effort" value={selectedOverride?.reasoningEffort ?? ''}
-                disabled={working || !selectedModel}
+                disabled={working || aiModelsLoading || !selectedModel}
                 onChange={(event) => setOverrides((current) => ({ ...current, [selected.id]: {
                   model: selectedOverride?.model ?? null, reasoningEffort: event.target.value || null } }))}>
                 <option value="">Predefinito</option>
+                {selectedOverride?.reasoningEffort && !selectedModel?.reasoningEfforts.some((effort) => effort.id === selectedOverride.reasoningEffort) && <option value={selectedOverride.reasoningEffort}>{selectedOverride.reasoningEffort} · disponibilità da verificare</option>}
                 {selectedModel?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
               </select>
+              {aiModelsLoading && <InlineLoading>Caricamento modelli…</InlineLoading>}
+              {aiModelsError && <p className="error-banner" role="alert">{aiModelsError}</p>}
+              {!aiModelsLoading && !aiModelsError && !aiModels.length && <p className="content-note">Nessun modello disponibile.</p>}
+              {!aiModelsLoading && !aiModelsError && selectedOverride?.model && (!selectedModel || (selectedOverride.reasoningEffort && !selectedModel.reasoningEfforts.some((effort) => effort.id === selectedOverride.reasoningEffort))) && <p className="warning-banner" role="status">Disponibilità della scelta personalizzata da verificare.</p>}
+              <button type="button" className="text-button" disabled={working || aiModelsLoading} onClick={() => void refreshAiModels()}>Ricarica modelli</button>
             </div></details>
-            <div className="thread-timeline"><h4>Discussione e proposte precedenti</h4>
-              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
-                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={setConfirmCandidate} />)}
-            </div>
-            <form className="thread-form" onSubmit={(event) => void ask(event)}>
-              <label htmlFor="thread-message">Scrivi nel thread</label>
-              <textarea id="thread-message" value={message} maxLength={5000} onChange={(event) => { setMessage(event.target.value); setPreview(null) }} />
-              <p className="content-note">Codex usa la base, la candidata e le schede/eventi pertinenti già disponibili localmente. Ogni risposta conserva le fonti del turno.</p>
-              <button type="button" className="secondary-button" disabled={!message.trim() || previewLoading || working} onClick={() => void previewEvidence('ask')}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
-              {preview?.kind === 'ask' && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
-              <button className="primary-button" disabled={working || !message.trim()}>{asking ? 'Codex sta rispondendo…' : 'Chiedi a Codex'}</button>
-              <button type="button" className="secondary-button" disabled={working || !message.trim()} onClick={() => void addMessage()}>Salva osservazione</button>
-            </form>
-            <form className="thread-form candidate-form" onSubmit={(event) => void propose(event)}>
-              <h4>Proposta completa con Codex</h4>
-              <p className="content-note">Descrivi il cambiamento. Codex usa la base, i vincoli, le schede e gli eventi locali pertinenti; la proposta richiede 60 carte.</p>
-              <label htmlFor="thread-proposal-request">Modifica da valutare</label>
-              <textarea id="thread-proposal-request" value={proposalRequest} maxLength={5000}
-                onChange={(event) => { setProposalRequest(event.target.value); setPreview(null) }} />
-              <button type="button" className="secondary-button" disabled={!proposalRequest.trim() || previewLoading || working} onClick={() => void previewEvidence('proposal')}>{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
-              {preview?.kind === 'proposal' && preview.prompt === proposalRequest && <EvidencePreview packet={preview.packet} />}
-              <button className="primary-button" disabled={working || !selected.baseVersionId || !proposalRequest.trim()}>
-                {proposing ? 'Codex sta preparando la proposta…' : 'Genera proposta Codex'}
-              </button>
-            </form>
             <details className="manual-candidate"><summary>Incolla manualmente una candidata completa</summary><form className="thread-form candidate-form" onSubmit={(event) => void saveCandidate(event)}>
               <h4>Nuova candidata</h4>
               <p className="content-note">Incolla l'intera lista. Puoi salvare anche una bozza incompleta.</p>
@@ -415,7 +571,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               <textarea id="candidate-note" value={candidateNote} maxLength={5000} onChange={(event) => setCandidateNote(event.target.value)} />
               <button className="primary-button" disabled={working || !candidateText.trim()}>Salva candidata nel thread</button>
             </form></details>
-          </> : <p className="content-note">Crea un thread per esplorare una variante del mazzo.</p>}
+          </> : !creating && <p className="content-note">Crea un thread per esplorare una variante del mazzo.</p>}
         </div>
       </div>
       <details className="thread-versions"><summary>Versioni principali ({versions.length})</summary>
@@ -435,6 +591,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     }}>
       <span className="eyebrow">Conferma esplicita</span><h2 id="adoption-title">Adottare l’intera lista candidata?</h2>
       <p>La candidata {confirmCandidate.sequence} ({confirmCandidate.parsed.interpretedTotal} carte) sostituirà la lista principale. Le altre candidate resteranno nei rispettivi thread.</p>
+      {error && <div className="error-banner" role="alert">{error}</div>}
       <div className="dialog-actions"><button type="button" className="secondary-button" autoFocus onClick={() => setConfirmCandidate(null)}>Annulla</button>
         <button type="button" className="primary-button" disabled={working} onClick={() => void adopt(confirmCandidate)}>{working ? 'Adozione…' : 'Confermo: adotta l’intera lista'}</button></div>
     </div>

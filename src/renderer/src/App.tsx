@@ -1,3 +1,4 @@
+import { InlineLoading, LoadingSkeleton, Spinner } from './Loading'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { DeckBaseline, DeckImportSource } from '../../shared/deck-import'
 import type { Project } from '../../shared/projects'
@@ -7,18 +8,15 @@ import { CatalogSection } from './CatalogSection'
 import { DeckList } from './DeckList'
 import { DeckCompanion } from './DeckCompanion'
 import { ConstraintsSection } from './ConstraintsSection'
-import { ExportButton } from './ExportButton'
+import { DeckConstraintsProvider } from './DeckConstraintsContext'
 import { ThreadsSection } from './ThreadsSection'
 import { TournamentSection } from './TournamentSection'
+import { Icon } from './Icon'
+import { ProjectSwitcher } from './ProjectSwitcher'
+import { NavigationControls, useNavigation, useDraftState, useViewState, useBusyState } from './Navigation'
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(new Date(value))
-}
-
-function statusLabel(status: Project['status']): string {
-  if (status === 'BOZZA') return 'Bozza'
-  if (status === 'PRONTA_PER_CONTROLLO') return 'Pronta per controllo'
-  return 'Da costruire'
 }
 
 function projectWithBaseline(project: Project, baseline: DeckBaseline): Project {
@@ -33,35 +31,46 @@ function projectWithBaseline(project: Project, baseline: DeckBaseline): Project 
 }
 
 export function App() {
+  const nav = useNavigation()
+  const { view, tab: activeTab } = nav.entry.route
+  const importKey = `import:${nav.entry.route.projectId}`
   const [projects, setProjects] = useState<Project[]>([])
   const [selected, setSelected] = useState<Project | null>(null)
-  const [name, setName] = useState('')
+  const [name, setName] = useDraftState('project-name', '')
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useBusyState('project.create')
   const [baseline, setBaseline] = useState<DeckBaseline | null>(null)
   const [baselineLoading, setBaselineLoading] = useState(false)
-  const [draft, setDraft] = useState('')
-  const [source, setSource] = useState<DeckImportSource>('paste')
-  const [fileName, setFileName] = useState<string | null>(null)
-  const [importing, setImporting] = useState(false)
+  const [draft, setDraft] = useDraftState(`${importKey}:text`, baseline?.rawText ?? '')
+  const [source, setSource] = useDraftState<DeckImportSource>(`${importKey}:source`, baseline?.source ?? 'paste')
+  const [fileName, setFileName] = useDraftState<string | null>(`${importKey}:file`, baseline?.fileName ?? null)
+  const [importing, setImporting] = useBusyState(importKey)
+  const [importOpen, setImportOpen] = useViewState('import.open', false)
+  const [readingFile, setReadingFile] = useState(false)
+  const [importError, setImportError] = useDraftState<string | null>(`${importKey}:error`, null)
+  const [importNotice, setImportNotice] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'deck' | 'threads' | 'matchups'>('deck')
-  const [view, setView] = useState<'project' | 'ai' | 'catalog' | 'tournament'>('project')
-  const [catalogFocusIdentityId, setCatalogFocusIdentityId] = useState<string | null>(null)
-  const [constraintTargetId, setConstraintTargetId] = useState<string | null>(null)
+  const catalogFocusIdentityId = nav.entry.ui['catalog.focus'] as string | null ?? null
+  const setView = (next: typeof view) => nav.go({ view: next })
+  const [constraintTargetId, setConstraintTargetId] = useState<string | null>(nav.entry.ui['constraint.target'] as string | null ?? null)
   const [constraintSelectionVersion, setConstraintSelectionVersion] = useState(0)
-  const [showCompactCreate, setShowCompactCreate] = useState(false)
+  const [showCompactCreate, setShowCompactCreate] = useViewState('project.create', false)
   const selectionVersion = useRef(0)
+  const importDraftVersion = useRef(0)
+  const wasImporting = useRef(importing)
+  useEffect(() => {
+    const finished = wasImporting.current && !importing
+    wasImporting.current = importing
+    if (finished && selected) void selectProject(selected.id)
+  }, [importing])
+
+  useEffect(() => { if (showCompactCreate) document.getElementById('compact-project-name')?.focus() }, [showCompactCreate])
 
   async function selectProject(id: string, known?: Project): Promise<void> {
     const version = ++selectionVersion.current
-    setConstraintTargetId(null)
     setError(null)
     setBaselineLoading(true)
     setBaseline(null)
-    setDraft('')
-    setSource('paste')
-    setFileName(null)
     try {
       let project = known
       if (!project) {
@@ -76,9 +85,6 @@ export function App() {
       if (version !== selectionVersion.current) return
       if (!result.ok) throw new Error(result.error)
       setBaseline(result.value)
-      setDraft(result.value?.rawText ?? '')
-      setSource(result.value?.source ?? 'paste')
-      setFileName(result.value?.fileName ?? null)
     } catch (cause) {
       if (version === selectionVersion.current) {
         setError(cause instanceof Error ? cause.message : 'Impossibile aprire la lista del progetto.')
@@ -100,7 +106,12 @@ export function App() {
           return
         }
         setProjects(result.value)
-        if (result.value[0]) void selectProject(result.value[0].id, result.value[0])
+        const requested = nav.entry.route.projectId
+        const project = requested ? result.value.find((item) => item.id === requested) : result.value[0]
+        if (project) {
+          nav.entry.route.projectId = project.id
+          void selectProject(project.id, project)
+        } else if (requested) setError('Questo progetto non è più disponibile. Scegli un altro progetto oppure torna indietro.')
       } catch (cause) {
         if (active) setError(cause instanceof Error ? cause.message : 'Impossibile leggere i progetti.')
       } finally {
@@ -108,18 +119,17 @@ export function App() {
       }
     }
     void load()
-    return () => { active = false }
+    return () => { active = false; selectionVersion.current++; importDraftVersion.current++ }
   }, [])
 
   async function openProject(id: string): Promise<void> {
-    setView('project')
-    await selectProject(id)
+    nav.go({ view: 'project', projectId: id }, undefined, `${activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup'} · ${projects.find((item) => item.id === id)?.name ?? 'Progetto'}`)
   }
 
   function selectConstraintTarget(identityId: string): void {
     setConstraintTargetId(identityId)
     setConstraintSelectionVersion((version) => version + 1)
-    setActiveTab('deck')
+    if (activeTab !== 'deck' || view !== 'project') nav.go({ view: 'project', tab: 'deck' }, { 'constraint.target': identityId })
   }
 
   async function createProject(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -135,16 +145,9 @@ export function App() {
       }
       setProjects((current) => [result.value, ...current])
       selectionVersion.current++
-      setSelected(result.value)
-      setBaseline(null)
-      setBaselineLoading(false)
-      setDraft('')
-      setSource('paste')
-      setFileName(null)
       setName('')
-      setActiveTab('deck')
-      setView('project')
       setShowCompactCreate(false)
+      nav.go({ view: 'project', tab: 'deck', projectId: result.value.id })
     } catch {
       setError('Salvataggio non riuscito. Nessun progetto è stato creato.')
     } finally {
@@ -155,39 +158,48 @@ export function App() {
   async function loadTextFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.target.files?.[0]
     const version = selectionVersion.current
+    const draftVersion = ++importDraftVersion.current
     event.target.value = ''
     if (!file) return
+    setReadingFile(false)
     if (!/\.txt$/i.test(file.name)) {
-      setError('Seleziona un file .txt.')
+      setImportError('Seleziona un file .txt.')
       return
     }
     if (file.size > 400_000) {
-      setError('Il file è troppo grande per una lista di mazzo.')
+      setImportError('Il file è troppo grande per una lista di mazzo.')
       return
     }
     try {
+      setReadingFile(true)
+      setImportError(null)
       const text = await file.text()
-      if (version !== selectionVersion.current) return
+      if (version !== selectionVersion.current || draftVersion !== importDraftVersion.current) return
       setDraft(text)
       setSource('file')
       setFileName(file.name)
-      setError(null)
     } catch {
-      if (version === selectionVersion.current) setError('Impossibile leggere il file selezionato.')
-    }
+      if (version === selectionVersion.current && draftVersion === importDraftVersion.current) setImportError('Impossibile leggere il file selezionato.')
+    } finally { if (draftVersion === importDraftVersion.current) setReadingFile(false) }
   }
 
   async function importDeck(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || importing) return
+    if (!selected || importing || readingFile || baselineLoading) return
     const projectId = selected.id
     const importVersion = selectionVersion.current
     setImporting(true)
-    setError(null)
+    setImportError(null)
     try {
       const result = await window.projectsApi.importDeck({ projectId, rawText: draft, source, fileName })
       if (!result.ok) {
-        if (selectionVersion.current === importVersion) setError(result.error)
+        setImportError(result.error)
+        return
+      }
+      if (!nav.isCurrent()) {
+        setDraft(result.value.rawText)
+        setSource(result.value.source)
+        setFileName(result.value.fileName)
         return
       }
       const updated = projectWithBaseline(selected, result.value)
@@ -195,173 +207,159 @@ export function App() {
       if (selectionVersion.current !== importVersion) return
       setBaseline(result.value)
       setSelected(updated)
+      setDraft(result.value.rawText)
+      setSource(result.value.source)
+      setFileName(result.value.fileName)
+      setImportOpen(false)
+      setImportNotice(baseline ? 'Lista sostituita.' : 'Lista salvata.')
+      requestAnimationFrame(focusList)
     } catch {
-      if (selectionVersion.current === importVersion) setError('Importazione non riuscita. La lista precedente è rimasta salvata.')
+      setImportError('Importazione non riuscita. Riprova il salvataggio.')
     } finally {
       setImporting(false)
     }
   }
 
+  function resetImportUi(): void {
+    importDraftVersion.current++
+    setImportOpen(false)
+    setReadingFile(false)
+    setImportError(null)
+    setImportNotice('')
+  }
+
+  function focusList(): void {
+    const trigger = document.getElementById('deck-import-trigger')
+    if (!trigger) return
+    trigger.focus({ preventScroll: true })
+    trigger.closest('.main-content')?.scrollTo(0, 0)
+  }
+
+  function cancelImport(): void {
+    if (importing || !baseline) return
+    resetImportUi()
+    setDraft(baseline.rawText)
+    setSource(baseline.source)
+    setFileName(baseline.fileName)
+    requestAnimationFrame(focusList)
+  }
+
+  function focusImport(): void {
+    if (!importOpen) {
+      importDraftVersion.current++
+      setDraft(baseline?.rawText ?? '')
+      setSource(baseline?.source ?? 'paste')
+      setFileName(baseline?.fileName ?? null)
+      setImportError(null)
+      setImportNotice('')
+      setImportOpen(true)
+    }
+    requestAnimationFrame(() => {
+      const panel = document.getElementById('deck-import')
+      const main = panel?.closest('.main-content')
+      document.getElementById('deck-text')?.focus({ preventScroll: true })
+      if (panel && main) main.scrollTop += panel.getBoundingClientRect().top - main.getBoundingClientRect().top - 20
+    })
+  }
+
   const importProblems = baseline?.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH') ?? []
+  const showDeckCompanion = Boolean(selected && view === 'project' && activeTab !== 'deck')
 
   return (
-    <div className={`app-shell ${selected && view === 'project' ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
+    <div className={`app-shell ${showDeckCompanion ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
       <a className="skip-link" href="#main-content">Vai al contenuto</a>
       <header className="topbar">
-        <span>POKÉGURU <b>/</b> {view === 'project' ? 'WORKSPACE DEL MAZZO' : view === 'catalog' ? 'CATALOGO' : view === 'tournament' ? 'EVENTI' : 'IMPOSTAZIONI AI'}</span>
-        <span>ARCHIVIO LOCALE</span>
+        <NavigationControls />
+        <span>Pokéguru <b aria-hidden="true">/</b> {view === 'project' ? activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup' : view === 'catalog' ? 'Catalogo' : view === 'tournament' ? 'Eventi' : 'Impostazioni AI'}</span>
+        <span>Standard occidentale</span>
       </header>
 
       <div className="workspace">
         <aside className="sidebar" aria-label="Progetti di mazzo">
           <div className="brand">
-            <span className="brand-mark" aria-hidden="true">P<span>.</span></span>
-            <div><strong>Pokéguru</strong><span>DECK INTELLIGENCE</span></div>
+            <img className="brand-mark" src="./favicon.svg" alt="Pokéguru" width="40" height="40" />
+            <div><strong aria-hidden="true">Pokéguru</strong><span>Analisi competitiva</span></div>
           </div>
-          <div className="sidebar-heading">
-            <div>
-              <h2>Progetti</h2>
-            </div>
-            <span className="count" aria-label={`${projects.length} progetti`}>{projects.length}</span>
-          </div>
-
-          {!selected && view === 'project' && !showCompactCreate && <form className="create-form" onSubmit={(event) => void createProject(event)}>
-            <label htmlFor="project-name">Nome progetto</label>
-            <input
-              id="project-name"
-              name="project-name"
-              autoComplete="off"
-              maxLength={120}
-              placeholder="Es. Mega Absol / Mega Audino"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-            />
-            <label htmlFor="project-format">Formato</label>
-            <select id="project-format" defaultValue="STANDARD">
-              <option value="STANDARD">Standard</option>
-            </select>
-            <span className="fixed-circuit">Circuito: Occidentale / internazionale</span>
-            <button className="primary-button" type="submit" disabled={saving || loading || !name.trim()}>
-              {saving ? 'Salvataggio…' : 'Crea progetto'}
-            </button>
-          </form>}
-
-          {loading ? <p className="sidebar-note">Caricamento…</p> : projects.length === 0 ? (
-            <p className="sidebar-note">Nessun progetto.</p>
-          ) : (
-            <ul className="project-list">
-              {projects.map((project) => (
-                <li key={project.id}>
-                  <button
-                    type="button"
-                    className={`project-button ${selected?.id === project.id ? 'active' : ''}`}
-                    onClick={() => void openProject(project.id)}
-                    data-testid={`project-${project.id}`}
-                    aria-current={selected?.id === project.id ? 'page' : undefined}
-                      title={project.name}
-                  >
-                    <span className="project-avatar" aria-hidden="true">{project.name.charAt(0).toUpperCase()}</span>
-                    <span className="project-labels">
-                      <strong>{project.name}</strong>
-                      <small>{project.cardTotal === null ? statusLabel(project.status) : `${project.cardTotal} carte`}</small>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ProjectSwitcher projects={projects} selected={selected} loading={loading}
+            onSelect={(id) => void openProject(id)}
+            onCreate={() => { if (view === 'project') setShowCompactCreate(true); else nav.go({ view: 'project' }, { 'project.create': true }) }} />
           <nav className="workspace-nav" aria-label="Aree del progetto">
             <span className="rail-caption">Area di lavoro</span>
-            <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('deck') }} title="Lista"><span className="nav-index" aria-hidden="true">01</span><span className="nav-abbrev" aria-hidden="true">L</span>Lista</button>
-            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('threads') }} title="Thread"><span className="nav-index" aria-hidden="true">02</span><span className="nav-abbrev" aria-hidden="true">T</span>Thread</button>
-            <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => { setView('project'); setActiveTab('matchups') }} title="Matchup"><span className="nav-index" aria-hidden="true">03</span><span className="nav-abbrev" aria-hidden="true">M</span>Matchup</button>
+            <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'deck' })} title="Lista" aria-label="Lista"><Icon name="deck" /><span className="nav-label">Lista</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'threads' })} title="Thread" aria-label="Thread"><Icon name="thread" /><span className="nav-label">Thread</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'matchups' })} title="Matchup" aria-label="Matchup"><Icon name="matchup" /><span className="nav-label">Matchup</span></button>
           </nav>
           <nav className="resource-nav" aria-label="Risorse globali">
             <span className="rail-caption">Risorse</span>
-            <button type="button" className={view === 'catalog' ? 'active' : ''} onClick={() => { setCatalogFocusIdentityId(null); setView('catalog') }} title="Catalogo"><span aria-hidden="true">⌕</span>Catalogo</button>
-            <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi"><span aria-hidden="true">◷</span>Eventi</button>
-            <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI"><span aria-hidden="true">⚙</span>Impostazioni AI</button>
+            <button type="button" className={view === 'catalog' ? 'active' : ''} onClick={() => setView('catalog')} title="Catalogo" aria-label="Catalogo" aria-current={view === 'catalog' ? 'page' : undefined}><Icon name="catalog" /><span className="nav-label">Catalogo</span></button>
+            <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi" aria-label="Eventi" aria-current={view === 'tournament' ? 'page' : undefined}><Icon name="event" /><span className="nav-label">Eventi</span></button>
+            <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI" aria-label="Impostazioni AI" aria-current={view === 'ai' ? 'page' : undefined}><Icon name="settings" /><span className="nav-label">Impostazioni AI</span></button>
           </nav>
-          <button type="button" className="compact-create-trigger" aria-expanded={showCompactCreate} onClick={() => { setView('project'); setShowCompactCreate((value) => !value) }} title="Nuovo progetto">＋ <span>Nuovo progetto</span></button>
           <div className="local-indicator"><span aria-hidden="true" /> Archivio locale</div>
         </aside>
 
-        <main id="main-content" className="main-content">
+        <main id="main-content" className="main-content" tabIndex={-1} data-nav-loading={loading || baselineLoading}>
           {showCompactCreate && <form className="compact-create-panel" onSubmit={(event) => void createProject(event)}>
-            <div className="panel-heading"><h2>Nuovo progetto</h2><button type="button" className="text-button" onClick={() => setShowCompactCreate(false)}>Chiudi</button></div>
+            <div className="panel-heading"><h2>Nuovo progetto</h2><button type="button" className="text-button" onClick={() => { setShowCompactCreate(false); document.getElementById('project-switcher-trigger')?.focus() }}>Chiudi</button></div>
             <label htmlFor="compact-project-name">Nome progetto</label>
             <input id="compact-project-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required placeholder="Es. Mega Absol / Mega Audino" />
-            <p>Standard · circuito occidentale / internazionale</p>
+            <p className="content-note">Standard · circuito occidentale / internazionale</p>
             <button type="submit" className="primary-button" disabled={saving || loading || !name.trim()}>{saving ? 'Salvataggio…' : 'Crea progetto'}</button>
           </form>}
           {error && <div className="error-banner" role="alert">{error}</div>}
-          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? (identityId) => { setView('project'); selectConstraintTarget(identityId) } : undefined} /> : view === 'tournament' ? <TournamentSection /> : selected ? (
+          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? selectConstraintTarget : undefined} /> : view === 'tournament' ? <TournamentSection /> : loading ? <LoadingSkeleton label="Apertura progetti…" rows={3} /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-headline">
                 <div>
                   <h1 data-testid="selected-project-name">{selected.name}</h1>
                 </div>
-                <span className={`status-pill status-${selected.status.toLowerCase()}`}>{statusLabel(selected.status)}</span>
               </div>
               <details className="project-meta-details"><summary>Profilo e date del progetto</summary><div className="detail-meta">
                 <div><span>Formato</span><strong>Standard</strong></div>
                 <div><span>Circuito</span><strong>Occidentale / internazionale</strong></div>
                 <div><span>Creato il</span><strong>{formatDate(selected.createdAt)}</strong></div>
-                <div><span>Lista corrente</span><strong>{selected.cardTotal === null ? 'Assente' : `${selected.cardTotal} carte interpretate`}</strong></div>
+                <div><span>Lista principale</span><strong>{selected.cardTotal === null ? 'Assente' : `${selected.cardTotal} carte interpretate`}</strong></div>
               </div></details>
               {selected.circuitAssignment === 'MIGRATED' && <p className="migration-note">Profilo occidentale assegnato a questo progetto esistente. La lista è rimasta invariata.</p>}
-              {activeTab === 'deck' ? <>
-              {baselineLoading ? <p className="content-note">Caricamento lista…</p> : baseline ? (
-                <div className="baseline-panel" data-testid="baseline-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>Lista corrente</h2>
-                    </div>
-                    <div className="deck-heading-actions">
-                      <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
-                      <ExportButton key={`${selected.id}:${baseline.importedAt}`} baseline={baseline} />
-                      <button type="button" className="secondary-button" onClick={() => document.getElementById('deck-text')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>Importa / sostituisci</button>
-                    </div>
+              {activeTab === 'deck' ? <DeckConstraintsProvider key={`${selected.id}:${baseline?.importedAt ?? 'empty'}`} projectId={selected.id} baseline={baseline}>
+              {importNotice && <p className="import-notice" role="status">{importNotice}</p>}
+              {!baselineLoading && !error && (!baseline || importOpen) && <form id="deck-import" className="import-panel" aria-labelledby="deck-import-title" aria-describedby="deck-import-note"
+                onSubmit={(event) => void importDeck(event)} onKeyDown={(event) => {
+                  if (event.key === 'Escape' && baseline && !importing) { event.preventDefault(); event.stopPropagation(); cancelImport() }
+                }}>
+                <div className="panel-heading"><h2 id="deck-import-title">{baseline ? 'Sostituisci la lista' : 'Aggiungi una lista'}</h2></div>
+                <p id="deck-import-note" className="content-note">{baseline ? 'Il salvataggio sostituisce la lista principale.' : 'Incolla una lista o scegli un file .txt.'}</p>
+                <label htmlFor="deck-text">Testo lista</label>
+                <textarea id="deck-text" value={draft} disabled={importing || readingFile} onChange={(event) => {
+                  importDraftVersion.current++; setDraft(event.target.value); setSource('paste'); setFileName(null)
+                }} placeholder={'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 2'} spellCheck={false} />
+                {importError && <p className="error-banner" role="alert">{importError}</p>}
+                <div className="import-actions">
+                  <label className="file-picker" htmlFor="deck-file" aria-disabled={importing || readingFile}>Scegli file .txt</label>
+                  <input id="deck-file" type="file" accept=".txt,text/plain" disabled={importing || readingFile} onChange={(event) => void loadTextFile(event)} />
+                  {fileName && <span className="selected-file">{fileName}</span>}
+                  {readingFile && <InlineLoading>Lettura file…</InlineLoading>}
+                  <div className="import-submit-actions">
+                    {baseline && <button type="button" className="text-button" disabled={importing} onClick={cancelImport}>Annulla</button>}
+                    <button className="primary-button" type="submit" disabled={importing || readingFile || !draft.trim()}>{importing && <Spinner />}{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
                   </div>
+                </div>
+              </form>}
+              {baselineLoading ? <LoadingSkeleton label="Caricamento lista…" /> : baseline ? (
+                <div className="baseline-panel" data-testid="baseline-panel">
+                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} importOpen={importOpen} />
                   <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
-                  {baseline.declaredTotal !== null && baseline.declaredTotal !== baseline.interpretedTotal && <p className="diagnostics">Totale dichiarato: {baseline.declaredTotal}; interpretato: {baseline.interpretedTotal}.</p>}
-                  {baseline.diagnostics.length > 0 && (
-                    <details className={importProblems.length ? 'diagnostics' : 'project-meta-details'} role={importProblems.length ? 'status' : undefined}>
-                      <summary>{importProblems.length ? `Testo importato · ${importProblems.length} ${importProblems.length === 1 ? 'problema' : 'problemi'} da correggere` : 'Note sul testo importato'}</summary>
-                      <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
-                    </details>
-                  )}
-                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onConstrain={selectConstraintTarget} />
+                  {importProblems.length === 0 && baseline.diagnostics.length > 0 && <details className="project-meta-details"><summary>Note sul testo importato</summary><ul>{baseline.diagnostics.map((item, index) => <li key={index}>{item.message}</li>)}</ul></details>}
                   <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>
                 </div>
-              ) : !error && (
-                <div className="empty-deck">
-                  <div className="empty-icon" aria-hidden="true">◇</div>
-                  <h2>Nessuna lista di carte</h2>
-                  <p>Incolla una lista o scegli un file .txt.</p>
-                  <button type="button" className="primary-button" onClick={() => document.getElementById('deck-text')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>Aggiungi una lista</button>
-                </div>
-              )}
-              {!baselineLoading && <ConstraintsSection key={selected.id} projectId={selected.id} baseline={baseline}
+              ) : null}
+              {!baselineLoading && <ConstraintsSection key={selected.id}
                 selectedIdentityId={constraintTargetId} selectionVersion={constraintSelectionVersion}
+                onTargetConsumed={() => { setConstraintTargetId(null); delete nav.entry.ui['constraint.target'] }}
                 onOpenCatalog={() => setView('catalog')} />}
-              <form className="import-panel" onSubmit={(event) => void importDeck(event)}>
-                <div className="panel-heading">
-                  <div><span className="eyebrow">Importazione</span><h2>{baseline ? 'Aggiorna la lista' : 'Aggiungi una lista'}</h2></div>
-                </div>
-                {baseline && <p className="content-note">Il salvataggio sostituisce la lista corrente.</p>}
-                <label htmlFor="deck-text">Testo lista</label>
-                <textarea id="deck-text" value={draft} onChange={(event) => { setDraft(event.target.value); setSource('paste'); setFileName(null) }} placeholder={'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 2'} spellCheck={false} />
-                <div className="import-actions">
-                  <label className="file-picker" htmlFor="deck-file">Scegli file .txt</label>
-                  <input id="deck-file" type="file" accept=".txt,text/plain" onChange={(event) => void loadTextFile(event)} />
-                  {fileName && <span className="selected-file">{fileName}</span>}
-                  <button className="primary-button" type="submit" disabled={importing || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
-                </div>
-              </form>
-              </> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
+              </DeckConstraintsProvider> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
                 onAdopt={(adopted) => {
+                  resetImportUi()
                   const updated = projectWithBaseline(selected, adopted)
                   setBaseline(adopted)
                   setDraft(adopted.rawText)
@@ -370,23 +368,44 @@ export function App() {
                   setSelected(updated)
                   setProjects((current) => current.map((project) => project.id === selected.id ? updated : project))
                 }} /> : <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')}
-                  onOpenCatalogCard={(identityId) => { setCatalogFocusIdentityId(identityId); setView('catalog') }} />}
+                  onOpenCatalogCard={(identityId) => nav.go({ view: 'catalog' }, { 'catalog.focus': identityId, 'catalog.focusConsumed': false, 'catalog.selected': identityId, 'catalog.query': '', 'catalog.set': 'all' }, 'Catalogo · carta dalla guida')} />}
             </section>
           ) : (
             <section className="welcome" aria-label="Benvenuto">
               <span className="eyebrow">Inizia da qui</span>
-              <h1>Ogni mazzo parte da un’idea.</h1>
-              <p>Crea un progetto per conservarne il percorso. Potrai aprirlo di nuovo anche dopo aver chiuso l’app.</p>
+              <h1>Il tuo prossimo mazzo.</h1>
+              <p>Crea un progetto, importa la lista e confronta le varianti.</p>
               <button type="button" className="primary-button welcome-create" onClick={() => setShowCompactCreate(true)}>Inizia un progetto</button>
+              {!showCompactCreate && <form className="create-form" onSubmit={(event) => void createProject(event)}>
+                <label htmlFor="project-name">Nome progetto</label>
+                <input
+                  id="project-name"
+                  name="project-name"
+                  autoComplete="off"
+                  maxLength={120}
+                  placeholder="Es. Mega Absol / Mega Audino"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  required
+                />
+                <label htmlFor="project-format">Formato</label>
+                <select id="project-format" defaultValue="STANDARD">
+                  <option value="STANDARD">Standard</option>
+                </select>
+                <span className="fixed-circuit">Circuito: Occidentale / internazionale</span>
+                <button className="primary-button" type="submit" disabled={saving || loading || !name.trim()}>
+                  {saving ? 'Salvataggio…' : 'Crea progetto'}
+                </button>
+              </form>}
               <div className="welcome-steps">
                 <span>01 <strong>Crea un progetto</strong></span>
-                <span>02 <strong>Costruisci il mazzo</strong></span>
+                <span>02 <strong>Importa la lista</strong></span>
                 <span>03 <strong>Analizza e migliora</strong></span>
               </div>
             </section>
           )}
         </main>
-        {selected && view === 'project' && <DeckCompanion key={selected.id} baseline={baseline} loading={baselineLoading} />}
+        {selected && showDeckCompanion && <DeckCompanion key={selected.id} baseline={baseline} loading={baselineLoading} />}
       </div>
     </div>
   )

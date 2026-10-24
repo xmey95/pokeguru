@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const executablePath = process.argv[2] && resolve(process.argv[2])
 if (!executablePath || !existsSync(executablePath)) {
@@ -29,8 +29,10 @@ try {
   let page = await application.firstWindow()
   await createProjectFromStart(page, 'Pacchetto isolato')
   await page.getByTestId('selected-project-name').filter({ hasText: 'Pacchetto isolato' }).waitFor()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 86')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '1 carte' }).waitFor()
   await application.close()
   application = undefined
@@ -38,7 +40,7 @@ try {
   application = await launch(profile)
   page = await application.firstWindow()
   await page.getByTestId('selected-project-name').filter({ hasText: 'Pacchetto isolato' }).waitFor()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), '1 Mega Absol ex MEG 86')
+  assert.equal(await page.locator('.original-text pre').textContent(), '1 Mega Absol ex MEG 86')
   await application.close()
   application = undefined
   assert.ok(existsSync(join(profile, 'data', 'pokeguru.sqlite')))

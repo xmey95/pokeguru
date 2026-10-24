@@ -17,7 +17,7 @@ try {
   let page = await application.firstWindow()
   await page.getByRole('button', { name: 'Eventi' }).click()
   await page.getByRole('button', { name: 'Regional', exact: true }).click()
-  await page.getByRole('heading', { name: 'Regional e grandi eventi' }).waitFor()
+  await page.getByRole('heading', { name: 'Eventi', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Aggiorna nuovi Regional' }).click()
   for (let block = 0; block < 10; block++) {
     const button = page.getByRole('button', { name: 'Continua blocco Regional' })
@@ -38,7 +38,7 @@ try {
     if (block === 9) throw new Error(`Hydrapple non coperto in due Regional dopo dieci blocchi: ${JSON.stringify(state)}`)
     await button.click()
   }
-  await page.getByText('Liste da 60 acquisite').waitFor()
+  await page.locator('.event-coverage-counts').waitFor()
   await application.close()
   application = undefined
 

@@ -1,4 +1,7 @@
+import { LoadingSkeleton } from './Loading'
+import { Icon } from './Icon'
 import { useEffect, useMemo, useState } from 'react'
+import { useViewState } from './Navigation'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { CatalogView } from '../../shared/catalog'
 import { buildDeckCards, type DeckReconciliation } from '../../shared/reconciliation'
@@ -10,6 +13,12 @@ import { evaluateStandardDeck } from '../../shared/standard-deck'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../../shared/western-rule-package'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { reviewSummary } from './review-summary'
+import { CardThumbnail } from './CardThumbnail'
+import { deckThumbnail, groupDeckCards } from './deck-presentation'
+import { ExportButton } from './ExportButton'
+import { CardOverview } from './CardOverview'
+import { CardConstraints } from './CardConstraints'
+import { useDeckConstraints } from './DeckConstraintsContext'
 
 function localDate(): string {
   const now = new Date()
@@ -29,18 +38,20 @@ function cardStatus(status: 'recognized' | 'unverified' | 'ambiguous' | 'outside
     catalog.scope.kind === 'sample' ? 'Nessuna corrispondenza nel campione' : 'Nessuna corrispondenza locale'
 }
 
-export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
-  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onConstrain(identityId: string): void
+export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importOpen }: {
+  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void; importOpen: boolean
 }) {
+  const { setReconciliation: updateConstraintReconciliation } = useDeckConstraints()
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [loading, setLoading] = useState(true)
+  const [dataUnavailable, setDataUnavailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [expanded, setExpanded] = useViewState<string | null>('deck.expanded', null)
   const [saving, setSaving] = useState(false)
   const [today, setToday] = useState(localDate)
-  const [referenceDate, setReferenceDate] = useState<string | null>(null)
+  const [referenceDate, setReferenceDate] = useViewState<string | null>('deck.referenceDate', null)
 
   useEffect(() => {
     const timer = window.setInterval(() => setToday(localDate()), 60_000)
@@ -50,6 +61,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   useEffect(() => {
     let active = true
     setLoading(true)
+    setDataUnavailable(false)
     void Promise.all([window.projectsApi.getCatalog(), window.projectsApi.getReconciliation(projectId),
       window.projectsApi.getStandardRuleAudit()])
       .then(([catalogResult, reconciliationResult, auditResult]) => {
@@ -61,12 +73,13 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
         setReconciliation(reconciliationResult.value)
         setRuleAudit(auditResult.value)
       })
-      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Lista non disponibile.') })
+      .catch((cause) => { if (active) { setDataUnavailable(true); setError(cause instanceof Error ? cause.message : 'Lista non disponibile.') } })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [projectId, baseline.importedAt])
 
   const cards = useMemo(() => buildDeckCards(baseline, catalog, reconciliation), [baseline, catalog, reconciliation])
+  const { groups, usesImportHeadings } = useMemo(() => groupDeckCards(cards, baseline), [cards, baseline])
   const asOf = referenceDate ?? today
   const rotation = useMemo(() => evaluateWesternRotation(baseline, catalog, asOf), [baseline, catalog, asOf])
   const construction = useMemo(() => evaluateDeckConstruction(baseline, catalog), [baseline, catalog])
@@ -77,6 +90,19 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
   const promoByLine = new Map(promoAdmission.lines.map((line) => [line.lineNumber, line]))
   const standardDeck = useMemo(() => evaluateStandardDeck(baseline, catalog, asOf, ruleAudit), [baseline, catalog, asOf, ruleAudit])
   const reviewItems = useMemo(() => reviewSummary(standardDeck.toReview), [standardDeck])
+  const importProblems = baseline.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH')
+  const standardTone = loading || dataUnavailable ? 'neutral' : standardDeck.status === 'problem' ? 'problem' : standardDeck.legality === 'supported' ? 'success' : 'review'
+  const standardLabel = loading ? 'Standard: controllo…' : dataUnavailable ? 'Standard: non disponibile'
+    : standardDeck.status === 'problem' ? `Standard: ${standardDeck.problems.length} ${standardDeck.problems.length === 1 ? 'problema certo' : 'problemi certi'}`
+      : standardDeck.legality === 'supported' ? 'Standard: conforme allo snapshot' : 'Standard: da verificare'
+
+  function jumpToGroup(id: string): void {
+    const heading = document.getElementById(`deck-group-${id}`)
+    const main = heading?.closest('.main-content')
+    if (!heading || !main) return
+    main.scrollTop += heading.getBoundingClientRect().top - main.getBoundingClientRect().top - 20
+    heading.focus({ preventScroll: true })
+  }
 
   async function confirmIdentity(lineNumber: number, printId: string): Promise<void> {
     const line = baseline.lines.find((item) => item.lineNumber === lineNumber)
@@ -89,6 +115,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       })
       if (!result.ok) throw new Error(result.error)
       setReconciliation(result.value)
+      updateConstraintReconciliation(result.value)
       setExpanded(null)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Identità non salvata.') }
     finally { setSaving(false) }
@@ -105,20 +132,32 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       })
       if (!result.ok) throw new Error(result.error)
       setReconciliation(result.value)
+      updateConstraintReconciliation(result.value)
       setExpanded(null)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Correzione non rimossa.') }
     finally { setSaving(false) }
   }
 
-  return <div className="deck-list-body">
+  return <div className="deck-list-body" data-nav-loading={loading}>
     {error && <div className="error-banner" role="alert">{error}</div>}
-    {!loading && !catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
-    <section className={`standard-deck-panel ${standardDeck.status}`} aria-label="Esito Standard occidentale">
-      <strong>Standard: {standardDeck.status === 'problem' ? `${standardDeck.problems.length} ${standardDeck.problems.length === 1 ? 'problema certo' : 'problemi certi'}` :
-        standardDeck.status === 'review' ? 'da verificare' : 'controlli disponibili superati'}</strong>
-      {standardDeck.problems.length > 0 && <div><b>Problemi accertati</b><ul>{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
-      {reviewItems.length > 0 && <details className="standard-explanation"><summary>Controlli da verificare ({reviewItems.length})</summary><ul>{reviewItems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></details>}
-      <details className="standard-explanation"><summary>Copertura, fonti e controlli superati</summary>
+    <section className="standard-deck-panel" aria-label="Esito Standard occidentale">
+      <div className="deck-summary-heading">
+        <div className="deck-summary-title">
+          <h2>Lista principale</h2>
+          <div className="deck-summary-status">
+            <strong data-testid="card-total">{baseline.interpretedTotal} carte</strong>
+            <span className="standard-status" data-tone={standardTone} role="status">{standardLabel}</span>
+          </div>
+        </div>
+        <div className="deck-heading-actions">
+          <ExportButton baseline={baseline} />
+          {!importOpen && <button id="deck-import-trigger" type="button" className="secondary-button" onClick={onImport}>Importa / sostituisci</button>}
+        </div>
+      </div>
+      {standardDeck.problems.length > 0 && <ul className="standard-problems" aria-label="Problemi accertati">{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
+      <details className="standard-details"><summary>Controlli e fonti</summary>
+      {reviewItems.length > 0 && <div className="standard-review"><h3>Da verificare ({reviewItems.length})</h3><ul>{reviewItems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
+      <h3>Copertura e fonti</h3>
       <p>Data {asOf}. Fonti del pacchetto: {ruleAudit?.status === 'matching' ? `coerenti al ${ruleAudit.checkedAt.slice(0, 10)}` : ruleAudit?.status === 'changed' ? 'da rivedere' : ruleAudit?.status === 'unavailable' ? 'non raggiungibili all’ultimo controllo' : 'non ricontrollate da questa installazione'}. {standardDeck.legality === 'supported'
         ? 'La lista è conforme ai controlli Standard coperti dal pacchetto incluso. La verifica riguarda la lista e le stampe riconosciute, non lingua, autenticità o condizioni delle carte fisiche.'
         : standardDeck.legality === 'invalid' ? 'La lista viola almeno una regola Standard verificata.'
@@ -129,21 +168,38 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
       {standardDeck.passed.length > 0 && <details><summary>Controlli superati ({standardDeck.passed.length})</summary><ul>{standardDeck.passed.map((item) => <li key={item}>{item}</li>)}</ul></details>}
       </details>
     </section>
-    <p className="content-note">Apri una carta per vedere stampe e righe importate.</p>
-    {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-list" aria-label="Carte della lista corrente">
-      {cards.map((card) => {
+    {baseline.declaredTotal !== null && baseline.declaredTotal !== baseline.interpretedTotal && <p className="diagnostics">Totale dichiarato: {baseline.declaredTotal}; interpretato: {baseline.interpretedTotal}.</p>}
+    {importProblems.length > 0 && <details className="diagnostics" role="status">
+      <summary>Testo importato · {importProblems.length} {importProblems.length === 1 ? 'problema' : 'problemi'} da correggere</summary>
+      <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
+    </details>}
+    {!loading && !catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
+    <p className="content-note">Apri una carta per leggere il testo di gioco e impostare vincoli.</p>
+    {loading ? <LoadingSkeleton label="Caricamento carte…" /> : <div className="deck-card-groups" aria-label="Carte della lista principale">
+      <nav className="deck-composition" aria-label="Composizione del mazzo">{groups.filter((group) => group.id !== 'unknown' || group.total > 0).map((group) =>
+        group.total > 0 ? <a key={group.id} href={`#deck-group-${group.id}`} onClick={(event) => { event.preventDefault(); jumpToGroup(group.id) }}><span>{group.name}</span><strong>{group.total}</strong></a>
+          : <span key={group.id}><span>{group.name}</span><strong>0</strong></span>
+      )}</nav>
+      {usesImportHeadings && <p className="deck-group-note">Le categorie non riconosciute dal catalogo seguono le sezioni del testo importato.</p>}
+      {groups.filter((group) => group.cards.length > 0).map((group) => <section className="deck-card-group" key={group.id} aria-labelledby={`deck-group-${group.id}`}>
+        <h3 id={`deck-group-${group.id}`} tabIndex={-1}>{group.name}<span>{group.total} {group.total === 1 ? 'carta' : 'carte'}</span></h3>
+        <div className="deck-card-list">{group.cards.map((card) => {
         const open = expanded === card.key
+        const thumbnail = deckThumbnail(card)
         return <article className="deck-card" key={card.key} data-testid={card.identityId ? `deck-card-${card.identityId}` : `deck-line-${card.lines[0].lineNumber}`}>
           <button type="button" className="deck-card-toggle" aria-expanded={open} onClick={() => setExpanded(open ? null : card.key)}>
             <span className="deck-card-quantity">{card.quantity}×</span>
+            <CardThumbnail key={thumbnail} src={thumbnail} />
             <span className="deck-card-title"><strong>{card.name}</strong>{cardStatus(card.status, catalog) && <small>{cardStatus(card.status, catalog)}</small>}</span>
-            <span className="deck-card-chevron" aria-hidden="true">{open ? '−' : '+'}</span>
+            <span className="deck-card-chevron"><Icon name="chevron" /></span>
           </button>
           {open && <div className="deck-card-detail">
-            {card.identityId && <button type="button" className="secondary-button" onClick={() => onConstrain(card.identityId!)}>Aggiungi vincolo su questa carta</button>}
+            <CardOverview card={card} onOpenCatalog={onOpenCatalog} />
+            {card.identityId && <CardConstraints identityId={card.identityId} name={card.name} />}
             {card.staleCorrection && <p className="diagnostics">Una correzione precedente non corrisponde più al catalogo locale. Controlla l’identità prima di usarla nell’analisi.</p>}
             {card.status === 'ambiguous' && <p className="content-note">Le righe restano separate finché non confermi l’identità.</p>}
-            <div className="deck-source-lines"><strong>Nel testo importato</strong>{card.lines.map((line) => {
+            <details className="deck-import-details"><summary>Testo importato e controlli</summary>
+            <div className="deck-source-lines">{card.lines.map((line) => {
               const result = rotationByLine.get(line.lineNumber)
               const setResult = admissionByLine.get(line.lineNumber)
               const promoResult = promoByLine.get(line.lineNumber)
@@ -155,8 +211,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
                   {rotationIssue && <li>Rotazione: {result.message}</li>}
                   {admissionIssue && <li>Ammissione: {admissionResult.message}</li>}
                 </ul></details>}</div>
-            })}</div>
-            {card.prints.length > 0 && <><h3>Stampe e varianti note ({card.prints.length})</h3>
+            })}</div></details>
+            {card.prints.length > 0 && <details className="deck-print-details"><summary>Stampe e varianti ({card.prints.length})</summary>
               <div className="catalog-print-grid">{card.prints.map((print) => <article className="catalog-print" key={print.id}>
                 {print.thumbnail ? <img src={print.thumbnail} alt={`Carta ${print.name}, ${print.setName} ${print.localId}`} /> : <div className="catalog-no-image">Miniatura assente</div>}
                 <div><strong>{print.setName}</strong><span>{print.setId} · N. {print.localId}</span>
@@ -164,7 +220,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
                   {card.importedPrintIds.includes(print.id) && <span className="imported-print">Indicata nel testo importato</span>}
                   <button type="button" className="text-button" onClick={() => void window.projectsApi.openCatalogSource(print.sourceUrl)}>Apri scheda fonte ↗</button>
                 </div>
-              </article>)}</div></>}
+              </article>)}</div></details>}
             {(card.status === 'ambiguous' || card.staleCorrection || card.candidateIdentities.length > 1 ||
               card.lines.some((line) => reconciliation?.mappings.some((item) => item.lineNumber === line.lineNumber))) &&
               <details className="deck-identity-options">
@@ -183,7 +239,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain }: {
               </details>}
           </div>}
         </article>
-      })}
+      })}</div>
+      </section>)}
     </div>}
     <details className="deck-technical"><summary>Rotazione, ammissione e costruzione del mazzo</summary>
     <section className="rotation-panel" aria-label="Controllo della rotazione Standard occidentale">

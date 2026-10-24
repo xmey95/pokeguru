@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const directory = mkdtempSync(join(tmpdir(), 'pokeguru-reconcile-ai-'))
@@ -18,14 +18,16 @@ try {
   await page.getByRole('button', { name: 'Sincronizza campione' }).click()
   await page.getByText('5/5', { exact: true }).first().waitFor({ timeout: 120000 })
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('2 Iono PAL 185\n1 Iono PAL 254\n1 Rare Candy PAF 089')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.locator('.deck-card').filter({ hasText: 'Iono' }).first().waitFor()
   await page.getByRole('button', { name: 'Matchup' }).click()
-  await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
+  await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
-  await page.locator('.matchup-ai-details > summary').click()
+  await page.getByRole('button', { name: 'Modifica configurazione AI' }).click()
   const fastModel = connection.value.models.find((model) => model.id.includes('luna'))
   if (fastModel) {
     await page.getByLabel('Modello', { exact: true }).selectOption(fastModel.id)
@@ -34,8 +36,9 @@ try {
     }
   }
   console.log(`Codex test model: ${fastModel?.id ?? 'automatico'}`)
-  await page.locator('.ai-data-preview summary').click()
-  assert.match(await page.locator('.ai-data-preview pre').textContent(), /3 Iono — identità da testo di gioco coincidente/)
+  await page.getByRole('button', { name: 'Dati inviati', exact: true }).click()
+  await page.locator('.matchup-data-details > summary').click()
+  assert.match(await page.locator('.matchup-data-details pre').first().textContent(), /3 Iono — identità da testo di gioco coincidente/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([
     page.locator('.matchup-fields').getByText('Limiti dell’analisi').waitFor({ timeout: 200000 }),
@@ -44,8 +47,10 @@ try {
     })
   ])
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('2 Iono PAL 185\n2 Rare Candy PAF 089')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.locator('.stale-discussion').getByText('Guida storica · lista o meta precedenti.').waitFor({ timeout: 30000 })
   console.log('LIVE AI APP-006 OK: lista aggregata inviata a Codex; la guida diventa storica dopo cambio lista.')

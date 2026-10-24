@@ -58,6 +58,162 @@
 
 Le decisioni proposte fissano una base di lavoro modificabile. C-01–C-18 in `PRODUCT.md` fissano piattaforma iniziale, Standard, Codex iniziale con scelta AI futura, priorità del circuito competitivo rispetto alla lingua, adozione dell'intera lista da thread paralleli, sezione Matchup con revisioni iterative, configurazione AI nell'app, percorso `dev` → `main` → release GitHub, export immediato negli appunti provato su Limitless e Catalogo globale con aggiornamento rapido o scansione completa, senza gestione delle vecchie stampe fuori formato.
 
+### T-72 — Design system e qualità visiva (APP-083)
+
+Il feedback utente autorizza una rifinitura completa del renderer sul `dev` aggiornato. Token semantici unici, componenti condivisi e layout separato sostituiscono le sovrascritture precedenti. Sans di sistema, corpo 14 px e metadati almeno 12 px; sidebar 224 px e lista fissa 384 px, con dock 220 px sotto 1240 px. Selezione petrolio, proposta viola, incertezza ambra e blocchi rossi con testo esplicito. La creazione iniziale si sposta nel contenuto. Fonti e diagnosi sono consultabili senza precedere il compito principale; errore nel dialogo e ritorno del focus fanno parte del comportamento condiviso. Audit, regole e limiti in `DESIGN_SYSTEM.md`.
+
+Scelte reversibili nel renderer: nessuna modifica a schema, validatori, persistenza o integrazioni. Le prove UI con fixture non certificano le conclusioni AI. La resa Linux e ad alta scala del sistema resta da verificare; merge, I4 e release non inclusi nell'autorizzazione di APP-083.
+
+### T-49 — Lista unica nella vista Lista (APP-084)
+
+Durante la revisione condivisa l'utente riconosce il riepilogo destro come duplicazione nella vista Lista. In questa vista le carte occupano l'area di lavoro disponibile, anche quando la lista è vuota; nessun pannello destro o dock. Thread e Matchup conservano la lista persistente con larghezza e comportamento di T-72. La scelta modifica solo il layout del renderer.
+
+### T-50 — Progetto attivo e selettore ricercabile (APP-085)
+
+L'utente conferma che è sufficiente un selettore. La sidebar mostra il solo progetto attivo; il menu contiene ricerca, tutti i progetti e “Nuovo progetto”. Il menu non occupa spazio quando è chiuso; a finestra stretta si apre da un pulsante dedicato. Popover nativo con chiusura esterna/Escape, focus sulla ricerca e frecce/Invio; nessuna nuova dipendenza o modifica al database.
+
+### T-51 — Righe con miniature e categorie (APP-062)
+
+L'utente sceglie righe con piccole miniature e sezioni Pokémon, Allenatori ed Energie con conteggi. La Lista usa righe intere, miniatura 36×50 px e nome a 16 px; il riepilogo di composizione porta alla categoria scorrendo soltanto il contenuto. I conteggi sono copie effettive delle carte già riconciliate, senza reinterpretare i totali scritti nelle intestazioni.
+
+La categoria del catalogo ha precedenza; in assenza si usano soltanto sezioni esplicite del testo importato, con nota. Categorie ignote o discordanti restano “Da classificare”. La miniatura privilegia una stampa importata, poi una della stessa identità; nessuna inferenza dall'omonimia. Immagine assente/non leggibile: segnaposto neutro delle stesse dimensioni. Nessuna modifica al catalogo di produzione o alle integrazioni; la demo usa il campione acquisito attraverso il connettore esistente.
+
+### T-52 — Riepilogo unico della Lista (APP-063)
+
+L'utente approva un solo riepilogo con totale carte e stato Standard. Nella vista Lista si rimuove il badge “Pronta per controllo”, che dipende dal totale e non dalla validazione. Intestazione neutra con titolo, totale, badge Standard e azioni; “Controlli e fonti” raccoglie dettagli e incertezze. I problemi certi restano fuori dalla disclosure.
+
+L'esito positivo è “Standard: conforme allo snapshot” soltanto quando il validatore restituisce conformità supportata. Campione parziale e casi indeterminati restano da verificare; caricamento e dati non disponibili sono espliciti. Nessun cambio al significato o al calcolo dei validatori; lo stato generico del progetto nelle altre viste sarà oggetto della loro revisione.
+
+### T-53 — Dettaglio della carta orientato al gioco (APP-064)
+
+L'utente approva immagine e testo di gioco prima del vincolo, con stampe, provenienza e diagnostica in sezioni apribili. L'immagine usa la miniatura locale a 180×252 px; il testo affiancato è a 15 px con interlinea 1,65, sotto l'immagine quando il contenuto è stretto. Abilità, attacchi, effetti e caratteristiche sono quelli del catalogo, senza traduzione automatica o ricostruzione.
+
+Il testo proviene da una sola stampa della stessa identità, preferendo quella importata quando contiene gameplay; non si fondono campi di stampe diverse. Immagine e testo hanno ciascuno il proprio riferimento alla stampa. Costi ignoti non diventano gratuiti, ritirata zero resta zero, dati parziali e identità ambigue restano espliciti. Nessuna nuova acquisizione di immagini ad alta risoluzione o modifica al modello.
+
+### T-54 — Vincoli nel contesto della carta (APP-065)
+
+L'utente approva la creazione del vincolo direttamente nel dettaglio carta e il riepilogo generale per modifica/eliminazione. Nel modulo contestuale l'identità è fissata; si scelgono tipo, copie e stampa facoltativa. Il validatore esistente fornisce l'anteprima; un conflitto resta esplicito anche quando l'utente salva il vincolo, conservando il comportamento precedente. Un errore conserva i valori; Annulla/Escape chiudono senza scritture e restituiscono il focus.
+
+Il riepilogo apre la modifica nella riga selezionata e la creazione soltanto su richiesta; resta possibile imporre una carta fuori dalla lista tramite il Catalogo. Un provider del renderer condivide dati e mutazioni tra carta e riepilogo, con blocco dei salvataggi concorrenti; una correzione d'identità aggiorna la valutazione. I contratti IPC, il database e il validatore restano invariati. Lo scorrimento per il focus muove solo l'area di lavoro.
+
+### T-55 — Importazione apribile e annullabile (APP-066)
+
+L'utente approva il modulo su richiesta per liste già caricate e l'accesso immediato nel progetto vuoto. Il comando nell'intestazione apre il modulo sopra le carte, nel flusso della pagina; il testo salvato è precompilato. “Sostituisci lista” esplicita l'effetto del salvataggio. Annulla/Escape ripristinano testo e provenienza salvati, chiudono senza scritture e restituiscono il focus al comando. Dopo un salvataggio riuscito si torna alla lista con conferma breve; il progetto vuoto mostra direttamente il modulo.
+
+Errori di file e salvataggio restano nel modulo e conservano il testo. Un contatore del renderer invalida le letture file ancora pendenti dopo annullamento/cambio progetto; lettura e scrittura disabilitano i controlli pertinenti. Parser, persistenza e IPC restano invariati. Il file di prova simula il ritardo solo per verificare la UI e induce un errore SQLite solo nel profilo temporaneo; non certifica nuove integrazioni.
+
+### T-56 — Selettore Thread e creazione nel contenuto (APP-067)
+
+L'utente approva il selettore unico con titolo e stato accanto a “Nuovo thread”. Il menu usa ricerca, opzioni con titolo a capo, versione di base e stato sintetico; la base superata ha precedenza. Lo stile riprende il selettore progetti e il menu resta entro l'area centrale anche nel layout con dock, senza coprire la lista principale. Tab, frecce, Invio ed Escape permettono la scelta; focus e ricerca vengono ripristinati alla chiusura.
+
+La creazione avviene in un modulo nel contenuto, annullabile senza scritture; il selettore è disabilitato mentre il modulo è aperto. Un errore mantiene i valori e viene portato in vista muovendo solo l'area centrale. Il successo seleziona il nuovo thread e chiude il modulo. Il renderer usa le API esistenti; persistenza, sessioni AI, confronto e adozione non cambiano. La gerarchia tra conversazione e candidata sarà discussa separatamente in APP-068.
+
+### T-57 — Candidata compatta e confronto su richiesta (APP-068)
+
+L'utente approva il riepilogo della candidata con “Apri confronto” e la rimozione del titolo del thread ripetuto. Le variazioni sintetiche usano lo stesso confronto per nome e lo stesso testo normalizzato già mostrati nel dettaglio; copie aggiunte e tolte sono distinte. Nessuna variazione e sole differenze di stampa hanno etichette dedicate. Lo stato descrive proposta nuova, base superata o versione di adozione; il primo impedimento e il conteggio degli altri restano visibili, insieme alle verifiche aperte e all'origine. Lo stato della proposta non certifica la legalità.
+
+Il confronto resta nel flusso della pagina, con liste, fonti e controlli esistenti. L'apertura porta i contenuti in vista quando necessario, muovendo solo l'area centrale; chiusura ed Escape restituiscono il focus al comando. Dopo adozione il focus torna al selettore quando il caricamento è concluso. L'adozione resta esplicita e richiede la conferma dell'intera lista. Le candidate precedenti restano apribili nella cronologia; data di creazione e configurazione AI passano sotto la scrittura. Nessuna modifica a validatori, persistenza o integrazioni.
+
+### T-58 — Campo unico per scrivere nel Thread (APP-069)
+
+L'utente approva un campo con scelta “Discuti” / “Proponi una lista” e “Salva osservazione” distinto. Le due modalità usano radio native e condividono il testo: il cambio modalità non lo cancella. La modalità determina la chiamata AI esistente, l'indicazione sintetica e il pulsante principale; Salva osservazione conserva il testo nel thread senza chiamare Codex. La mancanza di una base del thread continua a impedire la proposta completa ed è spiegata vicino al campo.
+
+Una sola anteprima dei dati è secondaria rispetto alle azioni. Un contatore invalida risposte pendenti quando cambiano testo, modalità o contesto; un'anteprima vecchia non può ripristinare contenuti o errori sul nuovo thread. Durante invio/salvataggio il campo e la modalità sono disabilitati per evitare che il successo cancelli modifiche successive. Gli errori sono nel modulo e conservano la richiesta. Bozze per thread o persistenti non sono introdotte: il cambio thread azzera il campo, come prima. I test con ritardi/risposte AI simulate verificano la UI; osservazioni e errore SQLite usano lo storage reale temporaneo. Nessun cambio alle API di produzione.
+
+### T-59 — Selettore avversario nei Matchup (APP-070)
+
+L'utente approva un selettore ricercabile con nome, quota meta e disponibilità della guida. Le opzioni uniscono gli archetipi dello snapshot e gli avversari presenti nelle discussioni storiche del progetto. I report della base corrente identificano “Guida disponibile”; le discussioni precedenti identificano “Guida storica”. Finché le letture necessarie non sono disponibili, o se falliscono, lo stato è “Disponibilità da verificare”, senza dedurre assenza o attualità della guida. Un avversario solo storico non mostra la vecchia percentuale; aggiornare il meta ne conserva la selezione.
+
+Il menu usa lo stesso stile dei Thread, un popover nativo con ricerca e pulsanti, limitato all'area centrale per lasciare il mazzo consultabile. La ricerca si azzera alla chiusura e l'opzione corrente torna in vista alla riapertura; frecce/Invio, Tab ed Escape sono verificati. Escape viene gestito esplicitamente anche nel campo search compilato. Il nome scelto compare una volta; i punti Limitless passano nei dettagli della fonte. Nessuna modifica a storage, guida/revisioni o integrazioni. Le prove di disponibilità usano report dichiaratamente dimostrativi in SQLite; non attestano qualità o nuove generazioni Codex.
+
+### T-60 — Gerarchia della guida e riferimenti contestuali (APP-071)
+
+Il piano precede carte chiave e approfondimenti; i limiti restano aperti e lo stato storico visibile. Punti forti/rischi e fonti dettagliate sono richiudibili; la provenienza del meta resta accessibile dopo la guida. L'utente richiede hyperlink nei testi: la UI riconosce link Markdown e URL espliciti, oltre ai nomi di carte/eventi associati a riferimenti disponibili. Gli URL nudi supportati assumono etichette brevi; href e tooltip conservano la destinazione.
+
+Nomi completi, confini delle parole e destinazioni univoche evitano collegamenti arbitrari. Le carte riconosciute della base attuale aprono il Catalogo; le fonti salvate in un report e nelle sue revisioni restano quelle di quel report. Non si ricavano fonti storiche dalla lista attuale e non si inventano citazioni a supporto di un'affermazione. Il link serve a consultare il riferimento, senza certificare l'inferenza AI.
+
+Il renderer usa ancore semantiche, senza HTML interpretato né navigazione interna di Electron verso URL esterni. Le route IPC esistenti validano l'apertura di TCGdex e Limitless; protocolli, host o percorsi non supportati restano testo. Errori vicino al link e focus visibile. Non viene introdotto un parser Markdown generale né modificato il prompt di generazione. I test intercettano solo l'apertura finale della shell; IPC e navigazione Catalogo sono reali. La demo conserva guide dichiaratamente dimostrative.
+
+### T-61 — Cronologia di navigazione e stato della sessione (APP-072)
+
+L'utente approva la gestione globale Indietro/Avanti. L'intestazione contiene una sola coppia di controlli, disponibile anche nel layout compatto, con destinazione nel tooltip e Alt+Sinistra/Destra. La cronologia conserva fino a 80 destinazioni nella finestra corrente; una nuova destinazione dopo Indietro elimina il ramo Avanti. Scorrere, scrivere e aprire un dettaglio aggiornano il contesto senza generare ulteriori pagine.
+
+Le destinazioni conservano solo stato di presentazione. Ogni passaggio rilegge i dati dalle API esistenti; non ricrea record né ripete invii o adozioni. I componenti della destinazione sono rimontati con stato di vista conservato, isolando le risposte tardive. Dettagli aperti, scroll dei pannelli e focus vengono ripristinati dopo il caricamento; un'interazione dell'utente interrompe un ripristino ancora in attesa. Elementi non più presenti ricevono un fallback di focus sul contenuto. Il ritorno a progetti o contenuti non disponibili è esplicito.
+
+Bozze e operazioni in corso hanno uno stato di sessione separato per progetto e contenuto: una vecchia voce di cronologia non deve far riapparire come bozza un testo già salvato. Un risultato tardivo può liberare la propria operazione e aggiornare la propria bozza solo se non è stata modificata nel frattempo. I controlli di invio restano disabilitati anche dopo un ritorno durante l'attesa; al completamento vengono riletti i dati salvati. Le bozze non sono persistite su disco, quindi questa attività non anticipa la ripresa estesa I4.
+
+Le fonti esterne sono marcate ↗ e continuano a usare le API validate di apertura nel browser predefinito. Non generano una pagina nella cronologia interna. Nessuna modifica a schema DB, IPC o prompt di generazione. Le verifiche usano archivi temporanei reali, dati di esempio e ritardi dichiarati; la shell esterna è intercettata nel test.
+
+### T-62 — Ultimo scambio e storico della guida (APP-073)
+
+L'utente approva un solo scambio visibile, con i precedenti nello storico. Un componente dedicato presenta osservazione e riepilogo AI con voci distinte; la guida corrente resta sopra. Le versioni precedenti si aprono tramite disclosure native nel flusso, senza contenitori a scorrimento interno. I riferimenti di ogni versione derivano dal proprio report. Il numero delle revisioni precedenti include la guida iniziale; una guida senza osservazioni non mostra uno scambio vuoto né uno storico vuoto.
+
+La revisione ha un'unica azione primaria e la rigenerazione è secondaria. L'invio mostra il commento una sola volta anche prima che il turno sia leggibile dallo storage; dopo un errore usa il turno pendente salvato o mantiene la bozza se il salvataggio non è avvenuto. Stato e messaggio d'errore appartengono alla sessione e al contesto della richiesta: completare dopo una navigazione non lascia un invio fantasma e non cambia un altro avversario. La riprova usa il medesimo ID di turno. Un cambio di focus durante la lettura non viene annullato dal completamento. Nessuna modifica a schema DB, API o generazione.
+
+Le prove di stato controllano le risposte AI e scrivono fixture nell'archivio temporaneo; lettura delle guide, fonti, progetti e navigazione usano i percorsi reali. La demo grafica usa una copia separata del profilo di esempio e il suo snapshot dichiaratamente dimostrativo; l'invio AI è disattivato soltanto nel processo di anteprima, senza modificare il codice di produzione.
+
+### T-63 — Lista persistente sempre completa (APP-074)
+
+Su richiesta dell'utente viene eliminata Vista breve dal pannello laterale e dal dock. Rimane un'unica rappresentazione dell'intera lista per gruppi, con conteggi e scorrimento indipendente. Rimossi stato di sessione, anteprima delle prime cinque carte e stili del comando; larghezze e breakpoint restano quelli approvati. Nessuna modifica ai dati o alla vista Lista principale.
+
+### T-64 — Configurazione e dati Matchup separati per azione (APP-075)
+
+La riga AI vicina all'azione mostra preferenze globali oppure scelta personalizzata. Modifica e Dati inviati aprono pannelli alternativi nel flusso, con Escape e ritorno al comando. I selettori nativi conservano gli override di sessione per progetto/avversario; passare a un altro modello azzera il ragionamento. Un modello temporaneamente non leggibile resta identificato, con possibilità di ricaricare l'elenco.
+
+La sintesi dei dati segue il percorso già implementato nel backend: revisione/riprova riusano lista avversaria ed evidenze della guida se presenti, anche se la lista salvata è vuota; generazione e continuazione acquisiscono il contesto corrente. La rigenerazione ha una disclosure dedicata perché non invia lo stesso contesto di una revisione. La configurazione resta unica. Conteggi, fonte salvata/corrente e indisponibilità sono nel primo livello; dati tecnici e collegamenti nel secondo. Non è una copia esatta del prompt: acquisizione della lista pubblica e arricchimento delle schede possono avvenire all'invio. Nessuna modifica a API, prompt o persistenza. Le prove UI usano risposte controllate in archivi temporanei e non attestano l'integrazione AI.
+
+### T-65 — Ricerca prioritaria e gestione del Catalogo su richiesta (APP-076)
+
+L'utente sceglie di mantenere Aggiorna nuove carte nell'intestazione e raccogliere scansione e controlli in Gestisci catalogo. Il titolo diventa Catalogo, seguito dalla data di acquisizione e dall'eventuale ambito di campione. Ricerca, filtro e risultati precedono i dettagli di manutenzione. Il pannello si apre nel flusso della pagina: include scansione completa, sincronizzazione del campione se pertinente, regole, copertura e metodo. Gli stessi handler e dati vengono riutilizzati senza cambiare la sincronizzazione.
+
+Stato di aggiornamento/pausa, errori, lacune essenziali e fonti cambiate o non raggiungibili restano sempre accessibili fuori dal pannello. La fase dettagliata è nella gestione. Escape/Chiudi riportano il focus al comando; scegliere un set dalla copertura chiude il pannello e focalizza il filtro. Stato e dettagli seguono la cronologia della sessione. I test controllano le risposte della sincronizzazione e dell'audit; non attestano nuove acquisizioni o verifica delle fonti ufficiali. Il dettaglio della carta è rinviato al successivo confronto grafico.
+
+### T-66 — Scheda di gioco prioritaria nel Catalogo (APP-077)
+
+L'utente approva immagine e testo subito visibili, con stampe e metadati negli approfondimenti. `CardFace`, estratto dalla presentazione della Lista senza cambiarne la scelta dei dati, mostra immagine, caratteristiche, abilità, attacchi/effetto e fonte. Il Catalogo gli passa una sola stampa per immagine e testo: prima una scheda completa con immagine, altrimenti la migliore scheda disponibile entro il filtro espansione. Una selezione esplicita prevale finché è compresa nel filtro; il testo di un'altra stampa non riempie i campi mancanti.
+
+Stampe e metadati sono una disclosure nativa chiusa inizialmente. Mostra questa stampa aggiorna la scheda e porta il focus al titolo; la cronologia conserva stampa, disclosure e punto di lettura. Equivalenza incerta, promo da verificare, errori e testo mancante restano visibili. Il vincolo segue la scheda e usa il percorso esistente. Immagine 180×252 px, testo 15 px/1,65; sotto 500 px di spazio nel dettaglio l'immagine precede il testo. Nessun cambio a persistenza, identità, validatori o integrazioni. Prove con fixture UI, regressioni Lista/Matchup e scheda Mega Absol del catalogo già acquisito nella demo.
+
+### T-67 — Eventi: consultazione prima della manutenzione (APP-078)
+
+L'utente approva il riordino di Eventi con selezione, risultati e liste prioritari, mantenendo Play online e Regional distinti. `TournamentWorkspace` condivide intestazione, cambio fonte, azione rapida, gestione e stati; `TournamentDeck` presenta righe a tutta larghezza con quantità, nome e stampa, divise per categoria e conteggi. Il filtro governa anche il dettaglio: nessuna lista non corrispondente resta visibile quando si restringono i risultati. Se un evento non è leggibile, il selettore degli altri rimane disponibile.
+
+La sintesi Copertura e fonti espone partecipanti osservati/dichiarati, liste da 60 e parzialità; al suo interno rimangono data, fonte, lacune e limiti dei risultati. I piazzamenti Regional non diventano percentuali di matchup; abbinamenti Play assenti non sono descritti come zero match osservati. Gestisci eventi apre la scansione completa e il metodo di acquisizione nel normale flusso. Errori, avanzamento e pausa restano esterni; il pulsante di ripresa si abilita alla scadenza della pausa, mostrata con l'orario. Escape richiude la gestione con focus restituito; cronologia e stato sono separati per fonte. Nessun cambiamento a schema, API o acquisizione. Le prove di sincronizzazione sono controllate nel processo di test; la demo contiene record esplicitamente illustrativi.
+
+### T-68 — Impostazioni AI: connessione, scelta e prova distinte (APP-079)
+
+L'utente autorizza la rifinitura grafica delle Impostazioni AI. Una riga di connessione precede il modulo delle preferenze globali; account e accesso restano apribili, compresa la disconnessione con conferma dell'effetto condiviso. Modello e ragionamento usano i nomi del catalogo Codex; il predefinito del provider non viene presentato come consiglio del prodotto.
+
+Il salvataggio è esplicito, con stato della bozza e annullamento. La prova è separata e usa solo le preferenze salvate; stato connesso e disponibilità nel catalogo non sono una prova riuscita. I motivi che bloccano un comando restano visibili. Un modello/livello non più elencato conserva il proprio valore; una lettura fallita non viene presentata come preferenze Automatico salvate. Gli errori delle azioni non sono cancellati da un aggiornamento dello stato Codex. Le letture obsolete non aggiornano la schermata; bozza e operazione in corso sopravvivono alla navigazione. Nessun cambio a IPC, provider, autenticazione, prompt o persistenza; fixture solo nei test e nella demo isolata.
+
+### T-69 — Coerenza finale di linguaggio, stati e componenti (APP-080)
+
+La revisione finale richiesta dall'utente conserva layout e scelte condivise. Lista principale diventa il termine unico per il mazzo adottato. In Thread/Matchup lo stato appartiene al pannello persistente: viene rimosso il duplicato verde nell'intestazione, che poteva suggerire una validazione positiva. Titoli interni dei pannelli a 20 px e livello h2 per i dettagli Catalogo/Eventi; annullamento testuale nei moduli, pulsante secondario nel dialogo di adozione.
+
+Catalogo e le due fonti Eventi condividono lo stato di ricerca vuota: un messaggio, Azzera filtri quando applicabile, focus restituito al campo e torneo conservato. Le scelte AI esplicite dei Thread restano visibili quando il catalogo modelli non le contiene; ricarica e incertezza seguono la presentazione di Matchup/Impostazioni AI. Errore e avviso non ripetono la stessa causa. Nessun cambiamento a IPC, prompt, autenticazione, validatori o database. Le verifiche e la demo usano archivi separati e fixture dichiarate; evidenze in `UI_FINAL_REVIEW.md`.
+
+### T-70 — Caricamento contestuale e avanzamento misurato (APP-081)
+
+L'utente autorizza il miglioramento dei loader dell'app, inclusi Catalogo, Eventi e Codex. Apertura senza dati: segnaposto strutturali non interattivi con etichetta di stato. Aggiornamento: contenuto già acquisito consultabile e riquadro attività nella pagina, senza overlay. Operazioni brevi: spinner nello stesso controllo.
+
+Il Catalogo usa `acquired/expected` del job esistente; l'inventario senza totale non mostra una barra. Play e Regional mostrano solo conteggi ricevuti dalle API esistenti: il totale degli eventi non è noto. Codex mostra attesa e tempo trascorso, senza inventare percentuali, ragionamenti, fasi o durata restante. Il timer e l'operazione sono dati di sessione distinti dalla cronologia; ritornare nella vista non avvia una nuova richiesta. Pausa, cooldown, completamento ed errore hanno stati distinti; la ripresa Catalogo è disponibile accanto allo stato.
+
+Polling seriale con cleanup e risposte obsolete ignorate; animazione disattivata con movimento ridotto. Le etichette di attività sono live region, mentre secondi e contatori non vengono annunciati a ogni aggiornamento. Nessun nuovo canale di streaming, cancellazione remota, provider o modifica di archivio. Verifiche e demo isolate in `UI_LOADING_REVIEW.md`.
+
+### T-71 — Identità vettoriale unica per app e pacchetti (APP-082)
+
+L'utente autorizza creazione e integrazione del logo, compresa la favicon. Simbolo originale con due carte sovrapposte e G, palette petrolio/menta e accento oro. Il nome resta testo nell'interfaccia; nelle icone piccole compare solo il simbolo. Le proporzioni sono quadrate a ogni breakpoint e il nome accessibile non viene duplicato.
+
+Un master SVG in `resources/brand` genera gli asset PNG/ICO con Electron/Chromium già installato, senza dipendenze aggiuntive. I derivati sono versionati e vengono rigenerati con `npm run brand:generate`; nessun costo di rasterizzazione durante la build ordinaria. Favicon relative compatibili con `file://`, icona della finestra inclusa come risorsa esterna all'asar, ICO esplicito per Windows e PNG per Linux. AppId e dati dell'utente invariati.
+
+Pacchetto Windows locale, icona incorporata e caricamento delle favicon verificati; Linux e installer NSIS non attestati in esecuzione. Dettagli e limiti in `BRAND.md`. Nessun merge o release.
+
+### T-73 — Integrazione del redesign con le correzioni parallele (APP-086)
+
+L'utente autorizza il merge completo in dev. Il redesign incorpora prima le PR #8–10 già pubblicate: la nuova presentazione delle carte conserva la regola dei Premi, il raggruppamento Lista riconosce le intestazioni italiane e il Catalogo mostra gli esiti di audit solo per la versione corrente del pacchetto. Persistenza, regole e selezione delle schede delle varianti restano quelle corrette in dev.
+
+Gli ID pubblicati APP-059–061 e T-48 restano stabili. Le collisioni del ramo locale del redesign sono disambiguate come APP-083–085 e T-72, con corrispondenza esplicita nel backlog. Il merge avviene tramite PR dopo i check obbligatori Linux/Windows e senza derogare alle protezioni. Nessuna nuova release o avvio di I4.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

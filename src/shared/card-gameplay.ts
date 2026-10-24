@@ -64,10 +64,14 @@ export function hasComparableGameplay(category: string | null, stage: string | n
 }
 
 /** Prize rules are printed on cards but omitted by the TCGdex gameplay fields. */
+export function prizeCardsOnKnockOut(card?: { name: string; category: string | null }): number | null {
+  return card?.category === 'Pokemon' && /\sex$/u.test(card.name)
+    ? (card.name.startsWith('Mega ') ? 3 : 2) : null
+}
+
 export function gameplaySummary(gameplay: CardGameplay,
   card?: { name: string; category: string | null }): string {
-  const prizes = card?.category === 'Pokemon' && /\sex$/u.test(card.name)
-    ? (card.name.startsWith('Mega ') ? 3 : 2) : null
+  const prizes = prizeCardsOnKnockOut(card)
   const pieces = [
     gameplay.hp === null ? '' : `HP ${gameplay.hp}`,
     gameplay.types.length ? `tipi ${gameplay.types.join('/')}` : '',

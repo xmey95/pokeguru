@@ -20,7 +20,7 @@ Nella sezione **Thread**, apri una candidata per confrontare la lista completa c
 
 ## Workspace in sviluppo (APP-052)
 
-Sul ramo `task/desktop-redesign-integration`, **Lista**, **Thread** e **Matchup** sono nella navigazione laterale larga 208 px. La lista principale salvata resta visibile accanto al compito attivo: il pannello è largo **384 px** oltre 1240 px di finestra e scorre indipendentemente; a 1240 px o meno diventa un dock inferiore persistente. La finestra si apre a 1280×800 e può scendere fino a 640 px di larghezza. **Vista breve** mantiene totale, stato e prime carte. La creazione di altri progetti si apre da **Nuovo progetto**; quando il progetto è vuoto e la finestra è stretta, **Inizia un progetto** apre il modulo nel contenuto. Catalogo, Eventi e Impostazioni AI sono nelle risorse della stessa barra. Questo ramo non è incluso nella release v0.1.0.
+Sul ramo `task/desktop-redesign-integration`, **Lista**, **Thread** e **Matchup** sono nella navigazione laterale larga 208 px. La lista principale salvata resta visibile accanto al compito attivo: il pannello è largo **384 px** oltre 1240 px di finestra e scorre indipendentemente; a 1240 px o meno diventa un dock inferiore persistente. La finestra si apre a 1280×800 e può scendere fino a 640 px di larghezza. Con APP-074, il pannello mostra sempre l'intera lista per gruppi, con totale e stato. La creazione di altri progetti si apre da **Nuovo progetto**; quando il progetto è vuoto e la finestra è stretta, **Inizia un progetto** apre il modulo nel contenuto. Catalogo, Eventi e Impostazioni AI sono nelle risorse della stessa barra. Questo ramo non è incluso nella release v0.1.0.
 
 In **Thread**, crea un percorso da **Nuovo thread** e usa **Incolla manualmente una candidata completa** oppure la proposta Codex. La candidata più recente mostra lista principale, lista proposta e differenze; il comando di adozione apre una conferma dell'intera lista. Una base superata impedisce l'adozione. Per provare il confronto importa `examples/workspace-principale.txt`, poi incolla `examples/workspace-proposta.txt` come candidata manuale. Sono liste di esempio per l'interfaccia, non liste competitive verificate: molte stampe non sono indicate e i controlli potrebbero impedirne l'adozione. In **Matchup**, cerca un avversario per nome: piano, limiti e carte chiave precedono la configurazione AI; la lista principale resta nel pannello fisso. `npm run test:workspace-ui` verifica le tre viste in Electron con archivio temporaneo: la guida usata da questo test è una fixture dichiarata, non una generazione Codex. La prova automatica copre 1440×900, 1280×720, la soglia responsive a 1241/1240×720, 1024×768 e 640×720, più le risorse globali a 640×580; per un controllo manuale avvia `npm run dev` con Node 24 e prova a ridimensionare la finestra.
 
@@ -30,11 +30,61 @@ Sul ramo `task/content-hierarchy`, derivato dal workspace integrato, la Lista mo
 
 L'integrazione del workspace e dei testi in `dev` è tracciata dalla [PR #4](https://github.com/xmey95/pokeguru/pull/4). `main` e la release v0.1.0 non cambiano con questa PR.
 
+### Design system (APP-083)
+
+La revisione condivisa APP-084 elimina il riepilogo duplicato nella vista **Lista**, che usa ora l'area disponibile. Il pannello fisso e il dock descritti sotto rimangono in **Thread** e **Matchup**.
+
+APP-085 sostituisce l'elenco permanente dei progetti con un **selettore in alto**: clic sul progetto attivo per cercare gli altri o crearne uno nuovo. Nella barra compatta il selettore usa un pulsante dedicato.
+
+APP-062 organizza la **Lista** in righe con miniature e sezioni **Pokémon, Allenatori ed Energie**, con conteggi delle copie e riepilogo cliccabile. Le immagini disponibili provengono dal catalogo locale; quelle mancanti hanno un segnaposto. Le categorie seguono il catalogo o, con nota, le intestazioni dell'import; i casi ignoti restano “Da classificare”.
+
+APP-063 riunisce **totale e stato Standard** nell'intestazione della Lista, sostituendo il badge “Pronta per controllo”. **Controlli e fonti** apre gli approfondimenti; i problemi certi restano subito visibili.
+
+APP-064 mostra nel **dettaglio della carta** immagine, abilità, attacchi o effetto, poi il vincolo. Stampe e controlli sono apribili; testi in inglese dal catalogo locale e dati mancanti espliciti.
+
+APP-065 apre **Aggiungi vincolo** direttamente nella carta, con anteprima di esito e conflitti. Il riepilogo si aggiorna al salvataggio e consente modifica nella riga ed eliminazione. Annulla/Escape chiudono il modulo senza scritture; gli errori conservano i valori inseriti.
+
+APP-066 mostra l'importazione su richiesta da **Importa / sostituisci**, sopra la lista, con testo precompilato e **Annulla**. Nei progetti vuoti il modulo è subito disponibile. Il salvataggio chiude il modulo; errori e letture file pendenti conservano l'isolamento fra progetti.
+
+APP-067 riunisce i **Thread** in un selettore con ricerca, titolo e stato, accanto a **Nuovo thread**. La creazione apre un modulo nel contenuto, annullabile con il pulsante o Escape. La lista principale resta consultabile anche quando il selettore è aperto.
+
+APP-068 mostra la candidata corrente in un **riepilogo compatto**, con stato, copie cambiate e controlli essenziali. **Apri confronto** espande liste, differenze, fonti e adozione manuale; Escape o **Chiudi confronto** riportano al riepilogo. Il titolo del thread compare nel solo selettore e la conversazione precede i dettagli AI.
+
+APP-069 usa un unico campo per **Discuti / Proponi una lista**, conservando il testo al cambio modalità. **Salva osservazione** registra il testo senza chiamare Codex; l'anteprima dei dati è unica. Errori contestuali conservano la richiesta e le anteprime tardive vengono ignorate dopo un cambio di contesto.
+
+APP-070 riunisce gli avversari **Matchup** in un selettore con ricerca, quota meta e stato della guida. Gli avversari storici restano consultabili senza presentare una vecchia quota come attuale. Il menu lascia visibile il mazzo; frecce e Invio selezionano, Escape chiude e restituisce il focus.
+
+APP-071 porta il **piano Matchup** in primo piano e rende punti forti, rischi e fonti dettagliate apribili. I testi della guida e delle revisioni contengono **link contestuali** a carte, eventi e fonti disponibili; lo storico conserva i propri riferimenti. Nella demo, cerca “fixture UI” e prova i link a Mega Absol ex e Mega Audino ex.
+
+APP-072 aggiunge **Indietro / Avanti** nell'intestazione e **Alt+← / Alt+→**. Il ritorno recupera selezione, dettagli aperti, filtri, bozze, scorrimento e focus. Le bozze restano separate per progetto e contenuto; i messaggi già salvati non ricompaiono nel campo di scrittura. I link **↗** aprono il browser esterno e lasciano intatta l'app. Cronologia (fino a 80 destinazioni) e bozze durano per la sessione: chiudendo l'app vengono azzerate. `node tests/matchup-switcher-ui-live.mjs --navigation` verifica i percorsi con archivio temporaneo, guide di esempio e operazioni reali di salvataggio.
+
+Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con token condivisi, tipografia sans, icone SVG, controlli leggibili e stati coerenti. La sidebar desktop è larga **224 px**; la lista principale rimane fissa a **384 px**, con dock di 220 px sotto la soglia di 1240 px. Il primo progetto si crea nell'area centrale. Metadati e metodo precedono meno spesso carte, differenze e strategia; focus e scorrimento sono verificati anche da tastiera.
+
+L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.
+
+APP-073 rifinisce **Discussione** nelle guide Matchup: ultimo scambio sempre visibile, osservazione e risposta Codex distinte, **Aggiorna guida** come azione principale. **Revisioni precedenti (N)** raccoglie lo storico e **Leggi versione** apre le vecchie guide senza scorrimenti annidati. Attesa, errore e riprova restano accanto al commento; la guida valida resta disponibile. `node tests/matchup-switcher-ui-live.mjs --discussion --navigation` verifica questi stati e il ritorno al contesto con risposte AI simulate e archivio temporaneo.
+
+APP-075 separa **Modifica** della configurazione AI e **Dati inviati** vicino all'azione Matchup. Una scelta locale resta visibile come **Personalizzata**. La sintesi distingue fonti salvate della revisione e archivio corrente di rigenerazione/nuova base; **Dettagli e fonti** raccoglie il contenuto tecnico. **Dati per rigenerare** descrive l'invio della nuova guida. `node tests/matchup-switcher-ui-live.mjs --ai-options --discussion --navigation` verifica il flusso con risposte controllate, senza nuove chiamate AI.
+
+APP-076 porta ricerca e risultati del **Catalogo** subito sotto l'intestazione. **Aggiorna nuove carte** resta visibile; **Gestisci catalogo** raccoglie scansione completa, campione, copertura e regole. Avvisi e avanzamento restano visibili a pannello chiuso. Scegliere un set dalla copertura riporta ai risultati filtrati; Escape richiude la gestione. `node tests/catalog-ui-live.mjs` verifica il percorso con archivio temporaneo e risposte di sincronizzazione controllate.
+
+APP-077 porta **immagine e testo di gioco** nel primo livello del dettaglio Catalogo, con la stessa presentazione della Lista. **Stampe e metadati** raccoglie varianti e provenienza e permette di scegliere la stampa visualizzata; immagine, testo e fonte restano coerenti con la scelta e il filtro espansione. Dati mancanti e incertezze sono espliciti; il vincolo segue il testo. `node tests/catalog-card-ui-live.mjs` verifica schede, selezione, tastiera, navigazione e layout con dati di prova isolati.
+
+APP-078 riordina **Eventi**: **Play online / Regional** condividono intestazione, selezione del torneo e filtro giocatore/mazzo. Risultati e liste precedono gli approfondimenti, con conteggi Pokémon/Allenatori/Energie. **Copertura e fonti** mostra una sintesi con denominatori e apre provenienza/metodo; **Gestisci eventi** contiene la scansione completa. Errori e pausa restano visibili. `node tests/tournament-ui-live.mjs --offline` verifica entrambi i percorsi con dati di esempio e risposte di sincronizzazione controllate; `--keep-profile` conserva l'archivio temporaneo per una prova manuale.
+
+APP-079 riordina **Impostazioni AI**: stato Codex compatto, modello/ragionamento, **Salva preferenze** e **Annulla modifiche**. **Esegui prova AI** usa la configurazione salvata e spiega eventuali blocchi; account, disponibilità e dati inviati sono negli approfondimenti. Errori e scelte non più disponibili restano visibili. `node tests/ai-settings-ui-live.mjs` verifica il percorso con account/richieste simulati e preferenze temporanee; `node tests/ai-settings-offline.mjs` verifica la CLI assente.
+
+APP-080 completa la [revisione grafica finale](docs/UI_FINAL_REVIEW.md): terminologia **Lista principale**, titoli e azioni coerenti, stato del mazzo senza duplicati, ricerche vuote recuperabili e selettori AI dei Thread che conservano le scelte non disponibili. Il rapporto raccoglie la matrice delle sezioni, le schermate responsive e le verifiche eseguite su Windows. Il checkpoint resta sul ramo locale, prima di I4.
+
+APP-081 uniforma [caricamenti e attività in corso](docs/UI_LOADING_REVIEW.md): segnaposto iniziali, avanzamento misurato del Catalogo con ripresa dalla pausa, conteggi di Play/Regional e tempo trascorso durante le richieste Codex. Carte e guide salvate restano consultabili; tornando nella sezione si ritrova lo stato dell'operazione. Nessuna percentuale AI o durata restante inventata. `node tests/loading-startup-ui.mjs` prova apertura, totale ignoto, errore e recupero del polling con ritardi controllati.
+
 ## Versione scaricabile
 
 Scarica [Pokéguru v0.1.0](https://github.com/xmey95/pokeguru/releases/tag/v0.1.0): `Pokeguru-0.1.0-linux-x86_64.AppImage` su Linux oppure `Pokeguru-0.1.0-windows-x64-setup.exe` su Windows. Il file `SHA256SUMS.txt` permette di controllare il download. Su Linux rendi eseguibile l'AppImage (`chmod +x`) e avviala; su Windows usa l'installer. I pacchetti iniziali non sono firmati digitalmente. La [prova della validazione Standard occidentale](#prova-della-validazione-standard-occidentale) e le prove dei thread più avanti descrivono i percorsi da verificare prima di I4.
 
 ## Avvio per sviluppo
+
+Il logo, la favicon e le icone desktop derivano da `resources/brand/pokeguru.svg`. Per rigenerare gli asset: `npm run brand:generate`; usi, formati e verifiche in [Identità visiva](docs/BRAND.md).
 
 Servono Node.js **24 o successivo** e npm. Su Linux serve un ambiente desktop; i comandi sono gli stessi su Linux e Windows, dalla radice del repository:
 

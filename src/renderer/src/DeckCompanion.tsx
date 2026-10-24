@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { LoadingSkeleton } from './Loading'
+import { useMemo } from 'react'
 import type { DeckBaseline, DeckLine } from '../../shared/deck-import'
 
 interface DeckGroup {
@@ -42,28 +43,21 @@ function deckState(baseline: DeckBaseline | null, loading: boolean): string {
 }
 
 export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | null; loading: boolean }) {
-  const [brief, setBrief] = useState(false)
   const groups = useMemo(() => baseline ? groupCards(baseline) : [], [baseline])
   const namedGroups = groups.filter((group) => group.name !== 'Carte importate')
-  const preview = groups.flatMap((group) => group.lines).slice(0, 5)
-  return <aside className={`deck-companion ${brief ? 'brief' : ''}`} aria-label="Lista principale persistente" data-testid="deck-companion">
+  return <aside className="deck-companion" aria-label="Lista principale persistente" data-testid="deck-companion">
     <div className="companion-top">
       <h2>Lista principale</h2>
-      <button type="button" className="companion-view-button" onClick={() => setBrief((value) => !value)}>
-        {brief ? 'Vista completa' : 'Vista breve'}
-      </button>
     </div>
     <div className="companion-summary">
-      <div className="companion-total"><strong>{baseline?.interpretedTotal ?? 0}<span>/60</span></strong><span className="companion-state">{deckState(baseline, loading)}</span></div>
+      <div className="companion-total"><strong>{baseline?.interpretedTotal ?? 0}<span>/60</span></strong><span className="companion-state" data-tone={baseline && (baseline.interpretedTotal !== 60 || baseline.diagnostics.some((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH')) ? 'warning' : 'neutral'}>{deckState(baseline, loading)}</span></div>
       {namedGroups.length > 0 ? <div className="companion-counts">{namedGroups.map((group, index) =>
         <div key={`${group.name}-${index}`}><strong>{group.total}</strong><span>{group.name}</span></div>)}</div>
         : baseline && <p className="companion-count-note">Sezioni non indicate nel testo.</p>}
     </div>
-    <div className="companion-list" aria-label={brief ? 'Prime carte della lista principale' : 'Carte della lista principale'}>
-      {loading ? <p>Caricamento lista…</p> : !baseline ? <p>Aggiungi una lista dalla sezione Lista.</p>
-        : brief ? <section className="companion-group"><h3>Prime carte</h3>{preview.map((line) => <div className="companion-row" key={line.lineNumber}>
-          <strong>{line.quantity}</strong><span title={line.name}>{line.name}</span></div>)}</section>
-          : groups.map((group, index) => <section className="companion-group" key={`${group.name}-${index}`}>
+    <div className="companion-list" tabIndex={0} role="region" aria-label="Carte della lista principale">
+      {loading ? <LoadingSkeleton label="Caricamento lista…" rows={3} /> : !baseline ? <p>Aggiungi una lista dalla sezione Lista.</p>
+        : groups.map((group, index) => <section className="companion-group" key={`${group.name}-${index}`}>
             <h3>{group.name}<span>{group.total}</span></h3>
             {group.lines.map((line) => <div className="companion-row" key={line.lineNumber}>
               <strong>{line.quantity}</strong><span title={line.name}>{line.name}</span>

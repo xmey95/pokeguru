@@ -1,3 +1,4 @@
+import { auditDesignSystem } from './design-system-audit.mjs'
 import assert from 'node:assert/strict'
 import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -5,6 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { catalogManagementScenarios } from './catalog-management-scenarios.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -18,13 +20,17 @@ try {
   application = await launch()
   let page = await application.firstWindow()
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
-  await page.getByRole('heading', { name: 'Carte e ristampe' }).waitFor()
+  await page.getByRole('heading', { name: 'Catalogo', exact: true }).waitFor()
   assert.equal(await page.getByRole('button', { name: 'Aggiorna nuove carte' }).count(), 1)
-  assert.equal(await page.getByRole('button', { name: 'Scansione completa' }).count(), 1)
+  assert.equal(await page.getByRole('button', { name: 'Scansione completa' }).count(), 0)
+  await page.getByText('Catalogo vuoto.', { exact: false }).waitFor()
+  await page.getByRole('button', { name: 'Gestisci catalogo' }).click()
+  await page.getByRole('button', { name: 'Sincronizza campione' }).waitFor()
+  await page.getByRole('button', { name: 'Chiudi gestione' }).click()
   assert.equal(await page.getByLabel('Nome progetto').count(), 0)
   await page.getByRole('button', { name: 'Impostazioni AI' }).click()
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
-  await page.getByRole('heading', { name: 'Carte e ristampe' }).waitFor()
+  await page.getByRole('heading', { name: 'Catalogo', exact: true }).waitFor()
   await application.close()
   application = undefined
 
@@ -60,12 +66,16 @@ try {
   application = await launch()
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
-  await page.getByText(/Copertura per set ·/).waitFor()
-  for (const [width, height] of [[1440, 900], [1280, 720]]) {
+  await page.getByLabel('Cerca carta o stampa').waitFor()
+  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
     await page.setViewportSize({ width, height })
     assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
+    await auditDesignSystem(page, 'Design system '+width)
+    const firstResult = await page.locator('.catalog-list > button').first().boundingBox()
+    assert.ok(firstResult && firstResult.y + firstResult.height < height, 'Primo risultato fuori dalla prima schermata')
     await page.screenshot({ path: join(workspace, 'node_modules', `content-catalog-${width}.png`) })
   }
+  await page.getByRole('button', { name: 'Gestisci catalogo' }).click()
   await page.getByText(/Copertura per set ·/).click()
   const table = page.getByRole('table', { name: 'Copertura Standard per set' })
   await table.waitFor()
@@ -79,11 +89,23 @@ try {
   assert.match(await table.textContent(), /Set A.*1.*1.*0/s)
   assert.match(await table.textContent(), /New Promos.*1.*0.*1/s)
   await table.getByRole('button', { name: /Set A/ }).click()
+  assert.equal(await page.locator('#catalog-management').isVisible(), false)
+  await page.waitForFunction(() => document.activeElement?.id === 'catalog-set-filter')
   await page.getByRole('button', { name: /Carta A/ }).click()
-  await page.getByText('Regole di gioco', { exact: true }).click()
-  assert.match(await page.locator('.catalog-detail').textContent(), /Search your deck for a Pokémon/)
+  await page.locator('.catalog-detail').getByText('Search your deck for a Pokémon.', { exact: true }).waitFor({ state: 'visible' })
+  await page.getByRole('button', { name: 'Gestisci catalogo' }).click()
+  await page.getByText(/Copertura per set ·/).click()
   await table.getByRole('button', { name: /New Promos/ }).click()
   assert.equal(await page.getByLabel('Espansione').inputValue(), 'nvp')
+  await catalogManagementScenarios(page, application, workspace)
+  await page.getByLabel('Cerca carta o stampa').fill('nessuna-carta-fixture')
+  await page.locator('.search-empty').getByRole('status').waitFor()
+  assert.equal(await page.locator('.catalog-detail').count(), 0)
+  await page.getByRole('button', { name: 'Azzera filtri' }).focus()
+  await page.keyboard.press('Enter')
+  assert.equal(await page.getByLabel('Cerca carta o stampa').inputValue(), '')
+  assert.equal(await page.getByLabel('Espansione').inputValue(), 'all')
+  assert.ok(await page.getByLabel('Cerca carta o stampa').evaluate(el => el === document.activeElement))
   console.log('E2E catalogo OK: accesso globale, copertura per set e filtro senza progetto.')
 } finally {
   if (application) await application.close()

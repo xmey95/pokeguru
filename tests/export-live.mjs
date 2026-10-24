@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -17,20 +17,26 @@ try {
     env: { ...process.env, POKEGURU_DATA_DIR: join(temporary, 'profile') }, timeout: 30000 })
   const page = await application.firstWindow()
   await createProjectFromStart(page, 'Verifica export')
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(input)
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   const expected = 'Trainer: 3\n2 Iono PAL 185\n1 Iono PAL 254\n1 Rare Candy PAF 089\n\nTotal Cards: 4\n'
   await page.getByRole('button', { name: 'Copia export' }).click()
   await page.getByText('Export copiato negli appunti.').waitFor()
   assert.equal(await application.evaluate(({ clipboard }) => clipboard.readText()), expected)
   assert.equal(await page.getByRole('region', { name: 'Esporta lista' }).count(), 0)
 
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(expected)
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').getByText('4 carte').waitFor()
-  assert.equal(await page.getByLabel('Testo lista').inputValue(), expected)
+  assert.equal(await page.locator('.original-text pre').textContent(), expected)
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('2 Iono PAL 185\n? carta dubbia')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: 'Copia export' }).click()
   await page.getByRole('alert').getByText('Correggi le righe non interpretate prima di esportare.').waitFor()
   assert.equal(await application.evaluate(({ clipboard }) => clipboard.readText()), expected)

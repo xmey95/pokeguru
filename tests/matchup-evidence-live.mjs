@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const directory = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-event-live-'))
@@ -15,8 +15,10 @@ try {
     cwd: resolve(import.meta.dirname, '..'), env: { ...process.env, POKEGURU_DATA_DIR: directory } })
   const page = await application.firstWindow()
   await createProjectFromStart(page, 'Prova fonti Matchup')
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('Pokémon: 4\n4 Mega Absol ex MEG 86\nTrainer: 8\n4 Rare Candy\n4 Iono')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '12 carte' }).waitFor()
   await page.getByRole('button', { name: 'Eventi' }).click()
   const tournament = await page.evaluate(() => window.projectsApi.refreshTournament())
@@ -30,15 +32,20 @@ try {
   const match = meta.value.decks.find((deck) => tournament.value.participations.some((entry) =>
     entry.deck && slug(entry.deck.id) === slug(deck.name) && entry.cardTotal === 60))
   assert.ok(match, 'Nessun archetipo con ID coerente e lista completa nel torneo corrente')
-  await page.locator('.meta-deck-list .meta-deck').filter({ hasText: match.name }).first().click()
-  assert.match(await page.locator('.ai-data-preview').textContent(), /liste complete dell’archetipo/)
+  await page.locator('#matchup-switcher-trigger').click()
+  await page.getByLabel('Cerca avversario').fill(match.name)
+  await page.locator('.matchup-option').filter({ hasText: match.name }).first().click()
+  await page.getByRole('button', { name: 'Dati inviati', exact: true }).click()
+  await page.locator('.matchup-data-details > summary').click()
+  assert.match(await page.locator('.matchup-data-details').textContent(), /liste complete dell’archetipo/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([
-    page.getByRole('region', { name: 'Evidenze torneo del matchup' }).waitFor({ timeout: 200000 }),
+    page.locator('.guide-sources > summary').waitFor({ timeout: 200000 }),
     page.getByRole('alert').waitFor({ timeout: 200000 }).then(async () => {
       throw new Error(`Analisi non generata: ${await page.getByRole('alert').textContent()}`)
     })
   ])
+  await page.locator('.guide-sources > summary').click()
   const evidenceText = await page.getByRole('region', { name: 'Evidenze torneo del matchup' }).textContent()
   assert.match(evidenceText, /liste complete dell’archetipo/)
   assert.match(evidenceText, /Carte osservate/)

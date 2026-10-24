@@ -1,0 +1,141 @@
+import assert from 'node:assert/strict'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { createRequire } from 'node:module'
+import { DatabaseSync } from 'node:sqlite'
+import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
+import { auditDesignSystem } from './design-system-audit.mjs'
+
+const require = createRequire(import.meta.url)
+const workspace = resolve(import.meta.dirname, '..')
+const profile = mkdtempSync(join(tmpdir(), 'pokeguru-catalog-card-ui-'))
+const now = new Date().toISOString()
+const empty = { hp: null, types: [], evolveFrom: null, attacks: [], abilities: [], effect: null,
+  trainerType: null, weaknesses: [], resistances: [], retreat: null }
+const artwork = 'data:image/svg+xml;base64,' + Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="252"><rect width="180" height="252" rx="10" fill="#c6ded6"/><rect x="12" y="24" width="156" height="100" fill="#698e86"/><path d="M16 148h148M16 168h126M16 188h138M16 208h110" stroke="#304b47" stroke-width="6"/></svg>').toString('base64')
+// Synthetic cards and text for layout/state checks; no competitive assertions or remote acquisition.
+const pokemon = { ...empty, hp: 280, types: ['Darkness'], retreat: 0,
+  attacks: [{ name: 'Attacco di prova', cost: ['Darkness', 'Colorless'], damage: '120+', effect: 'UI fixture: a readable attack effect.' }],
+  abilities: [{ name: 'Abilità di prova', type: 'Ability', effect: 'UI fixture: a readable ability effect.' }],
+  weaknesses: [{ type: 'Grass', value: '×2' }] }
+function seed() {
+  const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
+  try {
+    for (const [id, name] of [['me01', 'Set A · fixture'], ['me02.5', 'Set B · fixture']]) db.prepare(
+      'INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at) VALUES (?, ?, 10, 5, ?)').run(id, name, now)
+    for (const [id, name, category, gameplay, image, basis, extra] of [
+      ['me01-001', 'Pokémon di prova', 'Pokemon', null, 'data:image/png;base64,broken', 'pokemon-text', {}],
+      ['me02.5-002', 'Pokémon di prova', 'Pokemon', pokemon, artwork, 'pokemon-text', {}],
+      ['me01-003', 'Allenatore di prova', 'Trainer', { ...empty, trainerType: 'Supporter', effect: 'UI fixture: search your deck for a Pokémon.\nThen shuffle your deck.' }, artwork, 'trainer-text', {}],
+      ['me01-004', 'Energia Base di prova', 'Energy', empty, null, 'energy-text', { energyType: 'Basic' }],
+      ['me01-005', 'Energia speciale di prova', 'Energy', { ...empty, effect: 'UI fixture: this card provides Darkness Energy.' }, null, 'energy-text', { energyType: 'Special' }],
+      ['me01-006', 'Carta parziale di prova', 'Pokemon', { ...pokemon, attacks: [{ name: 'Costo ignoto', cost: null, damage: '0', effect: null }] }, null, 'unverified', {}],
+      ['me01-007', 'Promo di prova', 'Trainer', null, null, null, { isPromo: true,
+        promoStatus: { state: 'upcoming', legalDate: '2027-01-01', dateNote: null, checkedAt: now }, error: 'Fixture: scheda non acquisita.' }]
+    ]) {
+      const setId = id.split('-')[0]
+      const print = { id, setId, setName: setId === 'me01' ? 'Set A · fixture' : 'Set B · fixture', localId: id.split('-')[1],
+        name, category, rarity: 'Rare · fixture', variants: { holo: true }, identityId: name, identityBasis: basis,
+        gameplay, stage: category === 'Pokemon' ? 'Basic' : null, imageBase: null, thumbnail: image,
+        highImageAvailable: null, sourceUpdated: now, sourceUrl: 'https://api.tcgdex.net/v2/en/cards/' + id,
+        detailAt: now, error: null, isPromo: false, regulationMark: 'I', ...extra }
+      db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(id, setId, JSON.stringify(print))
+    }
+    db.prepare('INSERT INTO catalog_sync VALUES (1, ?)').run(now)
+  } finally { db.close() }
+}
+let application
+try {
+  application = await electron.launch({ executablePath: require('electron'), args: ['.'], cwd: workspace,
+    env: { ...process.env, POKEGURU_DATA_DIR: profile }, timeout: 30000 })
+  const page = await application.firstWindow()
+  page.setDefaultTimeout(10000)
+  const ready = async () => {
+    await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
+  }
+  await createProjectFromStart(page, 'Catalogo carte · fixture UI')
+  seed()
+  await application.evaluate(({ shell }) => { globalThis.cardSourceOpened = []; shell.openExternal = async (url) => { globalThis.cardSourceOpened.push(url) } })
+  await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
+  const detail = page.locator('.catalog-detail')
+  const search = page.getByLabel('Cerca carta o stampa')
+  const select = async (name) => {
+    await search.fill(name)
+    await page.locator('.catalog-list').getByRole('button', { name: new RegExp(name) }).click()
+    await ready()
+    await detail.getByRole('heading', { name, exact: true }).waitFor()
+  }
+  await select('Pokémon di prova')
+  await detail.getByText('UI fixture: a readable attack effect.', { exact: true }).waitFor()
+  assert.ok(await detail.getByText('UI fixture: a readable ability effect.', { exact: true }).isVisible())
+  assert.equal(await detail.locator('.card-battle-stats dd').last().innerText(), '0')
+  assert.equal(await detail.locator('.catalog-card-prints').evaluate((el) => el.open), false)
+  assert.equal(await detail.locator('.card-overview').count(), 1)
+  assert.match(await detail.locator('.card-artwork figcaption').innerText(), /Set B.*002/)
+  await detail.getByRole('button', { name: 'TCGdex ↗', exact: true }).click()
+  assert.deepEqual(await application.evaluate(() => globalThis.cardSourceOpened), ['https://api.tcgdex.net/v2/en/cards/me02.5-002'])
+  let minimumContrast = Infinity
+  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
+    await page.setViewportSize({ width, height })
+    await detail.locator('#catalog-card-heading').focus()
+    assert.equal(await page.locator('.main-content').evaluate((el) => el.scrollWidth > el.clientWidth + 1), false)
+    const geometry = await detail.evaluate((el) => {
+      const box = el.getBoundingClientRect()
+      return [...el.querySelectorAll('.card-artwork, .card-gameplay')].every((part) => {
+        const rect = part.getBoundingClientRect(); return rect.left >= box.left && rect.right <= box.right
+      })
+    })
+    assert.ok(geometry, 'Immagine o testo fuori dal dettaglio')
+    minimumContrast = Math.min(minimumContrast, (await auditDesignSystem(page, 'Carta Catalogo ' + width)).minimumContrast)
+    await page.screenshot({ path: join(workspace, 'node_modules', `catalog-card-${width}.png`) })
+  }
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await detail.locator('.catalog-card-prints > summary').focus()
+  await page.keyboard.press('Enter')
+  await detail.getByRole('button', { name: 'Mostra stampa me01 001', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  await detail.getByText('Immagine non disponibile', { exact: true }).waitFor()
+  assert.ok(await detail.getByText('Testo di gioco non disponibile nel catalogo locale.', { exact: true }).isVisible())
+  assert.equal(await detail.locator('.card-attack').count(), 0, 'Testo preso da una stampa diversa dalla selezione')
+  assert.ok(await detail.locator('#catalog-card-heading').evaluate((el) => el === document.activeElement))
+  await detail.getByRole('button', { name: 'TCGdex ↗', exact: true }).click()
+  assert.equal((await application.evaluate(() => globalThis.cardSourceOpened)).at(-1), 'https://api.tcgdex.net/v2/en/cards/me01-001')
+  await page.screenshot({ path: join(workspace, 'node_modules', 'catalog-card-missing-1280.png') })
+  await page.getByRole('button', { name: 'Impostazioni AI', exact: true }).click()
+  await ready()
+  await page.getByRole('button', { name: 'Indietro', exact: true }).click()
+  await ready()
+  assert.match(await detail.locator('.card-artwork figcaption').innerText(), /Set A.*001/)
+  assert.equal(await detail.locator('.catalog-card-prints').evaluate((el) => el.open), true)
+  await page.getByLabel('Espansione').selectOption('me02.5')
+  assert.match(await detail.locator('.card-artwork figcaption').innerText(), /Set B.*002/)
+  assert.equal(await detail.locator('.catalog-print').count(), 1)
+  await page.getByLabel('Espansione').selectOption('all')
+  await select('Allenatore di prova')
+  assert.ok(await detail.getByText('UI fixture: search your deck for a Pokémon.\nThen shuffle your deck.', { exact: true }).isVisible())
+  assert.equal(await detail.locator('.card-battle-stats').count(), 0)
+  await detail.getByRole('button', { name: 'Aggiungi vincolo su questa carta' }).click()
+  await page.waitForFunction(() => document.querySelector('#constraint-form select')?.value === 'Allenatore di prova')
+  await page.getByRole('button', { name: 'Indietro', exact: true }).click()
+  await ready()
+  await select('Energia Base di prova')
+  assert.ok(await detail.getByText('Nessun testo effetto riportato dal catalogo.', { exact: true }).isVisible())
+  assert.equal(await detail.locator('.card-gameplay-missing').count(), 0)
+  await select('Energia speciale di prova')
+  assert.ok(await detail.getByText('UI fixture: this card provides Darkness Energy.', { exact: true }).isVisible())
+  await select('Carta parziale di prova')
+  assert.ok(await detail.getByText('Scheda parziale', { exact: true }).isVisible())
+  assert.ok(await detail.getByText('Costo: Non indicato', { exact: true }).isVisible())
+  assert.ok(await detail.getByText('Equivalenza delle stampe da verificare.', { exact: true }).isVisible())
+  await select('Promo di prova')
+  assert.ok(await detail.locator('.catalog-card-notice').filter({ hasText: 'Promo non elencata · ammissione da verificare' }).isVisible())
+  assert.ok(await detail.getByText('Fixture: scheda non acquisita.', { exact: true }).first().isVisible())
+  assert.equal(await detail.locator('.catalog-card-prints').evaluate((el) => el.open), false)
+  console.log('CATALOG CARD OK: single-print gameplay, variants/filter/source, missing/broken image, partial/promo, trainer/energy, keyboard/history/constraint; 1440/1280/640; minimum contrast ' + minimumContrast.toFixed(2))
+} finally {
+  await application?.close()
+  rmSync(profile, { recursive: true, force: true })
+}
