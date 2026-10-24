@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-073 completato:** ultimo scambio visibile, osservazione e modifica AI distinte, campo di scrittura vicino e revisioni precedenti nello storico; rigenerazione secondaria, attesa/errore senza duplicazioni. Build e due percorsi Electron passati, inclusi riprova dello stesso turno, navigazione durante la richiesta, fonti e ritorno dai link, responsive e lista persistente. Risultati e limiti nel backlog. Prossimo passo: prova utente del blocco Discussione e prosecuzione della revisione grafica condivisa. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
 - **APP-072 completato:** cronologia globale Indietro/Avanti con recupero di selezioni, bozze, dettagli, scorrimento e focus; controlli presenti anche nel layout compatto. Operazioni pendenti e dati correnti separati dalla cronologia; link esterni riconoscibili. Build, nove test mirati e sette percorsi Electron passati; risultati e limiti nel backlog. Prossimo passo: prova utente e ripresa della revisione grafica condivisa, a partire dalla discussione/revisione delle guide Matchup. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
 
 - **APP-071 completato:** piano prioritario, approfondimenti apribili e hyperlink contestuali nei testi; riferimenti storici separati dalla lista attuale. Build, sette test mirati e due percorsi Electron passati; demo e schermate aggiornate, risultati/limiti nel backlog. Prossimo passo: prova utente di gerarchia e collegamenti, poi proseguire la revisione condivisa dei singoli blocchi. Ramo locale `task/production-design-system`; I4, merge e release esclusi.

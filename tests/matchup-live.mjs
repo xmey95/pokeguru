@@ -50,16 +50,17 @@ try {
     'Nella strategia considera anche il rischio di consumare troppe risorse nel primo turno.'
   ]
   for (let index = 0; index < observations.length; index += 1) {
-    await page.getByLabel('Rispondi a questa analisi').fill(observations[index])
-    await page.getByRole('button', { name: 'Rivedi analisi con Codex' }).click()
+    await page.getByLabel('Aggiungi un’osservazione').fill(observations[index])
+    await page.getByRole('button', { name: 'Aggiorna guida', exact: true }).click()
     await Promise.race([
-      page.waitForFunction((count) => document.querySelectorAll('.discussion-timeline details').length === count,
-        index + 2, { timeout: 200000 }),
+      page.waitForFunction((count) => document.querySelectorAll('.discussion-history-item').length === count &&
+        !!document.querySelector('.discussion-latest .discussion-change') && !!document.querySelector('#matchup-feedback'),
+        index + 1, { timeout: 200000 }),
       page.getByRole('alert').waitFor({ timeout: 200000 }).then(async () => {
         throw new Error(`Revisione non generata: ${await page.getByRole('alert').textContent()}`)
       })
     ])
-    assert.match(await page.locator('.discussion-timeline').textContent(), /Cosa è cambiato/)
+    assert.match(await page.locator('.discussion-latest').textContent(), /Cosa cambia/)
   }
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await openDeckImport(page)

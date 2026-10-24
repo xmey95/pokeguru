@@ -58,6 +58,8 @@ Il ramo `task/production-design-system` rifinisce tutte le viste dell'app con to
 
 L'[audit e le regole del design system](docs/DESIGN_SYSTEM.md) descrivono le scelte e i percorsi di prova. `node tests/workspace-ui-live.mjs --keep-profile`, dopo la build, conserva e stampa un profilo dimostrativo isolato. La guida e le liste di prova sono esempi UI, non nuove generazioni Codex. La rifinitura non è ancora integrata in `dev` né nella release v0.1.0.
 
+APP-073 rifinisce **Discussione** nelle guide Matchup: ultimo scambio sempre visibile, osservazione e risposta Codex distinte, **Aggiorna guida** come azione principale. **Revisioni precedenti (N)** raccoglie lo storico e **Leggi versione** apre le vecchie guide senza scorrimenti annidati. Attesa, errore e riprova restano accanto al commento; la guida valida resta disponibile. `node tests/matchup-switcher-ui-live.mjs --discussion --navigation` verifica questi stati e il ritorno al contesto con risposte AI simulate e archivio temporaneo.
+
 ## Versione scaricabile
 
 Scarica [Pokéguru v0.1.0](https://github.com/xmey95/pokeguru/releases/tag/v0.1.0): `Pokeguru-0.1.0-linux-x86_64.AppImage` su Linux oppure `Pokeguru-0.1.0-windows-x64-setup.exe` su Windows. Il file `SHA256SUMS.txt` permette di controllare il download. Su Linux rendi eseguibile l'AppImage (`chmod +x`) e avviala; su Windows usa l'installer. I pacchetti iniziali non sono firmati digitalmente. La [prova della validazione Standard occidentale](#prova-della-validazione-standard-occidentale) e le prove dei thread più avanti descrivono i percorsi da verificare prima di I4.

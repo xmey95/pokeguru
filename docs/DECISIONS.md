@@ -143,6 +143,14 @@ Bozze e operazioni in corso hanno uno stato di sessione separato per progetto e 
 
 Le fonti esterne sono marcate ↗ e continuano a usare le API validate di apertura nel browser predefinito. Non generano una pagina nella cronologia interna. Nessuna modifica a schema DB, IPC o prompt di generazione. Le verifiche usano archivi temporanei reali, dati di esempio e ritardi dichiarati; la shell esterna è intercettata nel test.
 
+### T-62 — Ultimo scambio e storico della guida (APP-073)
+
+L'utente approva un solo scambio visibile, con i precedenti nello storico. Un componente dedicato presenta osservazione e riepilogo AI con voci distinte; la guida corrente resta sopra. Le versioni precedenti si aprono tramite disclosure native nel flusso, senza contenitori a scorrimento interno. I riferimenti di ogni versione derivano dal proprio report. Il numero delle revisioni precedenti include la guida iniziale; una guida senza osservazioni non mostra uno scambio vuoto né uno storico vuoto.
+
+La revisione ha un'unica azione primaria e la rigenerazione è secondaria. L'invio mostra il commento una sola volta anche prima che il turno sia leggibile dallo storage; dopo un errore usa il turno pendente salvato o mantiene la bozza se il salvataggio non è avvenuto. Stato e messaggio d'errore appartengono alla sessione e al contesto della richiesta: completare dopo una navigazione non lascia un invio fantasma e non cambia un altro avversario. La riprova usa il medesimo ID di turno. Un cambio di focus durante la lettura non viene annullato dal completamento. Nessuna modifica a schema DB, API o generazione.
+
+Le prove di stato controllano le risposte AI e scrivono fixture nell'archivio temporaneo; lettura delle guide, fonti, progetti e navigazione usano i percorsi reali. La demo grafica usa una copia separata del profilo di esempio e il suo snapshot dichiaratamente dimostrativo; l'invio AI è disattivato soltanto nel processo di anteprima, senza modificare il codice di produzione.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

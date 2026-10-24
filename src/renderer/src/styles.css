@@ -409,13 +409,34 @@ details[open] > summary { margin-bottom: 8px; }
 .matchup-ai-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .ai-data-preview { margin-top: 16px; font-size: var(--text-sm); overflow-wrap: anywhere; }
 .matchup-discussion { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
-.matchup-discussion h4 { margin-bottom: 12px; }
-.discussion-timeline { display: grid; gap: 12px; margin: 16px 0; }
-.discussion-timeline details { padding: 4px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-subtle); }
-.discussion-timeline p { white-space: pre-wrap; line-height: 1.7; }
-.discussion-version { max-height: 360px; overflow: auto; }
+.matchup-discussion > h3 { margin: 0 0 20px; font-size: var(--text-md); }
+.matchup-discussion h4 { margin: 0 0 8px; font-size: var(--text-base); }
+.matchup-discussion p { margin: 0; font-size: 15px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.discussion-turn-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 16px; font-size: var(--text-sm); font-weight: 600; }
+.discussion-date, .discussion-change h4 span { font-weight: 400; color: var(--ink-muted); }
+.discussion-version-state { color: var(--ink-secondary); font-size: var(--text-xs); font-weight: 500; }
+.discussion-observation { padding: 16px 20px; border-radius: var(--radius-sm); background: var(--surface-subtle); }
+.discussion-change { padding: 20px 0 0; }
+.discussion-pending { display: grid; justify-items: start; gap: 12px; margin-top: 16px; }
+.discussion-pending > p:first-child { color: var(--ink-secondary); }
+.matchup-discussion .error-banner { margin: 0; font-size: var(--text-sm); }
+.matchup-discussion .content-note { margin: 16px 0; font-size: var(--text-sm); }
+.discussion-continue { margin: 20px 0; }
+.discussion-history { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 8px; }
+.discussion-history > summary { font-weight: 600; }
+.discussion-history-list { display: grid; gap: 24px; margin-top: 16px; }
+.discussion-history-item { min-width: 0; border-left: 2px solid var(--line); padding-left: 20px; }
+.discussion-version { margin-top: 12px; }
+.discussion-version-body { padding: 16px 0; }
+.discussion-version-body h4:not(:first-child) { margin-top: 24px; }
+.discussion-version-limits { margin: 20px 0; padding: 16px; border-left: 3px solid var(--warning-line); background: var(--warning-soft); color: var(--warning); }
+.discussion-version-sources { margin-top: 24px; }
+.discussion-version-sources p + p { margin-top: 8px; }
 .feedback-form { display: grid; gap: 12px; margin: 24px 0; }
-.feedback-form .primary-button, .pending-feedback .secondary-button { justify-self: start; }
+.feedback-form textarea { min-height: 112px; font-size: 15px; line-height: 1.65; }
+.feedback-form .primary-button { justify-self: start; }
+.feedback-form .content-note { margin: 0; }
+.matchup-regenerate { margin-top: 12px; }
 .matchup-form { margin-top: 24px; }
 .matchup-form label { display: block; margin: 16px 0 8px; }
 .matchup-form input { width: 100%; }

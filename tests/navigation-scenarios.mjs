@@ -13,9 +13,10 @@ export async function navigationScenarios(page, application, workspace) {
   const forward = page.getByRole('button', { name: 'Avanti', exact: true })
   await page.setViewportSize({ width: 1440, height: 900 })
   await ready()
-  const feedback = page.getByLabel('Rispondi a questa analisi')
+  const feedback = page.getByLabel('Aggiungi un’osservazione')
   await feedback.fill('Bozza revisione: conservare la ricerca nel finale.')
-  await page.locator('.discussion-timeline details').first().locator('summary').click()
+  await page.locator('.discussion-history > summary').click()
+  await page.locator('.discussion-version > summary').first().click()
   await page.locator('.matchup-assessment > summary').click()
   const link = page.locator('.matchup-assessment').getByRole('link', { name: 'Mega Absol ex', exact: true })
   await link.focus()
@@ -29,7 +30,8 @@ export async function navigationScenarios(page, application, workspace) {
   await ready()
   assert.equal(await feedback.inputValue(), 'Bozza revisione: conservare la ricerca nel finale.')
   assert.equal(await page.locator('.matchup-assessment').evaluate((el) => el.open), true)
-  assert.equal(await page.locator('.discussion-timeline details').first().evaluate((el) => el.open), true)
+  assert.equal(await page.locator('.discussion-history').evaluate((el) => el.open), true)
+  assert.equal(await page.locator('.discussion-version').first().evaluate((el) => el.open), true)
   assert.ok(await link.evaluate((el) => el === document.activeElement), 'Il ritorno deve focalizzare il link di partenza')
   const after = await page.evaluate(() => ({ main: document.querySelector('.main-content').scrollTop, deck: document.querySelector('.companion-list').scrollTop }))
   assert.ok(Math.abs(after.main - before.main) < 3, `Scroll guida perso: ${JSON.stringify({ before, after })}`)
@@ -224,6 +226,6 @@ export async function navigationScenarios(page, application, workspace) {
   }
   // Leave the surrounding selector regression in its expected, closed state.
   await page.locator('.matchup-assessment').evaluate((el) => { el.open = false })
-  await page.locator('.discussion-timeline details').first().evaluate((el) => { el.open = false })
+  await page.locator('.discussion-history').evaluate((el) => { el.open = false })
   console.log('NAVIGATION OK: back/forward, focus, independent scrolls, revisions, filters, drafts, saved/pending messages, projects, unavailable destination, late reads, branching, external links; 1440/1280/640')
 }

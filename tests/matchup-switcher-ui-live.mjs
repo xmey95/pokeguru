@@ -9,12 +9,13 @@ import { _electron as electron } from 'playwright-core'
 import { auditDesignSystem } from './design-system-audit.mjs'
 import { createProjectFromStart, switchProject } from './project-ui-helper.mjs'
 import { navigationScenarios } from './navigation-scenarios.mjs'
+import { discussionScenarios } from './matchup-discussion-scenarios.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
 const profile = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-switcher-'))
 const deck = readFileSync(join(workspace, 'examples/workspace-principale.txt'), 'utf8').trim()
-const guideLinks = process.argv.includes('--guide-links') || process.argv.includes('--navigation')
+const guideLinks = process.argv.includes('--guide-links') || process.argv.includes('--navigation') || process.argv.includes('--discussion')
 const hash = (text) => createHash('sha256').update(text).digest('hex')
 const names = ['Gardevoir ex', 'Dragapult ex', 'Charizard ex / Pidgeot ex',
   'Gholdengo ex / Joltik Box / Mega Kangaskhan ex · nome lungo di prova']
@@ -182,11 +183,13 @@ try {
     await page.locator('.guide-sources > summary').click()
     await page.getByRole('region', { name: 'Evidenze torneo del matchup' }).waitFor()
     await page.locator('.guide-sources > summary').click()
-    const previous = page.locator('.discussion-timeline details').first()
+    await page.locator('.discussion-history > summary').click()
+    const previous = page.locator('.discussion-version').first()
     await previous.locator('summary').click()
     assert.equal(await previous.getByRole('link', { name: 'Gardevoir ex', exact: true }).first().getAttribute('href'), 'https://api.tcgdex.net/v2/en/cards/sv01-086')
     assert.equal(await previous.locator('a[href^="#catalog-card"]').count(), 0, 'Lo storico usa le carte della lista attuale')
     await previous.locator('summary').click()
+    await page.locator('.discussion-history > summary').click()
     await plan.getByRole('link', { name: 'Mega Absol ex', exact: true }).click()
     await page.locator('.catalog-detail').getByRole('heading', { name: 'Mega Absol ex', exact: true }).waitFor()
     await page.getByRole('button', { name: 'Matchup', exact: true }).click()
@@ -194,6 +197,7 @@ try {
   }
 
   if (process.argv.includes('--navigation')) await navigationScenarios(page, application, workspace)
+  if (process.argv.includes('--discussion')) await discussionScenarios(page, application, workspace, profile)
 
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
     await page.locator('.main-content').evaluate((el) => { el.scrollTop = 0 })
@@ -254,6 +258,8 @@ try {
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
   await page.getByText('Guida storica · base precedente', { exact: true }).waitFor()
+  await page.getByText('Avversario assente dal meta attuale. Guida consultabile.', { exact: true }).waitFor()
+  assert.equal(await page.locator('#matchup-feedback').count(), 0)
   assert.match(await page.locator('.matchup-fields').first().innerText(), /Piano di prova contro Archetipo solo nello storico/)
   await page.getByRole('button', { name: 'Aggiorna Limitless', exact: true }).click()
   assert.match(await trigger.innerText(), /Archetipo solo nello storico/)

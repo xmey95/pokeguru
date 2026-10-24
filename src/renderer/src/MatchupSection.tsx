@@ -7,6 +7,7 @@ import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { evaluateStandardDeck } from '../../shared/standard-deck'
 import { buildDeckCards, matchupDeckContext, type DeckReconciliation } from '../../shared/reconciliation'
 import { MatchupSwitcher } from './MatchupSwitcher'
+import { MatchupDiscussion as DiscussionView, type RevisionInFlight } from './MatchupDiscussion'
 import { GuideText } from './GuideText'
 import { reportGuideReferences, type GuideReference } from './guide-links'
 import { useNavigation, useViewState, useDraftState, useBusyState } from './Navigation'
@@ -36,6 +37,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [feedback, setFeedback] = useDraftState(`matchup.feedback:${projectId}:${selectedId}:${activeDiscussionId}`, '')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useBusyState(`matchup:${projectId}:${selectedId}`)
+  const revisionKey = `matchup.revision:${projectId}:${selectedId}`
+  const revisionErrorKey = `matchup.revision-error:${projectId}:${selectedId}:${activeDiscussionId}`
+  const [revisionInFlight, setRevisionInFlight] = useDraftState<RevisionInFlight | null>(revisionKey, null)
+  const [revisionError, setRevisionError] = useDraftState<string | null>(revisionErrorKey, null)
   const [error, setError] = useDraftState<string | null>(`matchup.error:${projectId}:${selectedId}`, null)
   const [connection, setConnection] = useState<AiConnection | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
@@ -151,6 +156,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     if (!snapshot || !selectedId || !hasBaseline || !reconciliation || generating) return
     setGenerating(true)
     setError(null)
+    setRevisionError(null)
     try {
       const override: AiPreferences | null = overrideModel
         ? { model: overrideModel, reasoningEffort: overrideEffort || null } : null
@@ -176,6 +182,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     if (!discussion || !reconciliation || generating) return
     setGenerating(true)
     setError(null)
+    setRevisionError(null)
+    const retry = discussion.turns.find((turn) => turn.id === retryTurnId)
+    const submission = { discussionId: discussion.id, feedback: retry?.feedback ?? feedback, createdAt: retry?.createdAt ?? new Date().toISOString() }
+    setRevisionInFlight(submission)
+    if (document.activeElement?.closest('.matchup-discussion')) requestAnimationFrame(() => {
+      if (nav.isCurrent()) document.getElementById('matchup-discussion-heading')?.focus({ preventScroll: true })
+    })
     try {
       const result = retryTurnId
         ? await window.projectsApi.retryMatchupTurn(discussion.id, retryTurnId, selectedOverride())
@@ -185,10 +198,23 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       setDiscussions((current) => current.map((item) => item.id === result.value.id ? result.value : item))
       const latest = [...result.value.turns].reverse().find((turn) => turn.report)?.report
       if (latest && snapshot) setReports((current) => [...current.filter((item) => item.opponentId !== latest.opponentId), latest])
+      requestAnimationFrame(() => {
+        if (nav.isCurrent() && (document.activeElement === document.body || document.activeElement?.id === 'matchup-discussion-heading')) {
+          document.getElementById('matchup-discussion-heading')?.focus({ preventScroll: true })
+        }
+      })
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Revisione non completata.')
+      // This request owns its session status even if navigation remounted the view.
+      if (nav.drafts.get(revisionKey) === submission) {
+        nav.drafts.set(revisionErrorKey, cause instanceof Error ? cause.message : 'Revisione non completata.')
+        nav.notify()
+      }
       if (selectedId) await reloadDiscussions(selectedId).catch(() => undefined)
     } finally {
+      if (nav.drafts.get(revisionKey) === submission) {
+        nav.drafts.set(revisionKey, null)
+        nav.notify()
+      }
       setGenerating(false)
     }
   }
@@ -197,6 +223,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     if (!discussion || !snapshot || !reconciliation || generating) return
     setGenerating(true)
     setError(null)
+    setRevisionError(null)
     try {
       const result = await window.projectsApi.continueMatchup(discussion.id, snapshot.id, selectedOverride())
       if (!result.ok) throw new Error(result.error)
@@ -319,38 +346,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               </section>}
               {report.sampleDeckUrl && <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.sampleDeckUrl!)}>Apri la lista avversaria usata ↗</button>}
               </details>
-              {discussion && <div className="matchup-discussion">
-                <h4>Discussione dell’analisi</h4>
-                <div className="discussion-timeline">
-                  {discussion.turns.map((turn, index) => <details key={turn.id} open={index === discussion.turns.length - 1}>
-                    <summary>{index === 0 ? 'Analisi iniziale' : `Revisione ${index}`} · {date(turn.createdAt)}{turn.report ? '' : ' · in attesa'}</summary>
-                    {turn.feedback && <p><strong>La tua osservazione:</strong> {turn.feedback}</p>}
-                    {turn.changeSummary && <p><strong>Cosa è cambiato:</strong> {body(turn.changeSummary, turn.report ? reportGuideReferences(turn.report) : [])}</p>}
-                    {turn.report && index !== discussion.turns.length - 1 && <div className="discussion-version">
-                      <p><strong>Punti forti:</strong> {body(turn.report.strengths, reportGuideReferences(turn.report))}</p>
-                      <p><strong>Debolezze:</strong> {body(turn.report.weaknesses, reportGuideReferences(turn.report))}</p>
-                      <p><strong>Le nostre carte chiave:</strong> {body(turn.report.ourKeyCards, reportGuideReferences(turn.report))}</p>
-                      <p><strong>Le carte chiave avversarie:</strong> {body(turn.report.theirKeyCards, reportGuideReferences(turn.report))}</p>
-                      <p><strong>Piano di gioco:</strong> {body(turn.report.strategy, reportGuideReferences(turn.report))}</p>
-                      <p><strong>Limiti:</strong> {body(turn.report.limitations, reportGuideReferences(turn.report))}</p>
-                    </div>}
-                  </details>)}
-                </div>
-                {discussion.current ? pendingTurn ? <div className="pending-feedback">
-                  <p>Commento in attesa: {pendingTurn.feedback}</p>
-                  <button type="button" className="secondary-button" onClick={() => void submitFeedback(pendingTurn.id)} disabled={generating || !reconciliation}>Riprova la revisione</button>
-                </div> : <div className="feedback-form">
-                  <label htmlFor="matchup-feedback">Rispondi a questa analisi</label>
-                  <textarea id="matchup-feedback" value={feedback} maxLength={5000}
-                    onChange={(event) => setFeedback(event.target.value)}
-                    placeholder="Per esempio: secondo me conviene andare secondi perché…" disabled={generating} />
-                  <button type="button" className="primary-button" onClick={() => void submitFeedback()}
-                    disabled={!feedback.trim() || generating || snapshot.cached || !reconciliation}>{generating ? 'Codex sta rivedendo…' : 'Rivedi analisi con Codex'}</button>
-                </div> : !currentDiscussion && selectedInCurrentMeta ? <button type="button" className="primary-button"
-                  onClick={() => void continueOnCurrentBase()} disabled={generating || snapshot.cached || !hasBaseline || !reconciliation}>
-                  {generating ? 'Codex sta rivalutando…' : 'Continua sulla nuova base'}
-                </button> : !selectedInCurrentMeta && <p className="content-note">Questo archetipo non compare nello snapshot attuale. Puoi consultare lo storico; per continuare, seleziona uno snapshot in cui è presente quando sarà disponibile questa scelta.</p>}
-              </div>}
+              {discussion && <DiscussionView discussion={discussion} feedback={feedback} onFeedback={setFeedback}
+                onSubmit={() => void submitFeedback()} onRetry={(turnId) => void submitFeedback(turnId)}
+                onContinue={() => void continueOnCurrentBase()} onOpenCatalogCard={onOpenCatalogCard}
+                generating={generating} inFlight={revisionInFlight} error={revisionError}
+                canRevise={!snapshot.cached && !!reconciliation} canRetry={!!reconciliation}
+                canContinue={!currentDiscussion && selectedInCurrentMeta && hasBaseline}
+                absentFromMeta={!selectedInCurrentMeta} cached={snapshot.cached} />}
             </> : <p className="matchup-empty">Nessuna guida per questo archetipo e questa lista.</p>}
             {hasBaseline && <details className="matchup-ai-details"><summary>Opzioni AI e dati inviati</summary><div className="matchup-ai-options">
               <div className="matchup-ai-heading"><strong>AI per questa analisi</strong><button type="button" className="text-button" onClick={onOpenAiSettings}>Impostazioni AI</button></div>
@@ -375,10 +377,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 <p>Meta: {selected.name}, quota, punti, periodo {snapshot.period} e fonti Limitless {snapshot.sourceUrl} e {selected.url}. Se disponibile, sono inviati nomi e quantità di una lista avversaria pubblica. Le revisioni includono commento, guida precedente e contesto della discussione. Non sono inviati risultati di match del tuo mazzo né dati di altri progetti.</p>
               </details>
             </div></details>}
-            {selectedInCurrentMeta && (!discussion || discussion.current) && <button type="button" className="primary-button" onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
-              {generating ? 'Codex sta analizzando…' : report ? 'Rigenera analisi' : 'Genera analisi con Codex'}
+            {selectedInCurrentMeta && (!discussion || discussion.current) && <button type="button" className={report ? 'secondary-button matchup-regenerate' : 'primary-button'} onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
+              {generating && !revisionInFlight ? 'Codex sta analizzando…' : report ? 'Rigenera guida' : 'Genera analisi con Codex'}
             </button>}
-            {snapshot.cached && <p className="content-note">Per generare una nuova analisi, aggiorna prima il metagame online.</p>}
+            {snapshot.cached && !discussion?.current && <p className="content-note">Per generare una nuova analisi, aggiorna prima il metagame online.</p>}
           </>}
         </div>
       </div>
