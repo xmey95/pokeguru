@@ -17,7 +17,10 @@ import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchup
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
 import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
+  readDeckDiscussionSourceIds,
   deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from './deck-ai'
+import { buildThreadEvidence } from './thread-evidence'
+import type { ThreadEvidencePacket } from '../shared/thread-evidence'
 import { CatalogStore, enrichCatalogPrints, fetchCatalogSample, syncStandardCatalog } from './catalog'
 import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
 import { buildDeckCards, matchupDeckContext, snapshotPrint,
@@ -489,10 +492,26 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.addDeckThreadMessage(projectId as string, threadId as string, message as string))
   })
 
+  ipcMain.handle('deck:preview-evidence', (event, projectId: unknown, threadId: unknown,
+    question: unknown): OperationResult<ThreadEvidencePacket> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || !catalogStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+      typeof question !== 'string' || !question.trim() || question.length > 5000)
+      return { ok: false, error: 'Scrivi prima una domanda o una modifica da valutare.' }
+    return withStore(() => {
+      const thread = projectStore!.listDeckThreads(projectId).find((item) => item.id === threadId)
+      if (!thread) throw new Error('Thread non trovato in questo progetto.')
+      const base = thread.baseVersionId
+        ? projectStore!.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null : null
+      return buildThreadEvidence(thread, base, question.trim(), projectStore!.listConstraints(projectId),
+        catalogStore!.view(), tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
+    })
+  })
+
   ipcMain.handle('deck:ask-thread', async (event, projectId: unknown, threadId: unknown,
     message: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+    if (!projectStore || !catalogStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
       typeof message !== 'string' || !message.trim() || message.trim().length > 5000 || message.includes('\0'))
       return { ok: false, error: 'Scrivi una domanda da 1 a 5.000 caratteri.' }
     const project = projectStore.get(projectId)
@@ -507,16 +526,20 @@ function registerProjectHandlers(): void {
       const base = thread.baseVersionId
         ? projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null
         : null
+      const evidence = buildThreadEvidence(thread, base, message.trim(),
+        projectStore.listConstraints(projectId), catalogStore.view(),
+        tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
-      const prompt = deckDiscussionPrompt(thread, base, message.trim())
+      const prompt = deckDiscussionPrompt(thread, base, message.trim(), evidence)
       const sessionId = thread.aiSessionRef ?? await codexControl.startThread(cwd, config)
       if (thread.aiSessionRef) await codexControl.resumeThread(sessionId, cwd)
       else projectStore.assignDeckAiSession(projectId, threadId, sessionId)
       const result = await codexControl.jsonTurn(sessionId, cwd, prompt, config, DECK_DISCUSSION_SCHEMA)
       const answer = readDeckDiscussionReply(result.value)
+      const citedSourceIds = readDeckDiscussionSourceIds(result.value, evidence)
       return { ok: true, value: projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
-        message.trim(), answer, result.turnId, config) }
+        message.trim(), answer, result.turnId, config, undefined, evidence, citedSourceIds) }
     } catch (error) {
       return { ok: false, error: aiError(error) }
     } finally {
@@ -546,20 +569,20 @@ function registerProjectHandlers(): void {
       mkdirSync(cwd, { recursive: true })
       const catalog = catalogStore.view()
       const constraints = projectStore.listConstraints(projectId)
-      const context = deckProposalPrompt(thread, base, request.trim(), constraints, catalog,
-        tournamentStore?.latest() ?? null)
+      const evidence = buildThreadEvidence(thread, base, request.trim(), constraints, catalog,
+        tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
+      const context = deckProposalPrompt(thread, base, request.trim(), constraints, catalog, evidence)
       const sessionId = thread.aiSessionRef ?? await codexControl.startThread(cwd, config)
       if (thread.aiSessionRef) await codexControl.resumeThread(sessionId, cwd)
       else projectStore.assignDeckAiSession(projectId, threadId, sessionId)
       const result = await codexControl.jsonTurn(sessionId, cwd, context.prompt, config, DECK_PROPOSAL_SCHEMA)
       const proposal = validateDeckProposal(result.value, projectId, catalog, constraints, context.sources)
-      const citedSources = proposal.sources.filter((source) => !source.id.startsWith('print:'))
-      const answer = proposal.rationale + (citedSources.length
-        ? `\n\nFonti: ${citedSources.map((source) => source.label).join('; ')}.` : '')
+      const citedSourceIds = [...new Set((result.value as { sourceIds: string[] }).sourceIds)]
+      const answer = proposal.rationale
       return { ok: true, value: projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
         request.trim(), answer, result.turnId, config,
         proposal.outcome === 'candidate' ? { rawText: proposal.rawText, note: proposal.rationale,
-          sources: proposal.sources, checks: proposal.checks } : undefined) }
+          sources: proposal.sources, checks: proposal.checks } : undefined, evidence, citedSourceIds) }
     } catch (error) {
       return { ok: false, error: aiError(error) }
     } finally {
@@ -575,8 +598,10 @@ function registerProjectHandlers(): void {
       const tcgdex = url.hostname === 'api.tcgdex.net' &&
         /^\/v2\/en(?:\/(?:cards|sets)\/[a-zA-Z0-9.-]+)?$/.test(url.pathname)
       const limitless = url.hostname === 'play.limitlesstcg.com' &&
-        /^\/tournament\/[a-f0-9]{24}$/.test(url.pathname)
-      if (url.protocol !== 'https:' || (!tcgdex && !limitless) || url.search || url.hash)
+        /^\/tournament\/[a-f0-9]{24}(?:\/player\/[a-zA-Z0-9_-]+\/decklist)?$/.test(url.pathname)
+      const mainTournament = url.hostname === 'limitlesstcg.com' &&
+        /^\/(?:tournaments|decks\/list)\/\d+$/.test(url.pathname)
+      if (url.protocol !== 'https:' || (!tcgdex && !limitless && !mainTournament) || url.search || url.hash)
         return { ok: false, error: 'URL fonte non valido.' }
       await shell.openExternal(url.toString())
       return { ok: true, value: true }

@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { deckDiscussionPrompt, deckProposalPrompt, readDeckDiscussionReply, validateDeckProposal } from '../src/main/deck-ai'
+import { buildThreadEvidence } from '../src/main/thread-evidence'
 import type { AiRunConfig } from '../src/shared/ai'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import type { DeckConstraint } from '../src/shared/constraints'
@@ -57,19 +58,23 @@ it('salva lo scambio AI nel solo thread associato e conserva la provenienza alla
   reopened.close()
 })
 
-it('invia la lista di partenza al primo turno e solo note nuove nei successivi', () => {
+it('invia la lista di partenza e il pacchetto aggiornato a ogni turno', () => {
   const { store } = openStore()
   const project = store.create({ name: 'Prova', format: 'STANDARD' })
   store.importDeck({ projectId: project.id, rawText: '60 Carta A MEG 1', source: 'paste' })
   const thread = store.createDeckThread({ projectId: project.id, title: 'Variante', openingNote: 'Più consistenza' })
   const base = store.listDeckVersions(project.id)[0]
-  expect(deckDiscussionPrompt(thread, base, 'Valuta il motore')).toContain('60 Carta A MEG 1')
+  const catalog: CatalogView = { circuit: 'WESTERN', source: 'TCGdex REST v2/en', sourceLanguage: 'en',
+    scope: { setIds: [], names: [] }, syncedAt: null, sets: [], prints: [] }
+  const firstEvidence = buildThreadEvidence(thread, base, 'Valuta il motore', [], catalog, [], [])
+  expect(deckDiscussionPrompt(thread, base, 'Valuta il motore', firstEvidence)).toContain('60 Carta A MEG 1')
   store.assignDeckAiSession(project.id, thread.id, 'session')
   store.saveDeckAiExchange(project.id, thread.id, 'session', 'Valuta il motore', 'Possibile miglioria.', 'turn', config)
   const continued = store.addDeckThreadMessage(project.id, thread.id, 'Considera anche il tempo.')
-  const prompt = deckDiscussionPrompt(continued, base, 'E ora?')
+  const prompt = deckDiscussionPrompt(continued, base, 'E ora?',
+    buildThreadEvidence(continued, base, 'E ora?', [], catalog, [], []))
   expect(prompt).toContain('Considera anche il tempo.')
-  expect(prompt).not.toContain('60 Carta A MEG 1')
+  expect(prompt).toContain('60 Carta A MEG 1')
   expect(readDeckDiscussionReply({ reply: ' Sì. ' })).toBe('Sì.')
   expect(() => readDeckDiscussionReply({ reply: '' })).toThrow()
   store.close()
@@ -174,7 +179,7 @@ it('salva una candidata AI atomica solo con 60 carte, stampe e fonti verificabil
   reopened.close()
 })
 
-it('inserisce dati e link soltanto per un evento realmente presente nel contesto', () => {
+it('inserisce dati e link soltanto per un evento pertinente al thread', () => {
   const { store } = openStore()
   const project = store.create({ name: 'Evento', format: 'STANDARD' })
   store.importDeck({ projectId: project.id, rawText: '60 Psychic Energy SVE 005', source: 'paste' })
@@ -182,14 +187,17 @@ it('inserisce dati e link soltanto per un evento realmente presente nel contesto
   const base = store.listDeckVersions(project.id)[0]
   const catalog: CatalogView = { circuit: 'WESTERN', source: 'TCGdex REST v2/en',
     sourceLanguage: 'en', scope: { setIds: [], names: [] }, syncedAt: null, sets: [], prints: [] }
-  const event = { name: 'Campione Limitless', date: '2026-10-22', platform: 'PTCGL',
+  const event = { id: 'snapshot-1', eventId: '0123456789abcdef01234567', circuit: 'WESTERN', format: 'STANDARD',
+    name: 'Campione Limitless', date: '2026-10-22', platform: 'PTCGL',
     publicUrl: 'https://play.limitlesstcg.com/tournament/0123456789abcdef01234567',
+    coverage: { returnedParticipants: 1, complete60Lists: 1 },
     participations: [{ listStatus: 'available', cardTotal: 60, placing: 1,
-      deck: { id: 'a', name: 'Archetipo A' }, cards: [{ count: 2, name: 'Mega Absol ex',
+      playerId: 'player', deck: { id: 'a', name: 'Mega Absol ex' }, cards: [{ count: 2, name: 'Mega Absol ex',
         set: 'ME01', number: '086', category: 'pokemon' }] }] } as TournamentSnapshot
-  const context = deckProposalPrompt(thread, base, 'Valuta il mazzo', [], catalog, event)
-  expect(context.sources.find((item) => item.id === 'event')?.url).toBe(event.publicUrl)
+  const evidence = buildThreadEvidence(thread, base, 'Valuta Mega Absol', [], catalog, [event], [])
+  const context = deckProposalPrompt(thread, base, 'Valuta Mega Absol', [], catalog, evidence)
+  expect(context.sources.find((item) => item.id === `event:play:${event.eventId}`)?.url).toBe(event.publicUrl)
   expect(context.prompt).toContain('2 Mega Absol ex ME01 086')
-  expect(context.prompt).toContain('PTCGL')
+  expect(context.prompt).toContain('Campione Limitless')
   store.close()
 })
