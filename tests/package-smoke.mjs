@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const executablePath = process.argv[2] && resolve(process.argv[2])
 if (!executablePath || !existsSync(executablePath)) {
@@ -26,8 +27,7 @@ try {
   const profile = join(temporary, 'profile')
   application = await launch(profile)
   let page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Pacchetto isolato')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Pacchetto isolato')
   await page.getByTestId('selected-project-name').filter({ hasText: 'Pacchetto isolato' }).waitFor()
   await page.getByLabel('Testo lista').fill('1 Mega Absol ex MEG 86')
   await page.getByRole('button', { name: 'Salva lista' }).click()

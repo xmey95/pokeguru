@@ -43,6 +43,15 @@ try {
   await page.getByRole('button', { name: 'Eventi' }).click()
   await page.getByRole('heading', { name: 'Evento Standard' }).waitFor()
   if (!offline) await page.getByRole('button', { name: 'Acquisisci evento' }).click()
+  if (offline) {
+    await page.getByText('Snapshot locale').waitFor()
+    for (const [width, height] of [[1440, 900], [1280, 720]]) {
+      await page.setViewportSize({ width, height })
+      assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
+      await page.screenshot({ path: join(workspace, 'node_modules', `content-eventi-${width}.png`) })
+    }
+  }
+  await page.getByText('Copertura e metodo', { exact: true }).click()
   await page.getByTestId('tournament-coverage').waitFor({ timeout: 60000 })
   assert.match(await page.getByTestId('tournament-coverage').textContent(), /liste leggibili/)
   assert.ok(await page.locator('.tournament-players button').count() >= 1)
@@ -63,6 +72,7 @@ try {
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Eventi' }).click()
   await page.getByText('Snapshot locale').waitFor()
+  await page.getByText('Copertura e metodo', { exact: true }).click()
   assert.match(await page.getByTestId('tournament-coverage').textContent(), /liste leggibili/)
   console.log(`E2E evento OK: ${snapshot.name}, ${snapshot.coverage.availableLists}/${snapshot.coverage.returnedParticipants} liste; riapertura offline.`)
 } finally {

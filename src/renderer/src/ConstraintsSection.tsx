@@ -121,16 +121,15 @@ export function ConstraintsSection({ projectId, baseline, selectedIdentityId, se
   return <section id="deck-constraints" className="constraints-panel" aria-label="Vincoli del mazzo">
     <div className="panel-heading"><div><span className="eyebrow">Requisiti del mazzo</span><h2>Vincoli</h2></div>
       <strong>{constraints.length} {constraints.length === 1 ? 'vincolo' : 'vincoli'}{problemCount ? ` · ${problemCount} da risolvere` : ''}</strong></div>
-    <p className="content-note">I vincoli restano nel progetto quando cambi la lista. Le quantità sono controllate sulla carta di gioco attraverso le ristampe equivalenti. Una stampa specifica è facoltativa.</p>
-    <p className="constraint-legality">Legalità Standard occidentale: <strong>indeterminata</strong>. La Lista corrente mostra il primo controllo del marchio; la validazione completa arriverà con APP-018.</p>
+    <details className="constraint-legality"><summary>Come funzionano i vincoli</summary><p>Restano nel progetto quando cambi lista e contano le ristampe equivalenti. Puoi richiedere una stampa specifica. L’esito Standard complessivo è nella Lista corrente.</p></details>
     {error && <div className="error-banner" role="alert">{error}</div>}
     {loading ? <p className="content-note">Caricamento vincoli…</p> : <>
-      {!catalog?.syncedAt && <p className="diagnostics">Sincronizza il catalogo campione per scegliere una carta. <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
+      {!catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button> per scegliere una carta.</p>}
       {evaluation?.conflicts.map((message, index) => <p className="constraint-conflict" role="alert" key={index}>{message}</p>)}
-      {constraints.length ? <div className="constraint-list">{evaluation?.results.map(({ constraint, status, message }) =>
+      {constraints.length ? <div className="constraint-list">{evaluation?.results.map(({ constraint, status, certainCopies, message }) =>
         <article className="constraint-item" key={constraint.id}>
           <div><strong>{constraint.identityName}{constraint.printId ? ` · ${constraint.printId}` : ''}</strong>
-            <span>{label(constraint)} · {message}</span></div>
+            <span>{label(constraint)}{status === 'met' ? ` · ${certainCopies} copie` : status === 'conflict' ? '' : ` · ${message}`}</span></div>
           <span className={`constraint-status ${status}`}>{status === 'met' ? 'Soddisfatto' : status === 'unmet' ? 'Non soddisfatto' : status === 'conflict' ? 'Conflitto' : 'Indeterminato'}</span>
           <button type="button" className="text-button" onClick={() => edit(constraint)} disabled={saving}>Modifica</button>
           <button type="button" className="text-button" onClick={() => void remove(constraint)} disabled={saving}>Elimina</button>

@@ -18,6 +18,11 @@ try {
   await page.getByRole('button', { name: 'Impostazioni AI' }).click()
   await page.getByRole('heading', { name: 'AI per Pokéguru' }).waitFor()
   await page.getByRole('alert').getByText('Codex CLI non trovato.', { exact: false }).waitFor()
+  for (const [width, height] of [[1440, 900], [1280, 720]]) {
+    await page.setViewportSize({ width, height })
+    assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
+    await page.screenshot({ path: join(workspace, 'node_modules', `content-ai-${width}.png`) })
+  }
   assert.match(await page.getByText('Codex non disponibile').textContent(), /Codex non disponibile/)
   assert.equal(await page.getByLabel('Modello', { exact: true }).inputValue(), '')
   assert.equal(await page.getByRole('button', { name: 'Esegui prova AI' }).isDisabled(), true)

@@ -184,7 +184,7 @@ export function matchupDeckContext(baseline: DeckBaseline, reconciliation: DeckR
       `LISTA PER CARTA DI GIOCO:\n${cards.slice(0, 120).map((card) =>
         `${card.quantity} ${card.name} — ${card.status === 'recognized' ? 'identità Trainer da testo coincidente'
           : card.status === 'unverified' ? 'stampa nota, equivalenza da verificare'
-            : card.status === 'ambiguous' ? 'identità ambigua' : 'fuori dal catalogo campione'}`).join('\n') || 'nessuna'}\n` +
+            : card.status === 'ambiguous' ? 'identità ambigua' : 'nessuna corrispondenza nel catalogo locale'}`).join('\n') || 'nessuna'}\n` +
       'Le stampe e le rarità non modificano la carta di gioco; legalità Standard ed errata non sono ancora verificate.'
   }
   const lines = baseline.lines.filter((line) => line.kind === 'card').slice(0, 120)

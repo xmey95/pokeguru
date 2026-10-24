@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -53,8 +54,7 @@ async function openThread(page, name) {
 try {
   application = await launch()
   let page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Discussioni AI')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Discussioni AI')
   const project = await page.evaluate(async () => {
     const result = await window.projectsApi.list()
     if (!result.ok) throw new Error(result.error)
@@ -66,8 +66,10 @@ try {
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Thread A')
   await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Thread B')
   await page.getByRole('button', { name: 'Crea thread' }).click()
 
@@ -131,6 +133,7 @@ try {
         const chosen = connection.value.models.find((model) => model.isDefault && model.reasoningEfforts.length > 1)
           ?? connection.value.models.find((model) => model.reasoningEfforts.length > 1)
         assert.ok(chosen, 'Nessun modello con due livelli di ragionamento disponibile per la prova.')
+        await page.locator('.thread-ai-options > summary').click()
         await page.locator(`#thread-ai-model option[value="${chosen.id}"]`).waitFor({ state: 'attached' })
         await page.getByLabel('Modello Codex per questo thread').selectOption(chosen.id)
         const effort = chosen.reasoningEfforts.find((item) => item.id !== chosen.defaultReasoningEffort)
@@ -141,8 +144,8 @@ try {
         `Prepara una candidata di prova: aggiungi esattamente ${count} Boss's Orders ME01 114, togli ${count} Psychic Energy SVE 005 e conserva Mega Absol ex. Restituisci l'intera lista di 60 carte usando i codici del catalogo; è una prova strutturale.`)
       await page.getByRole('button', { name: 'Genera proposta Codex' }).click()
       await page.locator('.thread-candidate').first().waitFor({ timeout: 180000 })
-      await page.locator('.thread-candidate').first().locator('summary').click()
-      await page.locator('.thread-candidate').getByRole('button', { name: /Mega Absol ex.*↗/ }).waitFor()
+      await page.locator('.thread-candidate.featured .candidate-evidence > summary').click()
+      await page.locator('.thread-candidate.featured').getByRole('button', { name: /Mega Absol ex.*↗/ }).waitFor()
     }
     const proposed = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
     assert.equal(proposed.ok, true)

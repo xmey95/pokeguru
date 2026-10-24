@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -19,9 +20,9 @@ async function launch() {
 try {
   application = await launch()
   let page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Test thread')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Test thread')
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Da zero')
   await page.getByRole('button', { name: 'Crea thread' }).click()
   await page.getByText('Senza lista iniziale').first().waitFor()
@@ -31,19 +32,21 @@ try {
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)
+  await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Piano A')
   await page.getByLabel('Prima osservazione (facoltativa)').fill('Più pescata')
   await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.locator('.manual-candidate > summary').click()
   await page.getByLabel('Lista completa proposta').fill('60 Carta B MEG 2')
   await page.getByLabel('Motivo o appunti (facoltativo)').fill('Cambio completo')
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
-  await page.locator('.thread-candidate').getByText(/Candidata 1/).waitFor()
+  await page.locator('.thread-candidate.featured > summary').waitFor()
+  await page.locator('.new-thread-details > summary').click()
   await page.getByLabel('Titolo').fill('Piano B')
   await page.getByRole('button', { name: 'Crea thread' }).click()
   await page.getByLabel('Lista completa proposta').fill('60 Carta C MEG 3')
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
   await page.locator('.thread-picker').getByRole('button', { name: /Piano A/ }).click()
-  await page.locator('.thread-candidate').first().click()
   assert.match(await page.locator('.thread-candidate').textContent(), /Carta B/)
   assert.doesNotMatch(await page.locator('.thread-candidate').textContent(), /Carta C/)
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
@@ -59,7 +62,6 @@ try {
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.locator('.thread-picker').getByRole('button', { name: /Piano A/ }).click()
-  await page.locator('.thread-candidate').first().click()
   assert.match(await page.locator('.thread-detail').textContent(), /Più pescata/)
   assert.match(await page.locator('.thread-candidate').textContent(), /Carta B/)
   assert.match(await page.locator('.thread-detail').textContent(), /Base da confrontare/)

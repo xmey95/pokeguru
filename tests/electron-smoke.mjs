@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const electronPath = require('electron')
@@ -32,9 +33,10 @@ try {
   const dataDirectory = join(temporary, 'profile')
   application = await launch(dataDirectory)
   let page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Mega Absol / Mega Audino')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await createProjectFromStart(page, 'Mega Absol / Mega Audino')
   await expectSelected(page, 'Mega Absol / Mega Audino')
+  await page.locator('.compact-create-trigger').click()
   await page.getByLabel('Nome progetto').fill('Secondo mazzo')
   await page.getByRole('button', { name: 'Crea progetto' }).click()
   await expectSelected(page, 'Secondo mazzo')
@@ -134,8 +136,7 @@ try {
   page = await application.firstWindow()
   await page.getByRole('alert').waitFor()
   assert.match(await page.getByRole('alert').textContent(), /Archivio locale non disponibile/)
-  await page.getByLabel('Nome progetto').fill('Non salvare')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Non salvare')
   assert.equal(await page.locator('.project-button').count(), 0)
   await application.close()
   application = undefined

@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const directory = mkdtempSync(join(tmpdir(), 'pokeguru-ai-live-'))
@@ -13,8 +14,7 @@ try {
   application = await electron.launch({ executablePath: require('electron'), args: ['.'],
     cwd: resolve(import.meta.dirname, '..'), env: { ...process.env, POKEGURU_DATA_DIR: directory } })
   const page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Prova analisi AI')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Prova analisi AI')
   await page.getByLabel('Testo lista').fill('Pokémon: 4\n4 Mega Absol ex MEG 86\nTrainer: 8\n4 Rare Candy\n4 Iono')
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.getByTestId('card-total').filter({ hasText: '12 carte' }).waitFor()

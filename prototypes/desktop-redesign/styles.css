@@ -1,0 +1,9 @@
+/* Readability floor for decision content at 1280×720. */
+.page-heading p,.section-heading p,.companion-help,.overview-check p{font-size:12px;color:#4d6a63}
+.main-card strong,.inner-item strong,.adoption-bar strong,.notice strong,.composer label{font-size:12px}
+.main-card small,.inner-item small,.side-source,.companion-counts div span{font-size:10px;color:#587267}
+.deck-row{min-height:30px;font-size:11px}.deck-row .card-print{color:#587267;font-size:10px}
+.diff-row,.notice,.compare-identities small,.full-list-title,.adoption-bar p,.key-cards button,.evidence p,.message,.composer textarea{font-size:11px}
+.full-list-scroll .deck-row{min-height:25px;font-size:10px}
+.plan-steps p,.guide-two p{font-size:11px;line-height:1.55}
+.deck-companion.compact .companion-counts div span{font-size:9px}

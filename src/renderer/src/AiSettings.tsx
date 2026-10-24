@@ -54,7 +54,7 @@ export function AiSettings() {
       if (!result.ok) throw new Error(result.error)
       setSaved(result.value)
       setDraft(result.value)
-      setNotice('Preferenze salvate. Saranno usate dalle prossime analisi.')
+      setNotice('Preferenze salvate.')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Salvataggio non riuscito.') }
     finally { setBusy(false) }
   }
@@ -65,7 +65,7 @@ export function AiSettings() {
       const result = await window.projectsApi.startAiLogin()
       if (!result.ok) throw new Error(result.error)
       setLoginPending(true)
-      setNotice('Completa l’accesso nel browser. Pokéguru aggiornerà lo stato automaticamente.')
+      setNotice('Completa l’accesso nel browser; lo stato si aggiornerà qui.')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Accesso non avviato.') }
     finally { setBusy(false) }
   }
@@ -88,7 +88,7 @@ export function AiSettings() {
     try {
       const result = await window.projectsApi.testAiConnection()
       if (!result.ok) throw new Error(result.error)
-      setNotice('Prova riuscita: Codex ha completato una breve richiesta senza dati dei tuoi mazzi.')
+      setNotice('Prova AI riuscita · nessun dato del progetto inviato.')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Prova non riuscita.') }
     finally { setBusy(false) }
   }
@@ -96,15 +96,15 @@ export function AiSettings() {
   return <section className="ai-settings" aria-label="Impostazioni AI">
     <span className="detail-kicker">Impostazioni</span>
     <h1>AI per Pokéguru</h1>
-    <p className="content-note">Configura Codex per le analisi. Le preferenze valgono per le nuove generazioni; le guide già salvate conservano il modello con cui sono state create.</p>
+    <p className="content-note">Le preferenze valgono dalle prossime analisi.</p>
     {error && <div className="error-banner" role="alert">{error}</div>}
     {notice && <div className="success-banner" role="status">{notice}</div>}
 
     <div className="settings-panel">
-      <div className="panel-heading"><div><span className="eyebrow">Motore iniziale</span><h2>Codex</h2></div>
+      <div className="panel-heading"><h2>Codex</h2>
         <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || busy}>Aggiorna stato</button></div>
       <p className="connection-state">{loading ? 'Verifica in corso…' : connection?.account === 'chatgpt' ? `Connesso con ChatGPT${connection.plan ? ` · piano ${connection.plan}` : ''}` : connection?.account === 'apiKey' ? 'Connesso con chiave API Codex' : connection?.account === 'other' ? 'Modalità di accesso non supportata da questa versione' : connection ? 'Accesso richiesto' : 'Codex non disponibile'}</p>
-      <p className="content-note">L’accesso è gestito da Codex sul computer. Pokéguru non salva password, chiavi o token nel proprio archivio.</p>
+      <details><summary>Gestione delle credenziali</summary><p className="content-note">L’accesso è gestito da Codex sul computer. Pokéguru non salva password, chiavi o token nel proprio archivio.</p></details>
       <div className="settings-actions">
         {!connection?.account && <button type="button" className="secondary-button" onClick={() => void login()} disabled={busy || loading}>Accedi con ChatGPT</button>}
         {connection?.account && <button type="button" className="text-button" onClick={() => void logout()} disabled={busy}>Disconnetti Codex</button>}
@@ -112,7 +112,7 @@ export function AiSettings() {
     </div>
 
     <div className="settings-panel">
-      <div className="panel-heading"><div><span className="eyebrow">Preferenze globali</span><h2>Modello e ragionamento</h2></div></div>
+      <div className="panel-heading"><h2>Modello e ragionamento</h2></div>
       <div className="settings-grid">
         <div className="settings-field"><label htmlFor="ai-model">Modello</label>
           <select id="ai-model" value={draft.model ?? ''} onChange={(event) => setDraft({ model: event.target.value || null, reasoningEffort: null })} disabled={busy}>
@@ -128,17 +128,17 @@ export function AiSettings() {
           </select>
         </div>
       </div>
-      <p className="content-note">Modelli e livelli sono proposti dal catalogo Codex; l’accesso effettivo a un modello si conferma con una generazione riuscita. «Automatico» segue il modello predefinito al momento della prossima analisi.</p>
+      <p className="content-note">«Automatico» usa il modello predefinito. La disponibilità degli altri modelli si verifica con una generazione.</p>
       <div className="settings-actions">
         <button type="button" className="primary-button" onClick={() => void save()} disabled={!dirty || busy}>Salva preferenze</button>
         <button type="button" className="secondary-button" onClick={() => void test()} disabled={busy || dirty || (connection?.account !== 'chatgpt' && connection?.account !== 'apiKey')}>Esegui prova AI</button>
       </div>
-      <p className="content-note">La prova invia una breve richiesta a Codex e può usare parte del tuo limite. Non include dati di progetto.</p>
+      <p className="content-note">La prova usa il limite Codex; non invia dati del progetto.</p>
     </div>
 
     <div className="settings-panel">
-      <div className="panel-heading"><div><span className="eyebrow">Trasparenza</span><h2>Dati inviati nelle analisi</h2></div></div>
-      <p className="content-note">Quando generi un Matchup, Pokéguru invia a Codex i nomi e le quantità delle carte interpretate, l’archetipo scelto, periodo e fonte del metagame Limitless e, se disponibile, una lista avversaria pubblica di esempio. Il dettaglio compare prima della generazione. L’AI non modifica automaticamente la lista del progetto.</p>
+      <div className="panel-heading"><h2>Dati inviati nelle analisi</h2></div>
+      <p className="content-note">Il Matchup invia la lista interpretata, l’avversario, periodo e fonti Limitless e, se disponibile, una lista avversaria pubblica. Il dettaglio compare prima della generazione.</p>
     </div>
   </section>
 }

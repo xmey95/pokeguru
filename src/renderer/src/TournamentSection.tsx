@@ -57,9 +57,9 @@ export function TournamentSection() {
         {busy ? 'Acquisizione…' : snapshot ? 'Aggiorna evento' : 'Acquisisci evento'}
       </button>
     </div>
-    <p className="content-note">Primo canale: Limitless Play API. Si cerca un evento pubblico PTCGL Standard con almeno 100 partecipanti, piazzamenti e liste disponibili tra i 50 tornei recenti. Gli eventi online non rappresentano i Regional in presenza o l’intero metagame.</p>
+    <p className="content-note">Un evento online non rappresenta i Regional in presenza.</p>
     {error && <div className="error-banner" role="alert">{error}</div>}
-    {!snapshot ? <div className="matchup-empty">Nessun evento salvato. Acquisisci un torneo pubblico Standard con liste disponibili.</div> : <>
+    {!snapshot ? <div className="matchup-empty">Nessun evento salvato.</div> : <>
       <div className="meta-provenance">
         <strong>{snapshot.name}</strong>
         <span>{dateTime(snapshot.date)} · PTCGL online · Standard occidentale · {snapshot.source}</span>
@@ -68,12 +68,14 @@ export function TournamentSection() {
       </div>
       <div className="catalog-metrics">
         <div><strong>{snapshot.reportedPlayers}</strong><span>Partecipanti dichiarati</span></div>
-        <div><strong>{snapshot.coverage.returnedParticipants}</strong><span>Partecipazioni restituite</span></div>
-        <div><strong>{snapshot.coverage.availableLists}</strong><span>Liste disponibili e leggibili</span></div>
+        <div><strong>{snapshot.coverage.availableLists}</strong><span>Liste leggibili</span></div>
         <div><strong>{snapshot.coverage.complete60Lists}</strong><span>Liste da 60 carte</span></div>
       </div>
-      <p className="content-note" data-testid="tournament-coverage">Copertura: {snapshot.coverage.availableLists}/{snapshot.coverage.returnedParticipants} liste leggibili; {snapshot.coverage.missingLists} assenti, {snapshot.coverage.invalidLists} non interpretabili. Partecipazioni e liste identiche restano record separati. Le carte mantengono codice e numero della stampa fornita dalla fonte.</p>
-      <p className="content-note">Fasi: {snapshot.phases.map((phase) => `${phase.type} ${phase.rounds} round ${phase.mode}`).join(' · ') || 'non indicate'}. Risultati per partecipante, non partite contro il tuo mazzo; nessuna percentuale di matchup è inferita.</p>
+      <details className="catalog-set-coverage"><summary>Copertura e metodo</summary>
+        <p className="content-note" data-testid="tournament-coverage">{snapshot.coverage.availableLists}/{snapshot.coverage.returnedParticipants} liste leggibili; {snapshot.coverage.missingLists} assenti, {snapshot.coverage.invalidLists} non interpretabili. Partecipazioni e liste identiche restano record separati; le carte conservano codice e numero della fonte.</p>
+        <p className="content-note">Fasi: {snapshot.phases.map((phase) => `${phase.type} ${phase.rounds} round ${phase.mode}`).join(' · ') || 'non indicate'}. I risultati sono dei partecipanti; nessun winrate del tuo mazzo è inferito.</p>
+        <p className="content-note">La selezione cerca, tra 50 tornei recenti, un evento pubblico PTCGL Standard con almeno 100 partecipanti, piazzamenti e liste disponibili.</p>
+      </details>
       <div className="catalog-filters"><label>Filtra giocatore o mazzo<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Dragapult" /></label></div>
       <div className="tournament-layout">
         <div className="tournament-players" aria-label="Partecipazioni evento">
