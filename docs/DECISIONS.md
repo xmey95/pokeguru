@@ -89,6 +89,12 @@ L'utente approva immagine e testo di gioco prima del vincolo, con stampe, proven
 
 Il testo proviene da una sola stampa della stessa identità, preferendo quella importata quando contiene gameplay; non si fondono campi di stampe diverse. Immagine e testo hanno ciascuno il proprio riferimento alla stampa. Costi ignoti non diventano gratuiti, ritirata zero resta zero, dati parziali e identità ambigue restano espliciti. Nessuna nuova acquisizione di immagini ad alta risoluzione o modifica al modello.
 
+### T-54 — Vincoli nel contesto della carta (APP-065)
+
+L'utente approva la creazione del vincolo direttamente nel dettaglio carta e il riepilogo generale per modifica/eliminazione. Nel modulo contestuale l'identità è fissata; si scelgono tipo, copie e stampa facoltativa. Il validatore esistente fornisce l'anteprima; un conflitto resta esplicito anche quando l'utente salva il vincolo, conservando il comportamento precedente. Un errore conserva i valori; Annulla/Escape chiudono senza scritture e restituiscono il focus.
+
+Il riepilogo apre la modifica nella riga selezionata e la creazione soltanto su richiesta; resta possibile imporre una carta fuori dalla lista tramite il Catalogo. Un provider del renderer condivide dati e mutazioni tra carta e riepilogo, con blocco dei salvataggi concorrenti; una correzione d'identità aggiorna la valutazione. I contratti IPC, il database e il validatore restano invariati. Lo scorrimento per il focus muove solo l'area di lavoro.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

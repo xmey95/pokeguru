@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-065 completato:** creazione del vincolo nel dettaglio carta, anteprima degli esiti, modifica dentro il riepilogo e stato condiviso. Build, test dei vincoli e percorsi Electron passati; errore di storage, riapertura/isolamento e responsive verificati su Windows. Prossimo punto proposto: APP-066, importazione su richiesta nella lista già caricata, da discutere prima di implementare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
 - **APP-064 completato:** dettaglio con immagine, testo di gioco e vincolo; stampe/provenienza/controlli apribili. Build, cinque test mirati e percorsi Electron passati; scheda reale del catalogo locale verificata a 1440/1280/640 px. Risultati e limiti nel backlog. Prossimo punto proposto per la revisione condivisa: APP-065, creazione contestuale dei vincoli, da discutere prima di implementare. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
 
 - **APP-063 completato:** riepilogo unico di totale e stato Standard nella Lista; incertezze/fonti apribili e problemi certi visibili. Verifiche UI e import/export passate su Windows. Prossimo punto della revisione condivisa: dettaglio della carta, con proposta di dare precedenza a immagine e testo di gioco rispetto a stampe e righe importate.

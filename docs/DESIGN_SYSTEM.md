@@ -34,6 +34,7 @@ L'audit comprende codice e avvio della versione integrata, schermate di Lista, c
 - **Dettaglio carta (APP-064):** immagine 180×252 px e testo di gioco a 15 px/1,65; poi vincolo. Stampe/varianti e testo importato/controlli in disclosure native. Immagine sopra il testo sotto 700 px di contenuto. Testo e immagine derivano dalle stampe della stessa identità, con riferimenti distinti; dati ignoti non ricostruiti.
 - **Finestra stretta:** fino a 1240 px, navigazione a icone e lista in dock inferiore di 220 px solo in Thread e Matchup, sempre parte della griglia. A 640 px la navigazione diventa orizzontale. Nessun pannello copre il contenuto.
 - **Livelli informativi:** decisione e blocchi → dettaglio operativo → provenienza e diagnostica. I dati non vengono eliminati per rendere la schermata più breve.
+- **Vincoli (APP-065):** creazione dentro la carta con identità fissata, esito e conflitti in anteprima. Modifica dentro la riga del riepilogo; creazione generale apribile su richiesta. Modulo condiviso, campi di almeno 40 px, stampa facoltativa a tutta larghezza. Errori mantengono i valori, Annulla/Escape restituiscono il focus; scroll confinato al contenuto.
 
 ## Fondazioni
 
@@ -80,6 +81,8 @@ Esiti dei comandi e limiti effettivi sono registrati in **APP-059 in BACKLOG.md*
 **Progetti (APP-061):** aprire il nome in alto, cercare un progetto o scegliere “Nuovo progetto”. Provare anche Tab, frecce, Invio ed Escape. [Selettore desktop](design-review/progetti-1280.png) e [compatto](design-review/progetti-640.png).
 
 **Dettaglio carta (APP-064):** in Lista aprire Mega Absol ex per leggere gli attacchi; aprire un Allenatore per l'effetto. “Testo importato e controlli” e “Stampe e varianti” si aprono anche con Invio/Spazio. [Carta 1440](design-review/carta-1440.png), [1280](design-review/carta-1280.png) e [640](design-review/carta-640.png) usano il campione TCGdex già acquisito nel solo profilo demo. La miniatura ingrandita conserva i limiti della risoluzione originale.
+
+**Vincoli (APP-065):** Lista → carta → Aggiungi vincolo; scegliere Almeno N e osservare l'esito prima di salvare. “Gestisci vincoli” raggiunge il riepilogo; Modifica apre il modulo nella riga. Provare Annulla/Escape. [Creazione 1440](design-review/vincolo-1440.png), [1280](design-review/vincolo-1280.png), [640](design-review/vincolo-640.png) sul catalogo locale della demo; [modifica a 640](design-review/vincolo-modifica-640.png) su fixture dichiarata di Iono.
 
 Schermate registrate: [Lista 1440](design-review/lista-1440.png), [Lista 1280](design-review/lista-1280.png), [Thread](design-review/thread-1440.png), [Matchup 1280](design-review/matchup-1280.png), [Lista a 640](design-review/lista-640.png), [dock Thread a 640](design-review/thread-640.png), [Catalogo](design-review/catalogo-1440.png), [Eventi](design-review/eventi-1280.png), [conferma di adozione](design-review/adozione.png).
 

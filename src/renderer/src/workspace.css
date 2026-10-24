@@ -72,7 +72,7 @@
   .detail-headline h1 { font-size: var(--text-xl); }
 }
 @container workspace (max-width: 480px) {
-  .settings-grid, .constraint-form, .matchup-form-grid, .matchup-fields, .meta-picker { grid-template-columns: minmax(0, 1fr); }
+  .settings-grid, .constraint-fields, .matchup-form-grid, .matchup-fields, .meta-picker { grid-template-columns: minmax(0, 1fr); }
   .matchup-fields > .strategy-field { grid-column: 1; }
   .candidate-identities { grid-template-columns: minmax(0, 1fr); }
   .candidate-identities > b { transform: rotate(90deg); }

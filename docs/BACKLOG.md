@@ -71,7 +71,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-062** | Lista per categorie con conteggi e miniature | UI/UX | R-02, R-03, R-04 / qualità pre-I4 | P0 / S | APP-061; preferenza utente confermata | Done |
 | **APP-063** | Riepilogo unico di totale e stato Standard nella Lista | UI/UX | R-02, R-03 / qualità pre-I4 | P0 / S | APP-062; riepilogo approvato dall'utente | Done |
 | **APP-064** | Dettaglio carta con immagine e testo di gioco in primo piano | UI/UX | R-02, R-05 / qualità pre-I4 | P0 / S | APP-063; gerarchia approvata dall'utente | Done |
-| **APP-065** | Revisione condivisa del flusso dei vincoli | UI/UX | R-05 / qualità pre-I4 | P1 / S | APP-064; proposta da discutere con l'utente | Backlog |
+| **APP-065** | Vincoli contestuali e riepilogo generale | UI/UX | R-05 / qualità pre-I4 | P1 / S | APP-064; proposta approvata dall'utente | Done |
+| **APP-066** | Revisione condivisa dell'importazione della lista | UI/UX | R-02 / qualità pre-I4 | P1 / S | APP-065; proposta da discutere con l'utente | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -563,10 +564,20 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche Windows:** build/typecheck, cinque test di presentazione, `workspace-ui-live.mjs` e `reconciliation-live.mjs` passati. Fixture per Pokémon/Allenatori/Energie, immagine non leggibile, identità ambigua, testo assente, costo nullo/vuoto, disclosure con Invio/Spazio, vincoli, riapertura e isolamento. Demo con le 41 stampe TCGdex già acquisite: scheda Mega Absol ex ispezionata a 1440×900, 1280×720 e 640×720, nessun overflow o sovrapposizione, contrasto minimo misurato 5,16:1. Schermate in `design-review/carta-*.png`; `git diff --check` pulito.
 - **Limiti:** testi in inglese dal catalogo locale, senza traduzione o ricostruzione; qualità dell'immagine limitata alla miniatura già acquisita. Nessuna nuova prova di integrazione AI, Linux, lettore di schermo o scala OS elevata. Nessun merge o release.
 
-### APP-065 — Flusso dei vincoli, proposta da discutere
+### APP-065 — Vincoli contestuali e riepilogo generale
 
 - **Osservazione:** “Aggiungi vincolo su questa carta” sposta l'utente al modulo generale, lontano dalla carta aperta.
-- **Proposta:** impostazione contestuale vicino alla carta; riepilogo generale per vedere, modificare o eliminare i vincoli. Discutere con l'utente prima dell'implementazione; nessuna modifica autorizzata in APP-064.
+- **Autorizzazione:** l'utente approva la creazione nel dettaglio della carta e il riepilogo generale per modifica/eliminazione. Task reso Ready con perimetro e dipendenze risolti, quindi avviato.
+- **Accettazione:** creazione senza salto al modulo generale, carta già selezionata, tipo/copie/stampa facoltativa; esiti e conflitti visibili nel contesto. Riepilogo aggiornato dopo il salvataggio, modifica e annullamento vicini al vincolo, percorso dal Catalogo conservato. Persistenza e isolamento invariati.
+- **Verifica prevista:** build, Electron con salvataggio/errore/annullamento, conflitti, vincoli di stampa, modifica/eliminazione, riapertura e due progetti; tastiera, contrasto e layout 1440×900, 1280×720 e compatto.
+- **Risultato:** il comando sulla carta apre un modulo contestuale con identità già fissata, tipo/copie/stampa facoltativa e anteprima dell'esito. Errori nel modulo senza perdere i valori, annullamento/Escape e ritorno del focus. Vincoli salvati visibili nella carta e nel riepilogo, modifica dentro la riga selezionata, creazione generale su richiesta e percorso dal Catalogo preservato. Stato condiviso nel renderer; una correzione d'identità aggiorna anche la valutazione dei vincoli. Nessun cambio a database, IPC o validatore.
+- **Verifiche Windows:** build/typecheck, quattro test dei vincoli, workspace UI e percorso Electron di riconciliazione passati. Creazione su identità e stampa, preview e salvataggio di conflitti, errore SQLite indotto nel solo archivio temporaneo e recupero, annullamento senza scritture, modifica/eliminazione, riapertura, isolamento e aggiornamento dopo rimozione della correzione verificati. Form contestuale e modifica controllati a 1440×900, 1280×720 e 640×720 con audit di contrasto/geometria; schermate ispezionate. Demo su campione TCGdex locale, senza aggiungere vincoli al profilo; contrasto minimo osservato 5,16:1. `git diff --check` pulito.
+- **Limiti:** fixture dichiarate per i casi deterministici e l'errore di storage. Linux, lettore di schermo e scala OS elevata non verificati; nessuna nuova integrazione AI, merge o release.
+
+### APP-066 — Importazione della lista, proposta da discutere
+
+- **Osservazione:** con una lista già caricata, il grande modulo “Aggiorna la lista” resta sempre aperto in fondo alla vista, oltre al comando nell'intestazione.
+- **Proposta:** aprire il modulo su richiesta da “Importa / sostituisci”, con annullamento e indicazione chiara dell'effetto del salvataggio; mantenere l'accesso immediato nel progetto vuoto. Da discutere con l'utente prima dell'implementazione.
 
 ## Regola per i blocchi
 

@@ -188,7 +188,13 @@ details[open] > summary { margin-bottom: 8px; }
 .card-gameplay-source { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 16px; color: var(--ink-muted); font-size: var(--text-xs); }
 .card-gameplay-source > span { overflow-wrap: anywhere; }
 .card-gameplay-missing p { margin-bottom: 8px; color: var(--ink-secondary); }
-.card-detail-actions { margin: 0 0 16px; }
+.card-constraints { margin: 0 0 16px; }
+.card-constraint-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.card-constraint-summary { display: grid; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+.card-constraint-summary li { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: var(--text-sm); }
+.constraint-notice { color: var(--ink-secondary); font-size: var(--text-sm); }
+.constraint-notice:empty { display: none; }
+.card-constraints .constraint-form { padding: 20px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface-subtle); }
 .deck-import-details, .deck-print-details { padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--text-sm); }
 .deck-source-lines { display: grid; gap: 8px; padding: 12px; border-radius: var(--radius-sm); background: var(--surface-subtle); color: var(--ink-secondary); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .deck-source-lines > div { display: grid; gap: 4px; }
@@ -200,11 +206,17 @@ details[open] > summary { margin-bottom: 8px; }
 .deck-identity-line > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .constraint-list { display: grid; gap: 12px; margin: 16px 0 24px; }
 .constraint-item { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
-.constraint-item > div { display: grid; gap: 4px; flex: 1 1 220px; }
+.constraint-item-description { display: grid; gap: 4px; flex: 1 1 220px; }
 .constraint-item span:not(.constraint-status) { color: var(--ink-muted); font-size: var(--text-sm); }
-.constraint-form, .settings-grid, .matchup-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
-.constraint-form { padding-top: 20px; border-top: 1px solid var(--line); }
-.constraint-form h3, .constraint-form-actions { grid-column: 1 / -1; margin: 0; }
+.settings-grid, .matchup-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.constraint-form { min-width: 0; margin-top: 16px; padding-top: 20px; border-top: 1px solid var(--line); }
+.constraint-item > .constraint-form, .constraint-item > .error-banner { flex: 1 0 100%; }
+.constraint-form h3 { margin: 0 0 16px; font-size: var(--text-md); }
+.constraint-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.constraint-card-field, .constraint-print-field { grid-column: 1 / -1; }
+.constraint-fields label { min-width: 0; }
+.constraint-preview { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 16px; font-size: var(--text-sm); color: var(--ink-secondary); }
+.constraint-preview .constraint-conflict { flex: 1 0 100%; margin: 4px 0 0; }
 .constraint-form label, .settings-field, .settings-grid label { display: flex; flex-direction: column; gap: 8px; }
 .settings-grid select { width: 100%; }
 .ai-settings { max-width: 1080px; margin: 0 auto; }

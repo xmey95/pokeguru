@@ -7,6 +7,7 @@ import { CatalogSection } from './CatalogSection'
 import { DeckList } from './DeckList'
 import { DeckCompanion } from './DeckCompanion'
 import { ConstraintsSection } from './ConstraintsSection'
+import { DeckConstraintsProvider } from './DeckConstraintsContext'
 import { ThreadsSection } from './ThreadsSection'
 import { TournamentSection } from './TournamentSection'
 import { Icon } from './Icon'
@@ -272,10 +273,10 @@ export function App() {
                 <div><span>Lista corrente</span><strong>{selected.cardTotal === null ? 'Assente' : `${selected.cardTotal} carte interpretate`}</strong></div>
               </div></details>
               {selected.circuitAssignment === 'MIGRATED' && <p className="migration-note">Profilo occidentale assegnato a questo progetto esistente. La lista è rimasta invariata.</p>}
-              {activeTab === 'deck' ? <>
+              {activeTab === 'deck' ? <DeckConstraintsProvider key={`${selected.id}:${baseline?.importedAt ?? 'empty'}`} projectId={selected.id} baseline={baseline}>
               {baselineLoading ? <p className="content-note">Caricamento lista…</p> : baseline ? (
                 <div className="baseline-panel" data-testid="baseline-panel">
-                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onConstrain={selectConstraintTarget} onImport={focusImport} />
+                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} />
                   <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
                   {importProblems.length === 0 && baseline.diagnostics.length > 0 && <details className="project-meta-details"><summary>Note sul testo importato</summary><ul>{baseline.diagnostics.map((item, index) => <li key={index}>{item.message}</li>)}</ul></details>}
                   <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>
@@ -288,8 +289,9 @@ export function App() {
                   <button type="button" className="primary-button" onClick={() => focusImport()}>Aggiungi una lista</button>
                 </div>
               )}
-              {!baselineLoading && <ConstraintsSection key={selected.id} projectId={selected.id} baseline={baseline}
+              {!baselineLoading && <ConstraintsSection key={selected.id}
                 selectedIdentityId={constraintTargetId} selectionVersion={constraintSelectionVersion}
+                onTargetConsumed={() => setConstraintTargetId(null)}
                 onOpenCatalog={() => setView('catalog')} />}
               <form className="import-panel" onSubmit={(event) => void importDeck(event)}>
                 <div className="panel-heading">
@@ -305,7 +307,7 @@ export function App() {
                   <button className="primary-button" type="submit" disabled={importing || !draft.trim()}>{importing ? 'Salvataggio…' : baseline ? 'Sostituisci lista' : 'Salva lista'}</button>
                 </div>
               </form>
-              </> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
+              </DeckConstraintsProvider> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
                 onAdopt={(adopted) => {
                   const updated = projectWithBaseline(selected, adopted)
                   setBaseline(adopted)

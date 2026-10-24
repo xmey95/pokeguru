@@ -1,168 +1,74 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import type { CatalogPrint, CatalogView } from '../../shared/catalog'
-import type { DeckBaseline } from '../../shared/deck-import'
-import { evaluateConstraints, type ConstraintKind, type DeckConstraint } from '../../shared/constraints'
-import { buildDeckCards, type DeckReconciliation } from '../../shared/reconciliation'
+import { useEffect, useRef, useState } from 'react'
+import { ConstraintForm, constraintLabel, ConstraintStatus, focusConstraintControl } from './ConstraintForm'
+import { useDeckConstraints } from './DeckConstraintsContext'
 
-function label(constraint: DeckConstraint): string {
-  if (constraint.kind === 'required') return 'Obbligatoria'
-  return constraint.kind === 'minimum' ? `Almeno ${constraint.quantity}` : `Esattamente ${constraint.quantity}`
-}
-
-export function ConstraintsSection({ projectId, baseline, selectedIdentityId, selectionVersion,
-  onOpenCatalog }: {
-  projectId: string
-  baseline: DeckBaseline | null
+export function ConstraintsSection({ selectedIdentityId, selectionVersion, onTargetConsumed, onOpenCatalog }: {
   selectedIdentityId: string | null
   selectionVersion: number
+  onTargetConsumed(): void
   onOpenCatalog(): void
 }) {
-  const [catalog, setCatalog] = useState<CatalogView | null>(null)
-  const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
-  const [constraints, setConstraints] = useState<DeckConstraint[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [identityId, setIdentityId] = useState('')
-  const [printId, setPrintId] = useState('')
-  const [kind, setKind] = useState<ConstraintKind>('required')
-  const [quantity, setQuantity] = useState('2')
+  const { catalog, constraints, evaluation, loading, saving, error, remove } = useDeckConstraints()
   const [editingId, setEditingId] = useState<string | null>(null)
-
+  const [createIdentity, setCreateIdentity] = useState<string | null>(null)
+  const [notice, setNotice] = useState('')
+  const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null)
+  const section = useRef<HTMLElement>(null)
+  const addButton = useRef<HTMLButtonElement>(null)
   useEffect(() => {
-    let active = true
-    setLoading(true)
-    void Promise.all([
-      window.projectsApi.getCatalog(),
-      window.projectsApi.getReconciliation(projectId),
-      window.projectsApi.listConstraints(projectId)
-    ]).then(([catalogResult, reconciliationResult, constraintsResult]) => {
-      if (!active) return
-      if (!catalogResult.ok) throw new Error(catalogResult.error)
-      if (!reconciliationResult.ok) throw new Error(reconciliationResult.error)
-      if (!constraintsResult.ok) throw new Error(constraintsResult.error)
-      setCatalog(catalogResult.value)
-      setReconciliation(reconciliationResult.value)
-      setConstraints(constraintsResult.value)
-    }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Vincoli non disponibili.') })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [projectId, baseline?.importedAt])
-
-  useEffect(() => {
-    if (!selectedIdentityId) return
+    if (!selectedIdentityId || loading || error) return
     setEditingId(null)
-    setIdentityId(selectedIdentityId)
-    setPrintId('')
-    document.getElementById('deck-constraints')?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-  }, [selectedIdentityId, selectionVersion])
+    setCreateIdentity(selectedIdentityId)
+    onTargetConsumed()
+  }, [selectedIdentityId, selectionVersion, loading, error, onTargetConsumed])
 
-  const cards = useMemo(() => baseline ? buildDeckCards(baseline, catalog, reconciliation) : [],
-    [baseline, catalog, reconciliation])
-  const catalogPrints = useMemo(() => (catalog?.prints ?? []).filter((print) => print.detailAt && print.identityId),
-    [catalog])
-  const identities = useMemo(() => {
-    const byId = new Map<string, CatalogPrint>()
-    for (const print of catalogPrints) if (!byId.has(print.identityId!)) byId.set(print.identityId!, print)
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
-  }, [catalogPrints])
-  const inDeck = new Set(cards.map((card) => card.identityId).filter((id): id is string => !!id))
-  const selectedPrints = catalogPrints.filter((print) => print.identityId === identityId)
-  const evaluation = useMemo(() => catalog
-    ? evaluateConstraints(constraints, baseline, catalog, reconciliation)
-    : null, [constraints, baseline, catalog, reconciliation])
   const problemCount = evaluation?.results.filter((result) => result.status === 'conflict' || result.status === 'unmet').length ?? 0
-
-  function edit(constraint: DeckConstraint): void {
-    setEditingId(constraint.id)
-    setIdentityId(constraint.identityId)
-    setPrintId(constraint.printId ?? '')
-    setKind(constraint.kind)
-    setQuantity(String(constraint.quantity))
-    setError(null)
-    document.querySelector<HTMLElement>('#constraint-form select')?.focus({ preventScroll: true })
-    document.getElementById('constraint-form')?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  function finishEdit(id: string): void {
+    setEditingId(null)
+    requestAnimationFrame(() => focusConstraintControl(section.current?.querySelector<HTMLButtonElement>('[data-edit-constraint="' + id + '"]') ?? null))
   }
-
-  async function save(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault()
-    if (saving) return
-    setSaving(true)
-    setError(null)
+  function finishCreate(): void {
+    setCreateIdentity(null)
+    requestAnimationFrame(() => focusConstraintControl(addButton.current))
+  }
+  async function deleteConstraint(id: string): Promise<void> {
+    setDeleteError(null)
+    setNotice('')
     try {
-      const result = await window.projectsApi.saveConstraint({
-        projectId, id: editingId ?? undefined, identityId, printId: printId || null,
-        kind, quantity: kind === 'required' ? 1 : Number(quantity)
-      })
-      if (!result.ok) throw new Error(result.error)
-      setConstraints((items) => editingId
-        ? items.map((item) => item.id === editingId ? result.value : item)
-        : [...items, result.value])
-      setEditingId(null)
-      setKind('required')
-      setPrintId('')
-      setQuantity('2')
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Vincolo non salvato.') }
-    finally { setSaving(false) }
+      await remove(id)
+      if (editingId === id) setEditingId(null)
+      setNotice('Vincolo eliminato.')
+      requestAnimationFrame(() => focusConstraintControl(section.current?.querySelector<HTMLButtonElement>('[data-edit-constraint]') ?? addButton.current))
+    } catch (cause) { setDeleteError({ id, message: cause instanceof Error ? cause.message : 'Vincolo non eliminato.' }) }
   }
 
-  async function remove(constraint: DeckConstraint): Promise<void> {
-    if (saving) return
-    setSaving(true)
-    setError(null)
-    try {
-      const result = await window.projectsApi.deleteConstraint({ projectId, id: constraint.id })
-      if (!result.ok) throw new Error(result.error)
-      setConstraints(result.value)
-      if (editingId === constraint.id) setEditingId(null)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Vincolo non eliminato.') }
-    finally { setSaving(false) }
-  }
-
-  return <section id="deck-constraints" className="constraints-panel" aria-label="Vincoli del mazzo">
-    <div className="panel-heading"><div><span className="eyebrow">Requisiti del mazzo</span><h2>Vincoli</h2></div>
-      <strong>{constraints.length} {constraints.length === 1 ? 'vincolo' : 'vincoli'}{problemCount ? ` · ${problemCount} da risolvere` : ''}</strong></div>
-    <details className="constraint-legality"><summary>Come funzionano i vincoli</summary><p>Restano nel progetto quando cambi lista e contano le ristampe equivalenti. Puoi richiedere una stampa specifica. L’esito Standard complessivo è nella Lista corrente.</p></details>
+  return <section ref={section} id="deck-constraints" className="constraints-panel" aria-label="Vincoli del mazzo">
+    <div className="panel-heading"><div><h2 tabIndex={-1}>Vincoli</h2>
+      <span className="content-note">{constraints.length} {constraints.length === 1 ? 'vincolo' : 'vincoli'}{problemCount ? ' · ' + problemCount + ' da risolvere' : ''}</span></div>
+      {createIdentity === null && <button ref={addButton} type="button" className="secondary-button" disabled={loading || saving || !!error || !catalog?.syncedAt}
+        onClick={() => { setEditingId(null); setCreateIdentity(''); setNotice('') }}>Aggiungi vincolo</button>}</div>
     {error && <div className="error-banner" role="alert">{error}</div>}
-    {loading ? <p className="content-note">Caricamento vincoli…</p> : <>
+    <p className="constraint-notice" role="status">{notice}</p>
+    {loading ? <p className="content-note">Caricamento vincoli…</p> : !error && <>
       {!catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button> per scegliere una carta.</p>}
       {evaluation?.conflicts.map((message, index) => <p className="constraint-conflict" role="alert" key={index}>{message}</p>)}
-      {constraints.length ? <div className="constraint-list">{evaluation?.results.map(({ constraint, status, certainCopies, message }) =>
-        <article className="constraint-item" key={constraint.id}>
-          <div><strong>{constraint.identityName}{constraint.printId ? ` · ${constraint.printId}` : ''}</strong>
-            <span>{label(constraint)}{status === 'met' ? ` · ${certainCopies} copie` : status === 'conflict' ? '' : ` · ${message}`}</span></div>
-          <span className={`constraint-status ${status}`}>{status === 'met' ? 'Soddisfatto' : status === 'unmet' ? 'Non soddisfatto' : status === 'conflict' ? 'Conflitto' : 'Indeterminato'}</span>
-          <button type="button" className="text-button" onClick={() => edit(constraint)} disabled={saving}>Modifica</button>
-          <button type="button" className="text-button" onClick={() => void remove(constraint)} disabled={saving}>Elimina</button>
-        </article>)}</div> : <p className="content-note">Nessun vincolo impostato.</p>}
-      <form id="constraint-form" className="constraint-form" onSubmit={(event) => void save(event)}>
-        <h3>{editingId ? 'Modifica vincolo' : 'Aggiungi vincolo'}</h3>
-        <label>Carta di gioco
-          <select value={identityId} onChange={(event) => { setIdentityId(event.target.value); setPrintId('') }} required disabled={!catalog?.syncedAt}>
-            <option value="">Seleziona una carta</option>
-            <optgroup label="Nella lista corrente">{identities.filter((print) => inDeck.has(print.identityId!)).map((print) =>
-              <option key={print.identityId!} value={print.identityId!}>{print.name} · {print.setName} {print.localId}</option>)}</optgroup>
-            <optgroup label="Nel catalogo">{identities.filter((print) => !inDeck.has(print.identityId!)).map((print) =>
-              <option key={print.identityId!} value={print.identityId!}>{print.name} · {print.setName} {print.localId}</option>)}</optgroup>
-          </select>
-        </label>
-        <label>Stampa specifica (facoltativa)
-          <select value={printId} onChange={(event) => setPrintId(event.target.value)} disabled={!identityId}>
-            <option value="">Tutte le stampe equivalenti</option>
-            {selectedPrints.map((print) => <option key={print.id} value={print.id}>{print.setName} {print.localId} · {print.rarity ?? 'rarità ignota'}</option>)}
-          </select>
-        </label>
-        <label>Tipo di vincolo
-          <select value={kind} onChange={(event) => setKind(event.target.value as ConstraintKind)}>
-            <option value="required">Obbligatoria</option><option value="minimum">Almeno N</option><option value="exact">Esattamente N</option>
-          </select>
-        </label>
-        {kind !== 'required' && <label>Numero di copie
-          <input type="number" min="1" max="60" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} required />
-        </label>}
-        <div className="constraint-form-actions"><button type="submit" className="primary-button" disabled={saving || !identityId || !catalog?.syncedAt}>{saving ? 'Salvataggio…' : editingId ? 'Salva modifica' : 'Aggiungi vincolo'}</button>
-          {editingId && <button type="button" className="text-button" onClick={() => setEditingId(null)}>Annulla modifica</button>}</div>
-      </form>
+      {constraints.length ? <div className="constraint-list">{evaluation?.results.map((result) => {
+        const { constraint, status, certainCopies, message } = result
+        return <article className="constraint-item" key={constraint.id}>
+          <div className="constraint-item-description"><strong>{constraint.identityName}{constraint.printId ? ' · ' + constraint.printId : ''}</strong>
+            <span>{constraintLabel(constraint)}{status === 'met' ? ` · ${certainCopies} ${certainCopies === 1 ? 'copia' : 'copie'}` : status === 'conflict' ? '' : ' · ' + message}</span></div>
+          <ConstraintStatus result={result} />
+          <button type="button" className="text-button" data-edit-constraint={constraint.id} disabled={saving} aria-expanded={editingId === constraint.id}
+            onClick={() => { setCreateIdentity(null); setEditingId(constraint.id); setNotice('') }}>Modifica</button>
+          <button type="button" className="text-button" onClick={() => void deleteConstraint(constraint.id)} disabled={saving}>Elimina</button>
+          {deleteError?.id === constraint.id && <p className="error-banner" role="alert">{deleteError.message}</p>}
+          {editingId === constraint.id && <ConstraintForm id="constraint-form" key={constraint.id} initial={constraint}
+            onSaved={() => { setNotice('Vincolo aggiornato.'); finishEdit(constraint.id) }} onCancel={() => finishEdit(constraint.id)} />}
+        </article>
+      })}</div> : <p className="content-note">Nessun vincolo impostato.</p>}
+      {createIdentity !== null && <ConstraintForm id="constraint-form" key={'new:' + createIdentity} initialIdentityId={createIdentity}
+        onSaved={() => { setNotice('Vincolo aggiunto.'); finishCreate() }} onCancel={finishCreate} />}
     </>}
+    <details className="constraint-legality"><summary>Come funzionano i vincoli</summary><p>Restano nel progetto quando cambi lista e contano le ristampe equivalenti. Puoi richiedere una stampa specifica. L’esito Standard complessivo è nella Lista corrente.</p></details>
   </section>
 }

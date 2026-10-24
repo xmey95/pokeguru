@@ -15,6 +15,8 @@ import { CardThumbnail } from './CardThumbnail'
 import { deckThumbnail, groupDeckCards } from './deck-presentation'
 import { ExportButton } from './ExportButton'
 import { CardOverview } from './CardOverview'
+import { CardConstraints } from './CardConstraints'
+import { useDeckConstraints } from './DeckConstraintsContext'
 
 function localDate(): string {
   const now = new Date()
@@ -34,9 +36,10 @@ function cardStatus(status: 'recognized' | 'unverified' | 'ambiguous' | 'outside
     catalog.scope.kind === 'sample' ? 'Nessuna corrispondenza nel campione' : 'Nessuna corrispondenza locale'
 }
 
-export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onImport }: {
-  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onConstrain(identityId: string): void; onImport(): void
+export function DeckList({ projectId, baseline, onOpenCatalog, onImport }: {
+  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void
 }) {
+  const { setReconciliation: updateConstraintReconciliation } = useDeckConstraints()
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
@@ -110,6 +113,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onIm
       })
       if (!result.ok) throw new Error(result.error)
       setReconciliation(result.value)
+      updateConstraintReconciliation(result.value)
       setExpanded(null)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Identità non salvata.') }
     finally { setSaving(false) }
@@ -126,6 +130,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onIm
       })
       if (!result.ok) throw new Error(result.error)
       setReconciliation(result.value)
+      updateConstraintReconciliation(result.value)
       setExpanded(null)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Correzione non rimossa.') }
     finally { setSaving(false) }
@@ -167,7 +172,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onIm
       <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
     </details>}
     {!loading && !catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
-    <p className="content-note">Apri una carta per vedere stampe e righe importate.</p>
+    <p className="content-note">Apri una carta per leggere il testo di gioco e impostare vincoli.</p>
     {loading ? <p className="content-note">Caricamento carte…</p> : <div className="deck-card-groups" aria-label="Carte della lista corrente">
       <nav className="deck-composition" aria-label="Composizione del mazzo">{groups.filter((group) => group.id !== 'unknown' || group.total > 0).map((group) =>
         group.total > 0 ? <a key={group.id} href={`#deck-group-${group.id}`} onClick={(event) => { event.preventDefault(); jumpToGroup(group.id) }}><span>{group.name}</span><strong>{group.total}</strong></a>
@@ -188,7 +193,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onConstrain, onIm
           </button>
           {open && <div className="deck-card-detail">
             <CardOverview card={card} onOpenCatalog={onOpenCatalog} />
-            {card.identityId && <div className="card-detail-actions"><button type="button" className="secondary-button" onClick={() => onConstrain(card.identityId!)}>Aggiungi vincolo su questa carta</button></div>}
+            {card.identityId && <CardConstraints identityId={card.identityId} name={card.name} />}
             {card.staleCorrection && <p className="diagnostics">Una correzione precedente non corrisponde più al catalogo locale. Controlla l’identità prima di usarla nell’analisi.</p>}
             {card.status === 'ambiguous' && <p className="content-note">Le righe restano separate finché non confermi l’identità.</p>}
             <details className="deck-import-details"><summary>Testo importato e controlli</summary>
