@@ -140,7 +140,7 @@ async function enrichOpponentCards(snapshot: MetaSnapshot, opponent: MetaDeck): 
   const prints = catalog.prints
   const codes = new Map(catalog.sets.flatMap((set) =>
     set.abbreviation ? [[set.id, set.abbreviation.toUpperCase()] as const] : []))
-  const names = new Set(preview.observedCards.slice(0, 24).map((card) => card.name.toLocaleLowerCase()))
+  const names = new Set(preview.observedCards.map((card) => card.name.toLocaleLowerCase()))
   const exactIds = preview.sampleLists.flatMap((sample) => sample.cards ?? []).flatMap((line) => {
     const match = /^(?:\d+)\s+(.+)\s+([A-Z0-9.]+)\s+([A-Z0-9]+)$/i.exec(line)
     if (!match || !names.has(match[1].toLocaleLowerCase())) return []
@@ -149,7 +149,7 @@ async function enrichOpponentCards(snapshot: MetaSnapshot, opponent: MetaDeck): 
       candidate.localId.replace(/^0+/, '') === match[3].replace(/^0+/, ''))
     return matches.length === 1 ? [matches[0].id] : []
   })
-  const fallbackIds = preview.observedCards.filter((card) => !card.gameplay).slice(0, 24).flatMap((card) => {
+  const fallbackIds = preview.observedCards.filter((card) => !card.gameplay).flatMap((card) => {
     const print = prints.find((candidate) => candidate.name.toLocaleLowerCase() === card.name.toLocaleLowerCase() &&
       candidate.detailAt !== null && candidate.gameplaySchemaVersion !== 1)
     return print ? [print.id] : []
@@ -178,7 +178,7 @@ async function opponentSampleWithMechanics(sample: { url: string | null; cards: 
     if (observed?.gameplay && observed.cardSourceUrl) return [{ name,
       text: observed.gameplay, sourceUrl: observed.cardSourceUrl }]
     const comparable = prints.filter((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase() && item.gameplay)
-    const summaries = new Set(comparable.map((item) => gameplaySummary(item.gameplay!)))
+    const summaries = new Set(comparable.map((item) => gameplaySummary(item.gameplay!, item)))
     return summaries.size === 1 && comparable[0]
       ? [{ name, text: [...summaries][0], sourceUrl: comparable[0].sourceUrl }] : []
   })

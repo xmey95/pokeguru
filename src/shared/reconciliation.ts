@@ -203,7 +203,7 @@ export function matchupDeckContext(baseline: DeckBaseline, reconciliation: DeckR
         : card.status === 'unverified' ? 'stampa esatta nota; equivalenza fra ristampe da verificare'
           : card.status === 'ambiguous' ? 'identità ambigua' : 'nessuna corrispondenza nel catalogo locale'
       return `${card.quantity} ${card.name} — ${status}` +
-        (print?.gameplay ? `; scheda ${print.id}: ${gameplaySummary(print.gameplay)}; fonte ${print.sourceUrl}` : '')
+        (print?.gameplay ? `; scheda ${print.id}: ${gameplaySummary(print.gameplay, print)}; fonte ${print.sourceUrl}` : '')
     })
     return `CARTE NOSTRE (testo originale):\n${baseline.lines.filter((line) => line.kind === 'card')
       .slice(0, 120).map((line) => line.raw).join('\n') || 'lista non interpretata'}\n` +

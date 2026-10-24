@@ -19,6 +19,8 @@ const prints = [print('me01-001', 'Base One', { category: 'Pokemon', stage: 'Bas
   print('me03-200', 'Future Trainer'), print('sv05-154', 'Maximum Belt', { rarity: 'ACE SPEC Rare', regulationMark: 'H' }),
   print('sv05-157', 'Prime Catcher', { rarity: 'ACE SPEC Rare', regulationMark: 'H' }),
   print('sv02-185', 'Iono', { regulationMark: 'G' }),
+  print('sv06.5-040', 'Genesect', { category: 'Pokemon', stage: 'Basic', regulationMark: 'H' }),
+  print('me02-116', 'Battle Cage'),
   print('30th-001', 'Special Card'),
   print('mep-051', 'Promo Waiting', { isPromo: true, promoStatus: {
     state: 'upcoming', legalDate: '2026-11-01', dateNote: null, checkedAt: '2026-10-23T00:00:00.000Z'
@@ -77,6 +79,17 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
     expect(result.legality).toBe('indeterminate')
   })
 
+  it('non attribuisce a Battle Cage una lacuna della riga Genesect SFA', () => {
+    const coveredCatalog: CatalogView = { ...catalog,
+      scope: { ...catalog.scope, kind: 'standard-marks' }, rulePackage: BUNDLED_WESTERN_RULE_PACKAGE }
+    const deck = baseline([...raw.slice(0, 58), '1 Genesect SFA 40', '1 Battle Cage PFL 116'])
+    const staleAudit: StandardRuleAudit = { packageVersion: '2026-10-24.1',
+      checkedAt: '2026-10-24T12:00:00.000Z', verifiedAt: null, status: 'unavailable', sources: [] }
+    const result = evaluateStandardDeck(deck, coveredCatalog, '2026-10-24', staleAudit)
+    expect(result.legality).toBe('supported')
+    expect(result.toReview).toEqual([])
+  })
+
   it('segnala come certi 59 carte, due ACE SPEC e ammissione futura', () => {
     const short = evaluateStandardDeck(baseline(raw.slice(0, 59)), catalog, '2026-10-23')
     expect(short.status).toBe('problem')
@@ -112,7 +125,7 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
   })
 
   it('riporta da verificare una fonte ufficiale cambiata', () => {
-    const audit: StandardRuleAudit = { packageVersion: 'western-2026-10-23-v1', checkedAt: '2026-10-23T12:00:00.000Z',
+    const audit: StandardRuleAudit = { packageVersion: BUNDLED_WESTERN_RULE_PACKAGE.version, checkedAt: '2026-10-23T12:00:00.000Z',
       verifiedAt: null, status: 'changed', sources: [] }
     const result = evaluateStandardDeck(baseline(raw), catalog, '2026-10-23', audit)
     expect(result.status).toBe('review')
