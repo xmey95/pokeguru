@@ -24,7 +24,7 @@ try {
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.locator('.deck-card').filter({ hasText: 'Iono' }).first().waitFor()
   await page.getByRole('button', { name: 'Matchup' }).click()
-  await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
+  await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
   await page.locator('.matchup-ai-details > summary').click()

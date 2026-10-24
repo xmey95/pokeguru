@@ -119,6 +119,12 @@ L'utente approva un campo con scelta “Discuti” / “Proponi una lista” e �
 
 Una sola anteprima dei dati è secondaria rispetto alle azioni. Un contatore invalida risposte pendenti quando cambiano testo, modalità o contesto; un'anteprima vecchia non può ripristinare contenuti o errori sul nuovo thread. Durante invio/salvataggio il campo e la modalità sono disabilitati per evitare che il successo cancelli modifiche successive. Gli errori sono nel modulo e conservano la richiesta. Bozze per thread o persistenti non sono introdotte: il cambio thread azzera il campo, come prima. I test con ritardi/risposte AI simulate verificano la UI; osservazioni e errore SQLite usano lo storage reale temporaneo. Nessun cambio alle API di produzione.
 
+### T-59 — Selettore avversario nei Matchup (APP-070)
+
+L'utente approva un selettore ricercabile con nome, quota meta e disponibilità della guida. Le opzioni uniscono gli archetipi dello snapshot e gli avversari presenti nelle discussioni storiche del progetto. I report della base corrente identificano “Guida disponibile”; le discussioni precedenti identificano “Guida storica”. Finché le letture necessarie non sono disponibili, o se falliscono, lo stato è “Disponibilità da verificare”, senza dedurre assenza o attualità della guida. Un avversario solo storico non mostra la vecchia percentuale; aggiornare il meta ne conserva la selezione.
+
+Il menu usa lo stesso stile dei Thread, un popover nativo con ricerca e pulsanti, limitato all'area centrale per lasciare il mazzo consultabile. La ricerca si azzera alla chiusura e l'opzione corrente torna in vista alla riapertura; frecce/Invio, Tab ed Escape sono verificati. Escape viene gestito esplicitamente anche nel campo search compilato. Il nome scelto compare una volta; i punti Limitless passano nei dettagli della fonte. Nessuna modifica a storage, guida/revisioni o integrazioni. Le prove di disponibilità usano report dichiaratamente dimostrativi in SQLite; non attestano qualità o nuove generazioni Codex.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

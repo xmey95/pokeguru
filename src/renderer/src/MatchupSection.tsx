@@ -6,6 +6,7 @@ import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaD
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { evaluateStandardDeck } from '../../shared/standard-deck'
 import { buildDeckCards, matchupDeckContext, type DeckReconciliation } from '../../shared/reconciliation'
+import { MatchupSwitcher } from './MatchupSwitcher'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -35,13 +36,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [snapshot, setSnapshot] = useState<MetaSnapshot | null>(null)
   const [reports, setReports] = useState<MatchupReport[]>([])
   const [historicalOpponents, setHistoricalOpponents] = useState<MetaDeck[]>([])
+  const [historyKey, setHistoryKey] = useState<string | null>(null)
   const [discussions, setDiscussions] = useState<MatchupDiscussion[]>([])
   const [discussionsKey, setDiscussionsKey] = useState<string | null>(null)
   const [activeDiscussionId, setActiveDiscussionId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState('')
   const [reportsKey, setReportsKey] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [opponentQuery, setOpponentQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -98,7 +99,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       const result = await window.projectsApi.getMeta()
       if (!result.ok) throw new Error(result.error)
       setSnapshot(result.value)
-      setSelectedId((id) => id && result.value.decks.some((deck) => deck.id === id) ? id : result.value.decks[0]?.id ?? null)
+      setSelectedId((id) => id && (result.value.decks.some((deck) => deck.id === id) || historicalOpponents.some((deck) => deck.id === id))
+        ? id : result.value.decks[0]?.id ?? null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Metagame non disponibile.')
     } finally {
@@ -110,8 +112,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   useEffect(() => {
     let active = true
     void window.projectsApi.listHistoricalMatchupOpponents(projectId).then((result) => {
-      if (active && result.ok) setHistoricalOpponents(result.value)
-    })
+      if (!active) return
+      if (result.ok) { setHistoricalOpponents(result.value); setHistoryKey(`${projectId}:${snapshot?.id}`) }
+      else setError(result.error)
+    }).catch(() => { if (active) setError('Impossibile leggere lo storico Matchup.') })
     return () => { active = false }
   }, [projectId, snapshot?.id])
   useEffect(() => {
@@ -219,12 +223,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     }
   }
 
-  const otherOpponents = historicalOpponents.filter((deck) => !snapshot?.decks.some((current) => current.id === deck.id))
+  const historyLoaded = historyKey === `${projectId}:${snapshot?.id}`
+  const knownHistory = historyLoaded ? historicalOpponents : []
+  const otherOpponents = knownHistory.filter((deck) => !snapshot?.decks.some((current) => current.id === deck.id))
   const allOpponents = [...(snapshot?.decks ?? []), ...otherOpponents]
-  const visibleOpponents = allOpponents.filter((deck) => deck.name.toLocaleLowerCase().includes(opponentQuery.trim().toLocaleLowerCase()))
   const selected = allOpponents.find((deck) => deck.id === selectedId)
   const selectedInCurrentMeta = !!snapshot?.decks.some((deck) => deck.id === selectedId)
   const currentReports = reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}` ? reports : []
+  const reportsLoaded = !hasBaseline || reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}`
   const visibleDiscussions = discussionsKey === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}` ? discussions : []
   const currentDiscussion = visibleDiscussions.find((item) => item.current)
   const discussion = visibleDiscussions.find((item) => item.id === activeDiscussionId) ?? currentDiscussion ?? visibleDiscussions[0]
@@ -240,18 +246,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const theirCatalogCards = report?.tournamentEvidence?.observedCards.filter((card) =>
     card.catalogIdentityId && mentioned(card.name, report.theirKeyCards)) ?? []
 
-  useEffect(() => {
-    const list = document.querySelector<HTMLElement>('.meta-deck-list')
-    const reveal = () => {
-      const active = list?.querySelector<HTMLElement>('.meta-deck.active')
-      if (list && active) list.scrollLeft += active.getBoundingClientRect().left - list.getBoundingClientRect().left - (list.clientWidth - active.clientWidth) / 2
-    }
-    if (!list) return
-    const observer = new ResizeObserver(reveal)
-    observer.observe(list)
-    reveal()
-    return () => observer.disconnect()
-  }, [selectedId, opponentQuery, snapshot?.id])
+  const opponentOptions = allOpponents.map((opponent) => ({
+    ...opponent,
+    inCurrentMeta: !!snapshot?.decks.some((deck) => deck.id === opponent.id),
+    guideStatus: currentReports.some((item) => item.opponentId === opponent.id) ? 'Guida disponibile'
+      : knownHistory.some((item) => item.id === opponent.id) && (reportsLoaded || !snapshot?.decks.some((deck) => deck.id === opponent.id)) ? 'Guida storica'
+      : historyLoaded && reportsLoaded
+        ? 'Nessuna guida' : 'Disponibilità da verificare'
+  }))
 
   return <section className="matchup-section" aria-label="Matchup del progetto">
     <div className="panel-heading">
@@ -264,25 +266,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         <summary>{snapshot.decks.length} archetipi Limitless · {snapshot.cached ? 'copia locale' : `aggiornato ${date(snapshot.fetchedAt)}`}</summary>
         <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(snapshot.sourceUrl)}>Apri fonte Limitless ↗</button>
         <p>{snapshot.period} · Standard occidentale · acquisito {date(snapshot.fetchedAt)}. Le quote indicano il meta, non il winrate.</p>
+        {selected && selectedInCurrentMeta && <p>{selected.name} · {selected.points} punti Limitless.</p>}
       </details>
       <div className="meta-layout">
-        <div className="meta-picker">
-          <label className="meta-search" htmlFor="opponent-search"><span>Cerca avversario</span>
-            <input id="opponent-search" type="search" value={opponentQuery} onChange={(event) => setOpponentQuery(event.target.value)} placeholder="Nome archetipo" /></label>
-          <div className="meta-deck-list" aria-label="Archetipi Limitless">
-          {visibleOpponents.map((deck) => <button type="button" key={deck.id}
-            className={`meta-deck ${selectedId === deck.id ? 'active' : ''}`}
-            onClick={() => setSelectedId(deck.id)} aria-pressed={selectedId === deck.id}>
-            <strong>{deck.name}</strong><span>{snapshot.decks.some((current) => current.id === deck.id)
-              ? `${deck.share.toFixed(2)}% quota · ${deck.points} punti${currentReports.some((item) => item.opponentId === deck.id) ? ' · Analisi AI' : ''}`
-              : 'Solo nello storico · Analisi AI'}</span>
-          </button>)}
-          {visibleOpponents.length === 0 && <p className="content-note">Nessun archetipo trovato.</p>}
-          </div>
-        </div>
+        <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading || generating} onSelect={setSelectedId} />
         <div className="meta-analysis">
           {selected && <>
-            <div className="matchup-card-head"><div><h3>{selected.name}</h3><span className="note-source">{selectedInCurrentMeta ? 'Quota meta, non winrate' : 'Archetipo dello storico'}</span></div>{discussion && !discussion.current && <span className="matchup-freshness stale">Guida storica · base precedente</span>}</div>
+            {discussion && !discussion.current && <p className="matchup-freshness stale">Guida storica · base precedente</p>}
             <div className="matchup-source-links"><button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(selected.url)}>Apri archetipo su Limitless ↗</button>
               {report?.metaSourceUrl && <button type="button" className="text-button"
                 onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}</div>

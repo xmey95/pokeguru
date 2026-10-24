@@ -32,7 +32,9 @@ try {
   const match = meta.value.decks.find((deck) => tournament.value.participations.some((entry) =>
     entry.deck && slug(entry.deck.id) === slug(deck.name) && entry.cardTotal === 60))
   assert.ok(match, 'Nessun archetipo con ID coerente e lista completa nel torneo corrente')
-  await page.locator('.meta-deck-list .meta-deck').filter({ hasText: match.name }).first().click()
+  await page.locator('#matchup-switcher-trigger').click()
+  await page.getByLabel('Cerca avversario').fill(match.name)
+  await page.locator('.matchup-option').filter({ hasText: match.name }).first().click()
   assert.match(await page.locator('.ai-data-preview').textContent(), /liste complete dell’archetipo/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([

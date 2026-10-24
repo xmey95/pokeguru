@@ -263,9 +263,10 @@ try {
   application = await launch()
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Matchup', exact: true }).click()
+  await page.locator('#matchup-switcher-trigger').click()
   await page.getByLabel('Cerca avversario').fill('Gardevoir ex · fixture UI')
-  assert.equal(await page.locator('.meta-deck').count(), 1, 'La ricerca non filtra gli archetipi')
-  await page.locator('.meta-deck').filter({ hasText: 'Gardevoir ex · fixture UI' }).click({ timeout: 30000 })
+  assert.equal(await page.locator('.matchup-option').count(), 1, 'La ricerca non filtra gli archetipi')
+  await page.locator('.matchup-option').filter({ hasText: 'Gardevoir ex · fixture UI' }).click({ timeout: 30000 })
   await page.getByText('Come giocare il matchup').waitFor()
   assert.equal(await page.locator('.discussion-timeline details').count(), 2)
   assert.equal(await page.locator('.discussion-timeline details').last().locator('.discussion-version').count(), 0,
@@ -279,7 +280,6 @@ try {
   assert.match(sharedData, /Mega Absol ex/)
   assert.match(sharedData, /altri progetti/)
   await page.locator('.matchup-ai-details > summary').click()
-  await page.getByLabel('Cerca avversario').fill('')
   for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'matchup')
     assert.match(await page.getByTestId('deck-companion').textContent(), /Mega Absol ex/)

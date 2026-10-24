@@ -62,7 +62,7 @@ export function ThreadSwitcher({ threads, selected, versions, disabled, onSelect
   const description = (thread: DeckThread) => `${thread.baseVersionNumber === null ? '' : `Base v${thread.baseVersionNumber} · `}${threadStatus(thread, versions)}`
 
   return <>
-    <button ref={trigger} id="thread-switcher-trigger" type="button" className="thread-switcher"
+    <button ref={trigger} id="thread-switcher-trigger" type="button" className="workspace-switcher thread-switcher"
       popoverTarget={id} aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
       aria-label={selected ? `Cambia thread: ${selected.title}` : 'Scegli thread'}
       disabled={disabled || threads.length === 0}>
@@ -71,7 +71,7 @@ export function ThreadSwitcher({ threads, selected, versions, disabled, onSelect
       <Icon name="chevron" />
     </button>
     <div ref={panel} id={id} popover="auto" role="dialog" aria-label="Scegli thread"
-      className="project-picker thread-picker" onKeyDown={navigate}
+      className="project-picker workspace-picker thread-picker" onKeyDown={navigate}
       onToggle={(event) => { const next = event.newState === 'open'; setOpen(next); if (!next) setQuery('') }}
       onBlur={(event) => {
         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget) && event.relatedTarget !== trigger.current) panel.current?.hidePopover()

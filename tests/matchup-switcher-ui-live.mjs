@@ -1,0 +1,206 @@
+import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { basename, dirname, join, resolve } from 'node:path'
+import { createRequire } from 'node:module'
+import { DatabaseSync } from 'node:sqlite'
+import { _electron as electron } from 'playwright-core'
+import { auditDesignSystem } from './design-system-audit.mjs'
+import { createProjectFromStart, switchProject } from './project-ui-helper.mjs'
+
+const require = createRequire(import.meta.url)
+const workspace = resolve(import.meta.dirname, '..')
+const profile = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-switcher-'))
+const deck = readFileSync(join(workspace, 'examples/workspace-principale.txt'), 'utf8').trim()
+const hash = (text) => createHash('sha256').update(text).digest('hex')
+const names = ['Gardevoir ex', 'Dragapult ex', 'Charizard ex / Pidgeot ex',
+  'Gholdengo ex / Joltik Box / Mega Kangaskhan ex · nome lungo di prova']
+const opponents = Array.from({ length: 16 }, (_, i) => ({
+  id: String(900000 + i), name: names[i] ?? 'Avversario di prova ' + i,
+  points: 500 - i * 20, share: i === 0 ? 8.2 : 5 - i / 4,
+  url: 'https://limitlesstcg.com/decks/' + (900000 + i)
+}))
+const historic = { id: '999998', name: 'Archetipo solo nello storico', share: 12.34, points: 200,
+  url: 'https://limitlesstcg.com/decks/999998' }
+const now = new Date().toISOString()
+const oldDate = new Date(Date.now() - 86400000).toISOString()
+const snapshot = { id: hash('matchup-selector-fixture'), fetchedAt: now,
+  sourceUrl: 'https://limitlesstcg.com/decks?format=standard', period: 'Fixture UI',
+  circuit: 'WESTERN', format: 'STANDARD', decks: opponents, cached: false }
+const oldSnapshot = { ...snapshot, id: hash('matchup-selector-old'), fetchedAt: oldDate, decks: [historic] }
+let application
+let minimumContrast = Infinity
+
+async function launch() {
+  application = await electron.launch({ executablePath: require('electron'), args: ['.'], cwd: workspace,
+    env: { ...process.env, POKEGURU_DATA_DIR: profile }, timeout: 30000 })
+  const page = await application.firstWindow()
+  page.setDefaultTimeout(15000)
+  return page
+}
+
+function seed() {
+  const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
+  try {
+    const project = db.prepare("SELECT id FROM projects WHERE name = 'Matchup · fixture UI'").get()
+    const savedDeck = db.prepare('SELECT raw_text FROM deck_baselines WHERE project_id = ?').get(project.id).raw_text
+    for (const meta of [oldSnapshot, snapshot]) db.prepare('INSERT INTO meta_snapshots (id, fetched_at, payload) VALUES (?, ?, ?)')
+      .run(meta.id, meta.fetchedAt, JSON.stringify(meta))
+    for (const [opponent, meta, deckHash] of [
+      [opponents[0], snapshot, hash(savedDeck)], [opponents[1], snapshot, hash('lista precedente')], [historic, oldSnapshot, hash(savedDeck)]
+    ]) {
+      const report = { projectId: project.id, metaId: meta.id, opponentId: opponent.id, deckHash,
+        generatedAt: meta.fetchedAt, sampleDeckUrl: null, metaSourceUrl: meta.sourceUrl,
+        metaPeriod: meta.period, metaFetchedAt: meta.fetchedAt,
+        strengths: 'Preparare due attaccanti.', weaknesses: 'Partenza dipendente dalla ricerca.',
+        ourKeyCards: 'Mega Absol ex, Mega Audino ex e Night Stretcher.',
+        theirKeyCards: opponent.name, strategy: 'Piano di prova contro ' + opponent.name + '. Conserva una carta di ricerca per il turno successivo.',
+        limitations: 'Fixture UI: guida di esempio, non generata da Codex e non verificata in partita.' }
+      db.prepare('INSERT INTO matchup_reports (project_id, meta_id, opponent_id, deck_hash, generated_at, payload) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(project.id, meta.id, opponent.id, deckHash, meta.fetchedAt, JSON.stringify(report))
+      db.prepare('INSERT INTO matchup_discussions (id, project_id, meta_id, opponent_id, deck_hash, parent_id, created_at) VALUES (?, ?, ?, ?, ?, NULL, ?)')
+        .run(opponent.id, project.id, meta.id, opponent.id, deckHash, meta.fetchedAt)
+      db.prepare('INSERT INTO matchup_turns (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary) VALUES (?, ?, 0, NULL, ?, ?, NULL)')
+        .run(opponent.id, opponent.id, meta.fetchedAt, JSON.stringify(report))
+    }
+  } finally { db.close() }
+}
+
+async function geometry(page, width, height, open) {
+  await page.setViewportSize({ width, height })
+  const boxes = await page.evaluate((open) => {
+    const rect = (selector) => {
+      const r = document.querySelector(selector).getBoundingClientRect()
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+    }
+    return { main: rect('.main-content'), deck: rect('.deck-companion'),
+      target: rect(open ? '.matchup-picker' : '#matchup-switcher-trigger'),
+      rootScroll: document.querySelector('#root').scrollTop,
+      overflow: document.querySelector('.main-content').scrollWidth > document.querySelector('.main-content').clientWidth + 1 }
+  }, open)
+  assert.equal(boxes.rootScroll, 0, 'Il focus ha spostato la griglia')
+  assert.equal(boxes.overflow, false, 'Overflow orizzontale')
+  assert.ok(boxes.target.left >= boxes.main.left && boxes.target.right <= boxes.main.right, 'Selettore fuori dal contenuto')
+  assert.ok(boxes.target.top >= boxes.main.top && boxes.target.bottom <= boxes.main.bottom, 'Menu fuori dal contenuto')
+  assert.ok(width > 1240 ? boxes.main.right <= boxes.deck.left : boxes.main.bottom <= boxes.deck.top, 'Lista coperta')
+  minimumContrast = Math.min(minimumContrast, (await auditDesignSystem(page, 'Matchup ' + width)).minimumContrast)
+}
+
+try {
+  let page = await launch()
+  await createProjectFromStart(page, 'Matchup · fixture UI')
+  await page.getByLabel('Testo lista').fill(deck)
+  await page.getByRole('button', { name: 'Salva lista', exact: true }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
+  assert.equal((await page.evaluate(() => window.projectsApi.create({ name: 'Progetto separato', format: 'STANDARD' }))).ok, true)
+  await application.close()
+  application = undefined
+  seed()
+  page = await launch()
+  // Only the network snapshot is a fixture handler. Guides/history/project isolation use real SQLite and IPC.
+  await application.evaluate(({ ipcMain }, meta) => {
+    ipcMain.removeHandler('matchups:get-meta')
+    ipcMain.handle('matchups:get-meta', () => ({ ok: true, value: meta }))
+  }, snapshot)
+  await switchProject(page, /Matchup · fixture UI/)
+  await page.getByRole('button', { name: 'Matchup', exact: true }).click()
+  const trigger = page.locator('#matchup-switcher-trigger')
+  const picker = page.getByRole('dialog', { name: 'Scegli avversario' })
+  const search = page.getByLabel('Cerca avversario')
+  async function openPicker() {
+    await trigger.click()
+    await page.waitForFunction(() => document.querySelector('#matchup-switcher-trigger')?.getAttribute('aria-expanded') === 'true' &&
+      document.activeElement?.getAttribute('aria-label') === 'Cerca avversario')
+  }
+  await trigger.waitFor()
+  await page.waitForFunction(() => document.querySelector('#matchup-switcher-trigger')?.textContent.includes('Guida disponibile'))
+  await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
+
+  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
+    await page.locator('.main-content').evaluate((el) => { el.scrollTop = 0 })
+    await geometry(page, width, height, false)
+    await page.screenshot({ path: join(workspace, 'node_modules', 'matchup-guide-' + width + '.png') })
+    await trigger.focus()
+    await page.keyboard.press('Enter')
+    await search.waitFor()
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Cerca avversario')
+    assert.equal(await picker.locator('.matchup-option').count(), 17)
+    assert.match(await picker.locator('.matchup-option').first().innerText(), /8,20% quota meta · Guida disponibile/)
+    assert.match(await picker.locator('.matchup-option').nth(1).innerText(), /quota meta · Guida storica/)
+    assert.match(await picker.locator('.matchup-option').nth(2).innerText(), /Nessuna guida/)
+    assert.match(await picker.locator('.matchup-option').last().innerText(), /Solo nello storico · Guida storica/)
+    assert.doesNotMatch(await picker.locator('.matchup-option').last().innerText(), /12,34|12.34|%/)
+    await geometry(page, width, height, true)
+    await page.screenshot({ path: join(workspace, 'node_modules', 'matchup-picker-' + width + '.png') })
+    await page.keyboard.press('ArrowUp')
+    assert.ok(await picker.locator('.matchup-option').last().evaluate((el) => document.activeElement === el))
+    await geometry(page, width, height, true)
+    await page.keyboard.press('Escape')
+    await picker.waitFor({ state: 'hidden' })
+    assert.ok(await trigger.evaluate((el) => el === document.activeElement))
+  }
+
+  await openPicker()
+  await search.fill('NESSUN RISULTATO')
+  await picker.getByRole('status').waitFor()
+  await page.keyboard.press('ArrowDown')
+  assert.ok(await search.evaluate((el) => el === document.activeElement))
+  await page.keyboard.press('Escape')
+  await openPicker()
+  assert.equal(await search.inputValue(), '')
+  await search.fill(' gholdengo ')
+  assert.equal(await picker.locator('.matchup-option').count(), 1)
+  await geometry(page, 640, 720, true)
+  await page.screenshot({ path: join(workspace, 'node_modules', 'matchup-long-name-640.png') })
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Tab')
+  await picker.waitFor({ state: 'hidden' })
+  assert.match(await trigger.innerText(), /Gardevoir/)
+  await openPicker()
+  await search.fill('gholdengo')
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+  await picker.waitFor({ state: 'hidden' })
+  assert.match(await trigger.innerText(), /Gholdengo.*Nessuna guida/s)
+  assert.ok(await trigger.evaluate((el) => el === document.activeElement))
+  await page.getByText('Nessuna guida per questo archetipo e questa lista.').waitFor()
+  await openPicker()
+  await search.fill('solo nello storico')
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+  await page.getByText('Guida storica · base precedente', { exact: true }).waitFor()
+  assert.match(await page.locator('.matchup-fields').innerText(), /Piano di prova contro Archetipo solo nello storico/)
+  await page.getByRole('button', { name: 'Aggiorna Limitless', exact: true }).click()
+  assert.match(await trigger.innerText(), /Archetipo solo nello storico/)
+  await openPicker()
+  await search.fill('Dragapult')
+  await picker.getByRole('button', { name: /Dragapult/ }).click()
+  await page.getByText('Guida storica · base precedente', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Continua sulla nuova base' }).waitFor()
+
+  await switchProject(page, /Progetto separato/)
+  await page.waitForFunction(() => document.querySelector('#matchup-switcher-trigger')?.textContent.includes('Nessuna guida'))
+  await openPicker()
+  assert.equal(await picker.locator('.matchup-option').count(), 16, 'Storico di un altro progetto visibile')
+  assert.doesNotMatch(await picker.innerText(), /Guida disponibile|Guida storica/)
+  await page.keyboard.press('Escape')
+  await page.getByText('Importa una lista nel progetto per generare l’analisi di questo matchup.').waitFor()
+
+  // A failed history read must not masquerade as "no guides".
+  await application.evaluate(({ ipcMain }) => {
+    ipcMain.removeHandler('matchups:list-historical-opponents')
+    ipcMain.handle('matchups:list-historical-opponents', () => ({ ok: false, error: 'Storico non leggibile · fixture UI' }))
+  })
+  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('button', { name: 'Matchup', exact: true }).click()
+  await page.getByRole('alert').filter({ hasText: 'Storico non leggibile' }).waitFor()
+  assert.match(await trigger.innerText(), /Disponibilità da verificare/)
+  console.log('MATCHUP SELECTOR UI OK: ricerca, tastiera, storico, base precedente, isolamento progetti, errore lettura; 1440/1280/640; contrasto minimo ' + minimumContrast.toFixed(2))
+} finally {
+  await application?.close()
+  const resolved = realpathSync(profile)
+  assert.equal(dirname(resolved).toLowerCase(), realpathSync(tmpdir()).toLowerCase())
+  assert.ok(basename(resolved).startsWith('pokeguru-matchup-switcher-'))
+  rmSync(resolved, { recursive: true, force: true })
+}

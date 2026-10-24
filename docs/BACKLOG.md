@@ -76,7 +76,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-067** | Revisione condivisa di selezione e creazione dei Thread | UI/UX | R-03, R-07 / qualità pre-I4 | P1 / S | APP-066; proposta approvata dall'utente | Done |
 | **APP-068** | Revisione condivisa della gerarchia tra conversazione e candidata | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-067; proposta approvata dall'utente | Done |
 | **APP-069** | Revisione condivisa della scrittura nel Thread | UI/UX | R-07, R-08 / qualità pre-I4 | P1 / S | APP-068; proposta approvata dall'utente | Done |
-| **APP-070** | Revisione condivisa della scelta dell'avversario nei Matchup | UI/UX | R-10 / qualità pre-I4 | P1 / S | APP-069; proposta da discutere con l'utente | Backlog |
+| **APP-070** | Revisione condivisa della scelta dell'avversario nei Matchup | UI/UX | R-10 / qualità pre-I4 | P1 / S | APP-069; proposta approvata dall'utente | Done |
+| **APP-071** | Revisione condivisa della gerarchia della guida Matchup | UI/UX | R-10 / qualità pre-I4 | P1 / S | APP-070; proposta da discutere con l'utente | Backlog |
 
 ## Task dettagliati I0–I2
 
@@ -618,10 +619,20 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche Windows:** build/typecheck e cinque percorsi Electron passati: `thread-composer-ui-live.mjs`, AI offline, workspace UI, thread persistenti e adozione. Tastiera/frecce, testo conservato, lista iniziale assente, osservazioni realmente persistite e isolate, errore SQLite e recupero nel solo archivio temporaneo, instradamento delle modalità e disabilitazione durante attesa verificati. Fixture dichiarate per risposte AI e ritardi: anteprime tardive dopo cambio modalità/testo/thread non ricompaiono. Layout/contrasto a 1440×900, 1280×720 e 640×720; workspace anche a 1241/1240×720 e 1024×768. Schermate ispezionate, lista persistente senza sovrapposizioni e contrasto minimo osservato 5,16:1. `git diff --check` pulito.
 - **Limiti:** nessuna nuova generazione AI; il test con risposte simulate verifica solo il renderer e l'instradamento, non l'integrazione. Prove Linux, lettore di schermo e scala OS elevata non eseguite. Bozze tra thread/riavvii fuori da questo task; nessun merge o release.
 
-### APP-070 — Scelta dell'avversario nei Matchup, proposta da discutere
+### APP-070 — Scelta dell'avversario nei Matchup
 
 - **Osservazione:** ricerca permanente affiancata a una striscia orizzontale di archetipi; i riquadri nascondono parte delle opzioni e occupano spazio prima della guida.
-- **Proposta:** selettore unico ricercabile con nome avversario, quota meta e disponibilità della guida, coerente con progetti e Thread. Preservare distinzione fra meta corrente e storico, fonti e quota meta diversa dal winrate. Da discutere con l'utente prima di applicare.
+- **Autorizzazione e Ready:** proposta approvata dall'utente il 24-10-2026; perimetro S, dipendenze risolte, avviata sul ramo locale `task/production-design-system`.
+- **Accettazione:** selettore unico ricercabile con nome avversario, quota meta e disponibilità della guida, coerente con progetti e Thread. Preservare accesso allo storico, distinzione fra meta corrente e storico, fonti e quota meta diversa dal winrate. Menu nel contenuto centrale con lista principale consultabile; tastiera, focus e ricerca senza risultati.
+- **Verifica prevista:** build/typecheck; Electron con dati locali dichiarati per guide correnti, storiche e assenti, ricerca, tastiera e isolamento progetti; layout/contrasto a 1440×900, 1280×720 e 640×720; regressione workspace. Nessuna nuova generazione AI.
+- **Risultato:** selettore unico con ricerca per nome, quota meta italiana e stato “Guida disponibile”, “Guida storica”, “Nessuna guida” o “Disponibilità da verificare”. Lo storico non espone quote vecchie come attuali; un errore di lettura non equivale ad assenza di guide. Menu limitato all'area centrale, scorrimento proprio, selezione corrente in vista alla riapertura, frecce/Invio/Tab/Escape e ritorno del focus. Escape chiude anche con ricerca compilata. Nessun titolo avversario ripetuto; punti Limitless nei dettagli della fonte. Aggiornare il meta conserva un avversario storico selezionato. Selezione disabilitata durante generazione; contenuti della guida, revisioni e contratti IPC invariati.
+- **Verifiche Windows:** build/typecheck e tre percorsi Electron passati in sequenza: `matchup-switcher-ui-live.mjs`, selettore Thread e workspace UI. Archivio SQLite temporaneo con 16 archetipi correnti e uno storico: guida sulla base attuale, guida su lista precedente, guida di vecchio snapshot, nessuna guida, progetto vuoto/separato, ricerca senza risultati, nome lungo, tastiera, focus e errore di lettura coperti. Fixture dichiarata del solo snapshot di rete e dell'errore; guide/storico e isolamento letti tramite IPC/storage reali. Menu e lista consultabile a 1440×900, 1280×720 e 640×720; workspace anche 1241/1240×720 e 1024×768. Schermate ispezionate; contrasto minimo 5,16:1 nella fixture e 5,54:1 nella demo esistente. `git diff --check` pulito.
+- **Limiti:** guide e percentuali della prova dedicata sono dati dimostrativi; nessuna nuova generazione AI. Selettori dei vecchi test live aggiornati, ma non eseguite nuove prove live Codex/tornei. Linux, lettore di schermo e scala OS elevata non verificati. Nessun merge o release.
+
+### APP-071 — Gerarchia della guida Matchup, proposta da discutere
+
+- **Osservazione:** intestazioni, provenienza e collegamenti anticipano il piano; nella finestra compatta il testo della strategia inizia sotto la prima schermata. Punti forti, debolezze, carte e dettagli richiedono una gerarchia più chiara.
+- **Proposta:** dare precedenza al piano, seguito dalle carte chiave; rendere fonti sintetiche e approfondimenti apribili, con incertezze e base storica sempre riconoscibili. Non cambiare generazione o dati della guida. Da discutere con l'utente prima di applicare.
 
 ## Regola per i blocchi
 
