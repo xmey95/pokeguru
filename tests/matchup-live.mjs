@@ -23,9 +23,12 @@ try {
   const deckCount = await page.locator('.meta-deck').count()
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
-  const model = connection.value.models.find((item) => item.isDefault) ?? connection.value.models[0]
+  await page.locator('.matchup-ai-details > summary').click()
+  const model = connection.value.models.find((item) => item.id.includes('luna')) ??
+    connection.value.models.find((item) => item.isDefault) ?? connection.value.models[0]
   assert.ok(model, 'Nessun modello Codex disponibile')
-  const effort = model.reasoningEfforts.find((item) => item.id === model.defaultReasoningEffort)?.id ?? null
+  const effort = model.reasoningEfforts.some((item) => item.id === 'low') ? 'low' :
+    model.reasoningEfforts.find((item) => item.id === model.defaultReasoningEffort)?.id ?? null
   await page.getByLabel('Modello', { exact: true }).selectOption(model.id)
   if (effort) await page.getByLabel('Ragionamento', { exact: true }).selectOption(effort)
   assert.match(await page.locator('.ai-data-preview').textContent(), /Dati inviati a Codex/)
@@ -36,6 +39,7 @@ try {
       throw new Error(`Analisi non generata: ${await page.getByRole('alert').textContent()}`)
     })
   ])
+  await page.locator('.matchup-report-meta > summary').click()
   assert.match(await page.locator('.meta-analysis').textContent(), /Analisi Codex generata/)
   assert.match(await page.locator('.meta-analysis').textContent(), new RegExp(`Modello: ${model.id}`))
   const observations = [

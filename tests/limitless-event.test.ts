@@ -31,10 +31,24 @@ describe('Limitless Play event', () => {
     expect(snapshot.participations[0].cards[0]).toMatchObject({ set: 'MEE', number: '9', count: 60 })
   })
 
-  it('rejects Japanese or private events and duplicate player IDs', () => {
-    expect(() => parseTournament({ ...event, platform: 'OTHER', isOnline: false }, standings)).toThrow()
+  it('separates unverified in-person events; rejects incompatible online, custom rules and duplicate IDs', () => {
+    expect(parseTournament({ ...event, platform: 'IRL', isOnline: false }, standings).circuit).toBe('UNVERIFIED')
+    expect(() => parseTournament({ ...event, platform: 'OTHER' }, standings)).toThrow()
     expect(() => parseTournament({ ...event, isPublic: false }, standings)).toThrow()
+    expect(() => parseTournament({ ...event, specialRules: ['CUSTOM'] }, standings)).toThrow()
     expect(() => parseTournament(event, [...standings, standings[0]])).toThrow(/univoche/)
+  })
+
+  it('counts only published player-to-player pairings with explicit outcomes', () => {
+    const snapshot = parseTournament(event, standings, '2026-10-23T20:00:00.000Z', [
+      { phase: 1, round: 1, table: 1, player1: 'one', player2: 'two', winner: 'one' },
+      { phase: 1, round: 2, table: 1, player1: 'one', player2: 'two', winner: 0 },
+      { phase: 1, round: 3, player1: 'three', winner: -1 },
+      { phase: 1, round: 4, player1: 'one', player2: 'outside', winner: 'outside' }
+    ])
+    expect(snapshot.pairingCoverage).toMatchObject({ returned: 4, betweenParticipants: 2,
+      decided: 1, tied: 1, byes: 1, invalid: 0 })
+    expect(snapshot.pairings).toHaveLength(4)
   })
 
   it('marks malformed lists without dropping their participation', () => {
@@ -69,7 +83,7 @@ describe('Limitless Play event', () => {
         { id: event.id, game: 'PTCG', format: 'STANDARD', date: event.date, players: 109 }
       ])
       if (url.includes(later)) return Response.json({ ...event, id: later, isOnline: false })
-      return Response.json(url.endsWith('/details') ? event : standings)
+      return Response.json(url.endsWith('/details') ? event : url.endsWith('/pairings') ? [] : standings)
     }
     const selected = await fetchRecentWesternTournament(fetcher as typeof fetch, new Date('2026-10-24T23:00:00Z'))
     expect(selected.eventId).toBe(event.id)

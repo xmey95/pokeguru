@@ -41,11 +41,15 @@ try {
       ['sv99-001', 'sv99', 'Carta C', timestamp, false],
       ['nvp-001', 'nvp', 'Promo nuova', null, true]
     ]) {
+      const gameplay = id === 'sv05-001' ? { hp: null, types: [], evolveFrom: null,
+        attacks: [], abilities: [], effect: 'Search your deck for a Pokémon.', trainerType: 'Item',
+        weaknesses: [], resistances: [], retreat: null } : undefined
       const print = { id, setId, setName: setId === 'sv05' ? 'Set A' : setId === 'me01' ? 'Set B' : setId === 'sv99' ? 'Set C' : 'New Promos',
-        localId: '001', name, category: null, rarity: null, variants: null,
+        localId: '001', name, category: gameplay ? 'Trainer' : null, rarity: null, variants: null,
         identityId: null, identityBasis: null, imageBase: null, thumbnail: null,
         highImageAvailable: null, sourceUpdated: null,
-        sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`, detailAt, error: null, isPromo }
+        sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`, detailAt, error: null, isPromo,
+        gameplaySchemaVersion: gameplay ? 1 : undefined, gameplay }
       db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(id, setId, JSON.stringify(print))
       db.prepare('INSERT INTO catalog_targets VALUES (?)').run(id)
     }
@@ -74,6 +78,10 @@ try {
   assert.match(await table.getByRole('row').filter({ hasText: 'Set C' }).textContent(), /Da verificare/)
   assert.match(await table.textContent(), /Set A.*1.*1.*0/s)
   assert.match(await table.textContent(), /New Promos.*1.*0.*1/s)
+  await table.getByRole('button', { name: /Set A/ }).click()
+  await page.getByRole('button', { name: /Carta A/ }).click()
+  await page.getByText('Regole di gioco', { exact: true }).click()
+  assert.match(await page.locator('.catalog-detail').textContent(), /Search your deck for a Pokémon/)
   await table.getByRole('button', { name: /New Promos/ }).click()
   assert.equal(await page.getByLabel('Espansione').inputValue(), 'nvp')
   console.log('E2E catalogo OK: accesso globale, copertura per set e filtro senza progetto.')

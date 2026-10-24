@@ -1,6 +1,8 @@
 import type { CatalogPrint, CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
 import { OFFICIAL_SET_CODES } from './set-codes'
+import { gameplaySummary } from './card-gameplay'
+import type { StandardDeckEvaluation } from './standard-deck'
 
 export interface MappedPrint {
   id: string
@@ -144,15 +146,16 @@ export function buildDeckCards(baseline: DeckBaseline, catalog: CatalogView | nu
     const identities = [...new Set(sameName.map((print) => print.identityId!))]
     const exactIdentities = [...new Set(exact.map((print) => print.identityId!))]
     const override = overrides.get(line.lineNumber)
-    const overridePrint = override && prints.find((print) =>
-      print.id === override.print.id && print.identityId === override.print.identityId)
+    // A catalog enrichment can replace a provisional identity without invalidating
+    // the user's exact printing choice.
+    const overridePrint = override && prints.find((print) => print.id === override.print.id)
     let identityId: string | null = overridePrint?.identityId ?? null
     if (!identityId && exactIdentities.length === 1) identityId = exactIdentities[0]
     if (!identityId && !line.setCode && identities.length === 1 &&
-      sameName[0]?.identityBasis === 'trainer-text') identityId = identities[0]
+      sameName[0]?.identityBasis !== 'unverified') identityId = identities[0]
     const identityPrints = identityId ? byIdentity.get(identityId) ?? [] : []
     const status: DeckCardEntry['status'] = identityId
-      ? identityPrints[0]?.identityBasis === 'trainer-text' ? 'recognized' : 'unverified'
+      ? identityPrints[0]?.identityBasis !== 'unverified' ? 'recognized' : 'unverified'
       : identities.length > 0 ? 'ambiguous' : 'outside-catalog'
     const key = identityId ? `identity:${identityId}` : `line:${line.lineNumber}`
     const entry = entries.get(key) ?? {
@@ -175,17 +178,37 @@ export function buildDeckCards(baseline: DeckBaseline, catalog: CatalogView | nu
   return [...entries.values()]
 }
 
-export function matchupDeckContext(baseline: DeckBaseline, reconciliation: DeckReconciliation,
+function matchupStandardContext(standard: StandardDeckEvaluation | null,
   catalog?: CatalogView | null): string {
+  if (!standard) return 'CONTROLLO STANDARD: non calcolabile senza dati della lista.'
+  const errata = catalog?.rulePackage?.errata
+  return `CONTROLLO STANDARD (${standard.asOf}, pacchetto ${catalog?.rulePackage?.version ?? 'non disponibile'}): ` +
+    `${standard.legality}. Controlli superati: ${standard.passed.join('; ') || 'nessuno'}. ` +
+    `Problemi: ${standard.problems.join('; ') || 'nessuno'}. ` +
+    `Da verificare: ${standard.toReview.join('; ') || 'nessuno'}. ` +
+    (errata ? `REGISTRO ERRATA UFFICIALE: ${errata.sourceUrl}; verificato ${errata.checkedAt}, ` +
+      `ultimo aggiornamento della fonte ${errata.lastUpdated}. Nel perimetro H/I/J di questo snapshot ` +
+      'non sono elencate correzioni specifiche di stampa; le stampe storiche restano fuori perimetro.' :
+      'REGISTRO ERRATA: non disponibile nel catalogo locale.')
+}
+
+export function matchupDeckContext(baseline: DeckBaseline, reconciliation: DeckReconciliation,
+  catalog?: CatalogView | null, standard: StandardDeckEvaluation | null = null): string {
   if (catalog) {
     const cards = buildDeckCards(baseline, catalog, reconciliation)
+    const cardDescriptions = cards.slice(0, 120).map((card) => {
+      const print = card.importedPrintIds.map((id) => card.prints.find((candidate) => candidate.id === id))
+        .find((candidate) => !!candidate?.gameplay) ?? card.prints.find((candidate) => !!candidate.gameplay)
+      const status = card.status === 'recognized' ? 'identità da testo di gioco coincidente'
+        : card.status === 'unverified' ? 'stampa esatta nota; equivalenza fra ristampe da verificare'
+          : card.status === 'ambiguous' ? 'identità ambigua' : 'nessuna corrispondenza nel catalogo locale'
+      return `${card.quantity} ${card.name} — ${status}` +
+        (print?.gameplay ? `; scheda ${print.id}: ${gameplaySummary(print.gameplay)}; fonte ${print.sourceUrl}` : '')
+    })
     return `CARTE NOSTRE (testo originale):\n${baseline.lines.filter((line) => line.kind === 'card')
       .slice(0, 120).map((line) => line.raw).join('\n') || 'lista non interpretata'}\n` +
-      `LISTA PER CARTA DI GIOCO:\n${cards.slice(0, 120).map((card) =>
-        `${card.quantity} ${card.name} — ${card.status === 'recognized' ? 'identità Trainer da testo coincidente'
-          : card.status === 'unverified' ? 'stampa nota, equivalenza da verificare'
-            : card.status === 'ambiguous' ? 'identità ambigua' : 'nessuna corrispondenza nel catalogo locale'}`).join('\n') || 'nessuna'}\n` +
-      'Le stampe e le rarità non modificano la carta di gioco; legalità Standard ed errata non sono ancora verificate.'
+      `LISTA PER CARTA DI GIOCO E REGOLE DELLE STAMPE IDENTIFICATE:\n${cardDescriptions.join('\n') || 'nessuna'}\n` +
+      matchupStandardContext(standard, catalog)
   }
   const lines = baseline.lines.filter((line) => line.kind === 'card').slice(0, 120)
   const original = lines.map((line) => `${line.quantity} ${(line.name ?? '').slice(0, 120)}`)
@@ -199,5 +222,5 @@ export function matchupDeckContext(baseline: DeckBaseline, reconciliation: DeckR
   return `CARTE NOSTRE DAL TESTO IMPORTATO:\n${original.join('\n') || 'lista non interpretata'}\n` +
     `SCELTE MANUALI DI STAMPA (${reconciliation.resolvedLines} righe; ${reconciliation.unresolvedCopies} copie ancora irrisolte):\n${resolved.join('\n') || 'nessuna'}\n` +
     `TOTALI PER IDENTITÀ DI GIOCO RICONCILIATA:\n${totals.join('\n') || 'nessuno'}\n` +
-    'Le identità Trainer derivate dal testo sono provvisorie; equivalenza, errata e legalità Standard non sono ancora verificate.'
+    matchupStandardContext(standard, catalog)
 }

@@ -48,7 +48,7 @@ try {
   const row = database.prepare('SELECT payload FROM matchup_reports LIMIT 1').get()
   const report = JSON.parse(row.payload)
   assert.equal(report.tournamentEvidence.status, 'matched')
-  assert.equal(report.tournamentEvidence.matchedDeckId, slug(match.name))
+  assert.equal(report.tournamentEvidence.matchedDeckId, match.id)
   assert.ok(report.tournamentEvidence.matchedCompleteLists > 0)
   assert.ok(report.tournamentEvidence.sampleLists.every((list) => list.url.startsWith(tournament.value.publicUrl)))
   assert.ok(report.strengths && report.weaknesses && report.strategy && report.limitations,

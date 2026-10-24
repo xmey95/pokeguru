@@ -35,7 +35,8 @@
     "test:standard-catalog-live": "npm run build && node tests/standard-catalog-electron-live.mjs",
     "test:catalog-ui": "npm run build && node tests/catalog-ui-live.mjs",
     "test:tournament-ui-live": "npm run build && node tests/tournament-ui-live.mjs",
-    "test:tournament-ui:offline": "npm run build && node tests/tournament-ui-live.mjs --offline"
+    "test:tournament-ui:offline": "npm run build && node tests/tournament-ui-live.mjs --offline",
+    "test:main-tournament-ui-live": "npm run build && node tests/main-tournament-ui-live.mjs"
   },
   "dependencies": {
     "cheerio": "^1.1.2",

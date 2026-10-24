@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { parseDeck } from '../src/shared/deck-import'
+import type { MatchupReport } from '../src/shared/meta-matchups'
 
 const tempDirectories: string[] = []
 
@@ -276,9 +277,15 @@ describe('ProjectStore', () => {
       decks: [{ id: '284', name: 'Dragapult ex', points: 100, share: 12, url: 'https://limitlesstcg.com/decks/284' }]
     }
     store.saveMetaSnapshot(snapshot)
-    const initial = {
+    const initial: MatchupReport = {
       projectId: project.id, metaId: snapshot.id, opponentId: '284', deckHash: store.getCurrentDeckHash(project.id)!,
       generatedAt: '2026-10-23T00:05:00.000Z', sampleDeckUrl: null,
+      sampleDeckCards: ['2 Dragapult ex TWM 130'],
+      tournamentEvidence: { schemaVersion: 2, evidenceHash: 'evidence-v2',
+        status: 'matched', detail: 'Due eventi', eventId: '582', eventName: 'Nice',
+        eventDate: '2026-10-17', eventUrl: 'https://limitlesstcg.com/tournaments/582',
+        eventLists: 1, eventParticipants: 429, matchedDeckId: '284', matchedCompleteLists: 1,
+        observedCards: [], sampleLists: [], events: [] },
       strengths: 'Ipotesi A', weaknesses: 'Ipotesi B', ourKeyCards: 'Carta A', theirKeyCards: '',
       strategy: 'Piano iniziale', limitations: 'Nessun risultato di match'
     }
@@ -295,6 +302,8 @@ describe('ProjectStore', () => {
     const reopened = new ProjectStore(path)
     expect(reopened.listMatchupDiscussions(other.id, '284')).toEqual([])
     expect(reopened.getMatchupDiscussion(discussion.id)?.turns[1].feedback).toBe('Secondo me bisogna andare secondi.')
+    expect(reopened.getMatchupDiscussion(discussion.id)?.turns[0].report?.tournamentEvidence?.evidenceHash)
+      .toBe('evidence-v2')
     const revision = { ...initial, generatedAt: '2026-10-23T00:06:00.000Z', strategy: 'Piano rivisto' }
     const completed = reopened.completeMatchupFeedback(discussion.id, pending.turns[1].id, revision, 'Rivalutata l’ipotesi di andare secondi.')
     expect(completed.turns.map((turn) => turn.report?.strategy)).toEqual(['Piano iniziale', 'Piano rivisto'])
@@ -322,6 +331,9 @@ describe('ProjectStore', () => {
     expect(afterRestart.listMatchupDiscussions(project.id, '284')).toHaveLength(2)
     expect(afterRestart.getMatchupDiscussion(linked.id)?.parentId).toBe(discussion.id)
     expect(afterRestart.getMatchupDiscussion(discussion.id)?.contextSummary).toBe('Sintesi delle prime versioni')
+    expect(afterRestart.getMatchupDiscussion(discussion.id)?.turns[0].report?.sampleDeckCards)
+      .toEqual(['2 Dragapult ex TWM 130'])
+    expect(afterRestart.listMatchupDiscussions(other.id, '284')).toEqual([])
     afterRestart.close()
   })
 

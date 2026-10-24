@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { AiConnection, AiPreferences } from '../../shared/ai'
 import type { CatalogView } from '../../shared/catalog'
-import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
-import type { TournamentSnapshot } from '../../shared/tournament'
-import { matchupTournamentEvidence } from '../../shared/matchup-evidence'
+import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
+import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
+import { evaluateStandardDeck } from '../../shared/standard-deck'
 import { buildDeckCards, matchupDeckContext, type DeckReconciliation } from '../../shared/reconciliation'
 
 function date(value: string): string {
@@ -48,7 +48,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [connection, setConnection] = useState<AiConnection | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
-  const [tournament, setTournament] = useState<TournamentSnapshot | null>(null)
+  const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
+  const [previewEvidence, setPreviewEvidence] = useState<MatchupTournamentEvidence | null>(null)
   const [overrideModel, setOverrideModel] = useState('')
   const [overrideEffort, setOverrideEffort] = useState('')
 
@@ -61,9 +62,18 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   }, [])
 
   useEffect(() => {
+    if (!snapshot || !selectedId) { setPreviewEvidence(null); return }
     let active = true
-    void window.projectsApi.getTournament().then((result) => {
-      if (active && result.ok) setTournament(result.value)
+    void window.projectsApi.getMatchupEvidence(snapshot.id, selectedId).then((result) => {
+      if (active) setPreviewEvidence(result.ok ? result.value : null)
+    }).catch(() => { if (active) setPreviewEvidence(null) })
+    return () => { active = false }
+  }, [snapshot?.id, selectedId, catalog])
+
+  useEffect(() => {
+    let active = true
+    void window.projectsApi.getStandardRuleAudit().then((result) => {
+      if (active && result.ok) setRuleAudit(result.value)
     }).catch(() => undefined)
     return () => { active = false }
   }, [projectId])
@@ -154,6 +164,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       setReports((current) => [...current.filter((report) => report.opponentId !== selectedId), result.value])
       setReportsKey(`${projectId}:${snapshot.id}:${baselineKey}`)
       await reloadDiscussions(selectedId)
+      const updatedCatalog = await window.projectsApi.getCatalog()
+      if (updatedCatalog.ok) setCatalog(updatedCatalog.value)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Analisi non completata.')
     } finally {
@@ -220,8 +232,9 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     currentReports.find((item) => item.opponentId === selectedId)
   const pendingTurn = discussion?.turns.find((turn) => !turn.report)
   const model = connection?.models.find((item) => item.id === overrideModel)
-  const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog) : null
-  const previewEvidence = snapshot && selected ? matchupTournamentEvidence(snapshot, selected, tournament, catalog) : null
+  const standard = baseline ? evaluateStandardDeck(baseline, catalog,
+    new Date().toISOString().slice(0, 10), ruleAudit) : null
+  const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog, standard) : null
   const ourCatalogCards = baseline && (!discussion || discussion.current) ? buildDeckCards(baseline, catalog, reconciliation)
     .filter((card) => card.status === 'recognized' && card.identityId && report && mentioned(card.name, report.ourKeyCards)) : []
   const theirCatalogCards = report?.tournamentEvidence?.observedCards.filter((card) =>
@@ -290,10 +303,17 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               </div>
               <details className="matchup-report-meta"><summary>Versione, modello e dati usati</summary><p>Analisi Codex generata il {date(report.generatedAt)} · Standard occidentale · lista {report.deckHash.slice(0, 12)} · snapshot Meta {report.metaId.slice(0, 12)}{report.metaPeriod ? ` · ${report.metaPeriod}` : ''}{report.metaFetchedAt ? ` · acquisito ${date(report.metaFetchedAt)}` : ''}. {report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p></details>
               {report.tournamentEvidence && <section className="rotation-panel" aria-label="Evidenze torneo del matchup">
-                <strong>Liste osservate in un evento online</strong>
-                <p>{report.tournamentEvidence.status === 'matched'
-                  ? `${report.tournamentEvidence.matchedCompleteLists} liste complete dell’archetipo in ${report.tournamentEvidence.eventName} (${report.tournamentEvidence.eventDate ? date(report.tournamentEvidence.eventDate) : 'data non indicata'}). Evento online singolo; non è un winrate.`
-                  : report.tournamentEvidence.detail}</p>
+                <strong>{report.tournamentEvidence.schemaVersion === 2 ? 'Tornei e liste osservate' : 'Liste osservate in un evento online'}</strong>
+                <p>{report.tournamentEvidence.schemaVersion === 2 ? report.tournamentEvidence.detail
+                  : report.tournamentEvidence.status === 'matched'
+                    ? `${report.tournamentEvidence.matchedCompleteLists} liste complete dell’archetipo in ${report.tournamentEvidence.eventName} (${report.tournamentEvidence.eventDate ? date(report.tournamentEvidence.eventDate) : 'data non indicata'}). Evento online singolo; non è un winrate.`
+                    : report.tournamentEvidence.detail}</p>
+                {report.tournamentEvidence.events && <ul>{report.tournamentEvidence.events.map((item) => <li key={`${item.source}:${item.eventId}`}>
+                  {item.name} · {date(item.date)} · {item.source === 'main' ? 'Regional' : 'Play online'} · {item.matchedLists} liste dell’archetipo / {item.completeLists} liste complete acquisite · {item.visibleParticipants}/{item.totalParticipants} partecipanti visibili.
+                  <button type="button" className="text-button" onClick={() => void (item.source === 'main'
+                    ? window.projectsApi.openMainTournament(item.url) : window.projectsApi.openLimitless(item.url))}>Apri fonte ↗</button>
+                </li>)}</ul>}
+                {report.tournamentEvidence.opponentFieldRecord && <p>Risultati osservati dell’archetipo avversario contro il campo online: {report.tournamentEvidence.opponentFieldRecord.wins}V / {report.tournamentEvidence.opponentFieldRecord.losses}S / {report.tournamentEvidence.opponentFieldRecord.ties}P su {report.tournamentEvidence.opponentFieldRecord.denominator} match con esito ({report.tournamentEvidence.opponentFieldRecord.eligiblePairings} abbinamenti pertinenti, {report.tournamentEvidence.opponentFieldRecord.events} eventi, {date(report.tournamentEvidence.opponentFieldRecord.windowStart)}–{date(report.tournamentEvidence.opponentFieldRecord.windowEnd)}). Non è il winrate del tuo mazzo contro questo archetipo.</p>}
                 {report.tournamentEvidence.status === 'matched' && <>
                   <p>Carte osservate · numero di liste, non copie:</p>
                   <ul>{report.tournamentEvidence.observedCards.slice(0, 18).map((card) => <li key={card.name}>
@@ -301,11 +321,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                       ? '' : card.catalogStatus === 'ambiguous' ? ' · identità da verificare' : ' · non nel catalogo locale'}
                     {card.catalogIdentityId && <button type="button" className="text-button"
                       onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo ↗</button>}
+                    {card.gameplay && <details><summary>Meccaniche verificate</summary><p>{card.gameplay}</p>
+                      {card.cardSourceUrl && <small>{card.cardSourceUrl}</small>}</details>}
                   </li>)}</ul>
-                  {report.tournamentEvidence.eventUrl && <button type="button" className="text-button"
+                  {report.tournamentEvidence.schemaVersion !== 2 && report.tournamentEvidence.eventUrl && <button type="button" className="text-button"
                     onClick={() => void window.projectsApi.openLimitless(report.tournamentEvidence!.eventUrl!)}>Apri evento online ↗</button>}
                   {report.tournamentEvidence.sampleLists.map((list, index) => <button type="button" className="text-button" key={list.url}
-                    onClick={() => void window.projectsApi.openLimitless(list.url)}>Lista osservata {index + 1} ↗</button>)}
+                    onClick={() => void (list.source === 'main' ? window.projectsApi.openMainTournament(list.url)
+                      : window.projectsApi.openLimitless(list.url))}>Lista osservata {index + 1}{list.eventName ? ` · ${list.eventName}` : ''} ↗</button>)}
                 </>}
               </section>}
               {report.sampleDeckUrl && <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.sampleDeckUrl!)}>Apri la lista avversaria usata ↗</button>}
@@ -359,12 +382,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 </div>
               </div>
               <details className="ai-data-preview"><summary>Dati inviati a Codex per questa analisi</summary>
-                <p>Lista interpretata, stampe scelte e totali per carta di gioco:</p>
+                <p>Righe della lista, carte identificate, regole di gioco disponibili e controllo Standard alla data odierna:</p>
                 <pre>{deckContext ?? 'Caricamento corrispondenze…'}</pre>
-                <p>Evento online: {previewEvidence?.status === 'matched'
-                  ? `${previewEvidence.eventName} · ${previewEvidence.matchedCompleteLists} liste dell’archetipo. Inviati nomi delle carte osservate, frequenza nelle liste e link pubblici.`
-                  : previewEvidence?.detail ?? 'Nessun dato evento disponibile.'} Le revisioni riusano le evidenze salvate.</p>
-                <p>Meta: {selected.name}, quota, punti, periodo {snapshot.period} e fonti Limitless {snapshot.sourceUrl} e {selected.url}. Se disponibile, sono inviati nomi e quantità di una lista avversaria pubblica. Le revisioni includono commento, guida precedente e contesto della discussione. Non sono inviati risultati di match del tuo mazzo, il testo grezzo dell’import o altri progetti.</p>
+                <p>Tornei archiviati: {previewEvidence?.detail ?? 'Caricamento evidenze…'} Inviati liste campione, frequenze, meccaniche disponibili, fonti e soli risultati espliciti degli abbinamenti Play. Le revisioni riusano le evidenze salvate.</p>
+                <p>Meta: {selected.name}, quota, punti, periodo {snapshot.period} e fonti Limitless {snapshot.sourceUrl} e {selected.url}. Se disponibile, sono inviati nomi e quantità di una lista avversaria pubblica. Le revisioni includono commento, guida precedente e contesto della discussione. Non sono inviati risultati di match del tuo mazzo né dati di altri progetti.</p>
               </details>
             </div></details>}
             {selectedInCurrentMeta && (!discussion || discussion.current) && <button type="button" className="primary-button" onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>

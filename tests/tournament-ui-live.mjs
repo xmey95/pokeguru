@@ -41,8 +41,16 @@ try {
   application = await launch()
   let page = await application.firstWindow()
   await page.getByRole('button', { name: 'Eventi' }).click()
-  await page.getByRole('heading', { name: 'Evento Standard' }).waitFor()
-  if (!offline) await page.getByRole('button', { name: 'Acquisisci evento' }).click()
+  await page.getByRole('heading', { name: 'Eventi Standard' }).waitFor()
+  if (!offline) {
+    await page.getByRole('button', { name: 'Aggiorna nuovi tornei' }).click()
+    for (let block = 0; block < 5 && (await page.evaluate(async () => {
+      const result = await window.projectsApi.listTournaments()
+      return result.ok ? result.value.length : 0
+    })) < 2; block++) {
+      await page.getByRole('button', { name: 'Continua blocco' }).click()
+    }
+  }
   if (offline) {
     await page.getByText('Snapshot locale').waitFor()
     for (const [width, height] of [[1440, 900], [1280, 720]]) {
@@ -61,7 +69,7 @@ try {
 
   const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
   const rows = db.prepare('SELECT payload FROM tournament_snapshots').all()
-  assert.equal(rows.length, 1)
+  assert.ok(rows.length >= (offline ? 1 : 2))
   const snapshot = JSON.parse(rows[0].payload)
   assert.equal(snapshot.circuit, 'WESTERN')
   assert.equal(snapshot.format, 'STANDARD')
