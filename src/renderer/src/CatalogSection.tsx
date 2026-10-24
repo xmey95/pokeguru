@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigation, useViewState } from './Navigation'
 import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
-import { gameplaySummary } from '../../shared/card-gameplay'
+import { CatalogCardDetail } from './CatalogCardDetail'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -298,24 +298,9 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
           </button>)}</>}
         </div>
         <div className="catalog-detail">
-          {selected && <>
-            <h3>{selected.name}</h3>
-            {onConstrain && selected.prints.some((print) => print.detailAt && print.identityId) &&
-              <button type="button" className="secondary-button" onClick={() => onConstrain(selected.key)}>Aggiungi vincolo su questa carta</button>}
-            {selected.basis && selected.basis !== 'unverified' && <p className="content-note">Stampe collegate per regole di gioco coincidenti.</p>}
-            <div className="catalog-print-grid">{selectedPrints.map((print) => <article key={print.id} className="catalog-print">
-              {print.thumbnail ? <img src={print.thumbnail} alt={`Carta ${print.name}, ${print.setName} ${print.localId}`} /> : <div className="catalog-no-image">Miniatura assente</div>}
-              <div><strong>{print.setName}</strong><span>{print.setId} · N. {print.localId}</span>{print.rarity && <span>Rarità: {print.rarity}</span>}<span>Marchio: {print.regulationMark ?? 'non indicato'}</span>
-                {print.isPromo && <span>Registro promo: {print.promoStatus?.state === 'available' ? 'disponibile alla data del controllo' :
-                  print.promoStatus?.state === 'upcoming' ? `futura · ${print.promoStatus.legalDate ? `dal ${legalDate(print.promoStatus.legalDate)}` : print.promoStatus.dateNote ?? 'data da verificare'}` :
-                    print.promoStatus?.state === 'unlisted' ? 'non elencata · da verificare' : 'non verificata'}
-                  {print.promoStatus && ` · controllo ${date(print.promoStatus.checkedAt)}`}</span>}
-                {print.variants && <span>Varianti: {Object.entries(print.variants).filter(([, yes]) => yes).map(([name]) => name).join(', ') || 'nessuna indicata'}</span>}{print.highImageAvailable && <span>Immagine grande disponibile online</span>}{print.sourceUpdated && <span>Fonte aggiornata: {date(print.sourceUpdated)}</span>}{print.error && <span className="catalog-error">{print.error}</span>}
-                {print.gameplay ? <details><summary>Regole di gioco</summary><p>{gameplaySummary(print.gameplay)}</p></details>
-                  : <span>Regole di gioco non ancora acquisite</span>}
-                <button type="button" className="text-button" onClick={() => void openSource(print.sourceUrl)}>Apri scheda fonte ↗</button></div>
-            </article>)}</div>
-          </>}
+          {selected && <CatalogCardDetail key={selected.key} name={selected.name} basis={selected.basis} prints={selectedPrints}
+            onOpenSource={(url) => void openSource(url)}
+            onConstrain={onConstrain && selected.prints.some((print) => print.detailAt && print.identityId) ? () => onConstrain(selected.key) : undefined} />}
         </div>
       </div>
     </>}

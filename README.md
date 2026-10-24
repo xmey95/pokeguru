@@ -64,6 +64,8 @@ APP-075 separa **Modifica** della configurazione AI e **Dati inviati** vicino al
 
 APP-076 porta ricerca e risultati del **Catalogo** subito sotto l'intestazione. **Aggiorna nuove carte** resta visibile; **Gestisci catalogo** raccoglie scansione completa, campione, copertura e regole. Avvisi e avanzamento restano visibili a pannello chiuso. Scegliere un set dalla copertura riporta ai risultati filtrati; Escape richiude la gestione. `node tests/catalog-ui-live.mjs` verifica il percorso con archivio temporaneo e risposte di sincronizzazione controllate.
 
+APP-077 porta **immagine e testo di gioco** nel primo livello del dettaglio Catalogo, con la stessa presentazione della Lista. **Stampe e metadati** raccoglie varianti e provenienza e permette di scegliere la stampa visualizzata; immagine, testo e fonte restano coerenti con la scelta e il filtro espansione. Dati mancanti e incertezze sono espliciti; il vincolo segue il testo. `node tests/catalog-card-ui-live.mjs` verifica schede, selezione, tastiera, navigazione e layout con dati di prova isolati.
+
 ## Versione scaricabile
 
 Scarica [Pokéguru v0.1.0](https://github.com/xmey95/pokeguru/releases/tag/v0.1.0): `Pokeguru-0.1.0-linux-x86_64.AppImage` su Linux oppure `Pokeguru-0.1.0-windows-x64-setup.exe` su Windows. Il file `SHA256SUMS.txt` permette di controllare il download. Su Linux rendi eseguibile l'AppImage (`chmod +x`) e avviala; su Windows usa l'installer. I pacchetti iniziali non sono firmati digitalmente. La [prova della validazione Standard occidentale](#prova-della-validazione-standard-occidentale) e le prove dei thread più avanti descrivono i percorsi da verificare prima di I4.

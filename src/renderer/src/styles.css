@@ -272,6 +272,22 @@ details[open] > summary { margin-bottom: 8px; }
 .catalog-list span, .tournament-players span { color: var(--ink-muted); font-size: var(--text-xs); }
 .catalog-detail, .tournament-detail { margin: 0; }
 .catalog-detail h3, .tournament-detail h2 { margin-bottom: 8px; }
+.catalog-detail { container: catalog-card / inline-size; }
+.catalog-detail #catalog-card-heading { margin-bottom: 20px; }
+.catalog-detail .card-overview { grid-template-columns: 180px minmax(0, 1fr); }
+.catalog-detail .card-artwork { justify-self: start; }
+.catalog-card-notice { margin-bottom: 16px; }
+.catalog-card-actions { margin: 20px 0; }
+.catalog-card-prints { padding-top: 8px; border-top: 1px solid var(--line); }
+.catalog-card-prints .content-note { margin: 8px 0; }
+.catalog-card-prints .card-thumbnail { width: 72px; height: 100px; }
+.catalog-card-prints .card-thumbnail img { width: 100%; height: 100%; }
+.catalog-print-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; }
+.catalog-print-actions [aria-pressed=true] { color: var(--ink-secondary); }
+@container catalog-card (max-width: 500px) {
+  .catalog-detail .card-overview { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .catalog-detail .card-artwork { justify-self: center; }
+}
 .catalog-print-grid { display: grid; gap: 16px; margin-top: 20px; }
 .catalog-print { display: flex; gap: 20px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .catalog-print img, .catalog-no-image { flex: none; width: 104px; height: 145px; object-fit: contain; border-radius: var(--radius-sm); }

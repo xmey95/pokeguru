@@ -167,6 +167,12 @@ L'utente sceglie di mantenere Aggiorna nuove carte nell'intestazione e raccoglie
 
 Stato di aggiornamento/pausa, errori, lacune essenziali e fonti cambiate o non raggiungibili restano sempre accessibili fuori dal pannello. La fase dettagliata è nella gestione. Escape/Chiudi riportano il focus al comando; scegliere un set dalla copertura chiude il pannello e focalizza il filtro. Stato e dettagli seguono la cronologia della sessione. I test controllano le risposte della sincronizzazione e dell'audit; non attestano nuove acquisizioni o verifica delle fonti ufficiali. Il dettaglio della carta è rinviato al successivo confronto grafico.
 
+### T-66 — Scheda di gioco prioritaria nel Catalogo (APP-077)
+
+L'utente approva immagine e testo subito visibili, con stampe e metadati negli approfondimenti. `CardFace`, estratto dalla presentazione della Lista senza cambiarne la scelta dei dati, mostra immagine, caratteristiche, abilità, attacchi/effetto e fonte. Il Catalogo gli passa una sola stampa per immagine e testo: prima una scheda completa con immagine, altrimenti la migliore scheda disponibile entro il filtro espansione. Una selezione esplicita prevale finché è compresa nel filtro; il testo di un'altra stampa non riempie i campi mancanti.
+
+Stampe e metadati sono una disclosure nativa chiusa inizialmente. Mostra questa stampa aggiorna la scheda e porta il focus al titolo; la cronologia conserva stampa, disclosure e punto di lettura. Equivalenza incerta, promo da verificare, errori e testo mancante restano visibili. Il vincolo segue la scheda e usa il percorso esistente. Immagine 180×252 px, testo 15 px/1,65; sotto 500 px di spazio nel dettaglio l'immagine precede il testo. Nessun cambio a persistenza, identità, validatori o integrazioni. Prove con fixture UI, regressioni Lista/Matchup e scheda Mega Absol del catalogo già acquisito nella demo.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

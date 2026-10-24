@@ -24,8 +24,18 @@ function energyCost(cost: string[] | null): string {
 }
 
 export function CardOverview({ card, onOpenCatalog }: { card: DeckCardEntry; onOpenCatalog(): void }) {
-  const print = deckGameplayPrint(card)
-  const imagePrint = deckImagePrint(card)
+  return <CardFace print={deckGameplayPrint(card)} imagePrint={deckImagePrint(card)} onOpenCatalog={onOpenCatalog}
+    missingMessage={card.status === 'ambiguous' ? 'Conferma l’identità per consultare il testo di gioco.' : undefined} />
+}
+
+/** One source print supplies all gameplay fields; image provenance is shown separately. */
+export function CardFace({ print, imagePrint, missingMessage, onOpenCatalog, onOpenSource }: {
+  print: CatalogPrint | null
+  imagePrint: CatalogPrint | null
+  missingMessage?: string
+  onOpenCatalog?(): void
+  onOpenSource?(url: string): void
+}) {
   const gameplay = print?.gameplay
   const hasText = gameplay && (gameplay.attacks.length > 0 || gameplay.abilities.length > 0 || !!gameplay.effect)
   const basicEnergy = print?.category === 'Energy' && (print.energyType === 'Normal' || print.energyType === 'Basic')
@@ -46,8 +56,8 @@ export function CardOverview({ card, onOpenCatalog }: { card: DeckCardEntry; onO
         {partial && <span className="card-data-partial">Scheda parziale</span>}
       </div>
       {!hasText && !basicEnergy && <div className="card-gameplay-missing">
-        <p>{card.status === 'ambiguous' ? 'Conferma l’identità per consultare il testo di gioco.' : 'Testo di gioco non disponibile nel catalogo locale.'}</p>
-        <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button>
+        <p>{missingMessage ?? 'Testo di gioco non disponibile nel catalogo locale.'}</p>
+        {onOpenCatalog && <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button>}
       </div>}
       {basicEnergy && !hasText && <p className="content-note">Nessun testo effetto riportato dal catalogo.</p>}
       {gameplay?.abilities.map((ability, index) => <section className="card-ability" key={index} aria-label={`Abilità: ${ability.name}`}>
@@ -68,7 +78,7 @@ export function CardOverview({ card, onOpenCatalog }: { card: DeckCardEntry; onO
       </dl>}
       {gameplay?.evolveFrom && <p className="card-evolves">Evolve da {gameplay.evolveFrom}</p>}
       {print && <div className="card-gameplay-source"><span>{hasText ? 'Testo in inglese' : 'Scheda TCGdex'} · {print.setName} {print.localId}</span>
-        <button type="button" className="text-button" onClick={() => void window.projectsApi.openCatalogSource(print.sourceUrl)}>TCGdex ↗</button>
+        <button type="button" className="text-button" onClick={() => onOpenSource ? onOpenSource(print.sourceUrl) : void window.projectsApi.openCatalogSource(print.sourceUrl)}>TCGdex ↗</button>
       </div>}
     </div>
   </div>

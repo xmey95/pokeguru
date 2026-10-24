@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-077 completato:** dettaglio carta del Catalogo con immagine e testo di gioco prioritari, componente condiviso con la Lista e stampe/metadati apribili. Selezione coerente con filtro e fonte, dati mancanti/incerti visibili, vincolo dopo il testo. Build e quattro percorsi Electron passati, layout 1440/1280/640 e demo Mega Absol ispezionati; risultati e limiti nel backlog. Prossimo passo: prova utente del dettaglio e scelta condivisa del successivo blocco grafico. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
+
 - **APP-076 completato:** ricerca Catalogo prioritaria, Aggiorna nuove carte sempre visibile e Gestisci catalogo con manutenzione/copertura/fonti. Avvisi essenziali esterni, filtri e navigazione conservati. Build e percorsi Electron Catalogo/workspace passati; verifiche e limiti nel backlog. Prossimo blocco da discutere insieme: dettaglio carta nel Catalogo, ancora centrato sui metadati delle stampe. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
 
 - **APP-075 completato:** configurazione AI compatta, scelte personalizzate riconoscibili e dati separati vicino alle azioni Matchup; sintesi distinta per revisione, rigenerazione e nuova base. Build e percorsi Electron Matchup/navigazione/discussione e workspace passati; verifiche e limiti nel backlog. Prossimo passo: prova utente di Modifica, Dati inviati e Dati per rigenerare, poi scelta condivisa del prossimo blocco grafico. Ramo locale `task/production-design-system`; I4, merge e release esclusi.
