@@ -96,6 +96,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **Verifica integrazione:** [PR #11](https://github.com/xmey95/pokeguru/pull/11), richiesta dall'utente. Prima CI: Ubuntu completo e 129 test su entrambi i sistemi; corretta la sincronizzazione del helper di creazione progetto emersa su Windows. Prove locali di avvio ritardato/compatto e Standard passate. La PR conserva l'esito aggiornato dei gate e del merge; nessuna modifica a main.
+
 - **APP-086 completato — preparazione integrazione:** merge di tutte le modifiche in `dev` autorizzato. Il ramo incorpora le correzioni delle PR #8–10; build, suite locale e prove Electron su Catalogo, workspace, Matchup e navigazione passate. Conteggi italiani e Premi conservati, audit riferiti alla versione corrente. Gli ID UI locali APP-059–061 diventano APP-083–085 con corrispondenza nel backlog. Consegna tramite PR verso `dev`, vincolata ai check Ubuntu/Windows; lo stato definitivo del merge è nella PR e nella cronologia Git. Nessuna release o I4.
 
 - **APP-082 completato:** logo con carte e G integrato nella sidebar, favicon e icone desktop. Master SVG e generatore PNG/ICO versionati. Build/typecheck, layout Electron e pacchetto Windows locale verificati; icona dell'eseguibile estratta e favicon decodificate nella build confezionata. Specifiche e limiti in `BRAND.md` (Linux/NSIS non provati). Demo “Pokéguru · Logo e icone — dati di esempio” riaperta. Prossimo passo: feedback sul simbolo nella sidebar e nella barra compatta. Ramo locale `task/production-design-system`; nessun merge, release o I4.

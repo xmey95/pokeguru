@@ -1,6 +1,7 @@
 # Revisione grafica finale — APP-080
 
-24 ottobre 2026 · Windows · ramo `task/production-design-system`  
+24 ottobre 2026 · Windows · ramo `task/production-design-system`
+
 Base della revisione: `d7816c6`. Perimetro: renderer, presentazione degli stati, test UI e documentazione.
 
 ## Esito

@@ -5,6 +5,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { auditLoading } from './loading-ui-audit.mjs'
+import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -36,9 +37,12 @@ try {
   await page.reload()
   await page.getByRole('status').filter({ hasText: 'Apertura progetti…' }).waitFor()
   assert.equal(await page.getByRole('region', { name: 'Benvenuto' }).count(), 0)
+  // Start before the entry points exist; auditLoading ends at the compact viewport.
+  const creation = createProjectFromStart(page, 'Avvio dopo caricamento')
   await auditLoading(page, workspace, 'avvio', '.loading-skeleton')
   await release()
-  await page.getByRole('heading', { name: 'Il tuo prossimo mazzo.' }).waitFor()
+  await creation
+  await page.getByRole('heading', { name: 'Avvio dopo caricamento', exact: true }).waitFor()
   for (const [label, route, name] of [['Catalogo', 'catalog:get', 'apertura-catalogo'], ['Eventi', 'tournament:list', 'apertura-eventi']]) {
     await hold(route)
     await page.locator('.sidebar').getByRole('button', { name: label, exact: true }).click()
