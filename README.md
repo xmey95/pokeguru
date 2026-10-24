@@ -22,6 +22,8 @@ In **Thread**, crea un percorso da **Nuovo thread** e usa **Incolla manualmente 
 
 Sul ramo `task/content-hierarchy`, derivato dal workspace integrato, la Lista mostra un solo stato del catalogo e raggruppa per causa i controlli ripetuti; i risultati di rotazione e ammissione restano apribili sulla riga. Le carte senza corrispondenza non sono più dichiarate genericamente «fuori dal catalogo campione». Il Thread raggruppa le verifiche della candidata e conserva differenze, blocchi e conferma manuale. Nel Matchup la guida corrente compare una sola volta; la cronologia conserva le guide precedenti e mostra l'ultima osservazione con ciò che è cambiato. Nel Catalogo ricerca e carte precedono gli audit dettagliati, mentre lacune del manifest e fonti cambiate restano evidenti. Eventi, Vincoli, importazione, barra progetti e Impostazioni AI usano stati più brevi con dettagli accessibili. Questa revisione non è nella release v0.1.0 e non avvia I4.
 
+L'integrazione del workspace e dei testi in `dev` è tracciata dalla [PR #4](https://github.com/xmey95/pokeguru/pull/4). `main` e la release v0.1.0 non cambiano con questa PR.
+
 ## Versione scaricabile
 
 Scarica [Pokéguru v0.1.0](https://github.com/xmey95/pokeguru/releases/tag/v0.1.0): `Pokeguru-0.1.0-linux-x86_64.AppImage` su Linux oppure `Pokeguru-0.1.0-windows-x64-setup.exe` su Windows. Il file `SHA256SUMS.txt` permette di controllare il download. Su Linux rendi eseguibile l'AppImage (`chmod +x`) e avviala; su Windows usa l'installer. I pacchetti iniziali non sono firmati digitalmente. La [prova della validazione Standard occidentale](#prova-della-validazione-standard-occidentale) e le prove dei thread più avanti descrivono i percorsi da verificare prima di I4.
