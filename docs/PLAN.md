@@ -102,7 +102,7 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
-- **APP-117 in corso sul ramo isolato (25-10-2026):** menu Electron rimosso su Windows/Linux mantenendo frame, zoom, editing e navigazione; DevTools e ricarica riservati al renderer di sviluppo. Build, 179 test, prova menu e smoke offline passano su Windows con profili temporanei; F12 con input sintetico non ha dato esito conclusivo. Restano PR verso `dev` e CI Ubuntu/Windows con smoke dei pacchetti. Il coordinatore integra la PR dopo i check; `main`, release e I4 invariati.
+- **APP-117 completato sul ramo isolato — PR #29 (25-10-2026):** menu Electron rimosso su Windows/Linux mantenendo frame, zoom, editing e navigazione; DevTools e ricarica riservati al renderer di sviluppo. Build, 179 test, prova menu e smoke offline passano su Windows con profili temporanei. I job PR Ubuntu/Windows del run 40182822250 sono verdi sul commit `f173f95`, inclusi package e smoke; F12 con input sintetico non ha dato esito conclusivo e non è stato provato manualmente. Il coordinatore integra la PR in `dev`; `main`, release e I4 invariati.
 
 - **APP-114 completato nel branch (25-10-2026):** `task/app-114-event-auto` da `dev` avanza automaticamente i blocchi Eventi Play e Regional con pausa, ripresa esplicita dopo riavvio e attesa automatica 429. Cadenza Play proporzionale alle richieste reali; cursori e campione Regional invariati. Build, 179 test e UI Electron offline Play/Regional a 1440/1280/640 passati; dettagli e limiti in APP-114. L'integrazione in `dev` e una scansione reale completa restano da verificare; nessun I4, `main` o release.
 
