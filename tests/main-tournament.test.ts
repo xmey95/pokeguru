@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { parseMainTournamentIndex, parseMainTournament, parseMainDecklist } from '../src/main/limitless-main-tournament'
+import { parseMainTournamentIndex, parseMainTournament, parseMainDecklist,
+  fetchMainTournamentIndexPage, inspectMainTournamentIndex } from '../src/main/limitless-main-tournament'
 import { syncMainTournamentBlock } from '../src/main/main-tournament-sync'
 import { TournamentStore } from '../src/main/tournament-store'
 import { ProjectStore } from '../src/main/project-store'
@@ -45,6 +46,10 @@ describe('main Limitless tournament archive', () => {
       cards: [{ category: 'pokemon', count: 4, name: 'Teal Mask Ogerpon ex', set: 'TWM', number: '25' },
         { category: 'energy', count: 56, name: 'Grass Energy', set: 'MEE', number: '9' }] })
     expect(() => parseMainTournamentIndex(index.replace('data-value="standard"', 'data-value="expanded"'))).toThrow()
+    expect(inspectMainTournamentIndex(index.replace('alt="FR"', 'alt=""'))).toMatchObject({
+      indexedRows: 3, ineligibleRows: 1, unavailableRows: 1 })
+    expect(() => parseMainTournamentIndex(index.replace('17 Oct 26', '1 Sep 26')))
+      .toThrow('Ordine temporale')
   })
 
   it('saves two Regional and representative lists across blocks and reopens offline', async () => {
@@ -79,6 +84,112 @@ describe('main Limitless tournament archive', () => {
         new Date('2026-10-24T12:00:00.000Z'))
       expect(calls.filter((url) => url.includes('/decks/list/'))).toHaveLength(before)
       reopened.close()
+    } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('scans the bundled rotation across pages and distinguishes archived, ineligible and older rows', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-main-rotation-'))
+    const store = new TournamentStore(join(folder, 'data.sqlite'))
+    try {
+      const older = `<tr><td>9 Apr 26</td><td><img class="flag" alt="FR"></td><td><a href="/tournaments/580">Regional Paris</a></td><td><img alt="standard"></td><td>800</td></tr>`
+      const page2 = index.replace('data-max="1"', 'data-max="2"')
+        .replace(/<tr><td>17 Oct 26[\s\S]*<\/table>/, `${older}</table>`)
+      const calls: string[] = []
+      store.saveMain(parseMainTournament(event('Regional Louisville, KY', '30520', '30521'),
+        parseMainTournamentIndex(index)[1]))
+      store.saveMainProgress({ ...store.mainProgress(), mode: 'new', status: 'complete',
+        watermark: '2026-10-01T00:00:00.000Z' }) // legacy 90-day scan must not suppress backfill
+      const fetcher = async (input: string | URL | Request): Promise<Response> => {
+        const url = String(input)
+        calls.push(url)
+        if (url.includes('page=2')) return new Response(page2)
+        if (url.includes('/tournaments?')) return new Response(index.replace('data-max="1"', 'data-max="2"'))
+        if (url.endsWith('/tournaments/582')) return new Response(event('Regional Nice', '30518', '30519'))
+        return new Response(list)
+      }
+      const result = await syncMainTournamentBlock(store, 'new', fetcher as typeof fetch,
+        new Date('2026-10-25T12:00:00.000Z'))
+      expect(result).toMatchObject({ status: 'complete', rotationStart: '2026-04-10',
+        scannedPages: 2, indexedRows: 4, eligibleEvents: 2, ineligibleEvents: 1,
+        outsideRotationEvents: 1, alreadyAcquiredEvents: 1, inspectedEvents: 1 })
+      expect(calls.some((url) => url.endsWith('/tournaments/581'))).toBe(false)
+      expect(calls.some((url) => url.endsWith('/tournaments/580'))).toBe(false)
+      expect(store.mainSummaries()).toHaveLength(2)
+      const highPage = await fetchMainTournamentIndexPage(101,
+        (async () => new Response(index.replace('data-max="1"', 'data-max="125"'))) as typeof fetch)
+      expect(highPage.maxPages).toBe(125)
+    } finally { store.close(); rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('persists unavailable events and lists, then retries them on the next scan', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-main-unavailable-'))
+    const path = join(folder, 'data.sqlite')
+    try {
+      let available = false
+      const fetcher = async (input: string | URL | Request): Promise<Response> => {
+        const url = String(input)
+        if (url.includes('/tournaments?')) return new Response(index)
+        if (url.endsWith('/tournaments/582')) return available
+          ? new Response(event('Regional Nice', '30518', '30519')) : new Response('', { status: 404 })
+        if (url.endsWith('/tournaments/581')) return new Response(event('Regional Louisville, KY', '30520', '30521'))
+        if (url.endsWith('/decks/list/30520')) return available ? new Response(list) : new Response('', { status: 410 })
+        return new Response(list)
+      }
+      const store = new TournamentStore(path)
+      const first = await syncMainTournamentBlock(store, 'new', fetcher as typeof fetch,
+        new Date('2026-10-25T12:00:00.000Z'))
+      expect(first).toMatchObject({ status: 'complete', inspectedEvents: 1,
+        unavailableEvents: [{ eventId: '582' }], unavailableLists: [{ eventId: '581', listId: '30520' }] })
+      expect(store.getMain('581')?.participants[0].listUnavailable).toBe(true)
+      store.close()
+      available = true
+      const reopened = new TournamentStore(path)
+      try {
+        const retry = await syncMainTournamentBlock(reopened, 'new', fetcher as typeof fetch,
+          new Date('2026-10-25T12:00:00.000Z'))
+        expect(retry.unavailableEvents).toHaveLength(0)
+        expect(reopened.getMain('582')?.coverage.complete60Lists).toBe(2)
+        expect(reopened.mainSummaries()).toHaveLength(2)
+        let full = await syncMainTournamentBlock(reopened, 'full', fetcher as typeof fetch,
+          new Date('2026-10-25T12:00:00.000Z'))
+        if (full.status === 'running') full = await syncMainTournamentBlock(reopened, 'full', fetcher as typeof fetch,
+          new Date('2026-10-25T12:00:00.000Z'))
+        expect(full.status).toBe('complete')
+        expect(full.unavailableLists).toHaveLength(0)
+        expect(reopened.getMain('581')?.participants[0]).toMatchObject({ cardTotal: 60, listUnavailable: false })
+      } finally { reopened.close() }
+    } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('resumes after a persisted 429 without losing the index cursor', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-main-rate-'))
+    const path = join(folder, 'data.sqlite')
+    try {
+      let limited = true
+      const fetcher = async (input: string | URL | Request): Promise<Response> => {
+        const url = String(input)
+        if (url.includes('/tournaments?') && limited) return new Response('', {
+          status: 429, headers: { 'retry-after': '1' } })
+        if (url.includes('/tournaments?')) return new Response(index)
+        if (url.endsWith('/tournaments/582')) return new Response(event('Regional Nice', '30518', '30519'))
+        if (url.endsWith('/tournaments/581')) return new Response(event('Regional Louisville, KY', '30520', '30521'))
+        return new Response(list)
+      }
+      const store = new TournamentStore(path)
+      const limitedProgress = await syncMainTournamentBlock(store, 'new', fetcher as typeof fetch,
+        new Date('2026-10-25T12:00:00.000Z'))
+      expect(limitedProgress).toMatchObject({ status: 'rate-limited', page: 1, scannedPages: 0 })
+      store.close()
+      limited = false
+      const reopened = new TournamentStore(path)
+      try {
+        const resumed = await syncMainTournamentBlock(reopened, 'new', fetcher as typeof fetch,
+          new Date(Date.now() + 2_000))
+        expect(resumed).toMatchObject({ status: 'running', page: 2, scannedPages: 1,
+          inspectedEvents: 2, fetchedLists: 4 })
+        expect((await syncMainTournamentBlock(reopened, 'new', fetcher as typeof fetch,
+          new Date(Date.now() + 2_000))).status).toBe('complete')
+      } finally { reopened.close() }
     } finally { rmSync(folder, { recursive: true, force: true }) }
   })
 

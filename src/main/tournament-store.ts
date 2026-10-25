@@ -11,7 +11,9 @@ const initialProgress: TournamentSyncProgress = {
 }
 const initialMainProgress: MainTournamentSyncProgress = {
   mode: null, status: 'idle', page: 1, maxPages: null, pendingEvents: [], pendingLists: [], inspectedEvents: 0,
-  fetchedLists: 0, watermark: null, previousWatermark: null, newestSeen: null,
+  fetchedLists: 0, rotationStart: null, scannedPages: 0, indexedRows: 0, eligibleEvents: 0,
+  ineligibleEvents: 0, unavailableIndexRows: 0, outsideRotationEvents: 0, alreadyAcquiredEvents: 0,
+  unavailableEvents: [], unavailableLists: [], watermark: null, previousWatermark: null, newestSeen: null,
   stopAfterPage: false, cooldownUntil: null, lastError: null
 }
 
