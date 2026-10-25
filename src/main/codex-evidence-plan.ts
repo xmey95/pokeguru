@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import type { AiRunConfig } from '../shared/ai'
 import { readAiTokenUsage, type AiTokenUsage } from '../shared/ai-evidence'
 import { CODEX_ISOLATION_ARGS } from './codex-isolation'
+import { codexLauncher } from './codex-setup'
 import { AI_QUERY_PLAN_SCHEMA } from './ai-evidence-queries'
 
 /** An isolated, ephemeral planning call. The app executes only validated local queries. */
@@ -15,7 +16,7 @@ export async function planEvidenceQueriesWithCodex(prompt: string, config: AiRun
   const schemaPath = join(directory, 'schema.json')
   const resultPath = join(directory, 'result.json')
   writeFileSync(schemaPath, JSON.stringify(AI_QUERY_PLAN_SCHEMA), 'utf8')
-  const command = process.env.POKEGURU_CODEX_BIN || 'codex'
+  const launcher = codexLauncher('')
   const args = ['exec', '--ephemeral', '--json', ...CODEX_ISOLATION_ARGS,
     '--config', 'approval_policy="never"', '--skip-git-repo-check',
     '--color', 'never', '-C', directory,
@@ -25,7 +26,7 @@ export async function planEvidenceQueriesWithCodex(prompt: string, config: AiRun
     '--output-schema', schemaPath, '--output-last-message', resultPath, '-']
   try {
     return await new Promise<unknown>((resolve, reject) => {
-      const child = spawn(command, args, { cwd: directory, windowsHide: true,
+      const child = spawn(launcher.command, [...launcher.prefix, ...args], { cwd: directory, windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'] })
       const abort = () => child.kill()
       signal?.addEventListener('abort', abort, { once: true })
@@ -52,7 +53,7 @@ export async function planEvidenceQueriesWithCodex(prompt: string, config: AiRun
         clearTimeout(timer)
         signal?.removeEventListener('abort', abort)
         reject(new Error(error.message.includes('ENOENT')
-          ? 'Codex CLI non trovato. Installa o configura Codex su questo computer.'
+          ? 'Codex non disponibile. Verifica l’installazione di Pokéguru.'
           : 'Impossibile avviare Codex per le query.'))
       })
       child.on('close', (code) => {
