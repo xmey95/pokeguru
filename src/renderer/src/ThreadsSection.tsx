@@ -45,6 +45,8 @@ function ThreadSource({ source, cardTargets, onOpenCatalogCard }: {
   return <span tabIndex={printId ? 0 : undefined} {...previewProps}>{source.label}{printId ? ' · scheda non disponibile nel Catalogo locale' : ''}</span>
 }
 
+const TIMELINE_PAGE_SIZE = 50
+
 function DiffView({ title, diff, beforeLabel = 'PRINCIPALE' }: { title: string; diff: DeckDiff; beforeLabel?: string }) {
   const preview = useCardPreview()
   return <div className="thread-diff"><strong>{title}: {diff.beforeTotal} → {diff.afterTotal} carte</strong>
@@ -252,6 +254,17 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [versions, setVersions] = useState<DeckVersion[]>([])
   const [threads, setThreads] = useState<DeckThreadSummary[]>([])
   const [selectedDetail, setSelectedDetail] = useState<DeckThread | null>(null)
+  const [olderLoading, setOlderLoading] = useState(false)
+  const olderRequest = useRef(false)
+  function showDetail(next: DeckThread | null): void {
+    setSelectedDetail((current) => {
+      if (!next || !current || current.id !== next.id ||
+        current.messages.length <= next.messages.length || !current.oldestMessageCursor) return next
+      const recentIds = new Set(next.messages.map((message) => message.id))
+      return { ...next, messages: [...current.messages.filter((message) => !recentIds.has(message.id)),
+        ...next.messages], oldestMessageCursor: current.oldestMessageCursor }
+    })
+  }
   const [detailLoading, setDetailLoading] = useState(false)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const cardTargets = useMemo(() => catalogCardTargets(catalog), [catalog])
@@ -263,6 +276,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const aiModelsRequest = useRef(0)
   const [overrides, setOverrides] = useDraftState<Record<string, AiPreferences>>(`thread.overrides:${projectId}`, {})
   const [selectedId, setSelectedId] = useViewState<string | null>('thread.selected', null)
+  const [timelineWindow, setTimelineWindow] = useState({ threadId: '', count: TIMELINE_PAGE_SIZE })
   const [title, setTitle] = useDraftState(`thread.title:${projectId}`, '')
   const [openingNote, setOpeningNote] = useDraftState(`thread.opening:${projectId}`, '')
   const [message, setMessage] = useDraftState(`thread.message:${projectId}:${selectedId}`, '')
@@ -313,9 +327,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
 
   const selectedSummary = threads.find((thread) => thread.id === selectedId) ?? null
   const selected = selectedSummary && selectedDetail?.id === selectedId ? selectedDetail : null
-  const openingAiMessage = selected?.openingAiMessageId
-    ? selected.messages.find((entry) => entry.id === selected.openingAiMessageId) : null
-  const openingAiPending = !!openingAiMessage && !selected?.messages.some((entry) => entry.author === 'assistant')
+  const openingAiMessage = selected?.openingAiMessage ?? (selected?.openingAiMessageId
+    ? selected.messages.find((entry) => entry.id === selected.openingAiMessageId) : null)
+  const openingAiPending = selected?.openingAiPending ?? (!!openingAiMessage && !selected?.messages.some((entry) => entry.author === 'assistant'))
   const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
   useEffect(() => { if (selected) nav.entry.label = `Thread · ${selected.title}` }, [selected?.id])
   const featuredCandidate = selected?.candidates.at(-1) ?? null
@@ -351,6 +365,34 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     ...selected.messages.map((item) => ({ kind: 'message' as const, item })),
     ...selected.candidates.map((item) => ({ kind: 'candidate' as const, item }))
   ].sort((a, b) => a.item.createdAt.localeCompare(b.item.createdAt)) : []
+  const timelineEntries = timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id)
+  const visibleTimelineCount = timelineWindow.threadId === selectedId ? timelineWindow.count : TIMELINE_PAGE_SIZE
+  const hiddenTimelineCount = Math.max(0, timelineEntries.length - visibleTimelineCount) +
+    Math.max(0, (selected?.messageCount ?? selected?.messages.length ?? 0) - (selected?.messages.length ?? 0))
+
+  async function revealOlder(): Promise<void> {
+    if (!selected || olderRequest.current) return
+    const threadId = selected.id
+    const cursor = selected.oldestMessageCursor
+    const unloaded = Math.max(0, (selected.messageCount ?? selected.messages.length) - selected.messages.length)
+    if (unloaded && cursor) {
+      olderRequest.current = true
+      setOlderLoading(true)
+      try {
+        const result = await window.projectsApi.getDeckThreadMessagesBefore(projectId, threadId, cursor)
+        if (!result.ok) throw new Error(result.error)
+        if (!result.value.messages.length) throw new Error('Cronologia precedente non disponibile.')
+        setSelectedDetail((current) => current?.id === threadId &&
+          current.oldestMessageCursor?.rowId === cursor.rowId
+          ? { ...current, messages: [...result.value.messages, ...current.messages],
+            oldestMessageCursor: result.value.oldestCursor } : current)
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Cronologia precedente non disponibile.')
+        return
+      } finally { olderRequest.current = false; setOlderLoading(false) }
+    }
+    setTimelineWindow({ threadId, count: visibleTimelineCount + TIMELINE_PAGE_SIZE })
+  }
 
   useEffect(() => {
     let active = true
@@ -383,11 +425,11 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     if (!selectedId) { setSelectedDetail(null); setDetailLoading(false); return }
     let active = true
     setDetailLoading(true)
-    void window.projectsApi.getDeckThread(projectId, selectedId).then((result) => {
+    void window.projectsApi.getDeckThreadWindow(projectId, selectedId).then((result) => {
       if (!active) return
       if (!result.ok) throw new Error(result.error)
       if (!result.value) throw new Error('Thread non trovato in questo progetto.')
-      setSelectedDetail(result.value)
+      showDetail(result.value)
     }).catch((cause) => {
       if (active) { setSelectedDetail(null); setError(cause instanceof Error ? cause.message : 'Thread non disponibile.') }
     }).finally(() => { if (active) setDetailLoading(false) })
@@ -409,8 +451,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   useEffect(() => {
     if (aiJob?.status !== 'applied' || aiJob.projectId !== projectId ||
       aiJob.resourceId !== selectedId || !selectedId) return
-    void window.projectsApi.getDeckThread(projectId, selectedId).then((result) => {
-      if (result.ok) setSelectedDetail(result.value)
+    void window.projectsApi.getDeckThreadWindow(projectId, selectedId).then((result) => {
+      if (result.ok) showDetail(result.value)
     })
     void refreshSummaries()
   }, [aiJob?.id, aiJob?.status, projectId, selectedId])
@@ -428,8 +470,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     else if (selectedId) {
       const status = await window.projectsApi.getAiJobStatus(projectId, selectedId)
       if (status.ok) setAiJob(status.value)
-      const detail = await window.projectsApi.getDeckThread(projectId, selectedId)
-      if (detail.ok) setSelectedDetail(detail.value)
+      const detail = await window.projectsApi.getDeckThreadWindow(projectId, selectedId)
+      if (detail.ok) showDetail(detail.value)
     }
   }
 
@@ -508,15 +550,15 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     try {
       const result = await window.projectsApi.createDeckThread({ projectId, title, openingNote, startWithAi })
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       closeCreate()
       selectThread(result.value, '#new-thread-trigger')
       if (startWithAi && result.value.openingAiMessageId) {
         const response = await window.projectsApi.askDeckThread(projectId, result.value.id,
           openingNote.trim(), null, result.value.openingAiMessageId)
-        const latest = await window.projectsApi.getDeckThread(projectId, result.value.id)
-        if (latest.ok) setSelectedDetail(latest.value)
+        const latest = await window.projectsApi.getDeckThreadWindow(projectId, result.value.id)
+        if (latest.ok) showDetail(latest.value)
         if (!response.ok) setOpeningErrors((current) => ({ ...current, [result.value.id]: response.error }))
       }
     } catch (cause) { setCreateError(cause instanceof Error ? cause.message : 'Thread non creato.') }
@@ -533,13 +575,13 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const response = await window.projectsApi.askDeckThread(projectId, selected.id,
         openingAiMessage.text, selectedOverride?.model ? selectedOverride : null, openingAiMessage.id)
       if (!response.ok) throw new Error(response.error)
-      setSelectedDetail(response.value)
+      showDetail(response.value)
       await refreshSummaries()
     } catch (cause) {
       setOpeningErrors((current) => ({ ...current, [selected.id]:
         cause instanceof Error ? cause.message : 'Risposta Codex non completata.' }))
-      const latest = await window.projectsApi.getDeckThread(projectId, selected.id)
-      if (latest.ok) setSelectedDetail(latest.value)
+      const latest = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
+      if (latest.ok) showDetail(latest.value)
     } finally { setWorking(false); setAsking(false) }
   }
 
@@ -551,7 +593,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     try {
       const result = await window.projectsApi.addDeckThreadMessage(projectId, selected.id, message)
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       setMessage('')
       setPreview(null)
@@ -570,14 +612,14 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       setMessage('')
       setPreview(null)
     } catch (cause) {
       setComposerError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
-      const current = await window.projectsApi.getDeckThread(projectId, selected.id)
-      if (current.ok) setSelectedDetail(current.value)
+      const current = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
+      if (current.ok) showDetail(current.value)
       await refreshSummaries()
     }
     finally { setWorking(false); setAsking(false) }
@@ -593,7 +635,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         projectId, threadId: selected.id, rawText: candidateText, note: candidateNote
       })
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       setCandidateNote('')
       invalidatePreview()
@@ -612,15 +654,15 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       setCandidateText(result.value.candidates.at(-1)?.rawText ?? candidateText)
       setMessage('')
       setPreview(null)
     } catch (cause) {
       setComposerError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
-      const current = await window.projectsApi.getDeckThread(projectId, selected.id)
-      if (current.ok) setSelectedDetail(current.value)
+      const current = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
+      if (current.ok) showDetail(current.value)
       await refreshSummaries()
     }
     finally { setWorking(false); setProposing(false) }
@@ -638,11 +680,11 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       setConfirmCandidate(null)
       const [newVersions, newThreads, newDetail] = await Promise.all([
         window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreadSummaries(projectId),
-        window.projectsApi.getDeckThread(projectId, selected.id)
+        window.projectsApi.getDeckThreadWindow(projectId, selected.id)
       ])
       if (newVersions.ok) setVersions(newVersions.value)
       if (newThreads.ok) setThreads(newThreads.value)
-      if (newDetail.ok) setSelectedDetail(newDetail.value)
+      if (newDetail.ok) showDetail(newDetail.value)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Adozione non riuscita.') }
     finally { setWorking(false) }
   }
@@ -707,7 +749,10 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               <button ref={candidateAccess} type="button" className="text-button" onClick={openFeaturedCandidate}>Apri proposta e confronto</button>
             </div>}
             <div className="thread-timeline"><h4>Conversazione</h4>
-              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
+              {hiddenTimelineCount > 0 && <button type="button" className="text-button" aria-busy={olderLoading} onClick={() => void revealOlder()}>
+                Mostra {Math.min(TIMELINE_PAGE_SIZE, hiddenTimelineCount)} precedenti ({hiddenTimelineCount} nascosti)
+              </button>}
+              {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} />)}
             </div>
             {(asking || proposing) && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}

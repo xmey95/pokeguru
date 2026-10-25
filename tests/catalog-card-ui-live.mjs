@@ -55,7 +55,7 @@ let application
 try {
   application = await electron.launch({ executablePath: require('electron'), args: ['.'], cwd: workspace,
     env: { ...process.env, POKEGURU_DATA_DIR: profile }, timeout: 30000 })
-  const page = await application.firstWindow()
+  let page = await application.firstWindow()
   page.setDefaultTimeout(10000)
   const remoteImageRequests = []
   page.on('request', (request) => {
@@ -86,6 +86,16 @@ try {
   })
   writeFileSync(join(imageDirectory, 'mee-001.png'), Buffer.from(png, 'base64'))
   seed()
+  // The fixture edits SQLite outside CatalogStore; reopen the app so its cached view reads the seeded database.
+  await application.close()
+  application = await electron.launch({ executablePath: require('electron'), args: ['.'], cwd: workspace,
+    env: { ...process.env, POKEGURU_DATA_DIR: profile }, timeout: 30000 })
+  page = await application.firstWindow()
+  page.setDefaultTimeout(10000)
+  page.on('request', (request) => {
+    if (/^https:\/\/(?:assets\.tcgdex\.net|limitlesstcg\.nyc3\.cdn\.digitaloceanspaces\.com)\//.test(request.url()))
+      remoteImageRequests.push(request.url())
+  })
   await application.evaluate(({ shell }) => { globalThis.cardSourceOpened = []; shell.openExternal = async (url) => { globalThis.cardSourceOpened.push(url) } })
   await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
   await page.getByRole('button', { name: 'Gestisci catalogo' }).click()
