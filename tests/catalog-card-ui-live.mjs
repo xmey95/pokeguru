@@ -57,6 +57,11 @@ try {
     env: { ...process.env, POKEGURU_DATA_DIR: profile }, timeout: 30000 })
   const page = await application.firstWindow()
   page.setDefaultTimeout(10000)
+  const remoteImageRequests = []
+  page.on('request', (request) => {
+    if (/^https:\/\/(?:assets\.tcgdex\.net|limitlesstcg\.nyc3\.cdn\.digitaloceanspaces\.com)\//.test(request.url()))
+      remoteImageRequests.push(request.url())
+  })
   const ready = async () => {
     await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
@@ -105,6 +110,16 @@ try {
     previewBounds.x + previewBounds.width <= 640 && previewBounds.y + previewBounds.height <= 580)
   await previewRow.focus()
   assert.equal(await previewRow.getAttribute('aria-describedby'), 'card-preview')
+  await page.keyboard.press('Escape')
+  await popup.waitFor({ state: 'hidden' })
+  await search.fill('Energia Limitless di prova')
+  const pngRow = page.locator('.catalog-list').getByRole('button', { name: /Energia Limitless di prova/ }).first()
+  await pngRow.focus()
+  await previewImage.waitFor()
+  assert.equal(await previewImage.getAttribute('src'), 'pokeguru://cards/mee-001.png')
+  await page.waitForFunction(() => document.querySelector('[data-testid="card-preview"] img')?.naturalWidth > 0)
+  assert.equal(await pngRow.getAttribute('aria-describedby'), 'card-preview')
+  assert.deepEqual(remoteImageRequests, [], 'Hover/focus non deve scaricare nuovamente PNG o WebP')
   await page.keyboard.press('Escape')
   await popup.waitFor({ state: 'hidden' })
   await search.fill('Energia speciale di prova')
