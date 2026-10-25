@@ -103,6 +103,12 @@ jobs:
       - name: Check safe Thread Markdown on Windows
         if: runner.os == 'Windows'
         run: node tests/thread-markdown-ui-live.mjs
+      - name: Check persistent candidate access on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/thread-candidate-access-ui-live.mjs
+      - name: Check persistent candidate access on Windows
+        if: runner.os == 'Windows'
+        run: node tests/thread-candidate-access-ui-live.mjs
       - name: Exercise candidate adoption on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/deck-adoption-live.mjs
