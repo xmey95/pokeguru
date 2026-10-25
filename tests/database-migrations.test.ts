@@ -75,7 +75,7 @@ it('backs up a live WAL archive before legacy migration and restores its evidenc
   } finally { projects?.close(); rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 }, 30_000)
 
-it('backs up schema 4 before adding the Catalog retry clock', async () => {
+it('backs up schema 4 before adding the Catalog retry clock and job identity', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-catalog-'))
   const path = join(folder, 'pokeguru.sqlite')
   try {
@@ -101,7 +101,37 @@ it('backs up schema 4 before adding the Catalog retry clock', async () => {
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 })
 
-it('preserves a project and Catalog job across verified v3→v4→v5 upgrades', async () => {
+it('backs up schema 5 and preserves a Catalog job while adding run identity', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-alerts-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const original = new CatalogStore(path)
+    original.startJob('new')
+    original.close()
+    const old = new DatabaseSync(path)
+    old.exec('ALTER TABLE catalog_job DROP COLUMN run_id; PRAGMA user_version = 5')
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 5, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const upgraded = new CatalogStore(path)
+    expect(upgraded.jobStatus()).toMatchObject({ state: 'interrupted', runId: null })
+    upgraded.startJob('new')
+    const runId = upgraded.jobStatus().runId
+    expect(runId).toMatch(/^[a-f0-9-]{36}$/)
+    upgraded.pauseJob(null)
+    upgraded.close()
+    completeDatabaseMigration(path, preparation)
+    const reopened = new CatalogStore(path)
+    expect(reopened.jobStatus().runId).toBe(runId)
+    reopened.startJob('new')
+    expect(reopened.jobStatus().runId).not.toBe(runId)
+    reopened.close()
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('preserves a project and Catalog job across verified v3→v4→v6 upgrades', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-chain-'))
   const path = join(folder, 'pokeguru.sqlite')
   try {
@@ -149,14 +179,17 @@ it('preserves a project and Catalog job across verified v3→v4→v5 upgrades', 
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 }, 30_000)
 
-it('backs up v5 before installing the rotation tables and reopens the project', async () => {
+it('backs up v6 before installing rotation tables and preserves the Catalog run ID', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-rotation-'))
   const path = join(folder, 'pokeguru.sqlite')
   try {
     const projects = new ProjectStore(path)
     const project = projects.create({ name: 'Prima della rotazione', format: 'STANDARD' })
     projects.close()
-    new CatalogStore(path).close()
+    const originalCatalog = new CatalogStore(path)
+    originalCatalog.startJob('new')
+    const runId = originalCatalog.jobStatus().runId
+    originalCatalog.close()
     new TournamentStore(path).close()
     const old = new DatabaseSync(path)
     old.exec(`DROP TABLE catalog_retired_prints;
@@ -164,10 +197,10 @@ it('backs up v5 before installing the rotation tables and reopens the project', 
       DROP TABLE historical_event_references;
       DROP TABLE tournament_rotation;
       ALTER TABLE catalog_job DROP COLUMN rule_version;
-      PRAGMA user_version = 5`)
+      PRAGMA user_version = 6`)
     old.close()
     const preparation = await prepareDatabaseMigration(path)
-    expect(preparation).toMatchObject({ fromVersion: 5, needsMigration: true })
+    expect(preparation).toMatchObject({ fromVersion: 6, needsMigration: true })
     expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
     const restored = new DatabaseSync(preparation.backupPath!, { readOnly: true })
     expect(restored.prepare("SELECT name FROM sqlite_master WHERE name='tournament_rotation'").get())
@@ -178,7 +211,8 @@ it('backs up v5 before installing the rotation tables and reopens the project', 
     const upgradedEvents = new TournamentStore(path)
     completeDatabaseMigration(path, preparation)
     expect(upgradedProjects.get(project.id)?.name).toBe('Prima della rotazione')
-    expect(schemaVersion(path)).toBe(6)
+    expect(upgradedCatalog.jobStatus().runId).toBe(runId)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
     upgradedEvents.close(); upgradedCatalog.close(); upgradedProjects.close()
     verifyDatabase(path)
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }

@@ -2,6 +2,8 @@ import type { CatalogPrint, CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
 import { OFFICIAL_SET_CODES } from './set-codes'
 import { gameplaySummary } from './card-gameplay'
+import { effectiveCardGameplay } from './card-errata'
+import { localCalendarDate } from './calendar-date'
 import type { StandardDeckEvaluation } from './standard-deck'
 import { basicEnergyType } from './basic-energy-name'
 
@@ -310,8 +312,8 @@ function matchupStandardContext(standard: StandardDeckEvaluation | null,
     `Problemi: ${standard.problems.join('; ') || 'nessuno'}. ` +
     `Da verificare: ${standard.toReview.join('; ') || 'nessuno'}. ` +
     (errata ? `REGISTRO ERRATA UFFICIALE: ${errata.sourceUrl}; verificato ${errata.checkedAt}, ` +
-      `ultimo aggiornamento della fonte ${errata.lastUpdated}. Nel perimetro H/I/J di questo snapshot ` +
-      'non sono elencate correzioni specifiche di stampa; le stampe storiche restano fuori perimetro.' :
+      `ultimo aggiornamento della fonte ${errata.lastUpdated}; ` +
+      `${errata.corrections?.length ?? 0} correzioni curate per stampa nel pacchetto.` :
       'REGISTRO ERRATA: non disponibile nel catalogo locale.')
 }
 
@@ -322,11 +324,16 @@ export function matchupDeckContext(baseline: DeckBaseline, reconciliation: DeckR
     const cardDescriptions = cards.slice(0, 120).map((card) => {
       const print = card.importedPrintIds.map((id) => card.prints.find((candidate) => candidate.id === id))
         .find((candidate) => !!candidate?.gameplay) ?? card.prints.find((candidate) => !!candidate.gameplay)
+      const effective = print ? effectiveCardGameplay(print, standard?.asOf ?? localCalendarDate(),
+        catalog.rulePackage) : null
       const status = card.status === 'recognized' ? 'identità da testo di gioco coincidente'
         : card.status === 'unverified' ? 'stampa esatta nota; equivalenza fra ristampe da verificare'
           : card.status === 'ambiguous' ? 'identità ambigua' : 'nessuna corrispondenza nel catalogo locale'
       return `${card.quantity} ${card.name} — ${status}` +
-        (print?.gameplay ? `; scheda ${print.id}: ${gameplaySummary(print.gameplay, print)}; fonte ${print.sourceUrl}` : '')
+        (print && effective?.effective ? `; scheda ${print.id}: ${gameplaySummary(effective.effective, print)}; fonte ${print.sourceUrl}` +
+          (effective.status === 'applied' || effective.status === 'source-already-corrected'
+            ? `; errata ${effective.errataSourceUrl}` : effective.status === 'source-mismatch'
+              ? '; errata non applicata: testo fonte non corrispondente' : '') : '')
     })
     return `CARTE NOSTRE (testo originale):\n${baseline.lines.filter((line) => line.kind === 'card')
       .slice(0, 120).map((line) => line.raw).join('\n') || 'lista non interpretata'}\n` +

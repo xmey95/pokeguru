@@ -25,6 +25,9 @@ it('persists one active AI job per resource and retains a ready result through r
     jobs.transition(started.id, 'applied')
     expect(jobs.active(project.id, thread.id)).toBeNull()
     expect(jobs.get(started.id)).toMatchObject({ status: 'applied', request: null, result: null })
+    expect(jobs.recent()).toMatchObject([{ id: started.id, status: 'applied',
+      projectId: project.id, resourceId: thread.id }])
+    expect('request' in jobs.recent()[0]).toBe(false)
     expect(jobs.start('thread-propose', project.id, thread.id).status).toBe('running')
   } finally { jobs?.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
 })

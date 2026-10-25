@@ -76,6 +76,14 @@ export class AiJobStore {
       status: row.status, createdAt: row.created_at, updatedAt: row.updated_at, error: row.error } : null
   }
 
+  recent(limit = 30): AiJobSummary[] {
+    const rows = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error
+      FROM ai_jobs ORDER BY rowid DESC LIMIT ?`).all(limit) as unknown as JobRow[]
+    return rows.map((row) => ({ id: row.id, kind: row.kind, projectId: row.project_id,
+      resourceId: row.resource_id, status: row.status, createdAt: row.created_at,
+      updatedAt: row.updated_at, error: row.error }))
+  }
+
   recoverable(): AiJob[] {
     return (this.db.prepare(`SELECT * FROM ai_jobs WHERE status IN ('running', 'ready')
       ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)

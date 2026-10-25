@@ -645,7 +645,19 @@ export class ProjectStore {
         json_each(CASE WHEN json_valid(message.evidence_json) THEN message.evidence_json
           ELSE '{}' END, '$.events') AS event
       WHERE json_type(event.value, '$.snapshotId') = 'text'`).all() as { id: string }[]
-    return new Set(rows.map((row) => row.id))
+    const referenced = new Set(rows.map((row) => row.id))
+    for (const [table, column] of [['deck_thread_messages', 'evidence_json'],
+      ['matchup_reports', 'payload'], ['matchup_turns', 'report_payload']] as const) {
+      for (const row of this.db.prepare(`SELECT DISTINCT json_extract(list.value, '$.snapshotId') AS id
+        FROM ${table} AS evidence,
+          json_each(CASE WHEN json_valid(evidence.${column}) THEN evidence.${column} ELSE '{}' END,
+            '$.aiQueries.requests') AS request,
+          json_each(request.value, '$.data.lists') AS list
+        WHERE json_extract(request.value, '$.query.operation') = 'events.search'
+          AND json_type(list.value, '$.snapshotId') = 'text'`).all() as { id: string }[])
+        referenced.add(row.id)
+    }
+    return referenced
   }
 
   getDeckThread(projectId: string, threadId: string): DeckThread | null {

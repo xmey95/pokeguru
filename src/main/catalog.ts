@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -553,7 +553,7 @@ export class CatalogStore {
       CREATE TABLE IF NOT EXISTS catalog_job (
         id INTEGER PRIMARY KEY CHECK (id = 1), mode TEXT NOT NULL,
         state TEXT NOT NULL, phase TEXT NOT NULL, expected INTEGER NOT NULL,
-        error TEXT, updated_at TEXT NOT NULL, retry_at TEXT, rule_version TEXT
+        error TEXT, updated_at TEXT NOT NULL, retry_at TEXT, run_id TEXT, rule_version TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS catalog_job_targets (
         print_id TEXT PRIMARY KEY
@@ -578,6 +578,7 @@ export class CatalogStore {
     const jobColumns = this.db.prepare('PRAGMA table_info(catalog_job)').all()
       .map((row) => (row as { name: string }).name)
     if (!jobColumns.includes('retry_at')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN retry_at TEXT')
+    if (!jobColumns.includes('run_id')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN run_id TEXT')
     if (!jobColumns.includes('rule_version')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN rule_version TEXT')
     // A process killed during a batch leaves only committed targets completed.
     this.db.prepare("UPDATE catalog_job SET state = 'interrupted', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
@@ -589,27 +590,29 @@ export class CatalogStore {
       .get() as { rule_version: string; removed_prints: number; retained_references: number; completed_at: string } | undefined
     const rotationCleanup = cleanup ? { ruleVersion: cleanup.rule_version, removedPrints: cleanup.removed_prints,
       retainedReferences: cleanup.retained_references, completedAt: cleanup.completed_at } : undefined
-    const row = this.db.prepare('SELECT mode, state, phase, expected, error, retry_at FROM catalog_job WHERE id = 1')
+    const row = this.db.prepare('SELECT mode, state, phase, expected, error, retry_at, run_id FROM catalog_job WHERE id = 1')
       .get() as { mode: CatalogSyncMode; state: CatalogSyncStatus['state']; phase: string;
-        expected: number; error: string | null; retry_at: string | null } | undefined
+        expected: number; error: string | null; retry_at: string | null; run_id: string | null } | undefined
     if (!row) return { running: false, mode: null, state: 'idle', phase: '', expected: 0,
-      acquired: 0, error: null, cooldownUntil: null, rotationCleanup }
+      acquired: 0, error: null, cooldownUntil: null, runId: null, rotationCleanup }
     const pending = (this.db.prepare('SELECT COUNT(*) AS n FROM catalog_job_targets').get() as { n: number }).n
     return { running: row.state === 'running' || row.state === 'rate-limited', mode: row.mode,
       state: row.state, phase: row.phase, expected: row.expected,
-      acquired: row.expected - pending, error: row.error, cooldownUntil: row.retry_at, rotationCleanup }
+      acquired: row.expected - pending, error: row.error, cooldownUntil: row.retry_at,
+      runId: row.run_id, rotationCleanup }
   }
 
   startJob(mode: CatalogSyncMode, ruleVersion: string | null = null): void {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       this.db.exec('DELETE FROM catalog_job_targets')
-      this.db.prepare(`INSERT INTO catalog_job (id, mode, state, phase, expected, error, updated_at, retry_at, rule_version)
-        VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?, NULL, ?)
+      this.db.prepare(`INSERT INTO catalog_job (id, mode, state, phase, expected, error,
+        updated_at, retry_at, run_id, rule_version)
+        VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?, NULL, ?, ?)
         ON CONFLICT(id) DO UPDATE SET mode=excluded.mode, state=excluded.state,
-        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at,
-        retry_at=NULL, rule_version=excluded.rule_version`)
-        .run(mode, new Date().toISOString(), ruleVersion)
+        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at, retry_at=NULL,
+        run_id=excluded.run_id, rule_version=excluded.rule_version`)
+        .run(mode, new Date().toISOString(), randomUUID(), ruleVersion)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }

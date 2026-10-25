@@ -1,4 +1,5 @@
 import bundled from './western-rule-package.json'
+import type { CardGameplay } from './catalog'
 
 export interface RulePeriod {
   version: string
@@ -22,7 +23,9 @@ export interface WesternRulePackage {
   circuit: 'WESTERN'
   checkedAt: string
   standardBans: { checkedAt: string; sourceUrl: string; cardNames: string[] }
-  errata: { checkedAt: string; sourceUrl: string; lastUpdated: string }
+  errata: { checkedAt: string; sourceUrl: string; lastUpdated: string;
+    corrections?: { printId: string; effectiveFrom: string; sourceUrl: string;
+      printed: CardGameplay; corrected: CardGameplay }[] }
   rotations: RulePeriod[]
   setAdmissions: SetAdmissionRule[]
 }
@@ -47,6 +50,27 @@ function officialSource(value: unknown): value is string {
   } catch { return false }
 }
 
+function cardGameplay(value: unknown): value is CardGameplay {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const game = value as Partial<CardGameplay>
+  const nullableText = (item: unknown): boolean => item === null || typeof item === 'string'
+  const modifier = (item: unknown): boolean => !!item && typeof item === 'object' &&
+    typeof (item as { type?: unknown }).type === 'string' &&
+    typeof (item as { value?: unknown }).value === 'string'
+  return (game.hp === null || Number.isInteger(game.hp) && (game.hp ?? 0) > 0) &&
+    Array.isArray(game.types) && game.types.every((item) => typeof item === 'string') &&
+    nullableText(game.evolveFrom) && Array.isArray(game.attacks) &&
+    game.attacks.every((item) => item && typeof item.name === 'string' &&
+      (item.cost === null || Array.isArray(item.cost) && item.cost.every((cost) => typeof cost === 'string')) &&
+      nullableText(item.damage) && nullableText(item.effect)) &&
+    Array.isArray(game.abilities) && game.abilities.every((item) => item &&
+      typeof item.name === 'string' && typeof item.effect === 'string' && nullableText(item.type)) &&
+    nullableText(game.effect) && nullableText(game.trainerType) &&
+    Array.isArray(game.weaknesses) && game.weaknesses.every(modifier) &&
+    Array.isArray(game.resistances) && game.resistances.every(modifier) &&
+    (game.retreat === null || Number.isInteger(game.retreat) && (game.retreat ?? -1) >= 0)
+}
+
 /** Validate curated data before it can replace the bundled snapshot. */
 export function parseWesternRulePackage(input: unknown): WesternRulePackage {
   const value = record(input)
@@ -67,6 +91,22 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
     errata.lastUpdated > errata.checkedAt) {
     throw new Error('Fonti o elenco delle carte vietate non validi nel pacchetto.')
   }
+  const errataCheckedAt = errata.checkedAt as string
+  const corrections = errata.corrections === undefined ? [] : errata.corrections
+  if (!Array.isArray(corrections) || corrections.length > 200) throw new Error('Errata non valide nel pacchetto.')
+  const correctedPrints = new Set<string>()
+  const parsedCorrections = corrections.map((entry): NonNullable<WesternRulePackage['errata']['corrections']>[number] => {
+    const correction = record(entry)
+    if (typeof correction.printId !== 'string' ||
+      !/^[a-zA-Z0-9.]+-[a-zA-Z0-9.]+$/.test(correction.printId) ||
+      !isoDate(correction.effectiveFrom) || correction.effectiveFrom > errataCheckedAt ||
+      !officialSource(correction.sourceUrl) ||
+      !cardGameplay(correction.printed) || !cardGameplay(correction.corrected) ||
+      JSON.stringify(correction.printed) === JSON.stringify(correction.corrected) ||
+      correctedPrints.has(correction.printId)) throw new Error('Errata per stampa non valida o duplicata.')
+    correctedPrints.add(correction.printId)
+    return correction as unknown as NonNullable<WesternRulePackage['errata']['corrections']>[number]
+  })
   const rotations: RulePeriod[] = value.rotations.map((raw) => {
     const rule = record(raw)
     if (typeof rule.version !== 'string' || !/^play-\d{4}-\d{2}-\d{2}$/.test(rule.version) ||
@@ -96,7 +136,9 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
   })
   return { schema: 1, version: value.version, circuit: 'WESTERN', checkedAt: value.checkedAt,
     standardBans: bans as unknown as WesternRulePackage['standardBans'],
-    errata: errata as unknown as WesternRulePackage['errata'], rotations, setAdmissions }
+    errata: { checkedAt: errata.checkedAt as string, sourceUrl: errata.sourceUrl as string,
+      lastUpdated: errata.lastUpdated as string, corrections: parsedCorrections },
+    rotations, setAdmissions }
 }
 
 export const BUNDLED_WESTERN_RULE_PACKAGE = parseWesternRulePackage(bundled)

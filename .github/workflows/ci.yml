@@ -37,6 +37,12 @@ jobs:
       - name: Install Linux display tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
+      - name: Check Electron menu and development shortcuts on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/electron-menu-live.mjs
+      - name: Check Electron menu and development shortcuts on Windows
+        if: runner.os == 'Windows'
+        run: node tests/electron-menu-live.mjs
       - name: Exercise offline desktop flow on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run test:e2e:offline
@@ -85,6 +91,12 @@ jobs:
       - name: Exercise saved tournament on Windows
         if: runner.os == 'Windows'
         run: node tests/tournament-ui-live.mjs --offline
+      - name: Check global job alerts on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/job-alerts-ui-live.mjs
+      - name: Check global job alerts on Windows
+        if: runner.os == 'Windows'
+        run: node tests/job-alerts-ui-live.mjs
       - name: Exercise AI settings without Codex on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/ai-settings-offline.mjs

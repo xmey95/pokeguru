@@ -70,6 +70,24 @@ export function reportGuideReferences(report: MatchupReport, cardTargets: Readon
   for (const card of report.tournamentEvidence?.observedCards ?? []) add(card.name, card.cardSourceUrl)
   for (const event of report.tournamentEvidence?.events ?? []) add(event.name, event.url)
   if (report.tournamentEvidence?.eventName) add(report.tournamentEvidence.eventName, report.tournamentEvidence.eventUrl)
+  for (const result of report.aiQueries?.requests ?? []) {
+    if (result.status !== 'ok' || !result.data || typeof result.data !== 'object') continue
+    const data = result.data as Record<string, unknown>
+    if (Array.isArray(data.matches)) for (const match of data.matches) {
+      if (match && typeof match === 'object') {
+        const card = match as { name?: unknown; sourceUrl?: unknown }
+        if (typeof card.name === 'string' && typeof card.sourceUrl === 'string')
+          add(card.name, card.sourceUrl)
+      }
+    }
+    if (Array.isArray(data.lists)) for (const list of data.lists) {
+      if (list && typeof list === 'object') {
+        const entry = list as { deck?: unknown; listUrl?: unknown }
+        if (typeof entry.deck === 'string' && typeof entry.listUrl === 'string')
+          add(entry.deck, entry.listUrl)
+      }
+    }
+  }
   return references
 }
 

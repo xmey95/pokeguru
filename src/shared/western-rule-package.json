@@ -11,7 +11,8 @@
   "errata": {
     "checkedAt": "2026-10-24",
     "sourceUrl": "https://play.pokemon.com/en-us/resources/documents/tcg-errata/",
-    "lastUpdated": "2024-11-07"
+    "lastUpdated": "2024-11-07",
+    "corrections": []
   },
   "rotations": [
     {

@@ -30,6 +30,31 @@ try {
   application = await launch(profile)
   let page = await application.firstWindow()
   assert.equal(page.url(), 'pokeguru://bundle/index.html', 'Il pacchetto deve ignorare l’URL renderer nell’ambiente')
+  assert.deepEqual(await application.evaluate(({ BrowserWindow, Menu }) => {
+    const window = BrowserWindow.getAllWindows()[0]
+    return [Menu.getApplicationMenu(), window.isMenuBarVisible(), window.isMaximizable(), window.isMinimizable()]
+  }), [null, false, true, true], 'Il pacchetto conserva il frame senza menu Electron')
+  await application.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows()[0]
+    window.focus()
+    for (const input of [{ keyCode: 'Alt' }, { keyCode: 'F12' }]) {
+      window.webContents.sendInputEvent({ type: 'keyDown', ...input })
+      window.webContents.sendInputEvent({ type: 'keyUp', ...input })
+    }
+  })
+  await page.waitForTimeout(200)
+  assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.isDevToolsOpened()), false)
+  await application.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows()[0]
+    const input = { keyCode: 'I', modifiers: ['control', 'shift'] }
+    window.webContents.sendInputEvent({ type: 'keyDown', ...input })
+    window.webContents.sendInputEvent({ type: 'keyUp', ...input })
+  })
+  await page.waitForTimeout(200)
+  assert.deepEqual(await application.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows()[0]
+    return [window.isMenuBarVisible(), window.webContents.isDevToolsOpened()]
+  }), [false, false], 'Alt non riapre il menu e DevTools resta disabilitato')
   const documentResponse = page.waitForResponse((response) => response.url() === page.url())
   await page.reload()
   assert.match(await (await documentResponse).headerValue('content-security-policy'), /script-src 'self'/)

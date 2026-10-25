@@ -67,7 +67,13 @@ try {
     if (!result.ok) throw new Error(result.error)
     return result.value[0]
   })
-  if (!offline) seedCatalog()
+  if (!offline) {
+    seedCatalog()
+    // External fixture writes bypass CatalogStore's snapshot cache; reopen the app.
+    await application.close()
+    application = await launch()
+    page = await application.firstWindow()
+  }
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(baseText)
@@ -185,11 +191,11 @@ try {
       }
       await page.locator('.thread-candidate.featured .candidate-comparison > summary').click()
       await page.locator('.thread-candidate.featured .candidate-evidence > summary').click()
-      await page.locator('.thread-candidate.featured').getByRole('button', { name: /Mega Absol ex.*↗/ }).first().waitFor()
     }
     const proposed = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
     assert.equal(proposed.ok, true)
     assert.equal(proposed.value.every((thread) => thread.candidates.length === 1), true)
+    assert.equal(proposed.value.every((thread) => thread.candidates[0].rawText.includes('Mega Absol ex')), true)
     assert.notEqual(proposed.value[0].candidates[0].rawText, proposed.value[1].candidates[0].rawText)
     assert.equal(proposed.value.find((thread) => thread.title === 'Thread A').candidates[0].aiConfig.source, 'global')
     assert.equal(proposed.value.find((thread) => thread.title === 'Thread B').candidates[0].aiConfig.source, 'override')

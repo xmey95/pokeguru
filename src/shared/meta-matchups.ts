@@ -1,4 +1,5 @@
 import type { AiRunConfig } from './ai'
+import type { AiEvidenceQueryTrace, AiPromptAudit } from './ai-evidence'
 
 export interface MetaDeck {
   id: string
@@ -41,6 +42,8 @@ export interface MatchupReport {
   limitations: string
   ai?: AiRunConfig
   tournamentEvidence?: MatchupTournamentEvidence
+  aiQueries?: AiEvidenceQueryTrace
+  promptAudit?: AiPromptAudit
 }
 
 export interface MatchupTournamentEvidence {

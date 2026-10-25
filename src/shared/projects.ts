@@ -71,6 +71,7 @@ export interface ProjectsApi {
   getDeckThreadMessagesBefore(projectId: string, threadId: string,
     cursor: DeckThreadMessageCursor): Promise<OperationResult<DeckThreadMessagePage>>
   getAiJobStatus(projectId: string, resourceId: string): Promise<OperationResult<AiJobSummary | null>>
+  listRecentAiJobs(): Promise<OperationResult<AiJobSummary[]>>
   cancelAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
   recoverAiJobs(): Promise<OperationResult<boolean>>
   createDeckThread(input: CreateDeckThreadInput): Promise<OperationResult<DeckThread>>

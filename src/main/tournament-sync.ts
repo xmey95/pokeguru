@@ -3,12 +3,13 @@ import { fetchTournament, fetchTournamentIndex, LimitlessRateLimitError, Limitle
 import type { TournamentStore } from './tournament-store'
 import { westernRotationRule } from '../shared/standard-rotation'
 import { localCalendarDate } from '../shared/calendar-date'
+import { randomUUID } from 'node:crypto'
 
 const EVENTS_PER_BLOCK = 3
 const INDEX_PAGES_PER_BLOCK = 2
 function initial(mode: 'new' | 'full', previous: TournamentSyncProgress, rotationStart: string): TournamentSyncProgress {
   return {
-    mode, status: 'running', page: 1, pending: [], inspected: 0, saved: 0, skipped: 0,
+    mode, runId: randomUUID(), status: 'running', page: 1, pending: [], inspected: 0, saved: 0, skipped: 0,
     watermark: previous.watermark, previousWatermark: mode === 'new'
       ? previous.watermark && previous.watermark > rotationStart ? previous.watermark : rotationStart : rotationStart,
     newestSeen: null, stopAfterPage: false, cooldownUntil: null, lastError: null,

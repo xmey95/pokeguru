@@ -498,6 +498,7 @@ details[open] > summary { margin-bottom: 8px; }
 .meta-analysis { margin: 0; }
 .matchup-source-links { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
 .matchup-source-links .text-button { padding-left: 0; }
+.ai-prompt-audit pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .discussion-switcher { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .discussion-switcher .selected { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-line); }
 .matchup-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; }
@@ -633,3 +634,14 @@ button > .loading-spinner { width: 14px; height: 14px; flex-basis: 14px; margin-
 @media (prefers-reduced-motion: reduce) {
   .loading-spinner { animation: none; }
 }
+
+.job-alerts { position: fixed; z-index: 100; right: 16px; bottom: 16px; width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow: auto; display: grid; gap: 8px; }
+.job-alert-more { width: 100%; background: var(--surface); }
+.job-alert { padding: 12px 16px; border: 1px solid var(--line); border-left: 4px solid var(--success); border-radius: var(--radius-sm); background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .16); }
+.job-alert[data-state="failed"] { border-left-color: var(--warning); }
+.job-alert[data-state="cancelled"] { border-left-color: var(--ink-muted); }
+.job-alert strong { display: block; font-size: var(--text-sm); line-height: 1.4; }
+.job-alert p { margin: 4px 0 0; color: var(--ink-secondary); font-size: var(--text-sm); line-height: 1.45; overflow-wrap: anywhere; }
+.job-alert-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 6px; }
+.job-alert-actions .text-button { margin: 0; }
+@media (max-width: 700px) { .job-alerts { top: 68px; bottom: auto; max-height: min(50vh, 360px); } }

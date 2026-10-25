@@ -60,7 +60,13 @@ it('retires only verified old marks after a complete Catalog job and restores it
     referenceDb.close()
     const missing = print('me01-002', 'I', null)
     store.save({ sets, prints: [current, missing], fetchedAt: '2027-04-10T00:00:00Z' }, 'standard-marks', next)
+    store.startJob('new', WESTERN_ROTATION_RULES[1].version)
+    store.queueJob('new')
+    const oldRunId = store.jobStatus().runId
+    store.pauseJob(null)
+    expect(store.resumeJob('new', next.version)).toBe(false)
     store.startJob('new', next.version)
+    expect(store.jobStatus().runId).not.toBe(oldRunId)
     store.queueJob('new')
     await expect(store.completeJob(next)).rejects.toThrow('Dettagli ancora in coda')
     expect(store.getPrint(old.id)).not.toBeNull()
