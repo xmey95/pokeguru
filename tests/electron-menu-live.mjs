@@ -65,6 +65,9 @@ try {
   await pressNative('Alt')
   assert.equal((await windowState()).visible, false, 'Alt non deve ripristinare il menu')
 
+  await page.getByRole('region', { name: 'Benvenuto', exact: true }).waitFor()
+  const compactStart = page.getByRole('button', { name: 'Inizia un progetto' })
+  if (await compactStart.isVisible()) await compactStart.click()
   const name = page.getByLabel('Nome progetto')
   await name.fill('Mazzo di prova')
   await name.focus()
