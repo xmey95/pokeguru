@@ -108,6 +108,8 @@ try {
     await cardPopup.getByText('Carta non trovata nel Catalogo locale.').waitFor()
     assert.equal(await cardPopup.locator('img').count(), 0)
     assert.equal(await eventCard.getAttribute('aria-describedby'), 'card-preview')
+    assert.equal(await eventCard.evaluate((element) => document.activeElement === element), true,
+      'Il focus deve restare sulla riga della carta prima di Escape')
     await page.keyboard.press('Escape')
     await cardPopup.waitFor({ state: 'hidden' })
     await page.locator('.tournament-players button').filter({ hasText: 'Two' }).click()

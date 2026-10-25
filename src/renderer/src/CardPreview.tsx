@@ -5,7 +5,7 @@ import type { CardPreviewData, CardPreviewLookup } from '../../shared/card-previ
 
 type PreviewState = { anchor: HTMLElement; lookup: CardPreviewLookup; data: CardPreviewData | null }
 type PreviewContext = { show(anchor: HTMLElement, lookup: CardPreviewLookup, delay: number): void;
-  hide(anchor: HTMLElement): void }
+  hide(anchor: HTMLElement): void; dismiss(): void }
 const Context = createContext<PreviewContext | null>(null)
 const fallback: Record<Exclude<CardPreviewData['reason'], 'available'>, string> = {
   'source-missing': 'La fonte non fornisce un’immagine per questa stampa.',
@@ -68,7 +68,7 @@ export function CardPreviewProvider({ children }: { children: ReactNode }) {
   const hide = useCallback((element: HTMLElement) => {
     if (anchor.current === element || (timer.current !== null && !anchor.current)) clear()
   }, [clear])
-  const actions = useMemo(() => ({ show, hide }), [show, hide])
+  const actions = useMemo(() => ({ show, hide, dismiss: clear }), [show, hide, clear])
 
   useLayoutEffect(() => {
     if (!current) return
@@ -119,7 +119,7 @@ export function useCardPreview() {
     onFocus: (event: FocusEvent<HTMLElement>) => context.show(event.currentTarget, lookup, 0),
     onBlur: (event: FocusEvent<HTMLElement>) => context.hide(event.currentTarget),
     onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
-      if (event.key === 'Escape') { context.hide(event.currentTarget); event.stopPropagation() }
+      if (event.key === 'Escape') { context.dismiss(); event.stopPropagation() }
     }
   })
 }
