@@ -9,6 +9,20 @@ import { _electron as electron } from 'playwright-core'
 import { createProjectFromStart } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
+const profileRenderer = process.argv.includes('--profile-renderer')
+const expectAllMessages = process.argv.includes('--expect-all-messages')
+const integerOption = (name, fallback) => {
+  const value = process.argv.find((argument) => argument.startsWith(`--${name}=`))?.split('=')[1]
+  if (value === undefined) return fallback
+  const number = Number(value)
+  if (!Number.isSafeInteger(number) || number < 1 || number > 1000)
+    throw new Error(`Invalid --${name} value`)
+  return number
+}
+const threadCount = integerOption('threads', 160)
+const longMessages = integerOption('selected-messages', 5)
+const viewportWidth = process.argv.some((argument) => argument.startsWith('--viewport-width='))
+  ? integerOption('viewport-width', 1280) : null
 const workspace = resolve(import.meta.dirname, '..')
 const temporary = mkdtempSync(join(tmpdir(), 'pokeguru-growth-perf-'))
 const profile = join(temporary, 'profile')
@@ -71,10 +85,11 @@ function seed(path, projectId, count) {
       print.run(id, setId, JSON.stringify(payload))
       target.run(id)
     }
-    for (let index = 0; index < 160; index++) {
+    for (let index = 0; index < threadCount; index++) {
       const id = `thread-${String(index).padStart(3, '0')}`
       thread.run(id, projectId, `Thread ${index}`, date, date)
-      for (let number = 0; number < 5; number++) message.run(`${id}-message-${number}`, id,
+      for (let number = 0; number < (index === threadCount - 1 ? longMessages : 5); number++)
+        message.run(`${id}-message-${number}`, id,
         `Answer ${number}`, date, evidence)
       candidate.run(`${id}-candidate`, id, '60 Synthetic Card MEG 1', parsed, date)
     }
@@ -128,7 +143,8 @@ function seed(path, projectId, count) {
         number ? 'Synthetic revision.' : null)
     }
     db.exec('COMMIT')
-    return { cards: count, threads: 160, messages: 800, candidates: 160,
+    return { cards: count, threads: threadCount,
+      messages: (threadCount - 1) * 5 + longMessages, candidates: threadCount,
       playEvents: 120, regionalEvents: 60, matchupOpponents: 60, matchupRevisions: 300 }
   } catch (error) { db.exec('ROLLBACK'); throw error } finally { db.close() }
 }
@@ -153,6 +169,7 @@ try {
   const start = performance.now()
   application = await launch()
   page = await application.firstWindow()
+  if (viewportWidth) await page.setViewportSize({ width: viewportWidth, height: 800 })
   await application.evaluate(({ ipcMain }, snapshot) => {
     ipcMain.removeHandler('matchups:get-meta')
     ipcMain.handle('matchups:get-meta', () => ({ ok: true, value: snapshot }))
@@ -183,27 +200,31 @@ try {
     const samples = []
     let resultBytes = 0
     for (let index = 0; index < (call === 'getMatchupEvidence' ? 3 : 5); index++) {
-      const measurement = await page.evaluate(async ({ call, projectId, metaId }) => {
+      const measurement = await page.evaluate(async ({ call, projectId, metaId, threadCount, sampleIndex }) => {
         const start = performance.now()
         const args = { listDeckThreadSummaries: [projectId],
           listMatchupReports: [projectId, metaId],
           getMatchupEvidence: [metaId, '900000'],
           listMatchupDiscussions: [projectId, '900000'],
-          getDeckThread: [projectId, 'thread-159'],
+          getDeckThread: [projectId, `thread-${String(threadCount - 1).padStart(3, '0')}`],
           searchCatalog: ['Synthetic card', 'all', 0] }[call] ?? []
         const result = await window.projectsApi[call](...args)
-        return { ms: performance.now() - start, ok: result.ok, bytes: JSON.stringify(result).length }
-      }, { call, projectId, metaId })
+        const ms = performance.now() - start
+        return { ms, ok: result.ok, bytes: sampleIndex === 0 ? JSON.stringify(result).length : 0 }
+      }, { call, projectId, metaId, threadCount, sampleIndex: index })
       if (!measurement.ok) throw new Error(`${call} returned an error`)
       samples.push(+measurement.ms.toFixed(1))
-      resultBytes = measurement.bytes
+      if (index === 0) resultBytes = measurement.bytes
     }
     ipc[name] = { samples, median: median(samples), jsonChars: resultBytes }
   }
   const navigation = {}
+  const rendererProfiles = {}
   for (const section of ['Catalogo', 'Lista', 'Thread', 'Eventi', 'Matchup']) {
     const samples = []
     for (let index = 0; index < 3; index++) {
+      const profiling = profileRenderer && index === 0 && ['Lista', 'Matchup'].includes(section)
+      if (profiling) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.start') }
       const elapsed = await page.evaluate(async (name) => {
         const button = [...document.querySelectorAll('.sidebar button')]
           .find((item) => item.textContent?.trim() === name)
@@ -224,6 +245,18 @@ try {
         return performance.now() - started
       }, section)
       samples.push(+elapsed.toFixed(1))
+      if (profiling) {
+        await page.waitForTimeout(1000)
+        const { profile } = await cdp.send('Profiler.stop')
+        const hits = new Map()
+        for (const id of profile.samples ?? []) hits.set(id, (hits.get(id) ?? 0) + 1)
+        rendererProfiles[section] = profile.nodes.map((node) => ({
+          function: node.callFrame.functionName, url: node.callFrame.url,
+          line: node.callFrame.lineNumber + 1, column: node.callFrame.columnNumber + 1,
+          samples: hits.get(node.id) ?? 0
+        })).filter((node) => node.samples > 0)
+          .sort((a, b) => b.samples - a.samples).slice(0, 12)
+      }
     }
     navigation[section] = { samples, median: median(samples) }
     await page.waitForTimeout(600)
@@ -253,14 +286,63 @@ try {
         over32ms: gaps.filter((gap) => gap > 32).length }
     }, scrollSelector)
   }
+  await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
+  await page.locator('.catalog-list').waitFor()
+  const threadHeapBefore = await heap()
+  const threadStarted = performance.now()
+  await page.getByRole('button', { name: 'Thread', exact: true }).first().click()
+  await page.waitForFunction((expected) =>
+    document.querySelectorAll('.threads-section .thread-message').length === expected,
+  expectAllMessages ? longMessages : Math.min(longMessages, 50), { timeout: 30000 })
+  const threadContentMs = +(performance.now() - threadStarted).toFixed(1)
+  const threadHeapAfter = await heap()
+  const threadDom = await page.evaluate((totalMessages) => ({
+    nodes: document.querySelector('.threads-section')?.querySelectorAll('*').length ?? 0,
+    messages: document.querySelectorAll('.threads-section .thread-message').length,
+    totalMessages,
+    candidates: document.querySelectorAll('.threads-section .thread-candidate').length,
+    timelineHeight: document.querySelector('.thread-timeline')?.scrollHeight ?? 0
+  }), longMessages)
+  let threadHistoryExpansion = null
+  if (longMessages > 50 && !expectAllMessages) {
+    await page.locator('#thread-message').fill('Bozza mantenuta durante la lettura')
+    const historyButton = page.getByRole('button', { name: /Mostra 50 precedenti/ })
+    await historyButton.scrollIntoViewIfNeeded()
+    const buttonTopBefore = await historyButton.evaluate((button) => button.getBoundingClientRect().top)
+    const started = performance.now()
+    await historyButton.click()
+    await page.waitForFunction(() => document.querySelectorAll('.threads-section .thread-message').length === 100)
+    const historyState = await historyButton.evaluate((button) => ({
+      focused: document.activeElement === button, top: button.getBoundingClientRect().top }))
+    if (!historyState.focused || Math.abs(historyState.top - buttonTopBefore) > 4)
+      throw new Error(`Thread history lost focus or scroll position: ${JSON.stringify(historyState)}`)
+    if (await page.locator('#thread-message').inputValue() !== 'Bozza mantenuta durante la lettura')
+      throw new Error('Thread draft changed while revealing history')
+    if (await page.locator('.threads-section .thread-candidate').count() !== 1)
+      throw new Error('Featured candidate disappeared while revealing history')
+    if (await page.locator('.threads-section .thread-message').first().locator('.candidate-evidence').count() !== 1)
+      throw new Error('Historical evidence disappeared while revealing history')
+    threadHistoryExpansion = { ms: +(performance.now() - started).toFixed(1),
+      visibleMessages: await page.locator('.threads-section .thread-message').count(),
+      firstMessage: await page.locator('.threads-section .thread-message p').first().innerText(),
+      focused: historyState.focused, buttonShiftPx: +(historyState.top - buttonTopBefore).toFixed(1) }
+  }
   const heapEnd = await heap()
+  await cdp.send('HeapProfiler.enable')
+  await cdp.send('HeapProfiler.collectGarbage')
+  const heapAfterGc = await heap()
   const longTasks = await page.evaluate(() => window.__growthLongTasks ?? [])
   const processes = await application.evaluate(({ app }) => app.getAppMetrics().map((entry) => ({
     type: entry.type, privateKiB: entry.memory?.privateBytes ?? null })))
   console.log(JSON.stringify({ kind: 'Populated Electron fixture, offline and warm cache', platform: process.platform,
-    dataset, startupMs, ipc, navigation, scroll, longTasks: { count: longTasks.length,
+    profiled: profileRenderer, rendererProfiles,
+    dataset: { ...dataset, viewportWidth: viewportWidth ?? 'default', expectAllMessages }, startupMs, ipc, navigation, scroll,
+    threadContent: { ms: threadContentMs, dom: threadDom,
+      heapBeforeBytes: threadHeapBefore, heapAfterBytes: threadHeapAfter },
+    threadHistoryExpansion,
+    longTasks: { count: longTasks.length,
       maxMs: longTasks.length ? Math.max(...longTasks) : 0 },
-    rendererHeapBytes: { start: heapStart, end: heapEnd },
+    rendererHeapBytes: { start: heapStart, end: heapEnd, afterGc: heapAfterGc },
     processes }, null, 2))
 } finally {
   if (application) await application.close()

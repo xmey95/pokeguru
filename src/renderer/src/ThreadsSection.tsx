@@ -45,6 +45,8 @@ function ThreadSource({ source, cardTargets, onOpenCatalogCard }: {
   return <span tabIndex={printId ? 0 : undefined} {...previewProps}>{source.label}{printId ? ' · scheda non disponibile nel Catalogo locale' : ''}</span>
 }
 
+const TIMELINE_PAGE_SIZE = 50
+
 function DiffView({ title, diff, beforeLabel = 'PRINCIPALE' }: { title: string; diff: DeckDiff; beforeLabel?: string }) {
   const preview = useCardPreview()
   return <div className="thread-diff"><strong>{title}: {diff.beforeTotal} → {diff.afterTotal} carte</strong>
@@ -263,6 +265,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const aiModelsRequest = useRef(0)
   const [overrides, setOverrides] = useDraftState<Record<string, AiPreferences>>(`thread.overrides:${projectId}`, {})
   const [selectedId, setSelectedId] = useViewState<string | null>('thread.selected', null)
+  const [timelineWindow, setTimelineWindow] = useState({ threadId: '', count: TIMELINE_PAGE_SIZE })
   const [title, setTitle] = useDraftState(`thread.title:${projectId}`, '')
   const [openingNote, setOpeningNote] = useDraftState(`thread.opening:${projectId}`, '')
   const [message, setMessage] = useDraftState(`thread.message:${projectId}:${selectedId}`, '')
@@ -351,6 +354,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     ...selected.messages.map((item) => ({ kind: 'message' as const, item })),
     ...selected.candidates.map((item) => ({ kind: 'candidate' as const, item }))
   ].sort((a, b) => a.item.createdAt.localeCompare(b.item.createdAt)) : []
+  const timelineEntries = timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id)
+  const visibleTimelineCount = timelineWindow.threadId === selectedId ? timelineWindow.count : TIMELINE_PAGE_SIZE
+  const hiddenTimelineCount = Math.max(0, timelineEntries.length - visibleTimelineCount)
 
   useEffect(() => {
     let active = true
@@ -707,7 +713,10 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
               <button ref={candidateAccess} type="button" className="text-button" onClick={openFeaturedCandidate}>Apri proposta e confronto</button>
             </div>}
             <div className="thread-timeline"><h4>Conversazione</h4>
-              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
+              {hiddenTimelineCount > 0 && <button type="button" className="text-button" onClick={() => setTimelineWindow({ threadId: selected.id, count: visibleTimelineCount + TIMELINE_PAGE_SIZE })}>
+                Mostra {Math.min(TIMELINE_PAGE_SIZE, hiddenTimelineCount)} precedenti ({hiddenTimelineCount} nascosti)
+              </button>}
+              {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} />)}
             </div>
             {(asking || proposing) && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}

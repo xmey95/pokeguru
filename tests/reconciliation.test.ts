@@ -115,6 +115,9 @@ describe('Riconciliazione APP-006', () => {
     const conflicting = suggestPrints({ lineNumber: 3, raw: '1 Altro PAL 254', kind: 'card', quantity: 1,
       name: 'Altro', setCode: 'PAL', cardNumber: '254' }, catalog)
     expect(conflicting[0]).toMatchObject({ print: { id: 'sv02-254' }, reason: 'code-conflict' })
+    expect(suggestPrints({ lineNumber: 4, raw: '1 Rare Candy PAF 089', kind: 'card', quantity: 1,
+      name: 'Rare Candy', setCode: 'PAF', cardNumber: '089' }, catalog)[0])
+      .toMatchObject({ print: { id: 'sv04.5-089' }, reason: 'same-print' })
     expect(suggestPrints({ lineNumber: 4, raw: '1 Energia Base', kind: 'card', name: 'Energia Base' }, catalog)).toEqual([])
     expect(suggestPrints({ lineNumber: 5, raw: '1 Carta promo PR-SV 001a', kind: 'card',
       name: 'Carta promo', setCode: 'PR-SV', cardNumber: '001a' }, catalog)).toEqual([])

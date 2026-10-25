@@ -102,11 +102,81 @@ function sameCode(line: DeckLine, print: CatalogPrint): boolean {
     normalizedNumber(line.cardNumber) === normalizedNumber(print.localId)
 }
 
+interface SuggestIndex {
+  byName: Map<string, CatalogPrint[]>
+  byEnergyType: Map<string, CatalogPrint[]>
+  byCode: Map<string, CatalogPrint[]>
+}
+
+// CatalogView instances are snapshots. Weak keys release their search index with the snapshot.
+const suggestionIndexes = new WeakMap<CatalogView, SuggestIndex>()
+
+function suggestionIndex(catalog: CatalogView): SuggestIndex {
+  const cached = suggestionIndexes.get(catalog)
+  if (cached) return cached
+  const index: SuggestIndex = { byName: new Map(), byEnergyType: new Map(), byCode: new Map() }
+  const addCode = (print: CatalogPrint): void => {
+    const number = normalizedNumber(print.localId)
+    for (const code of new Set([print.setId.toUpperCase(), OFFICIAL_SET_CODES[print.setId]])) {
+      if (!code) continue
+      const key = `${code}\0${number}`
+      const group = index.byCode.get(key) ?? []
+      group.push(print)
+      index.byCode.set(key, group)
+    }
+  }
+  for (const print of catalog.prints) {
+    if (!print.detailAt || !print.identityId) continue
+    const name = normalizedName(print.name)
+    const named = index.byName.get(name) ?? []
+    named.push(print)
+    index.byName.set(name, named)
+    if (print.category === 'Energy' && print.energyType?.toLowerCase() === 'normal') {
+      const type = basicEnergyType(print.name)
+      if (type) {
+        const energy = index.byEnergyType.get(type) ?? []
+        energy.push(print)
+        index.byEnergyType.set(type, energy)
+      }
+    }
+    addCode(print)
+  }
+  for (const print of catalog.referencePrints ?? []) {
+    if (print.detailAt && print.identityId) addCode(print)
+  }
+  suggestionIndexes.set(catalog, index)
+  return index
+}
+
+function sortedCandidates(candidates: PrintCandidate[]): PrintCandidate[] {
+  const score: Record<CandidateReason, number> = { 'same-print': 0, 'code-conflict': 1,
+    'same-name': 2, search: 3 }
+  return candidates.sort((a, b) => score[a.reason] - score[b.reason] ||
+    a.print.name.localeCompare(b.print.name) || a.print.id.localeCompare(b.print.id))
+}
+
 export function suggestPrints(line: DeckLine, catalog: CatalogView, search = ''): PrintCandidate[] {
   if (line.kind !== 'card' || !line.name) return []
   const term = normalizedName(search)
+  if (!term) {
+    const index = suggestionIndex(catalog)
+    const codeKey = line.setCode && line.cardNumber && !/ALT/i.test(line.setCode)
+      ? `${line.setCode.toUpperCase()}\0${normalizedNumber(line.cardNumber)}` : null
+    const coded = codeKey ? index.byCode.get(codeKey) ?? [] : []
+    const candidates: PrintCandidate[] = coded.map((print) => ({ print,
+      reason: printNameMatches(line.name!, print) ? 'same-print' : 'code-conflict' }))
+    const seen = new Set(coded)
+    const named = index.byName.get(normalizedName(line.name)) ?? []
+    const energy = basicEnergyType(line.name)
+    const energyPrints = energy ? index.byEnergyType.get(energy) ?? [] : []
+    for (const print of [...named, ...energyPrints]) {
+      if (!seen.has(print)) candidates.push({ print, reason: 'same-name' })
+      seen.add(print)
+    }
+    return sortedCandidates(candidates)
+  }
   const referencePrints = (catalog.referencePrints ?? []).filter((print) => sameCode(line, print))
-  return [...catalog.prints, ...referencePrints]
+  const candidates = [...catalog.prints, ...referencePrints]
     .filter((print) => print.detailAt !== null && print.identityId !== null)
     .map((print): PrintCandidate | null => {
       if (term && !`${print.name} ${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase().includes(term)) return null
@@ -119,10 +189,7 @@ export function suggestPrints(line: DeckLine, catalog: CatalogView, search = '')
       return null
     })
     .filter((candidate): candidate is PrintCandidate => candidate !== null)
-    .sort((a, b) => {
-      const score: Record<CandidateReason, number> = { 'same-print': 0, 'code-conflict': 1, 'same-name': 2, search: 3 }
-      return score[a.reason] - score[b.reason] || a.print.name.localeCompare(b.print.name) || a.print.id.localeCompare(b.print.id)
-    })
+  return sortedCandidates(candidates)
 }
 
 export function snapshotPrint(print: CatalogPrint): MappedPrint {
@@ -142,29 +209,72 @@ export function buildDeckCards(baseline: DeckBaseline, catalog: CatalogView | nu
   reconciliation?: DeckReconciliation | null): DeckCardEntry[] {
   const prints = (catalog?.prints ?? []).filter((print) => print.detailAt && print.identityId)
   const byIdentity = new Map<string, CatalogPrint[]>()
+  const byName = new Map<string, CatalogPrint[]>()
+  const byEnergyType = new Map<string, CatalogPrint[]>()
+  const byCode = new Map<string, CatalogPrint[]>()
+  const byId = new Map<string, CatalogPrint>()
+  const printOrder = new Map<CatalogPrint, number>()
+  const printSet = new Set(prints)
+  const addCode = (print: CatalogPrint): void => {
+    const number = normalizedNumber(print.localId)
+    const codes = new Set([print.setId.toUpperCase(), OFFICIAL_SET_CODES[print.setId]])
+    for (const code of codes) {
+      if (!code) continue
+      const key = `${code}\0${number}`
+      const matches = byCode.get(key) ?? []
+      matches.push(print)
+      byCode.set(key, matches)
+    }
+  }
   for (const print of prints) {
     const group = byIdentity.get(print.identityId!) ?? []
     group.push(print)
     byIdentity.set(print.identityId!, group)
+    const name = normalizedName(print.name)
+    const named = byName.get(name) ?? []
+    named.push(print)
+    byName.set(name, named)
+    if (print.category === 'Energy' && print.energyType?.toLowerCase() === 'normal') {
+      const energy = basicEnergyType(print.name)
+      if (energy) {
+        const matching = byEnergyType.get(energy) ?? []
+        matching.push(print)
+        byEnergyType.set(energy, matching)
+      }
+    }
+    addCode(print)
+    byId.set(print.id, print)
+    printOrder.set(print, printOrder.size)
+  }
+  for (const print of catalog?.referencePrints ?? []) {
+    if (print.detailAt && print.identityId) addCode(print)
   }
   const overrides = new Map(reconciliation?.mappings.map((item) => [item.lineNumber, item]) ?? [])
   const entries = new Map<string, DeckCardEntry>()
   for (const line of baseline.lines.filter((item) => item.kind === 'card')) {
-    const sameName = prints.filter((print) => printNameMatches(line.name ?? '', print))
-    const exact = catalog ? suggestPrints(line, catalog).filter((item) => item.reason === 'same-print')
-      .map((item) => item.print) : []
+    const lineName = line.name ?? ''
+    const named = byName.get(normalizedName(lineName)) ?? []
+    const energy = basicEnergyType(lineName)
+    const energyPrints = energy ? byEnergyType.get(energy) ?? [] : []
+    const sameName = energyPrints.length ? [...new Set([...named, ...energyPrints])]
+      .sort((a, b) => printOrder.get(a)! - printOrder.get(b)!) : named
+    const codeKey = line.setCode && line.cardNumber && !/ALT/i.test(line.setCode)
+      ? `${line.setCode.toUpperCase()}\0${normalizedNumber(line.cardNumber)}` : null
+    const exact = codeKey ? (byCode.get(codeKey) ?? [])
+      .filter((print) => printNameMatches(lineName, print))
+      .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)) : []
     const identities = [...new Set(sameName.map((print) => print.identityId!))]
     const exactIdentities = [...new Set(exact.map((print) => print.identityId!))]
     const override = overrides.get(line.lineNumber)
     // A catalog enrichment can replace a provisional identity without invalidating
     // the user's exact printing choice.
-    const overridePrint = override && prints.find((print) => print.id === override.print.id)
+    const overridePrint = override && byId.get(override.print.id)
     let identityId: string | null = overridePrint?.identityId ?? null
     if (!identityId && exactIdentities.length === 1) identityId = exactIdentities[0]
     if (!identityId && !line.setCode && identities.length === 1 &&
       sameName[0]?.identityBasis !== 'unverified') identityId = identities[0]
     const identityPrints = identityId ? [...byIdentity.get(identityId) ?? [],
-      ...exact.filter((print) => print.identityId === identityId && !prints.includes(print))] : []
+      ...exact.filter((print) => print.identityId === identityId && !printSet.has(print))] : []
     const status: DeckCardEntry['status'] = identityId
       ? identityPrints[0]?.identityBasis !== 'unverified' ? 'recognized' : 'unverified'
       : identities.length > 0 ? 'ambiguous' : 'outside-catalog'
