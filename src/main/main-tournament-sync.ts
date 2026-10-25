@@ -3,12 +3,13 @@ import { completeMainTournament, fetchMainDecklist, fetchMainTournament,
   fetchMainTournamentIndexPage, MainLimitlessRateLimitError,
   MainLimitlessUnavailableError } from './limitless-main-tournament'
 import type { TournamentStore } from './tournament-store'
+import { randomUUID } from 'node:crypto'
 import { westernRotationRule } from '../shared/standard-rotation'
 
 const REQUESTS_PER_BLOCK = 7
 const LISTS_PER_EVENT = 16
 function initial(mode: 'new' | 'full', old: MainTournamentSyncProgress, rotationStart: string): MainTournamentSyncProgress {
-  return { mode, status: 'running', page: 1, maxPages: null, pendingEvents: [], pendingLists: [],
+  return { mode, runId: randomUUID(), status: 'running', page: 1, maxPages: null, pendingEvents: [], pendingLists: [],
     inspectedEvents: 0, fetchedLists: 0, rotationStart, scannedPages: 0, indexedRows: 0,
     eligibleEvents: 0, ineligibleEvents: 0, unavailableIndexRows: 0, outsideRotationEvents: 0,
     alreadyAcquiredEvents: 0, unavailableEvents: [], unavailableLists: [], watermark: old.watermark,
@@ -45,7 +46,7 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
     const next = initial(mode, progress, rotation.effectiveFrom)
     // An upgrade must finish an already queued event/list before backfilling the rotation.
     progress = progress.mode === mode && (progress.status === 'running' || progress.status === 'rate-limited')
-      ? { ...next, status: progress.status, cooldownUntil: progress.cooldownUntil,
+      ? { ...next, runId: progress.runId ?? next.runId, status: progress.status, cooldownUntil: progress.cooldownUntil,
         pendingEvents: progress.pendingEvents, pendingLists: progress.pendingLists }
       : next
     store.saveMainProgress(progress)

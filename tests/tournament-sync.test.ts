@@ -60,11 +60,13 @@ describe('global Limitless Play archive', () => {
       const first = new TournamentStore(path)
       const block = await syncTournamentBlock(first, 'new', network.fetcher, now)
       expect(block).toMatchObject({ status: 'running', inspected: 3, saved: 3 })
+      expect(block.runId).toMatch(/^[a-f0-9-]{36}$/)
       expect(first.list()).toHaveLength(3)
       first.close()
       const reopened = new TournamentStore(path)
       const finished = await syncTournamentBlock(reopened, 'new', network.fetcher, now)
       expect(finished).toMatchObject({ status: 'complete', inspected: 4, saved: 4 })
+      expect(finished.runId).toBe(block.runId)
       expect(reopened.summaries()).toHaveLength(4)
       expect(reopened.summaries()).toEqual(reopened.list().map(({ eventId, name, date, circuit, platform,
         isOnline, reportedPlayers, coverage, pairingCoverage }) => ({ eventId, name, date, circuit,
@@ -74,6 +76,7 @@ describe('global Limitless Play archive', () => {
       const before = network.calls.filter((url) => url.includes('/details')).length
       const repeat = await syncTournamentBlock(reopened, 'new', network.fetcher, now)
       expect(repeat).toMatchObject({ status: 'complete', inspected: 0, saved: 0 })
+      expect(repeat.runId).not.toBe(block.runId)
       expect(network.calls.filter((url) => url.includes('/details'))).toHaveLength(before)
       expect(reopened.summaries()).toHaveLength(4)
       reopened.close()

@@ -308,6 +308,9 @@ Il Catalogo conserva il testo TCGdex immutato. Un pacchetto regole di release pu
 ### T-117 — Menu e scorciatoie della finestra Electron (APP-117)
 
 [Electron Menu](https://www.electronjs.org/docs/latest/api/menu) specifica che `Menu.setApplicationMenu(null)` rimuove la barra su Windows/Linux; nasconderla soltanto permette invece di richiamarla con Alt ([BrowserWindow](https://www.electronjs.org/docs/latest/api/browser-window)). Si mantiene il frame predefinito per i controlli del sistema e si gestiscono nel processo principale soltanto lo zoom Ctrl+±/0 e, con renderer di sviluppo su loopback, F12/Ctrl+Shift+I e ricarica F5/Ctrl+R tramite [`before-input-event`](https://www.electronjs.org/docs/latest/api/web-contents/). Le scorciatoie di editing restano al renderer Chromium; Alt+←/→ è già gestita dalla navigazione dell'app. `webPreferences.devTools` è disabilitato per la build locale e i pacchetti. La scelta non introduce una seconda barra: la sidebar del renderer è navigazione di prodotto distinta dal menu Electron.
+### T-118 — Identità e avviso dei job (APP-118)
+
+Le corse Catalogo ed Eventi ricevono un ID persistente quando inizia una nuova acquisizione; pausa, attesa e ripresa conservano lo stesso ID. La nuova colonna Catalogo porta lo schema SQLite a v6, con backup verificato pre-upgrade. Gli avvisi usano l'ID del job AI già persistito. La shell del renderer legge gli stati ogni due secondi e salva soltanto ID e ultimo stato in `localStorage`: il primo controllo per fonte stabilisce una baseline, poi solo il passaggio a successo, errore o annullamento crea un avviso. Per Codex, successo significa `applied`, cioè risultato già salvato; `ready` non basta. Errori temporanei con ripresa automatica e pause manuali restano stati di lavoro. Questo contratto copre anche gli avvii automatici previsti da APP-120 se usano le medesime API di stato. Nessun testo del job o credenziale entra nel registro locale.
 
 ## Registro delle fonti primarie
 

@@ -91,6 +91,12 @@ jobs:
       - name: Exercise saved tournament on Windows
         if: runner.os == 'Windows'
         run: node tests/tournament-ui-live.mjs --offline
+      - name: Check global job alerts on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/job-alerts-ui-live.mjs
+      - name: Check global job alerts on Windows
+        if: runner.os == 'Windows'
+        run: node tests/job-alerts-ui-live.mjs
       - name: Exercise AI settings without Codex on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/ai-settings-offline.mjs

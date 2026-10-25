@@ -50,6 +50,7 @@ import { TournamentStore } from './tournament-store'
 import { completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
 import { AiJobStore } from './ai-job-store'
 import type { AiJob } from './ai-job-store'
+import type { AiJobSummary } from '../shared/ai-job'
 import { recoverMatchupJob, recoverThreadJob } from './ai-job-recovery'
 import { fetchRecentWesternTournament } from './limitless-event'
 import { syncTournamentBlock } from './tournament-sync'
@@ -797,6 +798,13 @@ function registerProjectHandlers(): void {
     if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
       return { ok: false, error: 'Job AI non disponibile.' }
     return { ok: true, value: aiJobStore.latest(projectId, resourceId as string) }
+  })
+
+  ipcMain.handle('ai:recent-jobs', (event): OperationResult<AiJobSummary[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!aiJobStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: aiJobStore.recent() } }
+    catch { return { ok: false, error: 'Stato dei job AI non leggibile.' } }
   })
 
   ipcMain.handle('ai:cancel-job', (event, projectId: unknown, resourceId: unknown) => {

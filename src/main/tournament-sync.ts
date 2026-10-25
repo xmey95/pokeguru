@@ -1,6 +1,7 @@
 import type { TournamentSyncProgress } from '../shared/tournament'
 import { fetchTournament, fetchTournamentIndex, LimitlessRateLimitError, LimitlessSyncPaused } from './limitless-event'
 import type { TournamentStore } from './tournament-store'
+import { randomUUID } from 'node:crypto'
 
 const EVENTS_PER_BLOCK = 3
 const INDEX_PAGES_PER_BLOCK = 2
@@ -8,7 +9,7 @@ const FIRST_SYNC_DAYS = 90
 
 function initial(mode: 'new' | 'full', previous: TournamentSyncProgress, now: Date): TournamentSyncProgress {
   return {
-    mode, status: 'running', page: 1, pending: [], inspected: 0, saved: 0, skipped: 0,
+    mode, runId: randomUUID(), status: 'running', page: 1, pending: [], inspected: 0, saved: 0, skipped: 0,
     watermark: previous.watermark, previousWatermark: mode === 'new'
       ? previous.watermark ?? new Date(now.getTime() - FIRST_SYNC_DAYS * 86_400_000).toISOString() : null,
     newestSeen: null, stopAfterPage: false, cooldownUntil: null, lastError: null
