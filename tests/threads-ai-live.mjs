@@ -74,7 +74,7 @@ try {
     application = await launch()
     page = await application.firstWindow()
   }
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(baseText)
   await page.getByRole('button', { name: 'Salva lista' }).click()

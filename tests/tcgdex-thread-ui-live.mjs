@@ -79,7 +79,7 @@ try {
   const stored = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), seeded.projectId)
   assert.equal(stored.value[0].messages[0].evidence.sources[0].url, sourceUrl)
   assert.equal(stored.value[0].candidates[0].sources[0].url, sourceUrl)
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await page.locator('.deck-card-toggle').filter({ hasText: 'Mega Absol ex' }).click()
   const deckDetail = page.locator('.deck-card-detail')
   await deckDetail.getByText('Scheda TCGdex', { exact: false }).waitFor()

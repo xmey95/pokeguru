@@ -99,7 +99,7 @@ try {
       if (!result.ok) throw new Error(result.error)
     }
   })
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await switchThread(page, /Piano più rapido/)
   const trigger = page.locator('#thread-switcher-trigger')
