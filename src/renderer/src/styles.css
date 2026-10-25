@@ -456,19 +456,26 @@ details[open] > summary { margin-bottom: 8px; }
 .matchup-source-links .text-button { padding-left: 0; }
 .discussion-switcher { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .discussion-switcher .selected { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-line); }
-.matchup-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 0 0 24px; }
-.matchup-fields > div { min-width: 0; }
-.matchup-fields h3 { margin: 0 0 10px; font-size: var(--text-base); color: var(--ink-secondary); }
-.matchup-fields p { margin: 0; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.matchup-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; }
+.matchup-fields > section { min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.matchup-fields h3 { margin: 0 0 8px; font-size: var(--text-base); color: var(--ink); }
+.matchup-fields p { margin: 0; line-height: 1.55; overflow-wrap: anywhere; }
 .matchup-fields > .strategy-field { grid-column: 1 / -1; }
 .matchup-fields .strategy-field h3 { color: var(--ink); font-size: var(--text-md); }
-.matchup-fields .strategy-field p { max-width: 76ch; font-size: 15px; }
-.matchup-fields > .matchup-trust { border-left: 3px solid var(--warning-line); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--warning-soft); padding: 16px 20px; }
-.matchup-fields .matchup-trust h3, .matchup-fields .matchup-trust p { color: var(--warning); font-size: var(--text-sm); }
+.matchup-fields .strategy-field p { max-width: 88ch; font-size: 15px; }
+.matchup-fields > .matchup-trust { grid-column: 1 / -1; border-left: 3px solid var(--warning-line); background: var(--warning-soft); }
+.matchup-fields .matchup-trust h3, .matchup-fields .matchup-trust .guide-body { color: var(--warning); font-size: var(--text-sm); }
 .matchup-assessment, .guide-sources { margin: 16px 0; }
 .matchup-assessment[open] > summary, .guide-sources[open] > summary { margin-bottom: 16px; }
 .matchup-section > .meta-provenance { margin-top: 20px; }
-.guide-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.guide-body { overflow-wrap: anywhere; }
+.guide-body > :first-child { margin-top: 0; }
+.guide-body > :last-child { margin-bottom: 0; }
+.guide-body p { margin: 0 0 8px; line-height: 1.55; }
+.guide-body h4 { margin: 12px 0 4px; color: var(--ink); font-size: var(--text-sm); }
+.guide-body ul, .guide-body ol { margin: 5px 0 10px; padding-left: 22px; line-height: 1.5; }
+.guide-body li + li { margin-top: 4px; }
+.guide-inline { overflow-wrap: anywhere; }
 .guide-link { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; border-radius: 2px; }
 .guide-link:hover { text-decoration-thickness: 2px; }
 .guide-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
