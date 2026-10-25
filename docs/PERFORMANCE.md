@@ -66,6 +66,12 @@ La fixture con liste Matchup corrispondenti passa sul ramo aggiornato ma in un c
 
 La fixture ora misura separatamente query SQLite e parse JSON degli stessi snapshot, dopo aver chiuso Electron, senza scaldare il database prima della misura di avvio. Sul taglio da 5.000 stampe e 180 eventi, due cicli di cinque campioni danno mediane Play 35–52 ms di query e 121–178 ms di parse per 24,3 milioni di caratteri; Regional 40–56 e 134–183 ms per 30,0 milioni. Nei medesimi cicli l'IPC dei soli riepiloghi Play/Regional è 58–60/66–71 ms e l'anteprima Matchup senza liste corrispondenti è circa 198 ms. I numeri della lettura diretta e dell'IPC sono raccolti in processi diversi, quindi non vanno sommati o sottratti come fasi della stessa chiamata; mostrano che il parse integrale degli eventi è un costo da rivalutare se diventa dominante. La fixture da 5.000 stampe passa anche dopo questa aggiunta, con scroll p95 17–19 ms nelle tre viste.
 
+### Rebase su APP-106, verifica dello schema v4
+
+Il ramo è stato ribasato su `dev` `34cdf2b`, che introduce archivio/ripristino/cancellazione dei progetti e schema SQLite v4. Typecheck/build e suite locale 154 passati/20 esclusi. In Electron Windows con profili temporanei passano `project-archive-ui-live.mjs` (archivio, cambio progetto, ripristino, cancellazione confermata e riapertura), `workspace-ui-live.mjs` a 1440/1280/1241/1240/1024/640 px e `matchup-switcher-ui-live.mjs --navigation` a 1440/1280/640 px. La cache Catalogo è globale e le scritture del Catalogo la invalidano; il ramo APP-113 non altera le API progetto né le migrazioni.
+
+La fixture su v4 con 10.000 stampe, 160 Thread, 995 messaggi totali e 200 nel Thread scelto passa a 640 px. Il dettaglio Thread trasferisce 6,5 milioni di caratteri in mediana 26,6 ms; la cronologia monta inizialmente 50 messaggi/1.650 nodi e ne espande altri 50 in 126 ms, con focus e posizione del pulsante invariati. Lo scroll p95 è 17–18 ms nelle viste Catalogo, Thread e Matchup; il long task massimo del ciclo è 145 ms. Le letture SQLite/parse dirette degli Eventi e l'IPC Matchup variano con il carico e restano da confrontare sul codice UI finale. Non sono state usate credenziali o dati personali.
+
 ### Criteri per il completamento dopo l'integrazione UI
 
 1. Aggiornare il ramo da `dev` dopo le PR UI, conservando gli esiti e misurando sullo stesso commit sia baseline integrata sia variante candidata; almeno tre cicli per avvio/primo accesso, cinque campioni per IPC e 120 frame per scroll. Misurare contenuto pronto, non solo il pulsante attivo.
