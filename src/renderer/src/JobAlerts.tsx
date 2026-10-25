@@ -20,6 +20,7 @@ export function JobAlerts() {
   const nav = useNavigation()
   const ledger = useRef<AlertLedger>(readLedger()).current
   const [alerts, setAlerts] = useState<ObservedJob[]>([])
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -45,7 +46,7 @@ export function JobAlerts() {
       })
       try { localStorage.setItem(storageKey, JSON.stringify(ledger)) } catch { /* Session dedupe still works. */ }
       if (additions.length) setAlerts((current) => [...current, ...additions])
-      timer = window.setTimeout(() => void poll(), 2000)
+      timer = window.setTimeout(() => void poll(), 5000)
     }
     void poll()
     return () => { active = false; window.clearTimeout(timer) }
@@ -62,8 +63,14 @@ export function JobAlerts() {
   }
   function dismiss(key: string): void { setAlerts((current) => current.filter((item) => item.key !== key)) }
   if (!alerts.length) return null
+  const hidden = Math.max(0, alerts.length - 3)
+  const shown = expanded ? alerts : alerts.slice(-3)
   return <aside className="job-alerts" aria-label="Avvisi attività" aria-live="polite" aria-relevant="additions">
-    {alerts.map((job) => <section className="job-alert" data-state={job.state} role="status" key={job.key}>
+    {hidden > 0 && <button type="button" className="secondary-button job-alert-more"
+      aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+      {expanded ? 'Mostra solo i più recenti' : `Mostra altri ${hidden} avvisi`}
+    </button>}
+    {shown.map((job) => <section className="job-alert" data-state={job.state} role="status" key={job.key}>
       <strong>{job.title}</strong><p>{job.detail}</p>
       <div className="job-alert-actions">
         <button type="button" className="text-button" onClick={() => open(job)}>

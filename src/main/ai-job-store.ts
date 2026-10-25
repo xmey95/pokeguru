@@ -78,7 +78,7 @@ export class AiJobStore {
 
   recent(limit = 30): AiJobSummary[] {
     const rows = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error
-      FROM ai_jobs ORDER BY created_at DESC, rowid DESC LIMIT ?`).all(limit) as unknown as JobRow[]
+      FROM ai_jobs ORDER BY rowid DESC LIMIT ?`).all(limit) as unknown as JobRow[]
     return rows.map((row) => ({ id: row.id, kind: row.kind, projectId: row.project_id,
       resourceId: row.resource_id, status: row.status, createdAt: row.created_at,
       updatedAt: row.updated_at, error: row.error }))

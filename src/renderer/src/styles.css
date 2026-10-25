@@ -636,6 +636,7 @@ button > .loading-spinner { width: 14px; height: 14px; flex-basis: 14px; margin-
 }
 
 .job-alerts { position: fixed; z-index: 100; right: 16px; bottom: 16px; width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow: auto; display: grid; gap: 8px; }
+.job-alert-more { width: 100%; background: var(--surface); }
 .job-alert { padding: 12px 16px; border: 1px solid var(--line); border-left: 4px solid var(--success); border-radius: var(--radius-sm); background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .16); }
 .job-alert[data-state="failed"] { border-left-color: var(--warning); }
 .job-alert[data-state="cancelled"] { border-left-color: var(--ink-muted); }

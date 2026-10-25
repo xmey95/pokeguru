@@ -93,9 +93,20 @@ try {
   await aiAlert.getByRole('button', { name: 'Apri Thread' }).click()
   await page.getByRole('button', { name: 'Thread', exact: true }).waitFor()
   await page.getByText('Thread avviso', { exact: true }).first().waitFor()
+  await app.evaluate(() => {
+    const first = globalThis.alertFixtures.ai[0]
+    globalThis.alertFixtures.ai = [first, ...[2, 3, 4, 5].map((number) => ({
+      ...first, id: `ai-fixture-${number}`, status: 'applied'
+    }))]
+  })
+  const more = page.getByRole('button', { name: 'Mostra altri 1 avvisi' })
+  await more.waitFor()
+  assert.equal(await page.locator('.job-alert').count(), 3)
+  await more.click()
+  assert.equal(await page.locator('.job-alert').count(), 4)
   await recorded('main:regional-1', 'failed')
   await page.reload()
-  await page.waitForTimeout(2300)
+  await page.waitForTimeout(5300)
   assert.equal(await page.locator('.job-alert').count(), 0, 'riapertura non deve duplicare gli avvisi')
   console.log('Avvisi job OK: Catalogo successo/errore, Play, Regional, AI, navigazione e riapertura.')
 } finally {
