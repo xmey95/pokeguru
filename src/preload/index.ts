@@ -36,6 +36,7 @@ const api: ProjectsApi = {
     ipcRenderer.invoke('deck:ask-thread', projectId, threadId, text, override, existingUserMessageId),
   proposeDeckThread: (projectId, threadId, request, override) => ipcRenderer.invoke('deck:propose-thread', projectId, threadId, request, override),
   openDeckSource: (url) => ipcRenderer.invoke('deck:open-source', url),
+  openThreadLink: (url) => ipcRenderer.invoke('thread:open-link', url),
   saveDeckCandidate: (input) => ipcRenderer.invoke('deck:save-candidate', input),
   adoptDeckCandidate: (input) => ipcRenderer.invoke('deck:adopt-candidate', input),
   copyDeckExport: (input) => ipcRenderer.invoke('deck:copy-export', input),

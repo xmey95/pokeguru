@@ -114,6 +114,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-109** | Avviare Codex con il primo messaggio del nuovo Thread | Funzionalità/UX | R-03, R-07, R-11 / feedback utente | P1 / M | APP-040/058/097; autorizzazione utente 25-10-2026 | Done |
 | **APP-103** | Acquisire tutti i tornei occidentali Standard della rotazione corrente con copertura esplicita | Correzione Eventi | R-06 / feedback utente | P1 / M | APP-056, pacchetto rotazione locale | Done |
 | **APP-110** | Rendere leggibile la guida Matchup lunga e strutturata | UI/contenuti | R-10, R-13 / feedback utente | P0 / M | APP-071/073; guida e revisioni già persistite | Done |
+| **APP-111** | Renderizzare le risposte Codex in Markdown nei Thread | UI/sicurezza | R-07, R-13 / feedback utente | P1 / S | APP-109 in `dev` prima di modificare la vista Thread | In progress |
 
 ### Corrispondenza degli ID assegnati sui rami paralleli
 
@@ -963,6 +964,12 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Risultato:** la guida mostra piano, punti forti, rischi, carte nostre e avversarie e incertezze in sezioni compatte, con fonti e dati della revisione nei dettagli. Il renderer delle guide e delle versioni storiche converte un sottoinsieme sicuro di Markdown in titoli, paragrafi, liste ed enfasi, preservando i collegamenti esistenti a Catalogo e fonti. L'anteprima dati mantiene i riferimenti in linea dove sono inseriti in una frase.
 - **Integrazione e verifiche locali:** ramo riallineato a `origin/dev` `a251348`, che include APP-107. Il renderer conserva i link TCGdex verso le schede locali anche nel Markdown strutturato e nelle fonti delle meccaniche. Build/typecheck e 152 test passati, 19 live esclusi, con Node 24 e Vitest limitato a due worker. Electron Windows con profili temporanei: lettura lunga e link a 1440×900, 1280×720, 640×720; navigazione Matchup/Thread e workspace; tre prove consecutive di accessibilità DPR 2 a 640×580. Verificati struttura, tastiera, storico, isolamento dei progetti, assenza di overflow e contrasto minimo 5,16.
 - **Correzioni correlate e limiti:** il ripristino differito del focus si interrompe su `focusin`; il Thread rilegge il dettaglio dopo un salvataggio pendente e non mostra il dettaglio di un thread assente dal riepilogo. La fixture lunga non è una nuova generazione Codex e non dimostra qualità tattica. Il renderer copre titoli, liste, paragrafi, enfasi e link consentiti, non l'intera sintassi Markdown. La precedente CI della PR #14 aveva un gate Ubuntu rosso sulla navigazione DPR 2; dopo la correzione i quattro check Verify Ubuntu/Windows di push e PR passano sul commit funzionale `9b08c18`. PR #14 integrata in `dev` (`c85f39b`); nessun intervento su `main` o release.
+
+### APP-111 — Markdown nelle risposte Codex dei Thread
+
+- **Autorizzazione e ambito:** attività assegnata il 25-10-2026; mostrare paragrafi, titoli, elenchi, link, enfasi e codice nelle risposte Codex già salvate e future, senza riscrivere il testo persistito. La vista Thread si modifica solo dopo l'integrazione di APP-109 in `dev`; il merge finale di APP-111 è coordinato separatamente.
+- **Accettazione:** Markdown leggibile anche a finestra compatta; HTML e contenuti attivi non eseguibili, immagini remote non caricate, URL non sicuri non apribili; i link HTTPS si aprono nel browser esterno dopo un clic. Testi storici invariati. Verificare il comportamento di contenuti parziali solo se il flusso li espone.
+- **Stato e verifica preliminare:** la vista attuale usa un `<p>` con il testo grezzo. I turni Codex sono persistiti solo al completamento; durante il job il Thread mostra uno stato, senza stream testuale parziale. Nel branch isolato è preparato un componente React Markdown con elementi ammessi, sanitizzazione e URL HTTPS controllati, più un handler IPC che rivalida i link. `npm run typecheck` e tre test mirati passano su Windows con Node 24. La vista, gli stili e la prova Electron attendono APP-109 in `dev`; nessuna PR aperta.
 
 ## Regola per i blocchi
 

@@ -39,6 +39,7 @@ import { gameplaySummary } from '../shared/card-gameplay'
 import { OFFICIAL_SET_CODES } from '../shared/set-codes'
 import { evaluateStandardDeck } from '../shared/standard-deck'
 import { localCalendarDate } from '../shared/calendar-date'
+import { safeThreadLink } from '../shared/thread-links'
 import { TournamentStore } from './tournament-store'
 import { completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
 import { AiJobStore } from './ai-job-store'
@@ -867,6 +868,16 @@ function registerProjectHandlers(): void {
       await shell.openExternal(url.toString())
       return { ok: true, value: true }
     } catch { return { ok: false, error: 'Impossibile aprire la fonte.' } }
+  })
+
+  ipcMain.handle('thread:open-link', async (event, input: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    const url = safeThreadLink(input)
+    if (!url) return { ok: false, error: 'Link non valido: è consentito solo HTTPS.' }
+    try {
+      await shell.openExternal(url)
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Impossibile aprire il link.' } }
   })
 
   ipcMain.handle('deck:save-candidate', (event, input: unknown): OperationResult<DeckThread> => {

@@ -73,6 +73,7 @@ export interface ProjectsApi {
     existingUserMessageId?: string): Promise<OperationResult<DeckThread>>
   proposeDeckThread(projectId: string, threadId: string, request: string, override?: AiPreferences | null): Promise<OperationResult<DeckThread>>
   openDeckSource(url: string): Promise<OperationResult<boolean>>
+  openThreadLink(url: string): Promise<OperationResult<boolean>>
   saveDeckCandidate(input: SaveDeckCandidateInput): Promise<OperationResult<DeckThread>>
   adoptDeckCandidate(input: AdoptDeckCandidateInput): Promise<OperationResult<DeckBaseline>>
   copyDeckExport(input: DeckExportRequest): Promise<OperationResult<boolean>>
