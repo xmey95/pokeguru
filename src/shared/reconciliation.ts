@@ -98,7 +98,8 @@ function normalizedNumber(value: string): string {
 function sameCode(line: DeckLine, print: CatalogPrint): boolean {
   if (!line.setCode || !line.cardNumber || /ALT/i.test(line.setCode)) return false
   const code = line.setCode.toUpperCase()
-  return (code === print.setId.toUpperCase() || code === OFFICIAL_SET_CODES[print.setId]) &&
+  return (code === print.setId.toUpperCase() || code === OFFICIAL_SET_CODES[print.setId] ||
+    code === print.historicalSetCode) &&
     normalizedNumber(line.cardNumber) === normalizedNumber(print.localId)
 }
 
@@ -117,7 +118,8 @@ function suggestionIndex(catalog: CatalogView): SuggestIndex {
   const index: SuggestIndex = { byName: new Map(), byEnergyType: new Map(), byCode: new Map() }
   const addCode = (print: CatalogPrint): void => {
     const number = normalizedNumber(print.localId)
-    for (const code of new Set([print.setId.toUpperCase(), OFFICIAL_SET_CODES[print.setId]])) {
+    for (const code of new Set([print.setId.toUpperCase(), OFFICIAL_SET_CODES[print.setId],
+      print.historicalSetCode])) {
       if (!code) continue
       const key = `${code}\0${number}`
       const group = index.byCode.get(key) ?? []

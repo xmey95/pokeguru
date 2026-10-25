@@ -69,6 +69,7 @@ export interface MainTournamentSyncProgress {
   stopAfterPage: boolean
   cooldownUntil: string | null
   lastError: string | null
+  rotationCleanup?: { removedPlay: number; removedMain: number; completedAt: string }
 }
 
 export type MainTournamentSummary = Pick<MainTournamentSnapshot,

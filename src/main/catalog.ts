@@ -18,6 +18,8 @@ import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
 import { BUNDLED_WESTERN_RULE_PACKAGE,
   type WesternRulePackage } from '../shared/western-rule-package'
 import { localCalendarDate } from '../shared/calendar-date'
+import { westernRotationRule, type RotationRule } from '../shared/standard-rotation'
+import { backupBeforeRotation } from './rotation-backup'
 import { readLimitedBytes, readLimitedText } from './bounded-response'
 import { OFFICIAL_SET_CODES } from '../shared/set-codes'
 import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
@@ -338,11 +340,12 @@ export async function fetchCatalogSample(): Promise<{ sets: CatalogSet[]; prints
   return { sets, prints, fetchedAt }
 }
 
-export async function fetchStandardManifest(signal?: AbortSignal): Promise<StandardManifest> {
+export async function fetchStandardManifest(signal?: AbortSignal, asOf = localCalendarDate()): Promise<StandardManifest> {
   const fetchedAt = new Date().toISOString()
-  // H is the first mark in the verified 2026 rotation. Future marks are inventory
-  // candidates only; the legality evaluator still requires verified rules.
-  const markFilter = candidateMarks.join('%7C')
+  const rotation = westernRotationRule(asOf)
+  if (!rotation) throw new Error('Nessuna rotazione Standard occidentale verificata per questa data.')
+  // Future marks remain inventory candidates; only the bundled rule establishes legality.
+  const markFilter = candidateMarks.filter((mark) => mark >= rotation.firstAllowedMark).join('%7C')
   const promoAttempt = loadPromoPackage()
   const [marked, lowerMarked, setIndex, scarletEnergy, megaEnergy, promoResult] = await Promise.all([
     json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter}`, signal),
@@ -418,13 +421,15 @@ export async function syncStandardCatalog(store: CatalogStore,
   progress?: (phase: string, expected: number, acquired: number) => void,
   mode: CatalogSyncMode = 'new', signal?: AbortSignal): Promise<CatalogView> {
   try {
+    const rotation = westernRotationRule(localCalendarDate())
+    if (!rotation) throw new Error('Nessuna rotazione Standard occidentale verificata per questa data.')
     signal?.throwIfAborted()
-    if (!store.resumeJob(mode)) {
-      store.startJob(mode)
+    if (!store.resumeJob(mode, rotation.version)) {
+      store.startJob(mode, rotation.version)
       progress?.('Lettura inventario TCGdex', 0, 0)
       const manifest = await fetchStandardManifest(signal)
       signal?.throwIfAborted()
-      store.save(manifest, 'standard-marks')
+      store.save(manifest, 'standard-marks', rotation)
       store.queueJob(mode)
     }
     let status = store.jobStatus()
@@ -466,7 +471,9 @@ export async function syncStandardCatalog(store: CatalogStore,
       const missing = status.expected - status.acquired
       throw new Error(`${missing} ${missing === 1 ? 'dettaglio TCGdex non disponibile' : 'dettagli TCGdex non disponibili'}. Le altre carte sono state controllate; riprendi più tardi.`)
     }
-    store.completeJob()
+    if (westernRotationRule(localCalendarDate())?.version !== rotation.version)
+      throw new Error('La rotazione Standard è cambiata durante l’aggiornamento; riprendi con il nuovo inventario.')
+    await store.completeJob(rotation)
     return store.view()
   } catch (error) {
     const status = store.jobStatus()
@@ -496,6 +503,7 @@ export async function enrichCatalogPrints(store: CatalogStore, ids: readonly str
 
 export class CatalogStore {
   private readonly db: DatabaseSync
+  private readonly filePath: string
   private viewCache: { date: string; value: CatalogView; thumbnails: Map<string, string | null> } | null = null
   private browseCache: { date: string; overview: CatalogBrowseOverview; groups: Array<CatalogBrowseGroup & {
     ids: string[]; search: string; setIds: Set<string>
@@ -513,6 +521,7 @@ export class CatalogStore {
   constructor(path: string) {
     mkdirSync(dirname(path), { recursive: true })
     this.dataDir = dirname(path)
+    this.filePath = path
     this.db = new DatabaseSync(path)
     this.db.exec('PRAGMA journal_mode = WAL')
     this.db.exec(`
@@ -544,7 +553,7 @@ export class CatalogStore {
       CREATE TABLE IF NOT EXISTS catalog_job (
         id INTEGER PRIMARY KEY CHECK (id = 1), mode TEXT NOT NULL,
         state TEXT NOT NULL, phase TEXT NOT NULL, expected INTEGER NOT NULL,
-        error TEXT, updated_at TEXT NOT NULL, retry_at TEXT
+        error TEXT, updated_at TEXT NOT NULL, retry_at TEXT, rule_version TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS catalog_job_targets (
         print_id TEXT PRIMARY KEY
@@ -552,6 +561,14 @@ export class CatalogStore {
       CREATE TABLE IF NOT EXISTS catalog_rule_package (
         id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL,
         installed_at TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS catalog_retired_prints (
+        id TEXT PRIMARY KEY, payload TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS catalog_rotation_cleanup (
+        id INTEGER PRIMARY KEY CHECK (id = 1), rule_version TEXT NOT NULL,
+        removed_prints INTEGER NOT NULL, retained_references INTEGER NOT NULL,
+        completed_at TEXT NOT NULL
       ) STRICT;
     `)
     const setColumns = this.db.prepare('PRAGMA table_info(catalog_sets)').all()
@@ -561,39 +578,48 @@ export class CatalogStore {
     const jobColumns = this.db.prepare('PRAGMA table_info(catalog_job)').all()
       .map((row) => (row as { name: string }).name)
     if (!jobColumns.includes('retry_at')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN retry_at TEXT')
+    if (!jobColumns.includes('rule_version')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN rule_version TEXT')
     // A process killed during a batch leaves only committed targets completed.
     this.db.prepare("UPDATE catalog_job SET state = 'interrupted', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
     this.db.prepare("UPDATE catalog_job SET state = 'interrupted' WHERE state = 'paused' AND phase = 'Interrotto alla chiusura'").run()
   }
 
   jobStatus(): CatalogSyncStatus {
+    const cleanup = this.db.prepare('SELECT rule_version, removed_prints, retained_references, completed_at FROM catalog_rotation_cleanup WHERE id = 1')
+      .get() as { rule_version: string; removed_prints: number; retained_references: number; completed_at: string } | undefined
+    const rotationCleanup = cleanup ? { ruleVersion: cleanup.rule_version, removedPrints: cleanup.removed_prints,
+      retainedReferences: cleanup.retained_references, completedAt: cleanup.completed_at } : undefined
     const row = this.db.prepare('SELECT mode, state, phase, expected, error, retry_at FROM catalog_job WHERE id = 1')
       .get() as { mode: CatalogSyncMode; state: CatalogSyncStatus['state']; phase: string;
         expected: number; error: string | null; retry_at: string | null } | undefined
     if (!row) return { running: false, mode: null, state: 'idle', phase: '', expected: 0,
-      acquired: 0, error: null, cooldownUntil: null }
+      acquired: 0, error: null, cooldownUntil: null, rotationCleanup }
     const pending = (this.db.prepare('SELECT COUNT(*) AS n FROM catalog_job_targets').get() as { n: number }).n
     return { running: row.state === 'running' || row.state === 'rate-limited', mode: row.mode,
       state: row.state, phase: row.phase, expected: row.expected,
-      acquired: row.expected - pending, error: row.error, cooldownUntil: row.retry_at }
+      acquired: row.expected - pending, error: row.error, cooldownUntil: row.retry_at, rotationCleanup }
   }
 
-  startJob(mode: CatalogSyncMode): void {
+  startJob(mode: CatalogSyncMode, ruleVersion: string | null = null): void {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       this.db.exec('DELETE FROM catalog_job_targets')
-      this.db.prepare(`INSERT INTO catalog_job (id, mode, state, phase, expected, error, updated_at, retry_at)
-        VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?, NULL)
+      this.db.prepare(`INSERT INTO catalog_job (id, mode, state, phase, expected, error, updated_at, retry_at, rule_version)
+        VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?, NULL, ?)
         ON CONFLICT(id) DO UPDATE SET mode=excluded.mode, state=excluded.state,
-        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at, retry_at=NULL`)
-        .run(mode, new Date().toISOString())
+        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at,
+        retry_at=NULL, rule_version=excluded.rule_version`)
+        .run(mode, new Date().toISOString(), ruleVersion)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
-  resumeJob(mode: CatalogSyncMode): boolean {
+  resumeJob(mode: CatalogSyncMode, ruleVersion: string | null = null): boolean {
     const status = this.jobStatus()
+    const saved = this.db.prepare('SELECT rule_version FROM catalog_job WHERE id = 1')
+      .get() as { rule_version: string | null } | undefined
     if (status.mode !== mode || !['paused', 'interrupted', 'rate-limited'].includes(status.state) ||
+      (ruleVersion !== null && saved?.rule_version !== ruleVersion) ||
       status.expected === 0 ||
       status.acquired >= status.expected) return false
     this.db.prepare("UPDATE catalog_job SET state='running', phase='Verifica dettagli', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
@@ -670,9 +696,110 @@ export class CatalogStore {
       .run(phase, message, retryAt, new Date().toISOString())
   }
 
-  completeJob(): void {
-    this.db.prepare("UPDATE catalog_job SET state='done', phase='Aggiornamento terminato', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
-      .run(new Date().toISOString())
+  async completeJob(rotation: RotationRule): Promise<void> {
+    const row = this.db.prepare('SELECT COUNT(*) AS n FROM catalog_job_targets').get() as { n: number }
+    if (row.n) throw new Error('Dettagli ancora in coda: pulizia della rotazione non applicata.')
+    const candidates = this.db.prepare('SELECT id, payload FROM catalog_prints').all() as { id: string; payload: string }[]
+    const retired = candidates.filter((row) => {
+      const mark = (JSON.parse(row.payload) as CatalogPrint).regulationMark
+      return mark && /^[A-Z]$/.test(mark) && mark < rotation.firstAllowedMark
+    })
+    const historical = this.db.prepare('SELECT id, payload FROM catalog_retired_prints').all() as
+      { id: string; payload: string }[]
+    const referenced = this.referencedPrintIds([...retired, ...historical])
+    const staleHistorical = historical.filter((row) => !referenced.has(row.id))
+    if (retired.length || staleHistorical.length)
+      await backupBeforeRotation(this.db, this.filePath, 'catalog', rotation.effectiveFrom)
+    const completedAt = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      for (const row of retired) {
+        const print = JSON.parse(row.payload) as CatalogPrint
+        if (referenced.has(row.id) && print.detailAt && print.identityId && print.identityBasis !== 'unverified') {
+          const set = this.db.prepare('SELECT abbreviation FROM catalog_sets WHERE id = ?')
+            .get(print.setId) as { abbreviation: string | null } | undefined
+          this.db.prepare('INSERT OR REPLACE INTO catalog_retired_prints VALUES (?, ?)')
+            .run(row.id, JSON.stringify({ ...print, historicalSetCode: set?.abbreviation ?? null }))
+        }
+        this.db.prepare('DELETE FROM catalog_targets WHERE print_id = ?').run(row.id)
+        this.db.prepare('DELETE FROM catalog_prints WHERE id = ?').run(row.id)
+      }
+      for (const row of staleHistorical)
+        this.db.prepare('DELETE FROM catalog_retired_prints WHERE id = ?').run(row.id)
+      this.db.exec('DELETE FROM catalog_sets WHERE id NOT IN (SELECT DISTINCT set_id FROM catalog_prints)')
+      const retained = (this.db.prepare('SELECT COUNT(*) AS n FROM catalog_retired_prints').get() as { n: number }).n
+      this.db.prepare(`INSERT INTO catalog_rotation_cleanup VALUES (1, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET rule_version=excluded.rule_version,
+        removed_prints=excluded.removed_prints, retained_references=excluded.retained_references,
+        completed_at=excluded.completed_at`).run(rotation.version, retired.length, retained, completedAt)
+      this.db.prepare("UPDATE catalog_job SET state='done', phase='Aggiornamento terminato', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
+        .run(completedAt)
+      this.db.exec('COMMIT')
+      this.viewCache = null
+      this.browseCache = null
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+  }
+
+  private referencedPrintIds(rows: { id: string; payload: string }[]): Set<string> {
+    const tables = new Set((this.db.prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all() as { name: string }[]).map((row) => row.name))
+    const referenced = new Set<string>()
+    if (tables.has('deck_line_mappings')) {
+      for (const row of this.db.prepare('SELECT print_snapshot FROM deck_line_mappings').all() as { print_snapshot: string }[]) {
+        const id = (JSON.parse(row.print_snapshot) as { id?: unknown }).id
+        if (typeof id === 'string') referenced.add(id)
+      }
+    }
+    if (tables.has('deck_constraints')) {
+      for (const row of this.db.prepare('SELECT print_id FROM deck_constraints WHERE print_id IS NOT NULL').all() as { print_id: string }[])
+        referenced.add(row.print_id)
+    }
+    if (tables.has('deck_thread_messages')) {
+      for (const row of this.db.prepare(`SELECT json_extract(card.value, '$.printId') AS id
+        FROM deck_thread_messages AS message,
+          json_each(CASE WHEN json_valid(message.evidence_json) THEN message.evidence_json ELSE '{}' END, '$.cards') AS card
+        WHERE json_type(card.value, '$.printId') = 'text'`).all() as { id: string }[])
+        referenced.add(row.id)
+    }
+    // APP-115 records additional cards returned by AI-selected local queries in Thread and Matchup evidence.
+    for (const [table, column] of [['deck_thread_messages', 'evidence_json'],
+      ['matchup_reports', 'payload'], ['matchup_turns', 'report_payload']] as const) {
+      if (!tables.has(table)) continue
+      for (const row of this.db.prepare(`SELECT DISTINCT json_extract(card.value, '$.printId') AS id
+        FROM ${table} AS evidence,
+          json_each(CASE WHEN json_valid(evidence.${column}) THEN evidence.${column} ELSE '{}' END,
+            '$.aiQueries.requests') AS request,
+          json_each(request.value, '$.data.matches') AS card
+        WHERE json_extract(request.value, '$.query.operation') = 'catalog.search'
+          AND json_type(card.value, '$.printId') = 'text'`).all() as { id: string }[])
+        referenced.add(row.id)
+    }
+    const keys = new Map<string, string[]>()
+    const officialCodes = new Map((this.db.prepare('SELECT id, abbreviation FROM catalog_sets').all() as
+      { id: string; abbreviation: string | null }[]).map((row) => [row.id, row.abbreviation]))
+    for (const row of rows) {
+      const print = JSON.parse(row.payload) as CatalogPrint
+      const number = print.localId.toUpperCase().replace(/^0+(?=\d)/, '')
+      for (const code of [print.setId.toUpperCase(), OFFICIAL_SET_CODES[print.setId], print.historicalSetCode,
+        officialCodes.get(print.setId)]) {
+        if (!code) continue
+        const key = `${code}\0${number}\0${print.name.normalize('NFKC').trim().toLocaleLowerCase()}`
+        keys.set(key, [...(keys.get(key) ?? []), row.id])
+      }
+    }
+    for (const table of ['deck_baselines', 'deck_versions', 'deck_thread_candidates', 'deck_ai_candidates']) {
+      if (!tables.has(table)) continue
+      for (const row of this.db.prepare(`SELECT parsed_json FROM ${table}`).all() as { parsed_json: string }[]) {
+        const lines = (JSON.parse(row.parsed_json) as { lines?: { setCode?: string; cardNumber?: string; name?: string }[] }).lines ?? []
+        for (const line of lines) {
+          if (!line.setCode || !line.cardNumber || !line.name || /ALT/i.test(line.setCode)) continue
+          const key = `${line.setCode.toUpperCase()}\0${line.cardNumber.toUpperCase().replace(/^0+(?=\d)/, '')}`+
+            `\0${line.name.normalize('NFKC').trim().toLocaleLowerCase()}`
+          for (const id of keys.get(key) ?? []) referenced.add(id)
+        }
+      }
+    }
+    return referenced
   }
 
   private upsertPrint(print: CatalogPrint): void {
@@ -708,7 +835,7 @@ export class CatalogStore {
   }
 
   save(sample: { sets: CatalogSet[]; prints: CatalogPrint[]; fetchedAt: string; promoAudit?: PromoAudit },
-    kind: 'sample' | 'standard-marks' = 'sample'): CatalogView {
+    kind: 'sample' | 'standard-marks' = 'sample', rotation?: RotationRule): CatalogView {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       for (const set of sample.sets) {
@@ -721,9 +848,21 @@ export class CatalogStore {
       }
       for (const print of sample.prints) this.upsertPrint(print)
       if (kind === 'standard-marks') {
+        const prior = this.db.prepare('SELECT print_id FROM catalog_targets').all() as { print_id: string }[]
+        const manifestIds = new Set(sample.prints.map((print) => print.id))
         this.db.exec('DELETE FROM catalog_targets')
         for (const print of sample.prints) {
           this.db.prepare('INSERT INTO catalog_targets VALUES (?)').run(print.id)
+        }
+        // An incomplete provider inventory cannot silently hide an already acquired current print.
+        for (const row of prior) {
+          if (manifestIds.has(row.print_id)) continue
+          const saved = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?')
+            .get(row.print_id) as { payload: string } | undefined
+          if (!saved) continue
+          const mark = (JSON.parse(saved.payload) as CatalogPrint).regulationMark
+          if (!rotation || !mark || !/^[A-Z]$/.test(mark) || mark >= rotation.firstAllowedMark)
+            this.db.prepare('INSERT INTO catalog_targets VALUES (?)').run(row.print_id)
         }
         if (sample.promoAudit) {
           if (sample.promoAudit.packageVersion !== undefined) {
@@ -808,6 +947,9 @@ export class CatalogStore {
         } } as CatalogPrint
       })
     const sync = this.db.prepare('SELECT fetched_at FROM catalog_sync WHERE id = 1').get() as { fetched_at: string } | undefined
+    const savedRule = this.db.prepare('SELECT rule_version FROM catalog_job WHERE id = 1')
+      .get() as { rule_version: string | null } | undefined
+    const inventoryRule = rules.value.rotations.find((rule) => rule.version === savedRule?.rule_version)
     const kind = this.scopeKind()
     const targetIds = kind === 'standard-marks' ? new Set(this.db.prepare('SELECT print_id FROM catalog_targets')
       .all().map((row) => (row as { print_id: string }).print_id)) : null
@@ -850,7 +992,8 @@ export class CatalogStore {
         ? { expected: targetIds.size, acquired: acquiredTargets,
           missing: targetIds.size - acquiredTargets,
           gameplayAcquired: gameplayTargets, gameplayMissing: targetIds.size - gameplayTargets,
-          marks: candidateMarks, bySet,
+          marks: inventoryRule ? candidateMarks.filter((mark) => mark >= inventoryRule.firstAllowedMark)
+            : candidateMarks, bySet,
           releaseSource: { url: OFFICIAL_SET_RELEASE_SOURCE, version: OFFICIAL_SET_RELEASE_VERSION,
             checkedAt: OFFICIAL_SET_RELEASE_CHECKED_AT },
           officialSets: { expected: officialReleased.length,
@@ -870,8 +1013,11 @@ export class CatalogStore {
       syncedAt: sync?.fetched_at ?? null,
       sets: targetIds ? sets.filter((set) => targetSetIds.includes(set.id)) : sets,
       prints: targetIds ? targetPrints : prints,
-      referencePrints: targetIds ? prints.filter((print) => !targetIds.has(print.id) &&
-        print.detailAt !== null && print.identityId !== null) : []
+      referencePrints: targetIds ? [
+        ...prints.filter((print) => !targetIds.has(print.id) && print.detailAt !== null && print.identityId !== null),
+        ...this.db.prepare('SELECT payload FROM catalog_retired_prints ORDER BY id').all()
+          .map((row) => this.availableImage(JSON.parse((row as { payload: string }).payload) as CatalogPrint))
+      ] : []
     }
     this.viewCache = { date: today, value,
       thumbnails: new Map([...value.prints, ...(value.referencePrints ?? [])].map((print) => [print.id, print.thumbnail])) }

@@ -4,6 +4,7 @@ import { completeMainTournament, fetchMainDecklist, fetchMainTournament,
   MainLimitlessUnavailableError } from './limitless-main-tournament'
 import type { TournamentStore } from './tournament-store'
 import { westernRotationRule } from '../shared/standard-rotation'
+import { localCalendarDate } from '../shared/calendar-date'
 
 const REQUESTS_PER_BLOCK = 7
 const LISTS_PER_EVENT = 16
@@ -12,7 +13,7 @@ function initial(mode: 'new' | 'full', old: MainTournamentSyncProgress, rotation
     inspectedEvents: 0, fetchedLists: 0, rotationStart, scannedPages: 0, indexedRows: 0,
     eligibleEvents: 0, ineligibleEvents: 0, unavailableIndexRows: 0, outsideRotationEvents: 0,
     alreadyAcquiredEvents: 0, unavailableEvents: [], unavailableLists: [], watermark: old.watermark,
-    previousWatermark: rotationStart,
+    previousWatermark: rotationStart, rotationCleanup: old.rotationCleanup,
     newestSeen: null, stopAfterPage: false, cooldownUntil: null, lastError: null }
 }
 
@@ -37,13 +38,28 @@ function selectedLists(participants: MainTournamentParticipant[]): string[] {
 /** Stores result rows first, then retrieves a bounded set of representative decklists over resumable blocks. */
 export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new' | 'full',
   fetcher: typeof fetch = fetch, now = new Date(), shouldStop: () => boolean = () => false): Promise<MainTournamentSyncProgress> {
-  const rotation = westernRotationRule(now.toISOString().slice(0, 10))
+  const rotation = westernRotationRule(localCalendarDate(now))
   if (!rotation) throw new Error('Nessuna rotazione Standard occidentale inclusa per la data corrente.')
+  let firstIndex: Awaited<ReturnType<typeof fetchMainTournamentIndexPage>> | null = null
+  if (store.rotationNeedsPreflight(rotation)) {
+    // A failed index request must leave the previous global archive available.
+    try { firstIndex = await fetchMainTournamentIndexPage(1, fetcher) }
+    catch (error) {
+      if (error instanceof MainLimitlessRateLimitError) {
+        const delayed = { ...store.mainProgress(), status: 'rate-limited' as const, cooldownUntil: error.retryAt }
+        store.saveMainProgress(delayed)
+        return delayed
+      }
+      throw error
+    }
+    if (!firstIndex.entries.length) throw new Error('Indice Regional vuoto: archivio precedente conservato.')
+  }
+  await store.ensureRotation(rotation)
   let progress = store.mainProgress()
   if (progress.mode !== mode || progress.status === 'idle' || progress.status === 'complete' ||
     progress.rotationStart !== rotation.effectiveFrom) {
     const next = initial(mode, progress, rotation.effectiveFrom)
-    // An upgrade must finish an already queued event/list before backfilling the rotation.
+    // A legacy current-period queue still finishes before the wider backfill.
     progress = progress.mode === mode && (progress.status === 'running' || progress.status === 'rate-limited')
       ? { ...next, status: progress.status, cooldownUntil: progress.cooldownUntil,
         pendingEvents: progress.pendingEvents, pendingLists: progress.pendingLists }
@@ -57,6 +73,8 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
   }
   let requests = 0
   while (requests < REQUESTS_PER_BLOCK) {
+    if (westernRotationRule(localCalendarDate())?.version !== rotation.version)
+      throw new Error('La rotazione Standard è cambiata durante la scansione Regional; riprendi con il nuovo periodo.')
     if (shouldStop()) return progress
     try {
       if (progress.pendingLists.length) {
@@ -91,7 +109,8 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
         store.saveMainProgress(progress)
         return progress
       } else {
-        const index = await fetchMainTournamentIndexPage(progress.page, fetcher)
+        const index = progress.page === 1 && firstIndex ? firstIndex
+          : await fetchMainTournamentIndexPage(progress.page, fetcher)
         const cutoff = progress.rotationStart!
         const inRotation = index.entries.filter((entry) => entry.date.slice(0, 10) >= cutoff)
         const already = mode === 'new' ? inRotation.filter((entry) => store.getMain(entry.eventId)) : []

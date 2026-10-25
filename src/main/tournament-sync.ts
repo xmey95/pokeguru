@@ -1,17 +1,18 @@
 import type { TournamentSyncProgress } from '../shared/tournament'
 import { fetchTournament, fetchTournamentIndex, LimitlessRateLimitError, LimitlessSyncPaused } from './limitless-event'
 import type { TournamentStore } from './tournament-store'
+import { westernRotationRule } from '../shared/standard-rotation'
+import { localCalendarDate } from '../shared/calendar-date'
 
 const EVENTS_PER_BLOCK = 3
 const INDEX_PAGES_PER_BLOCK = 2
-const FIRST_SYNC_DAYS = 90
-
-function initial(mode: 'new' | 'full', previous: TournamentSyncProgress, now: Date): TournamentSyncProgress {
+function initial(mode: 'new' | 'full', previous: TournamentSyncProgress, rotationStart: string): TournamentSyncProgress {
   return {
     mode, status: 'running', page: 1, pending: [], inspected: 0, saved: 0, skipped: 0,
     watermark: previous.watermark, previousWatermark: mode === 'new'
-      ? previous.watermark ?? new Date(now.getTime() - FIRST_SYNC_DAYS * 86_400_000).toISOString() : null,
-    newestSeen: null, stopAfterPage: false, cooldownUntil: null, lastError: null
+      ? previous.watermark && previous.watermark > rotationStart ? previous.watermark : rotationStart : rotationStart,
+    newestSeen: null, stopAfterPage: false, cooldownUntil: null, lastError: null,
+    rotationStart, rotationCleanup: previous.rotationCleanup
   }
 }
 
@@ -24,9 +25,26 @@ function finish(progress: TournamentSyncProgress): TournamentSyncProgress {
 /** One persisted block; the application job advances subsequent blocks at a controlled pace. */
 export async function syncTournamentBlock(store: TournamentStore, mode: 'new' | 'full',
   fetcher: typeof fetch = fetch, now = new Date(), shouldStop: () => boolean = () => false): Promise<TournamentSyncProgress> {
+  const rotation = westernRotationRule(localCalendarDate(now))
+  if (!rotation) throw new Error('Nessuna rotazione Standard occidentale inclusa per la data corrente.')
+  let firstIndex: Awaited<ReturnType<typeof fetchTournamentIndex>> | null = null
+  if (store.rotationNeedsPreflight(rotation)) {
+    // Keep the old global archive intact when the new source cannot be read.
+    try { firstIndex = await fetchTournamentIndex(1, fetcher) }
+    catch (error) {
+      if (error instanceof LimitlessRateLimitError) {
+        const delayed = { ...store.progress(), status: 'rate-limited' as const, cooldownUntil: error.retryAt }
+        store.saveProgress(delayed)
+        return delayed
+      }
+      throw error
+    }
+    if (!firstIndex.length) throw new Error('Indice Play vuoto: archivio precedente conservato.')
+  }
+  await store.ensureRotation(rotation)
   let progress = store.progress()
   if (progress.mode !== mode || progress.status === 'idle' || progress.status === 'complete') {
-    progress = initial(mode, progress, now)
+    progress = initial(mode, progress, rotation.effectiveFrom)
     store.saveProgress(progress)
   }
   if (progress.cooldownUntil && Date.parse(progress.cooldownUntil) > now.getTime()) return progress
@@ -37,6 +55,8 @@ export async function syncTournamentBlock(store: TournamentStore, mode: 'new' | 
   let processed = 0
   let pages = 0
   while (processed < EVENTS_PER_BLOCK) {
+    if (westernRotationRule(localCalendarDate())?.version !== rotation.version)
+      throw new Error('La rotazione Standard è cambiata durante la scansione Play; riprendi con il nuovo periodo.')
     if (shouldStop()) return progress
     if (!progress.pending.length) {
       if (progress.stopAfterPage || progress.page > 10_000) {
@@ -46,7 +66,7 @@ export async function syncTournamentBlock(store: TournamentStore, mode: 'new' | 
       }
       if (pages >= INDEX_PAGES_PER_BLOCK) return progress
       let index
-      try { index = await fetchTournamentIndex(progress.page, fetcher) }
+      try { index = progress.page === 1 && firstIndex ? firstIndex : await fetchTournamentIndex(progress.page, fetcher) }
       catch (error) {
         if (error instanceof LimitlessRateLimitError) {
           progress = { ...progress, status: 'rate-limited', cooldownUntil: error.retryAt }

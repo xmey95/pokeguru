@@ -272,7 +272,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
 
     {catalog?.syncedAt && <>
       <h3 className="catalog-coverage-heading">Copertura del catalogo</h3>
-      <p className="content-note">{standard ? 'Inventario Standard TCGdex · marchi H e successivi, promo ed Energie Base.' : 'Campione TCGdex condiviso fra i progetti.'}</p>
+      <p className="content-note">{standard ? 'Inventario Standard TCGdex · marchi dal primo ammesso dalla rotazione verificata, promo ed Energie Base.' : 'Campione TCGdex condiviso fra i progetti.'}</p>
       <div className="catalog-metrics" aria-label={standard ? 'Copertura dell’inventario Standard' : 'Copertura del campione'}>
         {standard ? <>
           <div><strong>{catalog.standardCoverage?.acquired ?? 0}/{catalog.standardCoverage?.expected ?? 0}</strong><span>Stampe acquisite</span></div>
@@ -318,7 +318,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       </details>}
       <details className="catalog-set-coverage"><summary>Metodo, promo e dati delle stampe</summary>
       {standard ? <>
-        <p className="content-note">Perimetro: stampe TCGdex con marchio H–Z ed Energie Base `sve`/`mee`. «Aggiorna nuove carte» completa anche le schede già presenti ma prive delle regole di gioco e delle miniature disponibili; «Scansione completa» ricontrolla tutti i dettagli. Le immagini grandi sono solo segnalate online.</p>
+        <p className="content-note">Perimetro: stampe TCGdex con marchio dal primo ammesso dalla rotazione verificata fino a Z ed Energie Base `sve`/`mee`. «Aggiorna nuove carte» completa anche le schede già presenti ma prive delle regole di gioco e delle miniature disponibili; «Scansione completa» ricontrolla tutti i dettagli. Le immagini grandi sono solo segnalate online.</p>
         <p className="content-note">Promo: {catalog.standardCoverage?.promos.available ?? 0} disponibili · {catalog.standardCoverage?.promos.upcoming ?? 0} future · {catalog.standardCoverage?.promos.unlisted ?? 0} non elencate · {catalog.standardCoverage?.promos.unchecked ?? 0} non verificate. Registro v{catalog.promoAudit?.packageVersion ?? '—'}, controllato il {catalog.promoAudit?.checkedAt ? date(catalog.promoAudit.checkedAt) : 'mai'}. Nuovi stati richiedono una release.
           {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('promo')}>Registro promo ufficiale ↗</button>
         </p>
@@ -355,6 +355,9 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     {progressError && <p className="warning-banner" role="status">{progressError}</p>}
     {checkingRules && <ActivityStatus title="Controllo delle fonti Standard…" />}
     {syncStatus?.error && <p className="diagnostics" role="status">{syncStatus.error}</p>}
+    {syncStatus?.rotationCleanup && <p className="content-note" role="status">
+      Ultima pulizia Catalogo con {syncStatus.rotationCleanup.ruleVersion}: {syncStatus.rotationCleanup.removedPrints} stampe fuori rotazione rimosse dalla ricerca; {syncStatus.rotationCleanup.retainedReferences} schede storiche conservate solo per verificare import esatti.
+    </p>}
     {error && <div className="error-banner" role="alert">{error}</div>}
     {catalog?.syncedAt && gaps.length > 0 && <p className="catalog-gap-summary" role="status">{gaps.join(' · ')}.</p>}
     {management}

@@ -97,7 +97,7 @@ it('backs up schema 4 before adding the Catalog retry clock', async () => {
     expect(catalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
     catalog.close()
     completeDatabaseMigration(path, preparation)
-    expect(schemaVersion(path)).toBe(5)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 })
 
@@ -141,13 +141,48 @@ it('preserves a project and Catalog job across verified v3→v4→v5 upgrades', 
     expect(completedCatalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
     completedCatalog.close()
     completeDatabaseMigration(path, v4)
-    expect(schemaVersion(path)).toBe(5)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
     const reopened = new ProjectStore(path)
     expect(reopened.get(project.id)?.name).toBe('Continuità')
     reopened.close()
     verifyDatabase(path)
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 }, 30_000)
+
+it('backs up v5 before installing the rotation tables and reopens the project', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-rotation-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const projects = new ProjectStore(path)
+    const project = projects.create({ name: 'Prima della rotazione', format: 'STANDARD' })
+    projects.close()
+    new CatalogStore(path).close()
+    new TournamentStore(path).close()
+    const old = new DatabaseSync(path)
+    old.exec(`DROP TABLE catalog_retired_prints;
+      DROP TABLE catalog_rotation_cleanup;
+      DROP TABLE historical_event_references;
+      DROP TABLE tournament_rotation;
+      ALTER TABLE catalog_job DROP COLUMN rule_version;
+      PRAGMA user_version = 5`)
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 5, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const restored = new DatabaseSync(preparation.backupPath!, { readOnly: true })
+    expect(restored.prepare("SELECT name FROM sqlite_master WHERE name='tournament_rotation'").get())
+      .toBeUndefined()
+    restored.close()
+    const upgradedProjects = new ProjectStore(path)
+    const upgradedCatalog = new CatalogStore(path)
+    const upgradedEvents = new TournamentStore(path)
+    completeDatabaseMigration(path, preparation)
+    expect(upgradedProjects.get(project.id)?.name).toBe('Prima della rotazione')
+    expect(schemaVersion(path)).toBe(6)
+    upgradedEvents.close(); upgradedCatalog.close(); upgradedProjects.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
 
 it('refuses a newer archive schema before opening stores', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-future-'))
