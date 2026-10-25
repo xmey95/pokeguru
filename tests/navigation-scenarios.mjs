@@ -17,8 +17,8 @@ export async function navigationScenarios(page, application, artifacts) {
   await feedback.fill('Bozza revisione: conservare la ricerca nel finale.')
   await page.locator('.discussion-history > summary').click()
   await page.locator('.discussion-version > summary').first().click()
-  await page.locator('.matchup-assessment > summary').click()
-  const link = page.locator('.matchup-assessment').getByRole('link', { name: 'Mega Absol ex', exact: true })
+  await page.locator('.guide-sources > summary').click()
+  const link = page.locator('.strategy-field').first().getByRole('link', { name: 'Mega Absol ex', exact: true })
   await link.focus()
   await page.locator('.companion-list').evaluate((el) => { el.scrollTop = 175 })
   const before = await page.evaluate(() => ({ main: document.querySelector('.main-content').scrollTop, deck: document.querySelector('.companion-list').scrollTop }))
@@ -29,7 +29,7 @@ export async function navigationScenarios(page, application, artifacts) {
   await page.keyboard.press('Alt+ArrowLeft')
   await ready()
   assert.equal(await feedback.inputValue(), 'Bozza revisione: conservare la ricerca nel finale.')
-  assert.equal(await page.locator('.matchup-assessment').evaluate((el) => el.open), true)
+  assert.equal(await page.locator('.guide-sources').evaluate((el) => el.open), true)
   assert.equal(await page.locator('.discussion-history').evaluate((el) => el.open), true)
   assert.equal(await page.locator('.discussion-version').first().evaluate((el) => el.open), true)
   assert.ok(await link.evaluate((el) => el === document.activeElement), 'Il ritorno deve focalizzare il link di partenza')
@@ -180,11 +180,11 @@ export async function navigationScenarios(page, application, artifacts) {
   await area('Catalogo').click()
   await ready()
   await application.evaluate(({ ipcMain }, missingId) => {
-    const original = ipcMain._invokeHandlers.get('deck:list-threads')
+    const original = ipcMain._invokeHandlers.get('deck:list-thread-summaries')
     if (!original) throw new Error('Handler thread mancante')
     globalThis.navigationThreadHandler = original
-    ipcMain.removeHandler('deck:list-threads')
-    ipcMain.handle('deck:list-threads', async (...args) => {
+    ipcMain.removeHandler('deck:list-thread-summaries')
+    ipcMain.handle('deck:list-thread-summaries', async (...args) => {
       const result = await original(...args)
       return result.ok ? { ...result, value: result.value.filter((item) => item.id !== missingId) } : result
     })
@@ -194,8 +194,8 @@ export async function navigationScenarios(page, application, artifacts) {
   await page.getByRole('alert').filter({ hasText: 'Il thread non è più disponibile' }).waitFor()
   assert.equal(await page.locator('.thread-timeline').count(), 0)
   await application.evaluate(({ ipcMain }) => {
-    ipcMain.removeHandler('deck:list-threads')
-    ipcMain.handle('deck:list-threads', globalThis.navigationThreadHandler)
+    ipcMain.removeHandler('deck:list-thread-summaries')
+    ipcMain.handle('deck:list-thread-summaries', globalThis.navigationThreadHandler)
   })
   await area('Matchup').click()
   await ready()
@@ -225,7 +225,7 @@ export async function navigationScenarios(page, application, artifacts) {
     await page.screenshot({ path: join(artifacts, `navigation-${width}.png`) })
   }
   // Leave the surrounding selector regression in its expected, closed state.
-  await page.locator('.matchup-assessment').evaluate((el) => { el.open = false })
+  await page.locator('.guide-sources').evaluate((el) => { el.open = false })
   await page.locator('.discussion-history').evaluate((el) => { el.open = false })
   console.log('NAVIGATION OK: back/forward, focus, independent scrolls, revisions, filters, drafts, saved/pending messages, projects, unavailable destination, late reads, branching, external links; 1440/1280/640')
 }

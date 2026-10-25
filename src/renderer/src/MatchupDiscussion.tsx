@@ -45,7 +45,7 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
     references={turn.report ? reportGuideReferences(turn.report, cardTargets) : []} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
   const exchange = (turn: MatchupTurn) => <>
     {turn.feedback && <div className="discussion-observation"><h4>Tu</h4><p>{turn.feedback}</p></div>}
-    {turn.changeSummary && <div className="discussion-change"><h4>Cosa cambia <span>· Codex</span></h4><p>{text(turn.changeSummary, turn)}</p></div>}
+    {turn.changeSummary && <div className="discussion-change"><h4>Cosa cambia <span>· Codex</span></h4>{text(turn.changeSummary, turn)}</div>}
   </>
 
   return <section className="matchup-discussion" aria-labelledby="matchup-discussion-heading">
@@ -93,16 +93,16 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
           {turn.report && <details className="discussion-version" id={`discussion-version-${turn.id}`}>
             <summary>Leggi versione</summary>
             <div className="discussion-version-body">
-              <h4>Piano di gioco</h4><p>{text(turn.report.strategy, turn)}</p>
-              <div className="discussion-version-limits"><h4>Limiti dell’analisi</h4><p>{text(turn.report.limitations, turn)}</p></div>
-              <h4>Le nostre carte chiave</h4><p>{text(turn.report.ourKeyCards, turn)}</p>
-              <h4>Le loro carte chiave</h4><p>{text(turn.report.theirKeyCards, turn)}</p>
-              <h4>Punti forti</h4><p>{text(turn.report.strengths, turn)}</p>
-              <h4>Debolezze</h4><p>{text(turn.report.weaknesses, turn)}</p>
+              <h4>Piano di gioco</h4>{text(turn.report.strategy, turn)}
+              <div className="discussion-version-limits"><h4>Limiti dell’analisi</h4>{text(turn.report.limitations, turn)}</div>
+              <h4>Le nostre carte chiave</h4>{text(turn.report.ourKeyCards, turn)}
+              <h4>Le loro carte chiave</h4>{text(turn.report.theirKeyCards, turn)}
+              <h4>Punti forti</h4>{text(turn.report.strengths, turn)}
+              <h4>Debolezze</h4>{text(turn.report.weaknesses, turn)}
               {(turn.report.sampleDeckUrl || turn.report.metaSourceUrl) && <div className="discussion-version-sources">
                 <h4>Fonti della versione</h4>
-                {turn.report.sampleDeckUrl && <p>{text(`[Lista avversaria](${turn.report.sampleDeckUrl})`, turn)}</p>}
-                {turn.report.metaSourceUrl && <p>{text(`[Metagame](${turn.report.metaSourceUrl})`, turn)}</p>}
+                {turn.report.sampleDeckUrl && text(`[Lista avversaria](${turn.report.sampleDeckUrl})`, turn)}
+                {turn.report.metaSourceUrl && text(`[Metagame](${turn.report.metaSourceUrl})`, turn)}
               </div>}
             </div>
           </details>}

@@ -16,7 +16,8 @@ const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
 const profile = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-switcher-'))
 const deck = readFileSync(join(workspace, 'examples/workspace-principale.txt'), 'utf8').trim()
-const guideLinks = process.argv.includes('--guide-links') || process.argv.includes('--navigation') || process.argv.includes('--discussion') || process.argv.includes('--ai-options')
+const reading = process.argv.includes('--reading')
+const guideLinks = reading || process.argv.includes('--guide-links') || process.argv.includes('--navigation') || process.argv.includes('--discussion') || process.argv.includes('--ai-options')
 const hash = (text) => createHash('sha256').update(text).digest('hex')
 const names = ['Gardevoir ex', 'Dragapult ex', 'Charizard ex / Pidgeot ex',
   'Gholdengo ex / Joltik Box / Mega Kangaskhan ex · nome lungo di prova']
@@ -98,6 +99,14 @@ function seed() {
           events: [{ source: 'main', eventId: '582', name: 'Regional di prova', date: now,
             url: 'https://limitlesstcg.com/tournaments/582', totalParticipants: 1, visibleParticipants: 1,
             completeLists: 1, matchedLists: 1, circuit: 'WESTERN' }] }
+        if (reading && opponent.id === opponents[0].id) {
+          report.strategy = '## Avvio\n- Prepara **Mega Absol ex** e un secondo attaccante.\n- Conserva la ricerca per il turno successivo.\n\n## Sviluppo\n1. Controlla Gardevoir ex nella [lista campione](https://limitlesstcg.com/decks/list/12345).\n2. Confronta le risorse osservate al Regional di prova.\n\n## Chiusura\n- Valuta i Premi rimasti e proteggi l’attaccante.\n- Se la linea principale manca, usa il piano alternativo dichiarando l’incertezza.'
+          report.strengths = '- Due attaccanti possono condividere il carico.\n- **Mega Absol ex** prepara il turno seguente.'
+          report.weaknesses = '- La ricerca iniziale è una dipendenza.\n- Una lista avversaria diversa può cambiare i Premi.'
+          report.ourKeyCards = '- Mega Absol ex: prima linea.\n- Mega Audino ex: secondo attaccante.\n- Night Stretcher: recupero.'
+          report.theirKeyCards = '- Gardevoir ex: osservata nella lista campione.\n- Ralts: frequenza da verificare.'
+          report.limitations = 'Fixture UI lunga, non generata da Codex.\n- Una sola lista campione.\n- Le frequenze non provano un winrate.\n- Testo non affidabile: <img src=x onerror=alert(1)>.'
+        }
       }
       db.prepare('INSERT INTO matchup_reports (project_id, meta_id, opponent_id, deck_hash, generated_at, payload) VALUES (?, ?, ?, ?, ?, ?)')
         .run(project.id, meta.id, opponent.id, deckHash, meta.fetchedAt, JSON.stringify(report))
@@ -160,7 +169,7 @@ try {
   }
   await trigger.waitFor()
   await page.waitForFunction(() => document.querySelector('#matchup-switcher-trigger')?.textContent.includes('Guida disponibile'))
-  await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
+  await page.locator('.matchup-fields').first().getByRole('heading', { name: 'Piano di gioco' }).waitFor()
   if (guideLinks) {
     await application.evaluate(({ shell }) => {
       globalThis.guideOpened = []
@@ -178,7 +187,7 @@ try {
     await page.locator('.catalog-detail').getByRole('heading', { name: 'Gardevoir ex', exact: true }).waitFor({ timeout: 30000 })
     assert.deepEqual(await application.evaluate(() => globalThis.guideOpened), [], 'La carta locale non deve aprire JSON')
     await page.getByRole('button', { name: 'Matchup', exact: true }).click()
-    await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
+    await page.locator('.matchup-fields').first().getByRole('heading', { name: 'Piano di gioco' }).waitFor()
     const currentPlan = page.locator('.matchup-fields > .strategy-field').first()
     await currentPlan.getByRole('link', { name: 'lista campione', exact: true }).click()
     await currentPlan.getByRole('link', { name: 'Regional di prova', exact: true }).click()
@@ -192,11 +201,9 @@ try {
     await currentPlan.getByRole('link', { name: 'lista campione', exact: true }).click()
     await currentPlan.getByRole('alert').waitFor({ state: 'detached' })
     assert.equal(await page.locator('.matchup-fields img, .matchup-fields a[href^="javascript:"]').count(), 0)
-    assert.equal(await page.locator('.matchup-assessment').getAttribute('open'), null)
+    assert.ok(await page.getByRole('heading', { name: 'Punti forti', exact: true }).first().isVisible())
     assert.equal(await page.locator('.guide-sources').getAttribute('open'), null)
-    await page.locator('.matchup-assessment > summary').click()
-    assert.ok(await page.locator('.matchup-assessment').getByRole('link', { name: 'lista campione' }).isVisible())
-    await page.locator('.matchup-assessment > summary').click()
+    assert.ok(await page.locator('.matchup-fields').first().getByRole('link', { name: 'lista campione' }).first().isVisible())
     await page.locator('.guide-sources > summary').click()
     await page.getByRole('region', { name: 'Evidenze torneo del matchup' }).waitFor()
     await page.locator('.guide-sources > summary').click()
@@ -209,7 +216,7 @@ try {
     await plan.getByRole('link', { name: 'Mega Absol ex', exact: true }).click()
     await page.locator('.catalog-detail').getByRole('heading', { name: 'Mega Absol ex', exact: true }).waitFor()
     await page.getByRole('button', { name: 'Matchup', exact: true }).click()
-    await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
+    await page.locator('.matchup-fields').first().getByRole('heading', { name: 'Piano di gioco' }).waitFor()
   }
 
   if (process.argv.includes('--navigation')) await navigationScenarios(page, application, profile)
@@ -219,8 +226,17 @@ try {
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
     await page.locator('.main-content').evaluate((el) => { el.scrollTop = 0 })
     await geometry(page, width, height, false)
+    if (reading) {
+      const sections = page.locator('.matchup-fields').first()
+      assert.deepEqual(await sections.locator(':scope > section > h3').allTextContents(),
+        ['Piano di gioco', 'Punti forti', 'Rischi e punti deboli', 'Le nostre carte chiave', 'Le loro carte chiave', 'Incertezze e limiti'])
+      assert.equal(await sections.locator('.strategy-field ul > li').count(), 4)
+      assert.equal(await sections.locator('.strategy-field ol > li').count(), 2)
+      assert.ok(await sections.getByText('Fixture UI lunga, non generata da Codex.', { exact: true }).isVisible())
+      await page.screenshot({ path: join(workspace, 'node_modules', 'matchup-reading-' + width + '.png') })
+    }
     if (guideLinks) {
-      const planBox = await page.locator('.strategy-field p').first().boundingBox()
+      const planBox = await page.locator('.strategy-field .guide-body').first().boundingBox()
       const mainBox = await page.locator('.main-content').boundingBox()
       assert.ok(planBox.y + 40 < mainBox.y + mainBox.height, 'Il testo del piano non è visibile nella prima schermata')
     }
