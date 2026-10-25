@@ -54,6 +54,8 @@ APP-068 mostra la candidata corrente in un **riepilogo compatto**, con stato, co
 
 APP-069 usa un unico campo per **Discuti / Proponi una lista**, conservando il testo al cambio modalità. **Salva osservazione** registra il testo senza chiamare Codex; l'anteprima dei dati è unica. Errori contestuali conservano la richiesta e le anteprime tardive vengono ignorate dopo un cambio di contesto.
 
+APP-109 avvia Codex già con il **primo messaggio** inserito in **Nuovo thread**. Il messaggio è salvato prima dell'invio e resta nel Thread se Codex fallisce: **Riprova primo messaggio** lo riusa senza duplicarlo. La risposta conserva la sessione Codex e le evidenze locali usate. **Salva nota senza AI** crea invece il Thread senza chiamare Codex.
+
 APP-070 riunisce gli avversari **Matchup** in un selettore con ricerca, quota meta e stato della guida. Gli avversari storici restano consultabili senza presentare una vecchia quota come attuale. Il menu lascia visibile il mazzo; frecce e Invio selezionano, Escape chiude e restituisce il focus.
 
 APP-071 porta il **piano Matchup** in primo piano e rende punti forti, rischi e fonti dettagliate apribili. I testi della guida e delle revisioni contengono **link contestuali** a carte, eventi e fonti disponibili; lo storico conserva i propri riferimenti. Nella demo, cerca “fixture UI” e prova i link a Mega Absol ex e Mega Audino ex.

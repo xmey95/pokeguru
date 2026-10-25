@@ -237,8 +237,10 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [proposing, setProposing] = useBusyState(`thread.propose:${projectId}:${selectedId}`)
   const startedAt = useBusyStartedAt(`thread:${projectId}:${selectedId}`)
   const [error, setError] = useState<string | null>(null)
+  const [openingErrors, setOpeningErrors] = useState<Record<string, string>>({})
   const [aiJob, setAiJob] = useState<AiJobSummary | null>(null)
-  const aiBusy = aiJob?.status === 'running' || aiJob?.status === 'ready'
+  const currentAiJob = aiJob?.projectId === projectId && aiJob?.resourceId === selectedId ? aiJob : null
+  const aiBusy = currentAiJob?.status === 'running' || currentAiJob?.status === 'ready'
   const [confirmCandidate, setConfirmCandidate] = useState<DeckCandidate | null>(null)
   useEffect(() => {
     if (creating) focusInWorkspace(newThreadTitle.current)
@@ -268,6 +270,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
 
   const selectedSummary = threads.find((thread) => thread.id === selectedId) ?? null
   const selected = selectedDetail?.id === selectedId ? selectedDetail : null
+  const openingAiMessage = selected?.openingAiMessageId
+    ? selected.messages.find((entry) => entry.id === selected.openingAiMessageId) : null
+  const openingAiPending = !!openingAiMessage && !selected?.messages.some((entry) => entry.author === 'assistant')
   const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
   useEffect(() => { if (selected) nav.entry.label = `Thread · ${selected.title}` }, [selected?.id])
   const featuredCandidate = selected?.candidates.at(-1) ?? null
@@ -427,20 +432,46 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     } finally { if (request === previewRequest.current) setPreviewLoading(false) }
   }
 
-  async function create(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault()
+  async function create(startWithAi: boolean): Promise<void> {
     if (working) return
     setWorking(true)
     setCreateError(null)
     try {
-      const result = await window.projectsApi.createDeckThread({ projectId, title, openingNote })
+      const result = await window.projectsApi.createDeckThread({ projectId, title, openingNote, startWithAi })
       if (!result.ok) throw new Error(result.error)
       setSelectedDetail(result.value)
       await refreshSummaries()
       closeCreate()
       selectThread(result.value, '#new-thread-trigger')
+      if (startWithAi && result.value.openingAiMessageId) {
+        const response = await window.projectsApi.askDeckThread(projectId, result.value.id,
+          openingNote.trim(), null, result.value.openingAiMessageId)
+        const latest = await window.projectsApi.getDeckThread(projectId, result.value.id)
+        if (latest.ok) setSelectedDetail(latest.value)
+        if (!response.ok) setOpeningErrors((current) => ({ ...current, [result.value.id]: response.error }))
+      }
     } catch (cause) { setCreateError(cause instanceof Error ? cause.message : 'Thread non creato.') }
     finally { setWorking(false) }
+  }
+
+  async function retryOpeningMessage(): Promise<void> {
+    if (!selected || !openingAiMessage || working || aiBusy) return
+    setWorking(true)
+    setAsking(true)
+    setComposerError(null)
+    setOpeningErrors((current) => { const next = { ...current }; delete next[selected.id]; return next })
+    try {
+      const response = await window.projectsApi.askDeckThread(projectId, selected.id,
+        openingAiMessage.text, selectedOverride?.model ? selectedOverride : null, openingAiMessage.id)
+      if (!response.ok) throw new Error(response.error)
+      setSelectedDetail(response.value)
+      await refreshSummaries()
+    } catch (cause) {
+      setOpeningErrors((current) => ({ ...current, [selected.id]:
+        cause instanceof Error ? cause.message : 'Risposta Codex non completata.' }))
+      const latest = await window.projectsApi.getDeckThread(projectId, selected.id)
+      if (latest.ok) setSelectedDetail(latest.value)
+    } finally { setWorking(false); setAsking(false) }
   }
 
   async function addMessage(): Promise<void> {
@@ -461,7 +492,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
 
   async function ask(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working || aiBusy || !message.trim()) return
+    if (!selected || working || aiBusy || openingAiPending || !message.trim()) return
     setWorking(true)
     setAsking(true)
     setComposerError(null)
@@ -503,7 +534,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
 
   async function propose(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working || aiBusy || !selected.baseVersionId || !message.trim()) return
+    if (!selected || working || aiBusy || openingAiPending || !selected.baseVersionId || !message.trim()) return
     setWorking(true)
     setProposing(true)
     setComposerError(null)
@@ -561,31 +592,42 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
           </button>
         </div>
         {creating && <form id="new-thread-form" className="thread-form new-thread-form" aria-labelledby="new-thread-heading"
-          onSubmit={(event) => void create(event)} onKeyDown={(event) => {
+          onSubmit={(event) => { event.preventDefault(); void create(true) }} onKeyDown={(event) => {
             if (event.key === 'Escape' && !working) { event.preventDefault(); closeCreate() }
           }}>
             <h3 id="new-thread-heading">Nuovo thread</h3>
             <label htmlFor="thread-title">Titolo</label>
             <input ref={newThreadTitle} id="thread-title" value={title} disabled={working} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Es. Variante più veloce" required />
-            <label htmlFor="thread-opening">Prima osservazione (facoltativa)</label>
-            <textarea id="thread-opening" value={openingNote} disabled={working} maxLength={5000} onChange={(event) => setOpeningNote(event.target.value)} />
+            <label htmlFor="thread-opening">Primo messaggio a Codex</label>
+            <textarea id="thread-opening" value={openingNote} disabled={working} maxLength={5000} required onChange={(event) => setOpeningNote(event.target.value)} />
             {createError && <div ref={newThreadError} className="error-banner" role="alert" tabIndex={-1}>{createError}</div>}
             <div className="thread-form-actions">
-              <button className="primary-button" disabled={working || !title.trim()}>{working && <Spinner />}{working ? 'Creazione…' : 'Crea thread'}</button>
+              <button className="primary-button" disabled={working || !title.trim() || !openingNote.trim()}>{working && <Spinner />}{working ? 'Avvio conversazione…' : 'Crea e chiedi a Codex'}</button>
+              <button type="button" className="secondary-button" disabled={working || !title.trim()}
+                onClick={() => void create(false)}>Salva nota senza AI</button>
               <button type="button" className="text-button" disabled={working} onClick={closeCreate}>Annulla</button>
             </div>
         </form>}
         <div className="thread-detail">
           {detailLoading && !selected ? <LoadingSkeleton label="Caricamento dettaglio thread…" rows={3} /> : selected ? <>
-            {aiJob && (aiJob.status === 'running' || aiJob.status === 'ready') &&
-              <div className="content-note" role="status">{aiJob.status === 'running'
+            {openingAiPending && <div className="content-note" role="status">{aiBusy
+              ? 'Codex sta rispondendo al primo messaggio.'
+              : 'Il primo messaggio è salvato. La risposta Codex è ancora da completare.'}
+              {(openingErrors[selected.id] || currentAiJob?.error) &&
+                <p>{openingErrors[selected.id] || currentAiJob?.error}</p>}
+              {!aiBusy && <button type="button" className="secondary-button" disabled={working}
+                onClick={() => void retryOpeningMessage()}>Riprova primo messaggio</button>}
+            </div>}
+            {currentAiJob && (currentAiJob.status === 'running' || currentAiJob.status === 'ready') &&
+              <div className="content-note" role="status">{currentAiJob.status === 'running'
                 ? 'Job Codex in corso per questo thread.' : 'Risultato Codex in attesa di recupero.'}
                 <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla job</button>
-                {aiJob.status === 'ready' && <button type="button" className="text-button" onClick={() => void recoverAi()}>Recupera risultato</button>}
+                {currentAiJob.status === 'ready' && <button type="button" className="text-button" onClick={() => void recoverAi()}>Recupera risultato</button>}
               </div>}
-            {aiJob && (aiJob.status === 'interrupted' || aiJob.status === 'failed' || aiJob.status === 'cancelled') &&
-              <p className="content-note" role="status">{aiJob.status === 'cancelled'
-                ? 'Job Codex annullato.' : 'Il job Codex precedente non è stato completato. Puoi inviare di nuovo la richiesta.'}</p>}
+            {currentAiJob && (currentAiJob.status === 'interrupted' || currentAiJob.status === 'failed' || currentAiJob.status === 'cancelled') &&
+              <p className="content-note" role="status">{currentAiJob.status === 'cancelled'
+                ? 'Job Codex annullato.' : 'Il job Codex precedente non è stato completato. Puoi inviare di nuovo la richiesta.'}
+                {currentAiJob.error ? ` ${currentAiJob.error}` : ''}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
               catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured onAdopt={confirmAdoption} />
@@ -611,7 +653,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 : !selected.baseVersionId ? 'Per proporre una lista serve una lista iniziale del thread.' : 'Ricevi una lista completa da confrontare.'}</p>
               {composerError && <div ref={composerErrorElement} className="error-banner" role="alert" tabIndex={-1}>{composerError}</div>}
               <div className="composer-actions"><div className="thread-form-actions">
-                <button className="primary-button" disabled={working || aiBusy || !message.trim() || (composerMode === 'proposal' && !selected.baseVersionId)}>
+                <button className="primary-button" disabled={working || aiBusy || openingAiPending || !message.trim() || (composerMode === 'proposal' && !selected.baseVersionId)}>
                   {(asking || proposing) && <Spinner />}{asking ? 'Risposta in corso…' : proposing ? 'Proposta in corso…'
                     : composerMode === 'ask' ? 'Chiedi a Codex' : 'Genera proposta Codex'}
                 </button>

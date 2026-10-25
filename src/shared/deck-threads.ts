@@ -49,6 +49,7 @@ export interface DeckThread {
   currentVersionId: string | null
   stale: boolean
   aiSessionRef: string | null
+  openingAiMessageId: string | null
   createdAt: string
   updatedAt: string
   messages: DeckThreadMessage[]
@@ -63,6 +64,7 @@ export interface CreateDeckThreadInput {
   projectId: string
   title: string
   openingNote?: string
+  startWithAi?: boolean
 }
 
 export interface SaveDeckCandidateInput {

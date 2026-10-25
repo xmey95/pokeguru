@@ -30,7 +30,7 @@ try {
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Prova cancellazione')
-  await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
   const thread = await page.evaluate(async (id) => {
     const result = await window.projectsApi.listDeckThreads(id)

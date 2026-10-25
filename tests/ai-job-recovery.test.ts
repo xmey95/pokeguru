@@ -56,6 +56,49 @@ it('recovers a completed CLI file after interruption and never duplicates the tu
   } finally { jobs.close(); catalog.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
 })
 
+it('reuses the persisted opening message when its Codex result is recovered', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-opening-recovery-'))
+  const path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path)
+  const catalog = new CatalogStore(path)
+  const jobs = new AiJobStore(path)
+  try {
+    const first = projects.create({ name: 'First', format: 'STANDARD' })
+    const second = projects.create({ name: 'Second', format: 'STANDARD' })
+    const thread = projects.createDeckThread({ projectId: first.id, title: 'Start',
+      openingNote: 'Valuta questa idea', startWithAi: true })
+    const other = projects.createDeckThread({ projectId: second.id, title: 'Other',
+      openingNote: 'Altra idea', startWithAi: true })
+    const manual = projects.createDeckThread({ projectId: first.id, title: 'Manual',
+      openingNote: 'Solo nota' })
+    expect(thread.openingAiMessageId).toBe(thread.messages[0].id)
+    expect(manual.openingAiMessageId).toBeNull()
+    const started = jobs.start('thread-ask', first.id, thread.id)
+    jobs.prepare(started.id, { message: 'Valuta questa idea', config, evidence,
+      existingUserMessageId: thread.openingAiMessageId })
+    jobs.ready(started.id, { sessionId: 'opening-session', turnId: 'opening-turn',
+      value: { reply: 'Risposta iniziale.', sourceIds: [] } })
+    expect(await recoverThreadJob(jobs.get(started.id)!, jobs, projects, catalog,
+      { latestTurnId: async () => 'opening-turn' }, join(folder, 'unused'))).toBe('applied')
+    const saved = projects.getDeckThread(first.id, thread.id)!
+    expect(saved.aiSessionRef).toBe('opening-session')
+    expect(saved.messages).toHaveLength(2)
+    expect(saved.messages[0].id).toBe(thread.openingAiMessageId)
+    expect(saved.messages[1]).toMatchObject({ author: 'assistant', aiTurnId: 'opening-turn', evidence })
+    expect(projects.getDeckThread(second.id, other.id)?.messages).toHaveLength(1)
+    expect(projects.getDeckThread(second.id, thread.id)).toBeNull()
+    expect(() => projects.saveDeckAiExchange(first.id, thread.id, 'opening-session',
+      'Valuta questa idea', 'Duplicata', 'another-turn', config, undefined, undefined, [],
+      thread.openingAiMessageId!)).toThrow('non recuperabile')
+    const reopened = new ProjectStore(path)
+    expect(reopened.getDeckThread(first.id, thread.id)).toMatchObject({
+      openingAiMessageId: thread.openingAiMessageId, aiSessionRef: 'opening-session',
+      messages: [{ id: thread.openingAiMessageId }, { aiTurnId: 'opening-turn' }]
+    })
+    reopened.close()
+  } finally { jobs.close(); catalog.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+})
+
 it('marks a job interrupted even if the process stopped before saving its request', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-ai-early-stop-'))
   const path = join(folder, 'data.sqlite')

@@ -4,9 +4,9 @@ Pokéguru conserva progetti, versioni, Thread, candidate, evidenze AI, Catalogo 
 
 ## Upgrade dello schema
 
-La versione corrente è `PRAGMA user_version = 2`. La versione 0 indica l'archivio precedente alla registrazione esplicita delle migrazioni; la versione 1 precede il registro dei job Codex. Prima di aprire gli store con una versione precedente, l'app crea con l'API backup di SQLite una copia consistente in `data/backups/pokeguru-pre-v<versione>-*.sqlite`. Un file accanto con suffisso `.verified` indica che, al momento della creazione, la copia ha superato `integrity_check` e `foreign_key_check`. I nomi sono univoci: una nuova prova dopo un'interruzione non sovrascrive il primo backup.
+La versione corrente è `PRAGMA user_version = 3`. La versione 0 indica l'archivio precedente alla registrazione esplicita delle migrazioni; la versione 1 precede il registro dei job Codex e la versione 2 precede il collegamento persistente del primo messaggio AI del Thread. Prima di aprire gli store con una versione precedente, l'app crea con l'API backup di SQLite una copia consistente in `data/backups/pokeguru-pre-v<versione>-*.sqlite`. Un file accanto con suffisso `.verified` indica che, al momento della creazione, la copia ha superato `integrity_check` e `foreign_key_check`. I nomi sono univoci: una nuova prova dopo un'interruzione non sovrascrive il primo backup.
 
-Solo dopo l'apertura degli store e i controlli di integrità dell'archivio aggiornato l'app registra la versione 2. Se l'upgrade si interrompe, la versione precedente resta registrata e il successivo avvio ripete i passaggi idempotenti. Una versione più nuova di quella supportata ferma l'apertura. Le revisioni Regional precedenti all'upgrade vengono conservate tutte.
+Solo dopo l'apertura degli store e i controlli di integrità dell'archivio aggiornato l'app registra la versione 3. Se l'upgrade si interrompe, la versione precedente resta registrata e il successivo avvio ripete i passaggi idempotenti. Una versione più nuova di quella supportata ferma l'apertura. Le revisioni Regional precedenti all'upgrade vengono conservate tutte.
 
 ## Job Codex e risultati
 
