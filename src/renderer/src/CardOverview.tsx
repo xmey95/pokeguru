@@ -29,12 +29,11 @@ export function CardOverview({ card, onOpenCatalog }: { card: DeckCardEntry; onO
 }
 
 /** One source print supplies all gameplay fields; image provenance is shown separately. */
-export function CardFace({ print, imagePrint, missingMessage, onOpenCatalog, onOpenSource }: {
+export function CardFace({ print, imagePrint, missingMessage, onOpenCatalog }: {
   print: CatalogPrint | null
   imagePrint: CatalogPrint | null
   missingMessage?: string
   onOpenCatalog?(): void
-  onOpenSource?(url: string): void
 }) {
   const gameplay = print?.gameplay
   const prizes = prizeCardsOnKnockOut(print ?? undefined)
@@ -79,9 +78,7 @@ export function CardFace({ print, imagePrint, missingMessage, onOpenCatalog, onO
         {prizes !== null && <div><dt>Premi al KO</dt><dd>{prizes}</dd></div>}
       </dl>}
       {gameplay?.evolveFrom && <p className="card-evolves">Evolve da {gameplay.evolveFrom}</p>}
-      {print && <div className="card-gameplay-source"><span>{hasText ? 'Testo in inglese' : 'Scheda TCGdex'} · {print.setName} {print.localId}</span>
-        <button type="button" className="text-button" onClick={() => onOpenSource ? onOpenSource(print.sourceUrl) : void window.projectsApi.openCatalogSource(print.sourceUrl)}>TCGdex ↗</button>
-      </div>}
+      {print && <div className="card-gameplay-source"><span>{hasText ? 'Testo in inglese' : 'Scheda TCGdex'} · {print.setName} {print.localId}</span></div>}
     </div>
   </div>
 }

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { auditDesignSystem } from './design-system-audit.mjs'
 import { switchProject, switchThread, openDeckImport } from './project-ui-helper.mjs'
 
-export async function navigationScenarios(page, application, workspace) {
+export async function navigationScenarios(page, application, artifacts) {
   const ready = async () => {
     await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
@@ -54,7 +54,7 @@ export async function navigationScenarios(page, application, workspace) {
 
   // The body external link does not add a page or modify the current view.
   const backTitle = await back.getAttribute('title')
-  const external = page.locator('.strategy-field').first().getByRole('link', { name: 'Gardevoir ex', exact: true }).last()
+  const external = page.locator('.strategy-field').first().getByRole('link', { name: 'lista campione', exact: true }).last()
   assert.equal(await external.locator('.external-link-mark').count(), 1)
   await external.click()
   assert.equal(await back.getAttribute('title'), backTitle)
@@ -222,7 +222,7 @@ export async function navigationScenarios(page, application, workspace) {
     await back.focus()
     assert.ok(await back.evaluate((el) => el === document.activeElement))
     await auditDesignSystem(page, `Navigazione ${width}`)
-    await page.screenshot({ path: join(workspace, 'node_modules', `navigation-${width}.png`) })
+    await page.screenshot({ path: join(artifacts, `navigation-${width}.png`) })
   }
   // Leave the surrounding selector regression in its expected, closed state.
   await page.locator('.matchup-assessment').evaluate((el) => { el.open = false })

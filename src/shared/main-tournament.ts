@@ -20,6 +20,7 @@ export interface MainTournamentParticipant {
   listUrl: string | null
   cards: TournamentCard[] | null
   cardTotal: number | null
+  listUnavailable?: boolean
 }
 
 export interface MainTournamentSnapshot extends MainTournamentEntry {
@@ -49,6 +50,16 @@ export interface MainTournamentSyncProgress {
   pendingLists: { eventId: string; listId: string }[]
   inspectedEvents: number
   fetchedLists: number
+  rotationStart: string | null
+  scannedPages: number
+  indexedRows: number
+  eligibleEvents: number
+  ineligibleEvents: number
+  unavailableIndexRows: number
+  outsideRotationEvents: number
+  alreadyAcquiredEvents: number
+  unavailableEvents: MainTournamentEntry[]
+  unavailableLists: { eventId: string; listId: string }[]
   watermark: string | null
   previousWatermark: string | null
   newestSeen: string | null

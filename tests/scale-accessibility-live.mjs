@@ -25,27 +25,21 @@ try {
   const session = await page.context().newCDPSession(page)
   for (const section of ['Lista', 'Thread', 'Matchup', 'Catalogo', 'Eventi', 'Impostazioni AI']) {
     const nav = page.locator('.sidebar').getByRole('button', { name: section, exact: true })
-    // Navigation restores focus over two frames after a route change.
+    // The previous route restores focus over two animation frames; let it finish before keyboard input.
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
     await nav.focus()
-    await page.waitForFunction((name) => document.activeElement?.getAttribute('aria-label') === name, section)
     await page.keyboard.press('Enter')
-    // Navigation renders on the next React commit; the previous view may already be idle.
     try {
       await page.waitForFunction((name) => [...document.querySelectorAll('.sidebar button')]
-        .some((button) => button.getAttribute('aria-label') === name && button.classList.contains('active')),
-      section, { timeout: 5_000 })
+        .some((element) => element.getAttribute('aria-label') === name &&
+          element.classList.contains('active')) && !document.querySelector('[data-nav-loading="true"]'), section,
+      { timeout: 10_000 })
     } catch (error) {
-      const state = await page.evaluate(() => ({
-        title: document.querySelector('.topbar')?.textContent,
-        buttons: [...document.querySelectorAll('.sidebar button')].map((button) => ({
-          name: button.getAttribute('aria-label'), active: button.classList.contains('active'),
-          focused: button === document.activeElement
-        }))
-      }))
-      throw new Error(`${section}: navigazione non attivata dopo Invio; ${JSON.stringify(state)}`, { cause: error })
+      const state = await page.evaluate(() => ({ active: document.querySelector('.sidebar button.active')?.getAttribute('aria-label'),
+        focus: document.activeElement?.getAttribute('aria-label'),
+        loading: [...document.querySelectorAll('[data-nav-loading="true"]')].map((item) => item.className) }))
+      throw new Error(`${section}: navigazione non completata: ${JSON.stringify(state)}`, { cause: error })
     }
-    await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
     assert.ok(await nav.evaluate((element) => element.classList.contains('active')),
       `${section}: Invio non ha selezionato la sezione`)
     const geometry = await page.evaluate(() => ({ width: document.documentElement.scrollWidth,

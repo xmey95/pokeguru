@@ -55,7 +55,7 @@ export async function discussionScenarios(page, application, workspace, profile)
   assert.equal(await version.evaluate((el) => el.open), true)
   assert.equal(await version.evaluate((el) => getComputedStyle(el).maxHeight), 'none')
   assert.equal(await version.evaluate((el) => getComputedStyle(el).overflowY), 'visible')
-  assert.equal(await version.getByRole('link', { name: 'Gardevoir ex', exact: true }).first().getAttribute('href'), 'https://api.tcgdex.net/v2/en/cards/sv01-086')
+  assert.equal(await version.getByRole('link', { name: 'Gardevoir ex', exact: true }).first().getAttribute('href'), '#catalog-card-fixture-gardevoir-historic')
   await history.locator(':scope > summary').click()
 
   await application.evaluate(({ ipcMain }) => {

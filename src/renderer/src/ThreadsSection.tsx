@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import type { DeckThread, DeckThreadMessage, DeckThreadSummary, DeckVersion } from '../../shared/deck-threads'
 import type { DeckCandidate } from '../../shared/deck-threads'
 import type { AiModel, AiPreferences } from '../../shared/ai'
@@ -17,11 +17,26 @@ import { ThreadSwitcher } from './ThreadSwitcher'
 import { Icon } from './Icon'
 import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
 import { ActivityStatus, InlineLoading, LoadingSkeleton, Spinner } from './Loading'
+import { catalogCardTargets, guideSourceTarget, tcgdexCardPrintId } from './guide-links'
 
 interface Props {
   projectId: string
   mainImportedAt: string | null
   onAdopt(baseline: DeckBaseline): void
+}
+
+function ThreadSource({ source, cardTargets, onOpenCatalogCard }: {
+  source: { id: string; label: string; url: string | null }
+  cardTargets: ReadonlyMap<string, string>
+  onOpenCatalogCard(identityId: string): void
+}) {
+  const target = source.url ? guideSourceTarget(source.url, cardTargets) : undefined
+  if (target?.kind === 'catalog') return <button type="button" className="text-button"
+    onClick={() => onOpenCatalogCard(target.identityId)}>{source.label} · Catalogo</button>
+  if (target) return <button type="button" className="text-button"
+    onClick={() => void (target.kind === 'limitless' ? window.projectsApi.openLimitless(target.url)
+      : window.projectsApi.openDeckSource(target.url))}>{source.label} ↗</button>
+  return <span>{source.label}{source.url && tcgdexCardPrintId(source.url) ? ' · scheda non disponibile nel Catalogo locale' : ''}</span>
 }
 
 function DiffView({ title, diff, beforeLabel = 'PRINCIPALE' }: { title: string; diff: DeckDiff; beforeLabel?: string }) {
@@ -43,7 +58,9 @@ function ComparisonList({ title, parsed }: { title: string; parsed: ParsedDeck |
       : <p>Nessuna lista principale.</p>}</div></section>
 }
 
-function ThreadMessageEvidence({ message }: { message: DeckThreadMessage }) {
+function ThreadMessageEvidence({ message, cardTargets, onOpenCatalogCard }: {
+  message: DeckThreadMessage; cardTargets: ReadonlyMap<string, string>; onOpenCatalogCard(identityId: string): void
+}) {
   const packet = message.evidence
   if (!packet) return null
   const cited = new Set(message.citedSourceIds ?? [])
@@ -57,8 +74,7 @@ function ThreadMessageEvidence({ message }: { message: DeckThreadMessage }) {
     <p>Fonti fornite a Codex; «citata» indica una fonte dichiarata nella risposta, non una verifica automatica della conclusione.</p>
     {packet.sources.length === 0 ? <p>Nessuna scheda o lista pertinente disponibile nell'archivio locale.</p> :
       <ul>{packet.sources.map((source) => <li key={source.id}>{cited.has(source.id) ? <strong>Citata · </strong> : null}
-        {source.url ? <button type="button" className="text-button" onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
-          : source.label}</li>)}</ul>}
+        <ThreadSource source={source} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /></li>)}</ul>}
     {packet.events.length > 0 && <p>Eventi: {packet.events.map((event) => `${event.name} (${event.date}, ${event.lists.length} liste selezionate su ${event.completeLists} complete)`).join('; ')}. Piazzamenti e liste non sono winrate del tuo mazzo.</p>}
   </details>
 }
@@ -81,9 +97,10 @@ function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
   </div>
 }
 
-function CandidateDetail({ candidate, thread, versions, catalog, constraints, audit, working, featured, onAdopt }: {
+function CandidateDetail({ candidate, thread, versions, catalog, constraints, audit, working, featured, cardTargets, onOpenCatalogCard, onAdopt }: {
   candidate: DeckCandidate; thread: DeckThread; versions: DeckVersion[]; catalog: CatalogView | null
-  constraints: DeckConstraint[]; audit: StandardRuleAudit | null; working: boolean; featured?: boolean; onAdopt(candidate: DeckCandidate): void
+  constraints: DeckConstraint[]; audit: StandardRuleAudit | null; working: boolean; featured?: boolean
+  cardTargets: ReadonlyMap<string, string>; onOpenCatalogCard(identityId: string): void; onAdopt(candidate: DeckCandidate): void
 }) {
   const comparison = useRef<HTMLDetailsElement>(null)
   const base = versions.find((version) => version.id === thread.baseVersionId)
@@ -112,9 +129,8 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
       <b aria-hidden="true">→</b><div><span>LISTA PROPOSTA</span><strong>Candidata {candidate.sequence} · {candidate.parsed.interpretedTotal}/60</strong></div></div>
     {candidate.note && <p>{candidate.note}</p>}
     {candidate.origin === 'ai' && <div className="candidate-source-strip"><strong>Fonti della proposta</strong>
-      {candidate.sources.length === 0 ? <span>Nessuna fonte collegata</span> : candidate.sources.slice(0, 2).map((source) => source.url
-        ? <button key={source.id} type="button" className="text-button" onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
-        : <span key={source.id}>{source.label}</span>)}
+      {candidate.sources.length === 0 ? <span>Nessuna fonte collegata</span> : candidate.sources.slice(0, 2).map((source) =>
+        <ThreadSource key={source.id} source={source} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />)}
       {candidate.sources.length > 2 && <span>+{candidate.sources.length - 2} nei dettagli</span>}</div>}
     {current && diff && <DiffView title={`Rispetto alla lista principale v${current.sequence}`} diff={diff} />}
     {base && base.id !== current?.id && <DiffView title={`Rispetto alla base v${base.sequence}`} diff={compareDecks(base.parsed, comparisonDeck)} beforeLabel="BASE DEL THREAD" />}
@@ -135,9 +151,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
       <p>Proposta {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {displayDate(candidate.createdAt)}</p>
       {candidate.aiConfig && <p className="content-note">AI: {candidate.aiConfig.model ?? 'Automatico'} / {candidate.aiConfig.reasoningEffort ?? 'predefinito'}</p>}
       {candidate.sources.length > 0 && <div className="content-note">Fonti: {candidate.sources.map((source) =>
-        source.url ? <button key={source.id} type="button" className="text-button"
-          onClick={() => void window.projectsApi.openDeckSource(source.url!)}>{source.label} ↗</button>
-          : <span key={source.id}>{source.label}; </span>)}</div>}
+        <ThreadSource key={source.id} source={source} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />)}</div>}
       {candidate.checks.length > 0 && <ul>{candidate.checks.map((check, index) => <li key={index}>{check}</li>)}</ul>}
       {candidate.parsed.diagnostics.length > 0 && <p className="content-note">{candidate.parsed.diagnostics.length} note di importazione da controllare.</p>}
       {review && review.conversions.length > 0 && <div className="thread-review"><strong>Testo che sarà adottato</strong>
@@ -199,6 +213,10 @@ function focusInWorkspace(element: HTMLElement | null): void {
 
 export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const nav = useNavigation()
+  const onOpenCatalogCard = (identityId: string) => nav.go({ view: 'catalog' }, {
+    'catalog.focus': identityId, 'catalog.focusConsumed': false, 'catalog.selected': identityId,
+    'catalog.query': '', 'catalog.set': 'all'
+  }, 'Catalogo · carta dal Thread')
   const newThreadTrigger = useRef<HTMLButtonElement>(null)
   const newThreadTitle = useRef<HTMLInputElement>(null)
   const newThreadError = useRef<HTMLDivElement>(null)
@@ -212,6 +230,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [selectedDetail, setSelectedDetail] = useState<DeckThread | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
+  const cardTargets = useMemo(() => catalogCardTargets(catalog), [catalog])
   const [constraints, setConstraints] = useState<DeckConstraint[]>([])
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [aiModels, setAiModels] = useState<AiModel[]>([])
@@ -630,11 +649,11 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 {currentAiJob.error ? ` ${currentAiJob.error}` : ''}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
-              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured onAdopt={confirmAdoption} />
+              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} />
               : <p className="thread-no-candidate">Nessuna proposta salvata.</p>}
             <div className="thread-timeline"><h4>Conversazione</h4>
-              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
-                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} onAdopt={confirmAdoption} />)}
+              {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small><p>{entry.item.text}</p><ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
+                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} />)}
             </div>
             {(asking || proposing) && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
               title={proposing ? 'Codex sta preparando la proposta…' : 'Codex sta rispondendo…'}
