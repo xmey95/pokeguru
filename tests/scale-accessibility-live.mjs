@@ -26,6 +26,9 @@ try {
   for (const section of ['Lista', 'Thread', 'Matchup', 'Catalogo', 'Eventi', 'Impostazioni AI']) {
     const nav = page.locator('.sidebar').getByRole('button', { name: section, exact: true })
     await nav.press('Enter')
+    // Navigation renders on the next React commit; the previous view may already be idle.
+    await page.waitForFunction((name) => [...document.querySelectorAll('.sidebar button')]
+      .some((button) => button.getAttribute('aria-label') === name && button.classList.contains('active')), section)
     await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
     assert.ok(await nav.evaluate((element) => element.classList.contains('active')),
       `${section}: Invio non ha selezionato la sezione`)
