@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path'
 import { backup, DatabaseSync } from 'node:sqlite'
 
-/** Version 1 records legacy migrations, 2 AI jobs, 3 the opening AI message link. */
-export const CURRENT_SCHEMA_VERSION = 3
+/** Version 1 records legacy migrations, 2 AI jobs, 3 the opening AI message link, 4 project archives. */
+export const CURRENT_SCHEMA_VERSION = 4
 
 export interface MigrationPreparation {
   fromVersion: number

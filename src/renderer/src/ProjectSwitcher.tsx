@@ -2,12 +2,16 @@ import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 're
 import type { Project } from '../../shared/projects'
 import { Icon } from './Icon'
 
-export function ProjectSwitcher({ projects, selected, loading, onSelect, onCreate }: {
+export function ProjectSwitcher({ projects, archivedProjects, selected, loading, onSelect, onCreate, onArchive, onRestore, onDelete }: {
   projects: Project[]
+  archivedProjects: Project[]
   selected: Project | null
   loading: boolean
   onSelect: (id: string) => void
   onCreate: () => void
+  onArchive: (id: string) => void
+  onRestore: (id: string) => void
+  onDelete: (project: Project) => void
 }) {
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
@@ -15,7 +19,9 @@ export function ProjectSwitcher({ projects, selected, loading, onSelect, onCreat
   const search = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const filtered = projects.filter((project) => project.name.toLocaleLowerCase('it').includes(query.trim().toLocaleLowerCase('it')))
+  const [showArchived, setShowArchived] = useState(false)
+  const visible = showArchived ? archivedProjects : projects
+  const filtered = visible.filter((project) => project.name.toLocaleLowerCase('it').includes(query.trim().toLocaleLowerCase('it')))
 
   useLayoutEffect(() => {
     if (!open) return
@@ -70,19 +76,31 @@ export function ProjectSwitcher({ projects, selected, loading, onSelect, onCreat
       onBlur={(event) => {
         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget) && event.relatedTarget !== trigger.current) panel.current?.hidePopover()
       }}>
-      <div className="project-picker-head"><h2>Progetti</h2><span>{projects.length}</span></div>
+      <div className="project-picker-head"><h2>{showArchived ? 'Progetti archiviati' : 'Progetti'}</h2><span>{visible.length}</span></div>
+      <div className="project-picker-tabs" role="group" aria-label="Stato dei progetti">
+        <button type="button" aria-pressed={!showArchived} onClick={() => { setShowArchived(false); setQuery('') }}>Attivi ({projects.length})</button>
+        <button type="button" aria-pressed={showArchived} onClick={() => { setShowArchived(true); setQuery('') }}>Archiviati ({archivedProjects.length})</button>
+      </div>
       <input ref={search} type="search" aria-label="Cerca progetti" placeholder="Cerca un progetto…" value={query} onChange={(event) => setQuery(event.target.value)} />
       <div className="project-picker-results">
         {filtered.length ? <ul>{filtered.map((project) => (
-          <li key={project.id}><button type="button" className="project-option" data-picker-action
-            data-testid={`project-${project.id}`} aria-current={selected?.id === project.id ? 'true' : undefined}
-            onClick={() => { close(); onSelect(project.id) }}>
-            <span><strong>{project.name}</strong><small>{project.cardTotal === null ? 'Senza lista' : `${project.cardTotal} carte`}</small></span>
-            {selected?.id === project.id && <span className="project-current">Attivo</span>}
-          </button></li>
-        ))}</ul> : <p role="status">{projects.length ? 'Nessun progetto trovato.' : 'Nessun progetto.'}</p>}
+          <li key={project.id} className="project-picker-row">{showArchived ?
+            <div className="project-option"><span><strong>{project.name}</strong><small>Archiviato</small></span></div> :
+            <button type="button" className="project-option" data-picker-action
+              data-testid={`project-${project.id}`} aria-current={selected?.id === project.id ? 'true' : undefined}
+              onClick={() => { close(); onSelect(project.id) }}>
+              <span><strong>{project.name}</strong><small>{project.cardTotal === null ? 'Senza lista' : `${project.cardTotal} carte`}</small></span>
+              {selected?.id === project.id && <span className="project-current">Attivo</span>}
+            </button>}
+          <div className="project-row-actions">
+            {showArchived ? <>
+              <button type="button" data-picker-action onClick={() => { close(); onRestore(project.id) }}>Ripristina</button>
+              <button type="button" data-picker-action className="project-delete-action" onClick={() => { close(); onDelete(project) }}>Elimina definitivamente</button>
+            </> : <button type="button" data-picker-action onClick={() => { close(); onArchive(project.id) }}>Archivia</button>}
+          </div></li>
+        ))}</ul> : <p role="status">{visible.length ? 'Nessun progetto trovato.' : showArchived ? 'Nessun progetto archiviato.' : 'Nessun progetto.'}</p>}
       </div>
-      <button type="button" className="project-picker-create" data-picker-action onClick={() => { close(); onCreate() }}><Icon name="plus" />Nuovo progetto</button>
+      {!showArchived && <button type="button" className="project-picker-create" data-picker-action onClick={() => { close(); onCreate() }}><Icon name="plus" />Nuovo progetto</button>}
     </div>
   </>
 }

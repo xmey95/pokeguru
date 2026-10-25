@@ -85,6 +85,18 @@ jobs:
       - name: Exercise deck threads without Codex on Windows
         if: runner.os == 'Windows'
         run: node tests/threads-ai-live.mjs --offline
+      - name: Check project archive and reopen on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/project-archive-ui-live.mjs
+      - name: Check project archive and reopen on Windows
+        if: runner.os == 'Windows'
+        run: node tests/project-archive-ui-live.mjs
+      - name: Check first Codex message recovery on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/thread-opening-ui-live.mjs
+      - name: Check first Codex message recovery on Windows
+        if: runner.os == 'Windows'
+        run: node tests/thread-opening-ui-live.mjs
       - name: Exercise candidate adoption on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/deck-adoption-live.mjs
