@@ -131,3 +131,9 @@ La dimensione gzip è un'indicazione di comprimibilità del file: l'app locale n
 ## Decisione
 
 Il bundle JS è grande in byte, ma in questi percorsi non emerge una pausa di navigazione attribuibile al suo caricamento: il cambio sezione è vicino a due frame a 60 Hz su entrambi gli ambienti. Una divisione ora introdurrebbe richieste dinamiche e nuovi stati di attesa senza un guadagno misurato. Si mantiene il bundle attuale e il benchmark come baseline ripetibile. Se un modulo futuro aumenta il tempo di avvio o rende lenta una sezione, misurare separatamente parsing/valutazione JS e primo accesso alla sezione prima di introdurre chunk asincroni; la verifica deve includere il pacchetto installabile.
+
+### Integrazione APP-104 in dev (7c9d640)
+
+Sul ramo APP-113 ribasato passano typecheck, build e suite locale (172 test, 24 live esclusi). La prova Electron di APP-104 conferma un clic per avanzare i lotti, pausa/annullamento/ripresa, recupero 429 e singole schede fallite dopo riavvio senza scansione automatica. Passano anche anteprime Catalogo, Eventi offline e richiamo candidata Thread.
+
+Con 10.000 stampe, 160 Thread, 1.000 messaggi Markdown, 180 eventi e 300 revisioni Matchup a 640 px: avvio 1.364 ms; IPC Catalogo 100,7 ms (6,37 milioni di caratteri), Thread 9,3 ms (1,63 milioni), Matchup senza corrispondenze 242,3 ms. La vista Thread monta 50 messaggi; la pagina precedente richiede 210 ms nel percorso UI, con focus e posizione conservati. Scroll p95 Catalogo/Thread/Matchup 17,3/17,5/17,6 ms; massimo long task 139 ms. Una prova distinta su 5.000 messaggi misura 8,0 ms mediani per la finestra IPC e 6,6 ms per la pagina precedente. Sono campioni distinti dalle misure sulla base APP-105 e non dimostrano una differenza causale. Non sono state misurate una generazione Codex reale né una sincronizzazione Standard completa.
