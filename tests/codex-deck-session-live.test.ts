@@ -14,20 +14,17 @@ live('mantiene due sessioni Codex distinte e riprende una dopo il riavvio App Se
   const directory = mkdtempSync(join(tmpdir(), 'pokeguru-codex-decks-'))
   let control = new CodexControl()
   try {
-    const firstId = await control.startThread(directory, config)
-    const secondId = await control.startThread(directory, config)
-    expect(firstId).not.toBe(secondId)
     const [first, second] = await Promise.all([
-      control.jsonTurn(firstId, directory, 'Non usare strumenti. Rispondi in JSON con reply uguale a POKEGURU_A.', config, schema),
-      control.jsonTurn(secondId, directory, 'Non usare strumenti. Rispondi in JSON con reply uguale a POKEGURU_B.', config, schema)
+      control.jsonTurn(null, directory, 'Non usare strumenti. Rispondi in JSON con reply uguale a POKEGURU_A.', config, schema),
+      control.jsonTurn(null, directory, 'Non usare strumenti. Rispondi in JSON con reply uguale a POKEGURU_B.', config, schema)
     ])
+    expect(first.sessionId).not.toBe(second.sessionId)
     expect(first.value).toEqual({ reply: 'POKEGURU_A' })
     expect(second.value).toEqual({ reply: 'POKEGURU_B' })
     expect(first.turnId).not.toBe(second.turnId)
     await control.stop()
     control = new CodexControl()
-    await control.resumeThread(firstId, directory)
-    const resumed = await control.jsonTurn(firstId, directory,
+    const resumed = await control.jsonTurn(first.sessionId, directory,
       'Continua questa sessione. Non usare strumenti. Rispondi in JSON con reply uguale a POKEGURU_A2.', config, schema)
     expect(resumed.value).toEqual({ reply: 'POKEGURU_A2' })
     console.log('Codex deck sessions OK: due thread isolati e ripresa del primo dopo nuovo processo.')

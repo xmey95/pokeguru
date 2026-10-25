@@ -3,6 +3,9 @@ import type { ProjectsApi } from '../shared/projects'
 
 const api: ProjectsApi = {
   getCatalog: () => ipcRenderer.invoke('catalog:get'),
+  getCatalogBrowseOverview: () => ipcRenderer.invoke('catalog:browse-overview'),
+  searchCatalog: (query, setId, offset) => ipcRenderer.invoke('catalog:search', query, setId, offset),
+  getCatalogGroup: (key) => ipcRenderer.invoke('catalog:group', key),
   syncCatalog: () => ipcRenderer.invoke('catalog:sync'),
   syncStandardCatalog: (mode: 'new' | 'full') => ipcRenderer.invoke('catalog:sync-standard', mode),
   getCatalogSyncStatus: () => ipcRenderer.invoke('catalog:sync-status'),
@@ -17,6 +20,11 @@ const api: ProjectsApi = {
   importDeck: (input) => ipcRenderer.invoke('projects:import-deck', input),
   listDeckVersions: (projectId) => ipcRenderer.invoke('deck:list-versions', projectId),
   listDeckThreads: (projectId) => ipcRenderer.invoke('deck:list-threads', projectId),
+  listDeckThreadSummaries: (projectId) => ipcRenderer.invoke('deck:list-thread-summaries', projectId),
+  getDeckThread: (projectId, threadId) => ipcRenderer.invoke('deck:get-thread', projectId, threadId),
+  getAiJobStatus: (projectId, resourceId) => ipcRenderer.invoke('ai:job-status', projectId, resourceId),
+  cancelAiJob: (projectId, resourceId) => ipcRenderer.invoke('ai:cancel-job', projectId, resourceId),
+  recoverAiJobs: () => ipcRenderer.invoke('ai:recover-jobs'),
   createDeckThread: (input) => ipcRenderer.invoke('deck:create-thread', input),
   addDeckThreadMessage: (projectId, threadId, text) => ipcRenderer.invoke('deck:add-thread-message', projectId, threadId, text),
   previewDeckThreadEvidence: (projectId, threadId, text) => ipcRenderer.invoke('deck:preview-evidence', projectId, threadId, text),

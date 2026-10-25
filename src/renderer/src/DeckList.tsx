@@ -19,11 +19,7 @@ import { ExportButton } from './ExportButton'
 import { CardOverview } from './CardOverview'
 import { CardConstraints } from './CardConstraints'
 import { useDeckConstraints } from './DeckConstraintsContext'
-
-function localDate(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-}
+import { localCalendarDate } from '../../shared/calendar-date'
 
 function variantText(variants: Record<string, boolean> | null): string {
   if (!variants) return 'non indicate'
@@ -50,11 +46,11 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useViewState<string | null>('deck.expanded', null)
   const [saving, setSaving] = useState(false)
-  const [today, setToday] = useState(localDate)
+  const [today, setToday] = useState(localCalendarDate)
   const [referenceDate, setReferenceDate] = useViewState<string | null>('deck.referenceDate', null)
 
   useEffect(() => {
-    const timer = window.setInterval(() => setToday(localDate()), 60_000)
+    const timer = window.setInterval(() => setToday(localCalendarDate()), 60_000)
     return () => window.clearInterval(timer)
   }, [])
 

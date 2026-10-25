@@ -55,6 +55,10 @@ export interface DeckThread {
   candidates: DeckCandidate[]
 }
 
+export type DeckThreadSummary = Omit<DeckThread, 'messages' | 'candidates'> & {
+  latestCandidateId: string | null
+}
+
 export interface CreateDeckThreadInput {
   projectId: string
   title: string

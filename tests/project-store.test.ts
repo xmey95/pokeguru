@@ -156,6 +156,13 @@ describe('ProjectStore', () => {
     store.addDeckThreadMessage(first.id, a.id, 'Teniamo il motore iniziale.')
     store.saveDeckCandidate({ projectId: first.id, threadId: a.id, rawText: '60 Carta B MEG 2', note: 'Più veloce' })
     store.saveDeckCandidate({ projectId: first.id, threadId: b.id, rawText: '60 Carta C MEG 3' })
+    expect(store.listDeckThreadSummaries(first.id).find((item) => item.id === a.id)).toMatchObject({
+      title: 'Piano A', baseVersionId: initial.id,
+      latestCandidateId: store.getDeckThread(first.id, a.id)?.candidates[0].id
+    })
+    expect(store.listDeckThreadSummaries(first.id).find((item) => item.id === a.id)).not.toHaveProperty('messages')
+    expect(store.getDeckThread(other.id, a.id)).toBeNull()
+    expect(store.listDeckThreadSummaries(other.id)).toHaveLength(1)
     expect(store.getBaseline(first.id)?.rawText).toBe(original)
     expect(store.listDeckThreads(first.id).find((item) => item.id === a.id)).toMatchObject({
       messages: [{ text: 'Proviamo più pesca.' }, { text: 'Teniamo il motore iniziale.' }],
@@ -177,6 +184,7 @@ describe('ProjectStore', () => {
     expect(reopened.listDeckThreads(first.id).find((item) => item.id === a.id)).toMatchObject({
       baseVersionId: initial.id, stale: true, candidates: [{ rawText: '60 Carta B MEG 2' }]
     })
+    expect(reopened.listDeckThreadSummaries(first.id).find((item) => item.id === a.id)?.stale).toBe(true)
     expect(reopened.getBaseline(first.id)?.rawText).toBe('60 Carta D MEG 4')
     reopened.close()
   })

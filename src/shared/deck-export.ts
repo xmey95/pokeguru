@@ -68,7 +68,8 @@ export function prepareDeckExport(baseline: DeckBaseline): DeckExportPreview {
   if (leadingCards.length) blocks.push(leadingCards.map((line) => line.raw.trim()).join('\n'))
   for (const section of sections) {
     if (!section.cards.length) continue
-    blocks.push(`${section.name}: ${section.cards.length}\n${section.cards.map((line) => line.raw.trim()).join('\n')}`)
+    const sectionTotal = section.cards.reduce((sum, line) => sum + (line.quantity ?? 0), 0)
+    blocks.push(`${section.name}: ${sectionTotal}\n${section.cards.map((line) => line.raw.trim()).join('\n')}`)
   }
   const canExport = !unparsed.length && cards.length > 0
   const text = canExport ? `${blocks.join('\n\n')}\n\nTotal Cards: ${cardTotal}\n` : ''

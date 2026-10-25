@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
@@ -19,7 +19,8 @@ async function launch(dataDirectory) {
     executablePath: electronPath,
     args: ['.'],
     cwd: workspace,
-    env: { ...process.env, POKEGURU_DATA_DIR: dataDirectory },
+    env: { ...process.env, POKEGURU_DATA_DIR: dataDirectory,
+      ELECTRON_RENDERER_URL: 'data:text/html,<title>Untrusted renderer</title>' },
     timeout: 30000
   })
 }
@@ -33,6 +34,7 @@ try {
   const dataDirectory = join(temporary, 'profile')
   application = await launch(dataDirectory)
   let page = await application.firstWindow()
+  assert.equal(page.url(), 'pokeguru://bundle/index.html', 'Un URL renderer non locale non deve essere caricato')
   await page.setViewportSize({ width: 1024, height: 768 })
   await createProjectFromStart(page, 'Mega Absol / Mega Audino')
   await expectSelected(page, 'Mega Absol / Mega Audino')
@@ -170,6 +172,12 @@ try {
   assert.match(await page.locator('.migration-note').textContent(), /Profilo occidentale assegnato/)
   await application.close()
   application = undefined
+  const upgraded = new DatabaseSync(join(legacyData, 'pokeguru.sqlite'), { readOnly: true })
+  try { assert.equal(upgraded.prepare('PRAGMA user_version').get().user_version, 2) }
+  finally { upgraded.close() }
+  const backupFiles = readdirSync(join(legacyData, 'backups'))
+  assert.equal(backupFiles.filter((name) => name.endsWith('.sqlite')).length, 1)
+  assert.equal(backupFiles.filter((name) => name.endsWith('.sqlite.verified')).length, 1)
 
   console.log(`E2E OK: progetti, import, circuito, ${offline ? 'percorso offline' : 'metagame Limitless'}, riapertura, isolamento, migrazione ed errore di persistenza.`)
   console.log(`Screenshot: ${join(temporary, 'pokeguru.png')}`)

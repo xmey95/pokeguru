@@ -214,6 +214,60 @@ L'utente autorizza il merge completo in dev. Il redesign incorpora prima le PR #
 
 Gli ID pubblicati APP-059–061 e T-48 restano stabili. Le collisioni del ramo locale del redesign sono disambiguate come APP-083–085 e T-72, con corrispondenza esplicita nel backlog. Il merge avviene tramite PR dopo i check obbligatori Linux/Windows e senza derogare alle protezioni. Nessuna nuova release o avvio di I4.
 
+### T-74 — Documento attendibile per l'IPC (APP-087)
+
+L'URL del renderer fornito dall'ambiente serve solo allo sviluppo e deve essere HTTP su loopback. L'app pacchettizzata carica sempre il proprio HTML locale; ogni richiesta IPC richiede la finestra e il frame principali e confronta il loro documento con quello scelto all'avvio. Per `file:` il confronto usa il percorso decodificato, perché su Windows il percorso breve `~` può essere codificato `%7E` da `pathToFileURL` e lasciato letterale da Electron. Gli smoke test del pacchetto verificano il rifiuto di un URL `data:` nell'ambiente.
+
+Questa scelta iniziale usava `file:`. APP-090 l'ha sostituito con il protocollo ristretto e la CSP descritti in T-75. Il pacchetto Linux richiede ancora una prova; il test Windows non ne è un sostituto.
+
+### T-75 — Protocollo applicativo e CSP (APP-090)
+
+Seguendo le [raccomandazioni di sicurezza Electron](https://www.electronjs.org/docs/latest/tutorial/security) e la [API `protocol.registerSource`](https://www.electronjs.org/docs/latest/api/protocol), il renderer locale usa `pokeguru://bundle/index.html`. La sorgente serve solo la directory `out/renderer`, con risoluzione confinata dal loader di Electron. Il protocollo è standard e sicuro ma non ottiene `bypassCSP`, accesso arbitrario al filesystem o `supportFetchAPI`. La CSP nel pacchetto permette script e stili solo da sé, immagini locali e `data:`, e nega connessioni, frame, oggetti e moduli inline. In sviluppo il server Vite emette una CSP dedicata con le eccezioni necessarie a HMR; questa policy più permissiva non è nel pacchetto. La guardia IPC di T-74 confronta l'URL del frame con il documento applicativo o con l'URL Vite di loopback scelto all'avvio.
+
+Il pacchetto Windows temporaneo ha passato avvio, salvataggio, riapertura, migrazione, blocco di script inline e di immagini `file:` esterne. Vite reale su loopback ha servito la UI e l'intestazione CSP. Il pacchetto Linux resta non verificato in questa sessione.
+
+### T-76 — Turni Codex isolati su workspace temporanea (APP-092)
+
+Le [permission profile Codex](https://learn.chatgpt.com/docs/permissions), la [documentazione del sandbox Windows](https://learn.chatgpt.com/docs/windows/windows-sandbox) e la [configurazione delle funzionalità](https://learn.chatgpt.com/docs/config-file/config-basic) distinguono restrizioni OS e strumenti del modello. Thread e Matchup eseguono i turni via CLI con configurazione utente ignorata, file AGENTS del progetto non caricati, ricerca web e integrazioni disattivate, shell e agenti disabilitati. Il profilo personalizzato concede solo lettura della workspace temporanea e del runtime minimo, senza rete. Windows usa MXC in modo esplicito e rifiuta la generazione se non disponibile. App Server resta per connessione, modelli e identificativo del turno: le risposte AI usano solo la CLI isolata. Gli ID reali di sessione e turno restano nelle evidenze locali.
+
+Il test OS ha letto un file temporaneo nella workspace e negato un canary nella directory sorella. Due turni reali non hanno restituito il canary esterno né quello interno quando il modello è stato invitato a usare uno strumento assente; Matchup e il percorso Electron Thread hanno completato prove reali. Questo verifica la configurazione osservata con Codex CLI 0.163.0-alpha.11.2 su Windows, non tutte le versioni o i dispositivi. Il backend `elevated`, configurato dopo autorizzazione dell'utente, richiede qui lettura globale e non soddisfa il vincolo. Linux va provato separatamente; i dispositivi senza MXC richiedono un altro backend verificato prima della generazione AI.
+
+### T-77 — Ricerca Catalogo a pagine con dettaglio differito (APP-093)
+
+La `CatalogView` completa resta necessaria ai controlli di lista e legalità, ma non alla navigazione nel Catalogo. Il main costruisce un indice leggero da uno snapshot locale, lo invalida dopo ogni scrittura e serve via IPC un riepilogo senza stampe, pagine da 100 gruppi e le stampe della sola carta selezionata. I gruppi mantengono identità e ordinamento esistenti; filtro set e ricerca per nome, codice, set e rarità operano sul cache. Il renderer non serializza miniature e gameplay per l'intera lista a ogni aggiornamento. Le misure APP-093 quantificano la riduzione; la vista completa negli altri percorsi resta un costo da misurare prima di ottimizzarla.
+
+### T-78 — Riepiloghi degli archivi distinti dai dettagli (APP-094)
+
+L'elenco Eventi estrae i soli campi richiesti dal renderer via SQLite JSON; il dettaglio conserva lo snapshot completo solo per l'evento aperto. La lista Thread usa colonne relazionali e ID dell'ultima candidata, mentre messaggi, candidate ed evidenze AI sono letti soltanto per ID e progetto. Le API complete esistenti restano per i percorsi che richiedono effettivamente tutti gli oggetti. La query JSON evita deserializzazione e trasporto inutili ma continua a leggere i payload grandi: una eventuale tabella di metadati materializzati va valutata insieme alle migrazioni versionate, dopo misure su profili realistici.
+
+### T-79 — Revisioni Regional complete, citate e precedenti all'upgrade (APP-095)
+
+Gli snapshot Regional ottenuti durante i blocchi sono immutabili e portano un ID derivato dai dati. Un registro separato marca quelli completati nella stessa transazione del salvataggio. All'upgrade, tutti gli snapshot già presenti vengono marcati perché la loro funzione storica non è deducibile. Le revisioni nuove intermedie vengono eliminate solo quando non sono l'ultima dell'evento, non sono nel registro e non sono citate da evidenze Thread persistite; la pulizia non avviene durante una generazione Thread. Le pagine SQLite eliminate restano riutilizzabili senza contrazione immediata del file.
+
+### T-80 — Versione schema e copia consistente prima dell'upgrade (APP-096)
+
+`PRAGMA user_version` registra la versione 1, baseline degli store Project/Catalog/Tournament e delle migrazioni legacy già esistenti; APP-097 ha aggiunto la versione 2 per `ai_jobs`. Per un archivio di versione inferiore l'app usa [`node:sqlite.backup`](https://nodejs.org/download/release/latest-v24.x/docs/api/sqlite.html#sqlitebackupsource-db-path-options), non una copia diretta del file in modalità WAL. La copia viene riaperta e passa [`integrity_check` e `foreign_key_check`](https://www.sqlite.org/pragma.html#pragma_integrity_check) prima di essere marcata `.verified`. Dopo l'apertura degli store, gli stessi controlli precedono la scrittura transazionale della versione corrente. I backup hanno nomi univoci e non vengono sovrascritti. Un'interruzione lascia la versione precedente e consente la ripresa dei passaggi idempotenti; il ripristino si prova in un profilo separato come in `docs/DATABASE.md`. Versioni future richiedono una nuova migrazione esplicita e un nuovo backup.
+
+### T-81 — Ciclo di vita durevole dei job Codex (APP-097)
+
+Thread e Matchup condividono un registro SQLite dei job per progetto/risorsa, con un solo job attivo per risorsa. Il contesto viene registrato prima di invocare la CLI; l'output JSON è scritto in una directory del job. Dopo il ritorno Codex, il risultato passa allo stato `ready` prima della transazione nel progetto; il recupero usa l'ID del turno Thread o l'ID del job Matchup per evitare una seconda applicazione. La cancellazione registra `cancelled` prima di fermare la CLI e libera gli artefatti alla chiusura del processo. `applied`, `cancelled`, `failed` e `interrupted` conservano soltanto stato e diagnostica, eliminando copie di prompt e risposta dal registro. I risultati finali e le evidenze restano nei Thread e nei report Matchup. Uno snapshot Regional non viene eliminato se un job Thread recuperabile potrebbe ancora citarlo. La versione dello schema è 2.
+
+### T-82 — Provenienza dei pacchetti e firma nativa (APP-098)
+
+Il repository `xmey95/pokeguru` risultava pubblico al controllo GitHub del 25-10-2026. Dopo i due job di packaging, un job distinto verifica manifest con hash, commit e ID esecuzione e usa [`actions/attest@v4`](https://github.com/actions/attest) per firmare la provenienza di pacchetti e manifest; il job di pubblicazione verifica le attestazioni con `gh attestation verify`, vincolando repository, commit, ref e workflow. [GitHub documenta](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations) questa funzione per repository pubblici su tutti i piani correnti; per repository privati serve Enterprise Cloud. L'attestazione prova origine e integrità del file, non la sicurezza del software né l'identità mostrata da Windows. Il workflow accetta i secret `WIN_CSC_LINK` e `WIN_CSC_KEY_PASSWORD` secondo [electron-builder 26](https://www.electron.build/v26/docs/features/code-signing/) e verifica Authenticode quando il certificato sarà configurato. Nessun certificato è presente ora. L'AppImage non ha firma GPG incorporata; per tale firma servono chiave e procedura di verifica dedicate. La prima esecuzione reale del workflow aggiornato resta da osservare senza anticipare una release in questo task.
+
+### T-83 — Associazione desktop Linux (APP-099)
+
+Il pacchetto Linux imposta `desktopName` e `syncDesktopName` a `io.github.xmey95.pokeguru.desktop` per allineare `StartupWMClass` e nome della voce `.desktop`. L'AppImage ricostruita è stata estratta e il valore generato verificato. WSL/Xvfb non prova il raggruppamento della finestra su GNOME o KDE: la prova manuale resta descritta in `docs/ACCESSIBILITY.md`.
+
+### T-84 — Bundle renderer misurato (APP-100)
+
+Il renderer resta in un solo chunk JS finché una misura sul percorso critico non giustifica la divisione. La baseline del 25-10-2026 mostra 980.102 byte di JS (189.132 gzip), avvio mediano di 562 ms Windows e 369 ms Linux WSL2/Xvfb e navigazione delle sezioni di circa 31 ms in entrambi gli ambienti. In queste condizioni uno split aggiungerebbe caricamenti asincroni senza un beneficio dimostrato. Metodo e limiti sono in `docs/PERFORMANCE.md`; un futuro rallentamento richiede una nuova misura, compreso il primo accesso al chunk candidato.
+
+### T-85 — Schede di contesto nei Thread (APP-101)
+
+Una richiesta come «come posso arginare questa cosa?» recupera le schede usando anche il titolo del Thread e le ultime sei osservazioni dell'utente; il ranking delle liste torneo usa lo stesso testo. Le carte nominate prevalgono sulle carte non citate quando si applica il limite del pacchetto. I nomi più specifici consumano le occorrenze prima dei nomi contenuti in essi, evitando di confondere Mega Lucario ex con Lucario ex. Per gli alias fra lingue si aggiungono solo corrispondenze verificate: [Limitless in italiano](https://limitlesstcg.com/cards/it/MEG/186) registra «Compassione di Lino», mentre il catalogo TCGdex inglese registra Wally's Compassion. Il pacchetto indica entrambi i nomi e la stampa acquisita. Il confronto del testo di gioco normalizza soltanto la grafia `×`/`x` della debolezza per scegliere fra stampe equivalenti; varianti con altre regole diverse non sono inferite come equivalenti. Questo alias non costituisce una traduzione generale del catalogo.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

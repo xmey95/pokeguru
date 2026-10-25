@@ -141,6 +141,34 @@ describe('Catalogo occidentale', () => {
     reopened.close()
   })
 
+  it('restituisce pagine leggere e dettaglio su richiesta, invalidando la ricerca dopo un aggiornamento', async () => {
+    fixtureFetch()
+    const store = new CatalogStore(path())
+    try {
+      store.save(await fetchCatalogSample())
+      const overview = store.browseOverview()
+      expect('prints' in overview).toBe(false)
+      expect(overview.stats.acquired).toBe(14)
+      expect(overview.stats.missing).toBe(1)
+      const first = store.browseSearch('', 'all', 0, 2)
+      const second = store.browseSearch('', 'all', 2, 2)
+      expect(first.groups).toHaveLength(2)
+      expect(second.groups).toHaveLength(2)
+      expect(first.groups[0].key).not.toBe(second.groups[0].key)
+      const iono = store.browseSearch('sv02-254', 'sv02', 0)
+      expect(iono.total).toBe(1)
+      expect(iono.groups[0].printCount).toBe(2)
+      expect('prints' in iono.groups[0]).toBe(false)
+      const detail = store.browseGroup(iono.groups[0].key)
+      expect(detail?.prints.map((print) => print.id)).toEqual(['sv02-185', 'sv02-254'])
+      expect(detail?.prints[0].thumbnail).toMatch(/^data:image\/webp;base64,/)
+      expect(store.browseSearch('sv02-254', 'me01', 0).total).toBe(0)
+      const changed = store.getPrint('sv02-185')!
+      store.savePrints([{ ...changed, name: 'Iono updated', detailAt: '2026-10-25T00:00:00.000Z' }])
+      expect(store.browseSearch('Iono updated', 'all', 0).total).toBe(1)
+    } finally { store.close() }
+  })
+
   it('apre il catalogo precedente e aggiunge il codice set alla scansione successiva', async () => {
     const database = path()
     const old = new DatabaseSync(database)

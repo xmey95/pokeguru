@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { TournamentCard, TournamentPairing, TournamentParticipation, TournamentSnapshot } from '../shared/tournament'
+import { readLimitedText } from './bounded-response'
 
 const API = 'https://play.limitlesstcg.com/api'
 const EVENT_ID = /^[a-f0-9]{24}$/
@@ -37,10 +38,7 @@ async function getJson(path: string, fetcher: typeof fetch): Promise<unknown> {
     throw new LimitlessRateLimitError(new Date(Date.now() + Math.max(1, Math.min(seconds, 3600)) * 1000).toISOString())
   }
   if (!response.ok) throw new Error(`Limitless Play: HTTP ${response.status}.`)
-  if (Number(response.headers.get('content-length') ?? 0) > 6_000_000)
-    throw new Error('Risposta Limitless Play troppo grande.')
-  const body = await response.text()
-  if (body.length > 6_000_000) throw new Error('Risposta Limitless Play troppo grande.')
+  const body = await readLimitedText(response, 6_000_000, 'Risposta Limitless Play troppo grande.')
   try { return JSON.parse(body) as unknown }
   catch { throw new Error('Risposta Limitless Play non valida.') }
 }

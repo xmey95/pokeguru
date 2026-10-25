@@ -109,3 +109,33 @@ export interface CatalogView {
   /** Stored older prints used only to verify an explicitly imported print. */
   referencePrints?: CatalogPrint[]
 }
+
+export type CatalogBrowseGroup = {
+  key: string
+  name: string
+  category: string | null
+  basis: CatalogPrint['identityBasis']
+  printCount: number
+  canConstrain: boolean
+}
+
+export type CatalogBrowseOverview = Omit<CatalogView, 'prints' | 'referencePrints'> & {
+  stats: {
+    sampled: number
+    acquired: number
+    missing: number
+    missingPreview: { id: string; error: string | null }[]
+    groups: number
+    confirmedGroups: number
+    rarity: number
+    variants: number
+    thumbnails: number
+    highImages: number
+  }
+}
+
+export type CatalogBrowsePage = {
+  total: number
+  offset: number
+  groups: CatalogBrowseGroup[]
+}

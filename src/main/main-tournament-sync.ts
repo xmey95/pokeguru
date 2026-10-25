@@ -56,9 +56,10 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
         const list = await fetchMainDecklist(pending.listId, fetcher)
         const participants = event.participants.map((item) => item.listId === pending.listId
           ? { ...item, cards: list.cards, cardTotal: list.total } : item)
+        const remaining = progress.pendingLists.slice(1)
         store.saveMain(completeMainTournament({ ...event, fetchedAt: new Date().toISOString(),
-          participants, cached: false }))
-        progress = { ...progress, pendingLists: progress.pendingLists.slice(1),
+          participants, cached: false }), remaining.length === 0)
+        progress = { ...progress, pendingLists: remaining,
           fetchedLists: progress.fetchedLists + 1, lastError: null }
       } else if (progress.pendingEvents.length) {
         const entry = progress.pendingEvents[0]
@@ -69,9 +70,10 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
         const participants = fresh.participants.map((item) => ({ ...item,
           cards: item.listId ? cardsById.get(item.listId)?.cards ?? null : null,
           cardTotal: item.listId ? cardsById.get(item.listId)?.total ?? null : null }))
-        store.saveMain(completeMainTournament({ ...fresh, participants }))
+        const pendingLists = selectedLists(participants).map((listId) => ({ eventId: entry.eventId, listId }))
+        store.saveMain(completeMainTournament({ ...fresh, participants }), pendingLists.length === 0)
         progress = { ...progress, pendingEvents: progress.pendingEvents.slice(1),
-          pendingLists: selectedLists(participants).map((listId) => ({ eventId: entry.eventId, listId })),
+          pendingLists,
           inspectedEvents: progress.inspectedEvents + 1, lastError: null }
       } else if (progress.stopAfterPage || (progress.maxPages !== null && progress.page > progress.maxPages)) {
         progress = finish(progress)

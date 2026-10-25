@@ -39,7 +39,29 @@ jobs:
       - name: Install Linux display tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
-      - run: npm run ${{ matrix.command }}
+      - name: Package Linux AppImage
+        if: runner.os == 'Linux'
+        run: npm run package:linux
+      - name: Package Windows installer
+        if: runner.os == 'Windows'
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: npm run package:win
+      - name: Verify Windows publisher signature when configured
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        run: |
+          if ($env:WIN_CSC_LINK) {
+            foreach ($file in @('release/win-unpacked/Pokeguru.exe') +
+              @(Get-ChildItem -LiteralPath release -Filter '*-setup.exe' | Select-Object -ExpandProperty FullName)) {
+              if ((Get-AuthenticodeSignature -LiteralPath $file).Status -ne 'Valid') {
+                throw "Windows signature not valid: $file"
+              }
+            }
+          }
       - name: Smoke packaged app on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/package-smoke.mjs "${{ matrix.binary }}"
@@ -65,20 +87,55 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Installed app smoke failed' }
           $uninstall = Start-Process -FilePath (Join-Path $target 'Uninstall Pokeguru.exe') -ArgumentList '/S' -WindowStyle Hidden -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited $($uninstall.ExitCode)" }
+      - name: Record package provenance
+        run: node scripts/release-provenance.mjs create ${{ matrix.name }}
       - uses: actions/upload-artifact@v4
         with:
           name: package-${{ matrix.name }}
-          path: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}
+            release/provenance-${{ matrix.name }}.json
           if-no-files-found: error
           retention-days: 14
 
+  attest:
+    name: Attest release packages
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Test provenance checks
+        run: node --test tests/release-provenance-check.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          merge-multiple: true
+          path: release
+      - name: Verify artifact digests and build identity
+        run: node scripts/release-provenance.mjs verify-all
+      - name: Sign build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: 'release/*'
+
   publish:
     name: Publish GitHub release
-    needs: package
+    needs: [package, attest]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
+      attestations: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -92,6 +149,19 @@ jobs:
           pattern: package-*
           merge-multiple: true
           path: release
+      - name: Verify downloaded packages and manifests
+        run: node scripts/release-provenance.mjs verify-all
+      - name: Verify signed build provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for file in release/*.AppImage release/*-setup.exe release/provenance-*.json; do
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" \
+              --source-digest "$GITHUB_SHA" --source-ref refs/heads/main \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" >/dev/null
+          done
       - name: Check package version and files
         shell: bash
         run: |
@@ -103,7 +173,7 @@ jobs:
           test "$(find release -maxdepth 1 -name '*.AppImage' | wc -l)" -eq 1
           test "$(find release -maxdepth 1 -name '*-setup.exe' | wc -l)" -eq 1
           echo "TAG=v$version" >> "$GITHUB_ENV"
-          (cd release && sha256sum ./*.AppImage ./*-setup.exe > SHA256SUMS.txt)
+          (cd release && sha256sum ./*.AppImage ./*-setup.exe ./provenance-*.json > SHA256SUMS.txt)
       - name: Create and publish verified release
         shell: bash
         env:
@@ -117,6 +187,6 @@ jobs:
             *) echo "Cannot verify tag ${TAG} (HTTP ${status:-unknown})." >&2; exit 1 ;;
           esac
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Pokeguru $TAG" --draft --generate-notes
-          gh release upload "$TAG" release/*.AppImage release/*-setup.exe release/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length' | grep -qx '3'
+          gh release upload "$TAG" release/*.AppImage release/*-setup.exe release/provenance-*.json release/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length' | grep -qx '5'
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false

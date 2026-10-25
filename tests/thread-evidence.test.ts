@@ -100,6 +100,9 @@ it('seleziona schede e liste pertinenti da più eventi, conserva i dati del turn
     store.close()
     store = new ProjectStore(path)
     const restored = store.listDeckThreads(project.id)[0]
+    expect(store.listDeckThreadSummaries(project.id)[0]).not.toHaveProperty('messages')
+    expect(store.getDeckThread(other.id, created.id)).toBeNull()
+    expect(store.getDeckThread(project.id, created.id)?.messages.at(-1)?.evidence?.events).toHaveLength(3)
     expect(restored.messages.at(-1)?.evidence?.cards.find((card) => card.name === 'Mega Absol ex')?.gameplayText)
       .toContain('danno 180')
     expect(restored.messages.at(-1)?.citedSourceIds).toContain('card:me01-086')
@@ -111,4 +114,58 @@ it('seleziona schede e liste pertinenti da più eventi, conserva i dati del turn
     expect(restored.messages.at(-1)?.evidence?.cards.find((card) => card.name === 'Mega Absol ex')?.gameplayText)
       .toContain('danno 180')
   } finally { store?.close(); rmSync(directory, { recursive: true, force: true }) }
+})
+
+it('recupera dal contesto del thread le schede italiane e stampe con la stessa regola', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pokeguru-thread-context-'))
+  const store = new ProjectStore(join(directory, 'projects.sqlite'))
+  try {
+    const project = store.create({ name: 'Prova', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id,
+      rawText: '1 Mega Absol ex ME01 086\n59 Basic Psychic Energy SVE 005', source: 'paste' })
+    const created = store.createDeckThread({ projectId: project.id, title: 'Contro Mega Lucario ex',
+      openingNote: 'Mega Lucario ex usa Compassione di Lino per curarsi.' })
+    const thread = store.addDeckThreadMessage(project.id, created.id, 'Fatico a chiudere il KO.')
+    const base = store.listDeckVersions(project.id)[0]
+    const lucario = { ...gameplay, hp: 340,
+      weaknesses: [{ type: 'Psychic', value: '×2' }] }
+    const wally = { ...gameplay, hp: null, attacks: [], weaknesses: [],
+      effect: 'Heal all damage from 1 of your Mega Evolution Pokémon ex.', trainerType: 'Supporter' }
+    const example = catalog()
+    example.prints.push(print('sv07-082', 'Lucario ex', gameplay),
+      print('30th-083', 'Lucario', gameplay),
+      { ...print('me01-077', 'Mega Lucario ex', lucario), identityId: 'lucario-glyph-a' },
+      { ...print('mep-012', 'Mega Lucario ex', { ...lucario,
+        weaknesses: [{ type: 'Psychic', value: 'x2' }] }), identityId: 'lucario-glyph-b' },
+      { ...print('me01-132', "Wally's Compassion", wally), category: 'Trainer' })
+    const packet = buildThreadEvidence(thread, base, 'Come posso arginare questa cosa?', [], example,
+      [play('0123456789abcdef01234567', '2026-10-23', 'Mega Lucario ex')], [])
+    expect(packet.cards.find((card) => card.name === 'Mega Lucario ex')).toMatchObject({
+      identityStatus: 'same-gameplay', printId: expect.any(String), gameplay: expect.any(Object) })
+    expect(packet.cards.find((card) => card.name === "Wally's Compassion")).toMatchObject({
+      mentionedAs: 'Compassione di Lino', printId: 'me01-132', gameplay: expect.any(Object) })
+    expect(packet.cards.some((card) => card.name === 'Lucario ex' || card.name === 'Lucario')).toBe(false)
+    expect(packet.events.flatMap((event) => event.lists)).toHaveLength(1)
+    expect(deckDiscussionPrompt(thread, base, 'Come posso arginare questa cosa?', packet))
+      .toContain('Compassione di Lino')
+
+    const different = { ...example, prints: [...example.prints,
+      { ...print('mep-099', 'Mega Lucario ex', { ...lucario, hp: 330 }),
+        identityId: 'truly-different' }] }
+    expect(buildThreadEvidence(thread, base, 'E adesso?', [], different, [], [])
+      .cards.find((card) => card.name === 'Mega Lucario ex')).toMatchObject({
+        identityStatus: 'ambiguous', printId: null })
+
+    const crowdedBase = { ...base, rawText: Array.from({ length: 36 }, (_, index) =>
+      `1 Carta di prova ${index + 1} ME05 ${String(index + 1).padStart(3, '0')}`).join('\n') }
+    const crowded = buildThreadEvidence(thread, crowdedBase, 'Come posso arginare questa cosa?',
+      [], example, [], [])
+    expect(crowded.cards).toHaveLength(36)
+    expect(crowded.cards.some((card) => card.name === 'Mega Lucario ex')).toBe(true)
+    expect(crowded.cards.some((card) => card.name === "Wally's Compassion")).toBe(true)
+    expect(crowded.cardCoverage.omitted).toBe(2)
+  } finally {
+    store.close()
+    rmSync(directory, { recursive: true, force: true })
+  }
 })

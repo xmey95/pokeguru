@@ -33,9 +33,9 @@ describe('Limitless Metagame', () => {
   it('includes every paginated archetype in one snapshot', async () => {
     const secondTable = table.replace('/decks/284', '/decks/500').replace('Dragapult', 'Altro')
       .replace('/decks/339', '/decks/501')
-    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, headers: new Headers(),
-      text: async () => filter + table + '<ul class="pagination" data-max="2"></ul>' })
-      .mockResolvedValueOnce({ ok: true, headers: new Headers(), text: async () => filter + secondTable })
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(filter + table + '<ul class="pagination" data-max="2"></ul>'))
+      .mockResolvedValueOnce(new Response(filter + secondTable))
     vi.stubGlobal('fetch', fetchMock)
     const snapshot = await fetchMeta()
     expect(snapshot.decks.map((deck) => deck.id)).toEqual(['284', '339', '500', '501'])

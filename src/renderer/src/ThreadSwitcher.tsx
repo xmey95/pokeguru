@@ -1,21 +1,20 @@
 import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
-import type { DeckThread, DeckVersion } from '../../shared/deck-threads'
+import type { DeckThreadSummary, DeckVersion } from '../../shared/deck-threads'
 import { Icon } from './Icon'
 
-function threadStatus(thread: DeckThread, versions: DeckVersion[]): string {
+function threadStatus(thread: DeckThreadSummary, versions: DeckVersion[]): string {
   if (thread.stale) return 'Base superata'
   if (thread.baseVersionNumber === null) return 'Senza lista iniziale'
-  const latest = thread.candidates.at(-1)
-  if (!latest) return 'Nessuna proposta'
-  return versions.some((version) => version.adoption?.candidateId === latest.id) ? 'Proposta adottata' : 'Proposta nuova'
+  if (!thread.latestCandidateId) return 'Nessuna proposta'
+  return versions.some((version) => version.adoption?.candidateId === thread.latestCandidateId) ? 'Proposta adottata' : 'Proposta nuova'
 }
 
 export function ThreadSwitcher({ threads, selected, versions, disabled, onSelect }: {
-  threads: DeckThread[]
-  selected: DeckThread | null
+  threads: DeckThreadSummary[]
+  selected: DeckThreadSummary | null
   versions: DeckVersion[]
   disabled: boolean
-  onSelect: (thread: DeckThread) => void
+  onSelect: (thread: DeckThreadSummary) => void
 }) {
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
@@ -59,7 +58,7 @@ export function ThreadSwitcher({ threads, selected, versions, disabled, onSelect
     else options[next].focus()
   }
 
-  const description = (thread: DeckThread) => `${thread.baseVersionNumber === null ? '' : `Base v${thread.baseVersionNumber} · `}${threadStatus(thread, versions)}`
+  const description = (thread: DeckThreadSummary) => `${thread.baseVersionNumber === null ? '' : `Base v${thread.baseVersionNumber} · `}${threadStatus(thread, versions)}`
 
   return <>
     <button ref={trigger} id="thread-switcher-trigger" type="button" className="workspace-switcher thread-switcher"
