@@ -5,6 +5,7 @@ export type CatalogSyncMode = 'new' | 'full'
 export interface CatalogSyncStatus {
   /** Stable across pause/retry; changes when a new scan starts. */
   runId?: string | null
+  daily?: import('./daily-sync').DailySyncState
   running: boolean
   mode: CatalogSyncMode | null
   state: 'idle' | 'running' | 'rate-limited' | 'interrupted' | 'paused' | 'cancelled' | 'done'

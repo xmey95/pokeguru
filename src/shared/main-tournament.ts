@@ -43,6 +43,7 @@ export interface MainTournamentSnapshot extends MainTournamentEntry {
 
 export interface MainTournamentSyncProgress {
   runId?: string | null
+  daily?: import('./daily-sync').DailySyncState
   mode: 'new' | 'full' | null
   status: 'idle' | 'running' | 'rate-limited' | 'complete'
   /** In-memory job state; absent from persisted legacy progress. */

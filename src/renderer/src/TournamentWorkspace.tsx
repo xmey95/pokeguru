@@ -2,8 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { TournamentSyncProgress } from '../../shared/tournament'
 import { useNavigation, useViewState } from './Navigation'
 import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
+import { DailySyncNotice } from './DailySyncNotice'
 
-type Progress = Pick<TournamentSyncProgress, 'status' | 'mode' | 'cooldownUntil' | 'lastError' | 'active' | 'stopping' | 'rotationCleanup'>
+type Progress = Pick<TournamentSyncProgress, 'status' | 'mode' | 'cooldownUntil' | 'lastError' | 'active' | 'stopping' | 'rotationCleanup' | 'daily'>
 export const eventDateTime = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 
 export function TournamentWorkspace({ source, loading, count, busy, progress, error, startedAt, progressDetail, progressError, onRefresh, onPause, management, children }: {
@@ -50,6 +51,7 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
       </div>
       <span className="content-note">{source === 'play' ? 'Liste e abbinamenti · Limitless Play' : 'Piazzamenti e liste · Limitless'}</span>
     </div>
+    <DailySyncNotice state={progress?.daily} active={progress?.active} />
     {(busy || (progress && progress.status !== 'idle' && (!error || progress.status !== 'complete'))) && <ActivityStatus
       title={progress?.stopping ? 'Pausa al termine della richiesta in corso…' : active && cooldown > now ? 'Limite della fonte raggiunto'
         : busy || active ? 'Acquisizione automatica in corso…' : progress?.status === 'complete' ? 'Scansione completata.'

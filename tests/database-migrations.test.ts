@@ -7,6 +7,7 @@ import { ProjectStore } from '../src/main/project-store'
 import { CatalogStore } from '../src/main/catalog'
 import { TournamentStore } from '../src/main/tournament-store'
 import { AiJobStore } from '../src/main/ai-job-store'
+import { DailySyncStore } from '../src/main/daily-sync'
 import { CURRENT_SCHEMA_VERSION, completeDatabaseMigration,
   prepareDatabaseMigration, verifyDatabase } from '../src/main/database-migrations'
 
@@ -26,10 +27,12 @@ it('versions a fresh archive and reopens it without another backup', async () =>
     const catalog = new CatalogStore(path)
     const events = new TournamentStore(path)
     const jobs = new AiJobStore(path)
+    const daily = new DailySyncStore(path)
     const project = projects.create({ name: 'New', format: 'STANDARD' })
     completeDatabaseMigration(path, preparation)
     expect(projects.get(project.id)?.name).toBe('New')
-    jobs.close(); events.close(); catalog.close(); projects.close()
+    expect(daily.due('catalog')).toBe(true)
+    daily.close(); jobs.close(); events.close(); catalog.close(); projects.close()
     verifyDatabase(path)
     const current = await prepareDatabaseMigration(path)
     expect(current).toMatchObject({ fromVersion: CURRENT_SCHEMA_VERSION,
@@ -67,15 +70,16 @@ it('backs up a live WAL archive before legacy migration and restores its evidenc
     const reopenedCatalog = new CatalogStore(path)
     const reopenedEvents = new TournamentStore(path)
     const reopenedJobs = new AiJobStore(path)
+    const reopenedDaily = new DailySyncStore(path)
     completeDatabaseMigration(path, retry)
     expect(reopenedProjects.getDeckThread(project.id, thread.id)?.messages[0].text).toBe('Keep me')
-    reopenedJobs.close(); reopenedEvents.close(); reopenedCatalog.close(); reopenedProjects.close()
+    reopenedDaily.close(); reopenedJobs.close(); reopenedEvents.close(); reopenedCatalog.close(); reopenedProjects.close()
     verifyDatabase(path)
     expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
   } finally { projects?.close(); rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 }, 30_000)
 
-it('backs up schema 4 before adding the Catalog retry clock and job identity', async () => {
+it('backs up schema 4 before adding the Catalog retry clock, job identity and daily sync', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-catalog-'))
   const path = join(folder, 'pokeguru.sqlite')
   try {
@@ -94,7 +98,10 @@ it('backs up schema 4 before adding the Catalog retry clock and job identity', a
     expect(preparation).toMatchObject({ fromVersion: 4, needsMigration: true })
     expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
     const catalog = new CatalogStore(path)
+    const daily = new DailySyncStore(path)
     expect(catalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
+    expect(daily.due('catalog')).toBe(true)
+    daily.close()
     catalog.close()
     completeDatabaseMigration(path, preparation)
     expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
@@ -168,8 +175,10 @@ it('preserves a project and Catalog job across verified v3→v4→v6 upgrades', 
       expect(columns('catalog_job')).not.toContain('retry_at')
     } finally { backup.close() }
     const completedCatalog = new CatalogStore(path)
+    const daily = new DailySyncStore(path)
     expect(completedCatalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
     completedCatalog.close()
+    daily.close()
     completeDatabaseMigration(path, v4)
     expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
     const reopened = new ProjectStore(path)

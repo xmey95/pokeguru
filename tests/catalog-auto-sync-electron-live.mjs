@@ -88,7 +88,8 @@ try {
   assert.equal((await page.evaluate(() => window.projectsApi.syncStandardCatalog('new'))).ok, true)
   await waitFor(page, 'done')
   const completed = await status(page)
-  const { runId, rotationCleanup, ...completedProgress } = completed
+  const { runId, rotationCleanup, daily, ...completedProgress } = completed
+  assert.equal(daily?.outcome, 'success')
   assert.match(runId, /^[a-f0-9-]{36}$/)
   assert.deepEqual({ ...rotationCleanup, completedAt: undefined }, {
     ruleVersion: 'play-2026-01-09', removedPrints: 0, retainedReferences: 0,
