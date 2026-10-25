@@ -5,7 +5,7 @@ import { useViewState } from './Navigation'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { CatalogView } from '../../shared/catalog'
 import { buildDeckCards, type DeckCardEntry, type DeckReconciliation } from '../../shared/reconciliation'
-import { evaluateWesternRotation } from '../../shared/standard-rotation'
+import { evaluateWesternRotation, westernRuleHorizon } from '../../shared/standard-rotation'
 import { evaluateDeckConstruction } from '../../shared/deck-construction'
 import { evaluateSetAdmission } from '../../shared/standard-admission'
 import { evaluatePromoAdmission } from '../../shared/promo-admission'
@@ -90,6 +90,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
   const promoAdmission = useMemo(() => evaluatePromoAdmission(baseline, catalog, asOf), [baseline, catalog, asOf])
   const promoByLine = new Map(promoAdmission.lines.map((line) => [line.lineNumber, line]))
   const standardDeck = useMemo(() => evaluateStandardDeck(baseline, catalog, asOf, ruleAudit), [baseline, catalog, asOf, ruleAudit])
+  const ruleHorizon = westernRuleHorizon(localCalendarDate(), catalog?.rulePackage)
   const reviewItems = useMemo(() => reviewSummary(standardDeck.toReview), [standardDeck])
   const importProblems = baseline.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH')
   const standardTone = loading || dataUnavailable ? 'neutral' : standardDeck.status === 'problem' ? 'problem' : standardDeck.legality === 'supported' ? 'success' : 'review'
@@ -203,6 +204,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
         </div>
       </div>
       {standardDeck.problems.length > 0 && <ul className="standard-problems" aria-label="Problemi accertati">{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
+      {ruleHorizon.status === 'expiring' && <p className="content-note" role="status">Il pacchetto Standard incluso copre fino al {ruleHorizon.until}; è una scadenza cautelativa dell’app. Occorrerà una release con regole ricontrollate.</p>}
+      {ruleHorizon.status === 'expired' && <p className="diagnostics" role="alert">Il pacchetto Standard incluso termina il {ruleHorizon.until}. Per date successive il controllo resta indeterminato fino a una release verificata.</p>}
       <details className="standard-details"><summary>Controlli e fonti</summary>
       {reviewItems.length > 0 && <div className="standard-review"><h3>Da verificare ({reviewItems.length})</h3><ul>{reviewItems.map((reason, index) => <li key={index}>{reason}</li>)}</ul></div>}
       <h3>Copertura e fonti</h3>

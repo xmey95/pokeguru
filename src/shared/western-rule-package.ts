@@ -12,9 +12,12 @@ export interface RulePeriod {
 
 export interface SetAdmissionRule {
   setId: string
+  /** Qualifying official product release for a derived two-week date. */
+  releaseDate?: string
   legalDate: string
   method: 'two-weeks' | 'explicit'
   sourceUrl: string
+  releaseSourceUrl?: string
 }
 
 export interface WesternRulePackage {
@@ -48,6 +51,12 @@ function officialSource(value: unknown): value is string {
     return url.protocol === 'https:' && ['www.pokemon.com', 'community.pokemon.com', 'press.pokemon.com', 'play.pokemon.com', 'worlds.2024.pokemon.com']
       .includes(url.hostname) && !url.username && !url.password
   } catch { return false }
+}
+
+function daysAfter(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00Z`)
+  value.setUTCDate(value.getUTCDate() + days)
+  return value.toISOString().slice(0, 10)
 }
 
 function cardGameplay(value: unknown): value is CardGameplay {
@@ -128,7 +137,12 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
     const rule = record(raw)
     if (typeof rule.setId !== 'string' || !/^[a-z0-9.]{2,20}$/.test(rule.setId) ||
       !isoDate(rule.legalDate) || !['two-weeks', 'explicit'].includes(String(rule.method)) ||
-      !officialSource(rule.sourceUrl) || seen.has(rule.setId)) {
+      !officialSource(rule.sourceUrl) || seen.has(rule.setId) ||
+      (rule.method === 'two-weeks' && (!isoDate(rule.releaseDate) ||
+        !officialSource(rule.releaseSourceUrl) ||
+        daysAfter(rule.releaseDate, 14) !== rule.legalDate)) ||
+      (rule.method === 'explicit' && (rule.releaseDate !== undefined ||
+        rule.releaseSourceUrl !== undefined))) {
       throw new Error('Data di ammissione non valida o duplicata nel pacchetto.')
     }
     seen.add(rule.setId)

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { evaluateStandardDeck } from '../src/shared/standard-deck'
+import { evaluatePromoAdmission } from '../src/shared/promo-admission'
+import { evaluateWesternRotation } from '../src/shared/standard-rotation'
 import type { StandardRuleAudit } from '../src/shared/standard-rule-audit'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../src/shared/western-rule-package'
 import { buildDeckCards } from '../src/shared/reconciliation'
@@ -66,6 +68,12 @@ describe('Esito Standard aggregato, senza certificazione torneo', () => {
       rulePackage: BUNDLED_WESTERN_RULE_PACKAGE, prints: [...prints, promo] }
     const deck = baseline([...raw.slice(0, 59), '1 Promo Included MEP 051'])
     expect(evaluateStandardDeck(deck, coveredCatalog, '2026-10-24').legality).toBe('supported')
+    const beforeRotation = '2026-04-09'
+    expect(evaluateWesternRotation(deck, coveredCatalog, beforeRotation).lines.at(-1)?.status).toBe('mark-accepted')
+    expect(evaluatePromoAdmission(deck, coveredCatalog, beforeRotation).lines[0].status).toBe('indeterminate')
+    const historical = evaluateStandardDeck(deck, coveredCatalog, beforeRotation)
+    expect(historical.legality).toBe('indeterminate')
+    expect(historical.toReview.some((item) => item.includes('data storica di ammissione'))).toBe(true)
     const unlisted: CatalogView = { ...coveredCatalog, prints: [...prints, { ...promo,
       promoStatus: { ...promo.promoStatus!, state: 'unlisted' as const } }] }
     expect(evaluateStandardDeck(deck, unlisted, '2026-10-24').legality).toBe('indeterminate')

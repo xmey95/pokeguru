@@ -102,7 +102,8 @@ export interface CatalogView {
     gameplayAcquired: number; gameplayMissing: number; marks: readonly string[];
     releaseSource: { url: string; version: number; checkedAt: string };
     officialSets: { expected: number; present: number; missing: number;
-      missingSets: { setId: string; product: string }[] };
+      missingSets: { setId: string; product: string }[];
+      unmappedProducts?: readonly { product: string; releaseDate: string; sourceUrl: string }[] };
     bySet: { setId: string; name: string; sourceTotal: number; releaseDate?: string | null;
       officialReleaseDate: string | null; expected: number;
       acquired: number; missing: number; gameplayAcquired: number; gameplayMissing: number;

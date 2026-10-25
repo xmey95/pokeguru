@@ -9,6 +9,8 @@ import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 import { CatalogActivity } from './CatalogActivity'
 import { DailySyncNotice } from './DailySyncNotice'
 import { useCardPreview } from './CardPreview'
+import { westernRuleHorizon } from '../../shared/standard-rotation'
+import { localCalendarDate } from '../../shared/calendar-date'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -242,6 +244,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     standard && coverage?.officialSets.missing ? `${coverage.officialSets.missing} set ${coverage.officialSets.missing === 1 ? 'assente' : 'assenti'} dall’inventario` : null
   ].filter(Boolean)
   const currentRuleAudit = ruleAudit?.packageVersion === catalog?.rulePackage?.version ? ruleAudit : null
+  const ruleHorizon = catalog?.rulePackage ? westernRuleHorizon(localCalendarDate(), catalog.rulePackage) : null
   const management = <section id="catalog-management" className="catalog-management" aria-labelledby="catalog-management-heading"
     hidden={!managementOpen} onKeyDown={(event) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeManagement() }
@@ -265,9 +268,9 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
         : currentRuleAudit.status === 'matching' ? `Fonti coerenti con il pacchetto locale al ${date(currentRuleAudit.checkedAt)}.`
           : currentRuleAudit.status === 'changed' ? `Fonte cambiata o non interpretabile al ${date(currentRuleAudit.checkedAt)}: revisione delle regole necessaria.`
             : `Fonti non raggiungibili al ${date(currentRuleAudit.checkedAt)}; ultima verifica riuscita ${currentRuleAudit.verifiedAt ? date(currentRuleAudit.verifiedAt) : 'mai'}.`}</p>
-      <p>Le regole sono incluse nella release dell’app; aggiornare le carte non le cambia. Le promo usano il registro locale.</p>
-      {currentRuleAudit?.sources.map((source) => <p key={source.id}>{source.id === 'rotation-2026' ? 'Rotazione 2026' : 'Attesa dei prodotti'}: {source.status === 'matching' ? 'coerente' : source.status === 'changed' ? 'da rivedere' : 'non raggiungibile'} · {source.detail}{' '}
-        <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(source.id === 'rotation-2026' ? 'play-2026-01-09' : 'set-admission')}>Fonte ↗</button></p>)}
+      <p>Le regole e lo stato delle promo sono inclusi nella release dell’app; aggiornare le carte o controllare queste fonti non li cambia. Il controllo confronta le pagine note e non scopre nuovi annunci.</p>
+      {currentRuleAudit?.sources.map((source) => <p key={source.id}>{source.id === 'rotation-2026' ? 'Rotazione 2026' : source.id === 'promo-registry' ? 'Registro promo' : 'Attesa dei prodotti'}: {source.status === 'matching' ? 'coerente' : source.status === 'changed' ? 'da rivedere' : 'non raggiungibile'} · {source.detail}{' '}
+        <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(source.id === 'rotation-2026' ? 'play-2026-01-09' : source.id === 'promo-registry' ? 'promo' : 'set-admission')}>Fonte ↗</button></p>)}
       <button type="button" className="secondary-button" disabled={checkingRules} onClick={() => void checkRules()}>{checkingRules && <Spinner />}{checkingRules ? 'Controllo in corso…' : 'Controlla fonti Standard'}</button>
     </details>
 
@@ -300,6 +303,9 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
         <summary>Copertura per set · {catalog.standardCoverage.bySet.filter((set) => set.missing > 0).length} con dettagli mancanti</summary>
         <p className="content-note">Set ufficiali nel manifest: {catalog.standardCoverage.officialSets.present}/{catalog.standardCoverage.officialSets.expected}; {catalog.standardCoverage.officialSets.missing} mancanti. Calendario controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}.</p>
         {catalog.standardCoverage.officialSets.missing > 0 && <div className="diagnostics" role="status"><strong>Set ufficiali non presenti nel manifest</strong><ul>{catalog.standardCoverage.officialSets.missingSets.map((set) => <li key={set.setId}>{set.product} ({set.setId})</li>)}</ul></div>}
+        {!!catalog.standardCoverage.officialSets.unmappedProducts?.length && <div className="content-note" role="status"><strong>Prodotti annunciati senza ID set verificato</strong><ul>
+          {catalog.standardCoverage.officialSets.unmappedProducts.map((item) => <li key={item.product}>{item.product} · uscita {legalDate(item.releaseDate)}. La data di ammissione e il mapping TCGdex restano da verificare.</li>)}
+        </ul></div>}
         <p className="content-note">«Nel perimetro» indica il filtro TCGdex; «Totale set» include le altre stampe. La presenza di un set non prova la legalità.
           {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti Pokémon ↗</button></p>
         <div className="catalog-set-table-wrap"><table aria-label="Copertura Standard per set">
@@ -348,6 +354,8 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       </div>
     </div>
     {catalog?.rulePackageError && <p className="diagnostics" role="alert">{catalog.rulePackageError}</p>}
+    {ruleHorizon?.status === 'expiring' && <p className="diagnostics" role="status">Il pacchetto Standard occidentale copre le date fino al {legalDate(ruleHorizon.until!)}. Questa è una scadenza cautelativa dell’app, non una data di rotazione annunciata: servirà una release con regole ricontrollate prima di allora.</p>}
+    {ruleHorizon?.status === 'expired' && <p className="diagnostics" role="alert">Le regole Standard occidentali incluse terminano il {legalDate(ruleHorizon.until!)}. Date successive e nuovi aggiornamenti richiedono una release con regole verificate; le liste salvate restano consultabili.</p>}
     {currentRuleAudit?.status === 'changed' && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
     {currentRuleAudit?.status === 'unavailable' && <p className="catalog-gap-summary" role="status">Fonti Standard non raggiungibili · ultimo controllo riuscito {currentRuleAudit.verifiedAt ? date(currentRuleAudit.verifiedAt) : 'mai'}.</p>}
     <DailySyncNotice state={syncStatus?.daily} active={syncStatus?.running} />
