@@ -85,6 +85,13 @@ function sameNumber(left: string, right: string): boolean {
 export function multiMatchupEvidence(meta: MetaSnapshot, opponent: MetaDeck,
   playEvents: TournamentSnapshot[], mainEvents: MainTournamentSnapshot[],
   catalog: CatalogView | null = null): MatchupTournamentEvidence {
+  const printsByName = new Map<string, NonNullable<typeof catalog>['prints']>()
+  for (const print of catalog?.prints ?? []) {
+    const name = print.name.toLocaleLowerCase()
+    const named = printsByName.get(name) ?? []
+    named.push(print)
+    printsByName.set(name, named)
+  }
   const setCodes = new Map(catalog?.sets.flatMap((set) =>
     set.abbreviation ? [[set.id, set.abbreviation.toUpperCase()] as const] : []) ?? [])
   const metaTime = Date.parse(meta.fetchedAt)
@@ -176,14 +183,12 @@ export function multiMatchupEvidence(meta: MetaSnapshot, opponent: MetaDeck,
   }
   // Keep uncommon Pokémon from the displayed variants, even when staples occupy the top 24.
   const samplePokemon = new Set(sampledRows.flatMap((row) => row.cards)
-    .filter((card) => catalog?.prints.some((print) => print.category === 'Pokemon' &&
-      print.name.toLocaleLowerCase() === card.name.toLocaleLowerCase()))
+    .filter((card) => printsByName.get(card.name.toLocaleLowerCase())?.some((print) => print.category === 'Pokemon'))
     .map((card) => card.name.toLocaleLowerCase()))
   const observedCards = [...seen.values()].sort((a, b) => b.lists - a.lists || a.name.localeCompare(b.name))
     .filter((item, index) => index < 24 || samplePokemon.has(item.name.toLocaleLowerCase()))
     .slice(0, 48).map(({ name, lists, examples }) => {
-      const prints = catalog?.prints.filter((print) => print.name.toLocaleLowerCase() === name.toLocaleLowerCase() &&
-        print.detailAt !== null) ?? []
+      const prints = (printsByName.get(name.toLocaleLowerCase()) ?? []).filter((print) => print.detailAt !== null)
       const exactPrints = examples.map((card) => {
         const candidates = prints.filter((print) =>
           ((setCodes.get(print.setId) ?? OFFICIAL_SET_CODES[print.setId]) === card.set.toUpperCase() ||

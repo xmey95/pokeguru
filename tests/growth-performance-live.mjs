@@ -11,6 +11,7 @@ import { createProjectFromStart } from './project-ui-helper.mjs'
 const require = createRequire(import.meta.url)
 const profileRenderer = process.argv.includes('--profile-renderer')
 const expectAllMessages = process.argv.includes('--expect-all-messages')
+const matchedEvidence = process.argv.includes('--matched-evidence')
 const integerOption = (name, fallback) => {
   const value = process.argv.find((argument) => argument.startsWith(`--${name}=`))?.split('=')[1]
   if (value === undefined) return fallback
@@ -99,7 +100,9 @@ function seed(path, projectId, count) {
       const id = `play-${index}`
       const participations = Array.from({ length: 120 }, (_, number) => ({ playerId: `${id}-${number}`,
         playerName: `Player ${number}`, country: 'IT', placing: number + 1, record: null,
-        deck: { id: 'deck', name: 'Test deck' }, listStatus: 'available', cards, cardTotal: 60 }))
+        deck: { id: matchedEvidence && index < 5 && number < 3 ? 'Synthetic opponent 0' : 'deck',
+          name: matchedEvidence && index < 5 && number < 3 ? 'Synthetic opponent 0' : 'Test deck' },
+        listStatus: 'available', cards, cardTotal: 60 }))
       play.run(id, String(index), date, JSON.stringify({ id, eventId: String(index), fetchedAt: date,
         source: 'Limitless Play API', sourceUrl: '', publicUrl: '', name: `Event ${index}`,
         date: '2026-10-25', circuit: 'WESTERN', format: 'STANDARD', platform: 'PTCGL',
@@ -110,7 +113,8 @@ function seed(path, projectId, count) {
     for (let index = 0; index < 60; index++) {
       const id = `main-${index}`
       const participants = Array.from({ length: 300 }, (_, number) => ({ placing: number + 1,
-        playerName: `Player ${number}`, playerId: String(number), country: 'IT', deckId: 'deck',
+        playerName: `Player ${number}`, playerId: String(number), country: 'IT',
+        deckId: matchedEvidence && index < 5 && number < 3 ? '900000' : 'deck',
         deckName: 'Test deck', listId: String(number), listUrl: null, cards, cardTotal: 60 }))
       regional.run(id, String(index), date, JSON.stringify({ id, eventId: String(index),
         name: `Regional ${index}`, date: '2026-10-25', country: 'IT', players: 300, url: '',
@@ -147,7 +151,8 @@ function seed(path, projectId, count) {
     db.exec('COMMIT')
     return { cards: count, threads: threadCount,
       messages: (threadCount - 1) * 5 + longMessages, candidates: threadCount,
-      playEvents: 120, regionalEvents: 60, matchupOpponents: 60, matchupRevisions: 300 }
+      playEvents: 120, regionalEvents: 60, matchupOpponents: 60, matchupRevisions: 300,
+      matchedEvidence }
   } catch (error) { db.exec('ROLLBACK'); throw error } finally { db.close() }
 }
 
@@ -212,9 +217,12 @@ try {
           searchCatalog: ['Synthetic card', 'all', 0] }[call] ?? []
         const result = await window.projectsApi[call](...args)
         const ms = performance.now() - start
-        return { ms, ok: result.ok, bytes: sampleIndex === 0 ? JSON.stringify(result).length : 0 }
+        return { ms, ok: result.ok, bytes: sampleIndex === 0 ? JSON.stringify(result).length : 0,
+          matchupStatus: call === 'getMatchupEvidence' ? result.value?.status : undefined }
       }, { call, projectId, metaId, threadCount, sampleIndex: index })
       if (!measurement.ok) throw new Error(`${call} returned an error`)
+      if (matchedEvidence && call === 'getMatchupEvidence' && measurement.matchupStatus !== 'matched')
+        throw new Error('Matched Matchup fixture produced no matches')
       samples.push(+measurement.ms.toFixed(1))
       if (index === 0) resultBytes = measurement.bytes
     }

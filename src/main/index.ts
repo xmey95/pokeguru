@@ -1108,9 +1108,9 @@ function registerProjectHandlers(): void {
       const sampleDeck = await fetchOpponentSample(opponent)
       await enrichMatchupDeck(projectId, baseline)
       await enrichOpponentCards(snapshot, opponent)
-      const sample = await opponentSampleWithMechanics(sampleDeck, currentMatchupEvidence(snapshot, opponent))
-      const deckContext = currentMatchupDeckContext(projectId, baseline)
       const evidence = currentMatchupEvidence(snapshot, opponent)
+      const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
+      const deckContext = currentMatchupDeckContext(projectId, baseline)
       const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config, evidence)
       aiJobStore.prepare(job.id, { base })
       const generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
@@ -1234,9 +1234,9 @@ function registerProjectHandlers(): void {
       const sampleDeck = await fetchOpponentSample(opponent)
       await enrichMatchupDeck(parent.projectId, baseline)
       await enrichOpponentCards(snapshot, opponent)
-      const sample = await opponentSampleWithMechanics(sampleDeck, currentMatchupEvidence(snapshot, opponent))
-      const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
       const evidence = currentMatchupEvidence(snapshot, opponent)
+      const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
+      const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
       const base = matchupJobBase(job.id, parent.projectId, hash,
         snapshot, opponent, sample, config, evidence)
       aiJobStore.prepare(job.id, { base, parentId: parent.id })
