@@ -14,7 +14,8 @@ import { extractCardGameplay, hasComparableGameplay } from '../shared/card-gamep
 import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
 import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
-  OFFICIAL_SET_RELEASE_VERSION, officialSetRelease, officialSetReleases } from './official-set-releases'
+  OFFICIAL_SET_RELEASE_VERSION, officialSetRelease, officialSetReleases,
+  officialUnmappedProducts } from './official-set-releases'
 import { BUNDLED_WESTERN_RULE_PACKAGE,
   type WesternRulePackage } from '../shared/western-rule-package'
 import { localCalendarDate } from '../shared/calendar-date'
@@ -1001,7 +1002,8 @@ export class CatalogStore {
             checkedAt: OFFICIAL_SET_RELEASE_CHECKED_AT },
           officialSets: { expected: officialReleased.length,
             present: officialReleased.length - officialMissing.length, missing: officialMissing.length,
-            missingSets: officialMissing.map((set) => ({ setId: set.setId, product: set.product })) },
+            missingSets: officialMissing.map((set) => ({ setId: set.setId, product: set.product })),
+            unmappedProducts: officialUnmappedProducts() },
           promos: { expected: promoTargets.length, acquired: acquiredPromos,
             missing: promoTargets.length - acquiredPromos,
             series: new Set(promoTargets.map((print) => print.setId)).size,

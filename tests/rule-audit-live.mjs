@@ -27,6 +27,7 @@ try {
   const first = await region.textContent()
   assert.match(first, /Rotazione 2026: (coerente|non raggiungibile|da rivedere)/)
   assert.match(first, /Attesa dei prodotti: (coerente|non raggiungibile|da rivedere)/)
+  assert.match(first, /Registro promo: (coerente|non raggiungibile|da rivedere)/)
   assert.doesNotMatch(first, /non ancora ricontrollate da questa installazione/)
   await application.close()
   application = undefined

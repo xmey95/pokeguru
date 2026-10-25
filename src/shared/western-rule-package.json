@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "2026-10-24.3",
+  "version": "2026-10-25.1",
   "circuit": "WESTERN",
-  "checkedAt": "2026-10-24",
+  "checkedAt": "2026-10-25",
   "standardBans": {
     "checkedAt": "2026-10-24",
     "sourceUrl": "https://www.pokemon.com/fr/play-pokemon/a-propos/jcc-pokemon-liste-des-cartes-bannies",
@@ -20,7 +20,7 @@
       "effectiveFrom": "2025-04-11",
       "effectiveUntil": "2026-04-09",
       "firstAllowedMark": "G",
-      "lastConfirmedMark": "H",
+      "lastConfirmedMark": "J",
       "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement"
     },
     {
@@ -33,19 +33,19 @@
     }
   ],
   "setAdmissions": [
-    { "setId": "sv05", "legalDate": "2024-04-05", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
-    { "setId": "sv06", "legalDate": "2024-06-07", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
+    { "setId": "sv05", "releaseDate": "2024-03-22", "legalDate": "2024-04-05", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "sv06", "releaseDate": "2024-05-24", "legalDate": "2024-06-07", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
     { "setId": "sv06.5", "legalDate": "2024-08-16", "method": "explicit", "sourceUrl": "https://worlds.2024.pokemon.com/en-us/news/2024-worlds-tcg-power-rankings/" },
-    { "setId": "sv07", "legalDate": "2024-09-27", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
-    { "setId": "sv08", "legalDate": "2024-11-22", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
-    { "setId": "sv08.5", "legalDate": "2025-01-31", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
-    { "setId": "sv09", "legalDate": "2025-04-11", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
-    { "setId": "sv10", "legalDate": "2025-06-13", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement" },
-    { "setId": "me01", "legalDate": "2025-10-10", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
-    { "setId": "me02", "legalDate": "2025-11-28", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
+    { "setId": "sv07", "releaseDate": "2024-09-13", "legalDate": "2024-09-27", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "sv08", "releaseDate": "2024-11-08", "legalDate": "2024-11-22", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "sv08.5", "releaseDate": "2025-01-17", "legalDate": "2025-01-31", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "sv09", "releaseDate": "2025-03-28", "legalDate": "2025-04-11", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "sv10", "releaseDate": "2025-05-30", "legalDate": "2025-06-13", "method": "two-weeks", "sourceUrl": "https://www.pokemon.com/uk/pokemon-news/2025-pokemon-tcg-standard-format-rotation-announcement", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "me01", "releaseDate": "2025-09-26", "legalDate": "2025-10-10", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "me02", "releaseDate": "2025-11-14", "legalDate": "2025-11-28", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
     { "setId": "me02.5", "legalDate": "2026-03-06", "method": "explicit", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
-    { "setId": "me03", "legalDate": "2026-04-10", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
-    { "setId": "me04", "legalDate": "2026-06-05", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" },
-    { "setId": "me05", "legalDate": "2026-07-31", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update" }
+    { "setId": "me03", "releaseDate": "2026-03-27", "legalDate": "2026-04-10", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "me04", "releaseDate": "2026-05-22", "legalDate": "2026-06-05", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" },
+    { "setId": "me05", "releaseDate": "2026-07-17", "legalDate": "2026-07-31", "method": "two-weeks", "sourceUrl": "https://community.pokemon.com/en-us/discussion/22216/pokemon-tcg-product-legality-update", "releaseSourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3" }
   ]
 }

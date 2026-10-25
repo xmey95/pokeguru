@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, expect, it, vi } from 'vitest'
 import { CatalogStore, fetchCatalogImage, fetchStandardManifest, syncStandardCatalog } from '../src/main/catalog'
-import { OFFICIAL_SET_RELEASE_CHECKED_AT, officialSetRelease, officialSetReleases } from '../src/main/official-set-releases'
+import { OFFICIAL_SET_RELEASE_CHECKED_AT, officialSetRelease, officialSetReleases,
+  officialUnmappedProducts } from '../src/main/official-set-releases'
+import { BUNDLED_WESTERN_RULE_PACKAGE } from '../src/shared/western-rule-package'
 
 const folders: string[] = []
 afterEach(() => {
@@ -25,7 +27,7 @@ it('mappa le date di uscita ufficiali dei set senza inferire quelle delle promo 
   const releases = officialSetReleases()
   expect(releases).toHaveLength(17)
   expect(new Set(releases.map((entry) => entry.setId)).size).toBe(releases.length)
-  expect(OFFICIAL_SET_RELEASE_CHECKED_AT).toBe('2026-10-23')
+  expect(OFFICIAL_SET_RELEASE_CHECKED_AT).toBe('2026-10-25')
   for (const entry of releases) {
     expect(entry.product.length).toBeGreaterThan(2)
     expect(new Date(`${entry.releaseDate}T00:00:00Z`).toISOString().slice(0, 10)).toBe(entry.releaseDate)
@@ -34,6 +36,12 @@ it('mappa le date di uscita ufficiali dei set senza inferire quelle delle promo 
   expect(officialSetRelease('30th')).toBe('2026-09-16')
   expect(officialSetRelease('mep')).toBeNull()
   expect(officialSetRelease('sv99')).toBeNull()
+  for (const admission of BUNDLED_WESTERN_RULE_PACKAGE.setAdmissions.filter((entry) => entry.method === 'two-weeks')) {
+    expect(admission.releaseDate).toBe(officialSetRelease(admission.setId))
+  }
+  expect(BUNDLED_WESTERN_RULE_PACKAGE.setAdmissions.some((entry) => entry.setId === '30th')).toBe(false)
+  expect(officialUnmappedProducts()).toEqual([{ product: 'Mega Evolution—Delta Reign',
+    releaseDate: '2026-11-06', sourceUrl: 'https://press.pokemon.com/en/Pokemon-TCG-Mega-EvolutionDelta-Reign' }])
 })
 
 it('salva l’inventario Standard a lotti, riprende un errore e conserva i dettagli acquisiti', async () => {

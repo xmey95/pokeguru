@@ -109,6 +109,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-127 in chiusura sul ramo `task/app-127-standard-admission-rotation` (25-10-2026):** pacchetto Standard occidentale con provenienza e controllo aritmetico delle date derivate, Delta Reign come prodotto senza mapping TCGdex, orizzonte cautelativo della regola e audit promo senza importazione automatica. Build/typecheck, 211 test e prove Electron Catalogo, audit e riconciliazione passano su Windows; la fonte ammissioni è coerente nell'audit live, mentre rotazione e promo sono bloccate da Incapsula. Attendere CI della PR verso `dev` e merge coordinato; nessuna nuova regola 2027, modifica a `main` o release. Dettagli e limiti in APP-127 e T-127.
+
 - **APP-123 integrato in `dev` — [PR #33](https://github.com/xmey95/pokeguru/pull/33), merge `37a0aa1`:** pulizia verificata della rotazione Catalogo/Eventi con backup, riferimenti storici e migrazione v7 dopo gli ID job APP-121. Sul ramo erano passati build, 197 test e smoke Electron offline; il risultato è ora nella base di APP-122. Nessuna regola 2027 inclusa.
 - **APP-120 integrato in `dev` — [PR #34](https://github.com/xmey95/pokeguru/pull/34), merge `6edcc11`:** aggiornamento giornaliero silente di Catalogo/Play/Regional e migrazione v8; quattro check CI Verify Ubuntu/Windows verdi su push e PR, compresi package e smoke. Il test locale successivo nel ramo APP-122 ha confermato startup, freschezza, offline, riavvio e concorrenza manuale.
 

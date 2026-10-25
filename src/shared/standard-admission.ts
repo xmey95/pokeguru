@@ -62,7 +62,8 @@ function evaluateLine(line: DeckLine, catalog: CatalogView | null, asOf: string)
   const admission = packageUsed.setAdmissions.find((rule) => rule.setId === print.setId)
   if (!admission) return { ...located, status: 'indeterminate',
     message: 'Data di ammissione di questo set non verificata nel pacchetto locale.' }
-  const evidence = admission.method === 'explicit' ? 'data esplicita Play! Pokémon' : 'regola delle due settimane e data prodotto ufficiale'
+  const evidence = admission.method === 'explicit' ? 'data esplicita Play! Pokémon'
+    : `due settimane dall’uscita ufficiale del prodotto (${admission.releaseDate})`
   if (asOf < admission.legalDate) return { ...located, legalDate: admission.legalDate, status: 'waiting',
     message: `Set non ancora ammesso: dal ${admission.legalDate} (${evidence}).` }
   return { ...located, legalDate: admission.legalDate, status: 'admitted',

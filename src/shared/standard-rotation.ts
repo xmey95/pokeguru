@@ -42,6 +42,20 @@ export function westernRotationRule(asOf: string, rules: WesternRulePackage = BU
   return [...rules.rotations].reverse().find((rule) => rule.effectiveFrom <= asOf && asOf <= rule.effectiveUntil) ?? null
 }
 
+/** The last bundled period is a safety horizon, not an official rotation date. */
+export function westernRuleHorizon(asOf: string, rules: WesternRulePackage = BUNDLED_WESTERN_RULE_PACKAGE):
+  { status: 'covered' | 'expiring' | 'expired' | 'uncovered'; until: string | null } {
+  const rule = westernRotationRule(asOf, rules)
+  const last = rules.rotations.at(-1)
+  if (!last) return { status: 'uncovered', until: null }
+  const date = new Date(`${asOf}T00:00:00Z`)
+  if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== asOf)
+    return { status: 'uncovered', until: last.effectiveUntil }
+  if (!rule) return { status: asOf > last.effectiveUntil ? 'expired' : 'uncovered', until: last.effectiveUntil }
+  const remaining = (Date.parse(`${rule.effectiveUntil}T00:00:00Z`) - Date.parse(`${asOf}T00:00:00Z`)) / 86_400_000
+  return { status: rule === last && remaining <= 90 ? 'expiring' : 'covered', until: rule.effectiveUntil }
+}
+
 function evaluateLine(line: DeckLine, catalog: CatalogView | null, rule: RotationRule | null,
   asOf: string): RotationLineResult {
   const base = { lineNumber: line.lineNumber, quantity: line.quantity ?? 0 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
-import { evaluateWesternRotation, westernRotationRule } from '../src/shared/standard-rotation'
+import { evaluateWesternRotation, westernRotationRule, westernRuleHorizon } from '../src/shared/standard-rotation'
+import { evaluateSetAdmission } from '../src/shared/standard-admission'
 
 function print(id: string, name: string, mark: string | null, identityId: string): CatalogPrint {
   const [setId, localId] = id.split('-')
@@ -50,6 +51,12 @@ describe('Rotazione Standard occidentale, solo marchio', () => {
     expect(result.legality).toBe('indeterminate')
   })
 
+  it('copre il marchio I già rilasciato nel periodo 2025 secondo la clausola dei marchi futuri', () => {
+    const deck = baseline('1 Rare Candy MEG 125')
+    expect(evaluateWesternRotation(deck, catalog, '2025-10-10').lines[0].status).toBe('mark-accepted')
+    expect(evaluateSetAdmission(deck, catalog, '2025-10-10').lines[0].status).toBe('admitted')
+  })
+
   it('non cambia l’esito storico in base a omonimi o altre stampe correnti', () => {
     const result = evaluateWesternRotation(baseline('1 Iono PAL 185'), catalog, '2026-10-23')
     expect(result.lines[0].status).toBe('mark-rotated')
@@ -73,5 +80,13 @@ describe('Rotazione Standard occidentale, solo marchio', () => {
     const result = evaluateWesternRotation(baseline('1 Iono\n1 Iono PAL 185'), catalog, '2026-10-23')
     expect(result.lines.map((line) => line.status)).toEqual(['indeterminate', 'mark-rotated'])
     expect(evaluateWesternRotation(baseline('1 Iono PAL 185'), null, '2026-10-23').counts.indeterminate).toBe(1)
+  })
+
+  it('espone la scadenza cautelativa senza inventare una rotazione 2027', () => {
+    expect(westernRuleHorizon('2026-10-01').status).toBe('covered')
+    expect(westernRuleHorizon('2026-10-02').status).toBe('expiring')
+    expect(westernRuleHorizon('2026-12-31')).toEqual({ status: 'expiring', until: '2026-12-31' })
+    expect(westernRuleHorizon('2027-01-01')).toEqual({ status: 'expired', until: '2026-12-31' })
+    expect(westernRotationRule('2027-01-01')).toBeNull()
   })
 })

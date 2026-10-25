@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "version": 1,
-  "checkedAt": "2026-10-23",
+  "version": 2,
+  "checkedAt": "2026-10-25",
   "sourceUrl": "https://press.pokemon.com/en-CA/Items/Schedule?period=All&types=3",
   "releases": [
     { "setId": "sv05", "product": "Scarlet & Violet—Temporal Forces", "releaseDate": "2024-03-22" },
@@ -21,5 +21,8 @@
     { "setId": "me04", "product": "Mega Evolution—Chaos Rising", "releaseDate": "2026-05-22" },
     { "setId": "me05", "product": "Mega Evolution—Pitch Black", "releaseDate": "2026-07-17" },
     { "setId": "30th", "product": "30th Celebration", "releaseDate": "2026-09-16" }
+  ],
+  "unmappedProducts": [
+    { "product": "Mega Evolution—Delta Reign", "releaseDate": "2026-11-06", "sourceUrl": "https://press.pokemon.com/en/Pokemon-TCG-Mega-EvolutionDelta-Reign" }
   ]
 }

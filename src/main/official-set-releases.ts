@@ -13,3 +13,8 @@ export function officialSetRelease(setId: string): string | null {
 export function officialSetReleases(): readonly { setId: string; product: string; releaseDate: string }[] {
   return bundled.releases
 }
+
+/** Announced products without a verified TCGdex set ID are not part of the set denominator. */
+export function officialUnmappedProducts(): readonly { product: string; releaseDate: string; sourceUrl: string }[] {
+  return bundled.unmappedProducts
+}
