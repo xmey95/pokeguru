@@ -6,10 +6,12 @@ directories:
 files:
   - out/**/*
 asar: true
-extraResources:
-  - from: resources/icon.png
-    to: icon.png
 linux:
+  extraResources:
+    - from: resources/icon.png
+      to: icon.png
+    - from: node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl
+      to: codex
   icon: build/icons
   category: Game
   syncDesktopName: true
@@ -18,6 +20,11 @@ linux:
       arch: [x64]
   artifactName: Pokeguru-${version}-linux-${arch}.${ext}
 win:
+  extraResources:
+    - from: resources/icon.png
+      to: icon.png
+    - from: node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc
+      to: codex
   icon: build/icon.ico
   target:
     - target: nsis

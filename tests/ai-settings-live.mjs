@@ -51,7 +51,7 @@ try {
   application = await launch({ POKEGURU_CODEX_BIN: join(workspace, 'codex-non-presente.exe') })
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Impostazioni AI' }).click()
-  await page.getByRole('alert').getByText('Codex CLI non trovato.', { exact: false }).waitFor()
+  await page.getByRole('alert').getByText('Codex non disponibile.', { exact: false }).waitFor()
   await application.close()
   const isolatedCodexHome = join(directory, 'codex-home')
   mkdirSync(isolatedCodexHome)

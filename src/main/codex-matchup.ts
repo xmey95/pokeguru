@@ -8,6 +8,7 @@ import { readAiTokenUsage, type AiEvidenceQueryTrace,
   type AiPromptAudit, type AiTokenUsage } from '../shared/ai-evidence'
 import { aiQueryEvidenceText, makeAiPromptAudit } from './ai-evidence-queries'
 import { CODEX_ISOLATION_ARGS } from './codex-isolation'
+import { codexLauncher } from './codex-setup'
 
 const fields = ['strengths', 'weaknesses', 'ourKeyCards', 'theirKeyCards', 'strategy', 'limitations'] as const
 type Analysis = Record<typeof fields[number], string>
@@ -55,13 +56,14 @@ function runCodex(prompt: string, config: AiRunConfig, test = false,
     required: requestedFields
   }), 'utf8')
   return new Promise((resolve, reject) => {
-    const command = process.env.POKEGURU_CODEX_BIN || 'codex'
+    const launcher = codexLauncher('')
     const args = ['exec', '--ephemeral', '--json', ...CODEX_ISOLATION_ARGS, '--skip-git-repo-check',
       '--color', 'never', '-C', directory,
       ...(config.model ? ['--model', config.model] : []),
       ...(config.reasoningEffort ? ['--config', `model_reasoning_effort=${JSON.stringify(config.reasoningEffort)}`] : []),
       '--output-schema', schemaPath, '--output-last-message', resultPath, '-']
-    const child = spawn(command, args, { cwd: directory, windowsHide: true, timeout: 180_000, stdio: ['pipe', 'pipe', 'pipe'] })
+    const child = spawn(launcher.command, [...launcher.prefix, ...args],
+      { cwd: directory, windowsHide: true, timeout: 180_000, stdio: ['pipe', 'pipe', 'pipe'] })
     const abort = () => child.kill()
     options.signal?.addEventListener('abort', abort, { once: true })
     let stderr = ''
@@ -85,7 +87,7 @@ function runCodex(prompt: string, config: AiRunConfig, test = false,
     child.on('error', (error) => {
       options.signal?.removeEventListener('abort', abort)
       if (!options.jobDirectory) rmSync(directory, { recursive: true, force: true })
-      reject(new Error(error.message.includes('ENOENT') ? 'Codex CLI non trovato. Installa o configura Codex su questo computer.' : 'Codex non è stato avviato.'))
+      reject(new Error(error.message.includes('ENOENT') ? 'Codex non disponibile. Verifica l’installazione di Pokéguru.' : 'Codex non è stato avviato.'))
     })
     child.on('close', (code) => {
       try {

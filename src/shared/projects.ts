@@ -1,6 +1,6 @@
 import type { DeckBaseline, ImportDeckInput } from './deck-import'
 import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from './meta-matchups'
-import type { AiConnection, AiPreferences } from './ai'
+import type { AiConnection, AiLoginProgress, AiLoginStart, AiPreferences, CodexSetupStatus } from './ai'
 import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
   CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from './catalog'
 import type { ClearLineMappingInput, DeckReconciliation, SaveLineMappingInput } from './reconciliation'
@@ -119,7 +119,10 @@ export interface ProjectsApi {
   getAiPreferences(): Promise<OperationResult<AiPreferences>>
   saveAiPreferences(value: AiPreferences): Promise<OperationResult<AiPreferences>>
   getAiConnection(): Promise<OperationResult<AiConnection>>
-  startAiLogin(): Promise<OperationResult<boolean>>
+  getCodexSetupStatus(): Promise<OperationResult<CodexSetupStatus>>
+  startAiLogin(mode: 'browser' | 'device'): Promise<OperationResult<AiLoginStart>>
+  getAiLoginProgress(): Promise<OperationResult<AiLoginProgress>>
+  cancelAiLogin(): Promise<OperationResult<boolean>>
   logoutAi(): Promise<OperationResult<boolean>>
   testAiConnection(): Promise<OperationResult<boolean>>
 }

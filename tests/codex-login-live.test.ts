@@ -12,7 +12,7 @@ live('avvia il login ChatGPT e disconnette soltanto un profilo Codex isolato', a
   try {
     process.env.CODEX_HOME = directory
     expect((await control.connection()).account).toBeNull()
-    const loginUrl = new URL(await control.startLogin())
+    const loginUrl = new URL((await control.startLogin()).url)
     expect(loginUrl.protocol).toBe('https:')
     expect(loginUrl.hostname === 'openai.com' || loginUrl.hostname.endsWith('.openai.com') ||
       loginUrl.hostname === 'chatgpt.com' || loginUrl.hostname.endsWith('.chatgpt.com')).toBe(true)

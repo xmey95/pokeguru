@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AiConnection, AiPreferences } from '../../shared/ai'
+import type { AiConnection, AiLoginStart, AiPreferences, CodexSetupStatus } from '../../shared/ai'
 import { useNavigation, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
 import { ActivityStatus, Spinner } from './Loading'
 
@@ -12,6 +12,8 @@ export function AiSettings() {
   const [draftValue, setDraft] = useDraftState<AiPreferences | null>('ai.preferences', null)
   const draft = draftValue ?? saved ?? automatic
   const [connection, setConnection] = useState<AiConnection | null>(null)
+  const [setup, setSetup] = useState<CodexSetupStatus | null>(null)
+  const [deviceLogin, setDeviceLogin] = useState<Extract<AiLoginStart, { mode: 'device' }> | null>(null)
   const [loading, setLoading] = useState(true)
   const [preferencesLoading, setPreferencesLoading] = useState(true)
   const [connectionError, setConnectionError] = useState<string | null>(null)
@@ -30,16 +32,30 @@ export function AiSettings() {
     const request = ++connectionRequest.current
     setLoading(true)
     try {
+      const setupResult = await window.projectsApi.getCodexSetupStatus()
+      if (request !== connectionRequest.current) return
+      if (setupResult.ok) setSetup(setupResult.value)
       const result = await window.projectsApi.getAiConnection()
       if (request !== connectionRequest.current) return
       if (!result.ok) throw new Error(result.error)
       setConnection(result.value)
       setConnectionError(null)
-      if (result.value.account) setLoginPending(false)
+      if (result.value.account) { setLoginPending(false); setDeviceLogin(null) }
+      else if (loginPending) {
+        const progress = await window.projectsApi.getAiLoginProgress()
+        if (request !== connectionRequest.current) return
+        if (progress.ok && progress.value.state === 'error') {
+          setLoginPending(false)
+          setDeviceLogin(null)
+          setErrorScope('connection')
+          setError(progress.value.error ?? 'Accesso Codex non riuscito. Riprova.')
+        }
+      }
     } catch (cause) {
       if (request !== connectionRequest.current) return
       setConnection(null)
       setConnectionError(cause instanceof Error ? cause.message : 'Impossibile controllare Codex.')
+      if (loginPending) { setLoginPending(false); setDeviceLogin(null) }
     } finally { if (request === connectionRequest.current) setLoading(false) }
   }
 
@@ -109,14 +125,25 @@ export function AiSettings() {
     finally { finish() }
   }
 
-  async function login(): Promise<void> {
+  async function login(mode: 'browser' | 'device'): Promise<void> {
     start('login')
     try {
-      const result = await window.projectsApi.startAiLogin()
+      const result = await window.projectsApi.startAiLogin(mode)
       if (!result.ok) throw new Error(result.error)
+      setDeviceLogin(result.value.mode === 'device' ? result.value : null)
       setLoginPending(true)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Accesso non avviato.') }
     finally { finish() }
+  }
+
+  async function cancelLogin(): Promise<void> {
+    try {
+      const result = await window.projectsApi.cancelAiLogin()
+      if (!result.ok) throw new Error(result.error)
+    } catch (cause) {
+      setErrorScope('connection')
+      setError(cause instanceof Error ? cause.message : 'Impossibile interrompere l’accesso.')
+    } finally { setLoginPending(false); setDeviceLogin(null) }
   }
 
   async function logout(): Promise<void> {
@@ -157,12 +184,22 @@ export function AiSettings() {
         </div>
         <div className="ai-connection-actions">
           <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || busy}>{loading && !busy && <Spinner />}Aggiorna stato</button>
-          {connection && !connection.account && <button type="button" className="primary-button" onClick={() => void login()} disabled={busy || loading || loginPending}>{action === 'login' ? 'Apertura accesso…' : 'Accedi con ChatGPT'}</button>}
+          {connection && !connection.account && <button type="button" className="primary-button" onClick={() => void login('browser')} disabled={busy || loading || loginPending}>{action === 'login' ? 'Apertura accesso…' : 'Accedi con ChatGPT'}</button>}
         </div>
       </div>
       {connectionError && <p className="error-banner" role="alert">{connectionError}</p>}
       {error && errorScope === 'connection' && <p className="error-banner" role="alert">{error}</p>}
-      {loginPending && <ActivityStatus state="paused" title="Completa l’accesso nel browser" detail="Lo stato si aggiorna automaticamente." />}
+      {!connected && setup && !setup.cliAvailable && <div className="ai-setup-guide">
+        <h3>Codex non disponibile</h3>
+        <p className="warning-banner" role="status">La CLI ufficiale non si avvia. Verifica l’installazione di Pokéguru e riprova.</p>
+      </div>}
+      {setup?.cliAvailable && <p className="content-note">{setup.bundled ? 'Codex incluso in Pokéguru' : 'CLI Codex disponibile'}: {setup.version}</p>}
+      {connection && !connection.account && <button type="button" className="text-button" onClick={() => void login('device')} disabled={busy || loginPending}>Accedi con codice dispositivo</button>}
+      {loginPending && <div>
+        <ActivityStatus state="paused" title={deviceLogin ? 'Completa l’accesso con il codice' : 'Completa l’accesso nel browser'} detail="Lo stato si aggiorna automaticamente." />
+        {deviceLogin && <p className="content-note">Inserisci il codice <strong>{deviceLogin.userCode}</strong> nella pagina aperta nel browser: {deviceLogin.verificationUrl}. Il codice è temporaneo e non viene salvato.</p>}
+        <button type="button" className="text-button" onClick={() => void cancelLogin()}>Interrompi attesa</button>
+      </div>}
       <details className="ai-account-details">
         <summary>Account e accesso</summary>
         <p className="content-note">L’accesso è condiviso con le altre app Codex su questo computer. Pokéguru non archivia password, chiavi o token.</p>

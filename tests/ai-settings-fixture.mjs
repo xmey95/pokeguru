@@ -34,10 +34,15 @@ export async function installAiFixture(application) {
       if (state.hold === 'test') await new Promise(resolve => { state.release = resolve })
       return state.testError ? { ok: false, error: state.testError } : { ok: true, value: true }
     })
-    replace('ai:start-login', () => {
-      globalThis.aiUi.calls.push(['login'])
-      return globalThis.aiUi.loginError ? { ok: false, error: globalThis.aiUi.loginError } : { ok: true, value: true }
+    replace('ai:start-login', (event, mode) => {
+      globalThis.aiUi.calls.push(['login', mode])
+      return globalThis.aiUi.loginError ? { ok: false, error: globalThis.aiUi.loginError }
+        : { ok: true, value: mode === 'device'
+          ? { mode: 'device', verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'ABCD-1234' }
+          : { mode: 'browser' } }
     })
+    replace('ai:login-progress', () => ({ ok: true, value: { state: 'pending', error: null } }))
+    replace('ai:cancel-login', () => ({ ok: true, value: true }))
     replace('ai:logout', () => {
       globalThis.aiUi.calls.push(['logout'])
       globalThis.aiUi.connection.account = null

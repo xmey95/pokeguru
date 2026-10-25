@@ -16,11 +16,18 @@ const temporary = mkdtempSync(join(tmpdir(), 'pokeguru-package-'))
 let application
 
 async function launch(profile) {
+  mkdirSync(join(profile, 'codex-home'), { recursive: true })
+  const environment = { ...process.env, POKEGURU_DATA_DIR: profile,
+    CODEX_HOME: join(profile, 'codex-home'), POKEGURU_AUTO_SYNC: '0',
+    ELECTRON_RENDERER_URL: 'data:text/html,<title>Untrusted renderer</title>' }
+  for (const key of Object.keys(environment)) if (key.toLowerCase() === 'path') delete environment[key]
+  const windowsRoot = process.env.SystemRoot ?? 'C:\\Windows'
+  environment.PATH = process.platform === 'win32'
+    ? `${windowsRoot}\\System32;${windowsRoot}` : '/usr/bin:/bin'
   return electron.launch({
     executablePath,
     args: process.platform === 'linux' ? ['--no-sandbox'] : [],
-    env: { ...process.env, POKEGURU_DATA_DIR: profile,
-      ELECTRON_RENDERER_URL: 'data:text/html,<title>Untrusted renderer</title>' },
+    env: environment,
     timeout: 45000
   })
 }
@@ -29,6 +36,13 @@ try {
   const profile = join(temporary, 'profile')
   application = await launch(profile)
   let page = await application.firstWindow()
+  const setup = await page.evaluate(() => window.projectsApi.getCodexSetupStatus())
+  assert.equal(setup.ok, true)
+  assert.equal(setup.value.bundled, true, 'Il pacchetto deve includere la CLI nativa senza Node/npm nel PATH')
+  assert.match(setup.value.version, /^codex-cli 0\.164\.0/)
+  assert.deepEqual(await page.evaluate(() => window.projectsApi.getAiConnection()),
+    { ok: true, value: { account: null, plan: null, models: [] } },
+    'App Server deve avviarsi con un profilo Codex isolato e senza Node/npm esterni')
   assert.equal(page.url(), 'pokeguru://bundle/index.html', 'Il pacchetto deve ignorare l’URL renderer nell’ambiente')
   assert.deepEqual(await application.evaluate(({ BrowserWindow, Menu }) => {
     const window = BrowserWindow.getAllWindows()[0]
@@ -105,7 +119,7 @@ try {
   await application.close()
   application = undefined
 
-  console.log('Pacchetto OK: avvio, salvataggio, riapertura e migrazione I1 con profili isolati.')
+  console.log('Pacchetto OK: Codex nativo/App Server senza Node, avvio, salvataggio, riapertura e migrazione I1.')
 } finally {
   if (application) await application.close()
   if (temporary.startsWith(join(tmpdir(), 'pokeguru-package-'))) {

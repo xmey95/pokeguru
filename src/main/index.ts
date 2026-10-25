@@ -11,12 +11,13 @@ import { auditStandardRuleSources } from './standard-rule-audit'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 import type { OperationResult, Project } from '../shared/projects'
 import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
-import type { AiConnection, AiPreferences, AiRunConfig } from '../shared/ai'
+import type { AiConnection, AiLoginProgress, AiLoginStart, AiPreferences, AiRunConfig, CodexSetupStatus } from '../shared/ai'
 import type { AiEvidenceQueryTrace } from '../shared/ai-evidence'
 import { fetchMeta, fetchOpponentSample } from './limitless-meta'
 import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
+import { CodexSetup } from './codex-setup'
 import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
   readDeckDiscussionSourceIds,
   deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from './deck-ai'
@@ -77,7 +78,8 @@ let playTournamentJob: TournamentSyncJob<TournamentSyncProgress> | null = null
 let mainTournamentJob: TournamentSyncJob<MainTournamentSyncProgress> | null = null
 let storageError: string | null = null
 let aiPreferencesStore: AiPreferencesStore | null = null
-const codexControl = new CodexControl()
+const codexControl = new CodexControl(() => app.getPath('userData'))
+const codexSetup = new CodexSetup(() => app.getPath('userData'))
 const generatingProjects = new Set<string>()
 const generatingDeckThreads = new Set<string>()
 const activeAiControllers = new Map<string, AbortController>()
@@ -736,6 +738,12 @@ function registerProjectHandlers(): void {
     catch (error) { return { ok: false, error: aiError(error) } }
   })
 
+  ipcMain.handle('ai:setup-status', async (event): Promise<OperationResult<CodexSetupStatus>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try { return { ok: true, value: await codexSetup.status() } }
+    catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
   ipcMain.handle('ai:save-preferences', async (event, value: unknown): Promise<OperationResult<AiPreferences>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!aiPreferencesStore) return { ok: false, error: unavailableMessage() }
@@ -747,13 +755,30 @@ function registerProjectHandlers(): void {
     } catch (error) { return { ok: false, error: aiError(error) } }
   })
 
-  ipcMain.handle('ai:start-login', async (event): Promise<OperationResult<boolean>> => {
+  ipcMain.handle('ai:start-login', async (event, mode: unknown): Promise<OperationResult<AiLoginStart>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (mode !== 'browser' && mode !== 'device') return { ok: false, error: 'Modalità di accesso non valida.' }
     try {
-      const url = await codexControl.startLogin()
-      await shell.openExternal(url)
-      return { ok: true, value: true }
-    } catch (error) { return { ok: false, error: aiError(error) } }
+      const result = await codexControl.startLogin(mode)
+      await shell.openExternal(result.url)
+      if (result.mode === 'device') return { ok: true, value: { mode: 'device',
+        verificationUrl: result.verificationUrl, userCode: result.userCode } }
+      return { ok: true, value: { mode: 'browser' } }
+    } catch (error) {
+      await codexControl.cancelLogin().catch(() => undefined)
+      return { ok: false, error: aiError(error) }
+    }
+  })
+
+  ipcMain.handle('ai:login-progress', (event): OperationResult<AiLoginProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return { ok: true, value: codexControl.loginProgress() }
+  })
+
+  ipcMain.handle('ai:cancel-login', async (event): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try { await codexControl.cancelLogin(); return { ok: true, value: true } }
+    catch (error) { return { ok: false, error: aiError(error) } }
   })
 
   ipcMain.handle('ai:logout', async (event): Promise<OperationResult<boolean>> => {

@@ -81,7 +81,10 @@ const api: ProjectsApi = {
   getAiPreferences: () => ipcRenderer.invoke('ai:get-preferences'),
   saveAiPreferences: (value) => ipcRenderer.invoke('ai:save-preferences', value),
   getAiConnection: () => ipcRenderer.invoke('ai:get-connection'),
-  startAiLogin: () => ipcRenderer.invoke('ai:start-login'),
+  getCodexSetupStatus: () => ipcRenderer.invoke('ai:setup-status'),
+  startAiLogin: (mode) => ipcRenderer.invoke('ai:start-login', mode),
+  getAiLoginProgress: () => ipcRenderer.invoke('ai:login-progress'),
+  cancelAiLogin: () => ipcRenderer.invoke('ai:cancel-login'),
   logoutAi: () => ipcRenderer.invoke('ai:logout'),
   testAiConnection: () => ipcRenderer.invoke('ai:test')
 }

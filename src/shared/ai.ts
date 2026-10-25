@@ -17,6 +17,15 @@ export interface AiConnection {
   models: AiModel[]
 }
 
+export interface CodexSetupStatus {
+  cliAvailable: boolean
+  version: string | null
+  bundled: boolean
+}
+
+export type AiLoginStart = { mode: 'browser' } | { mode: 'device'; verificationUrl: string; userCode: string }
+export type AiLoginProgress = { state: 'idle' | 'pending' | 'success' | 'error'; error: string | null }
+
 export interface AiRunConfig extends AiPreferences {
   provider: 'codex'
   source: 'global' | 'override'

@@ -4,19 +4,24 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { AiConnection, AiModel, AiRunConfig } from '../shared/ai'
+import type { AiConnection, AiLoginProgress, AiLoginStart, AiModel, AiRunConfig } from '../shared/ai'
 import { readAiTokenUsage, type AiTokenUsage } from '../shared/ai-evidence'
 import { CODEX_ISOLATION_ARGS } from './codex-isolation'
+import { codexLauncher } from './codex-setup'
 
-type RpcResponse = { id?: number; result?: unknown; error?: { message?: string } }
+type RpcResponse = { id?: number; result?: unknown; error?: { message?: string }; method?: string;
+  params?: { loginId?: string; success?: boolean; error?: string | null } }
 
 export class CodexControl {
+  constructor(private readonly dataDir: () => string = () => '') {}
   private child: ChildProcessWithoutNullStreams | null = null
   private lines: Interface | null = null
   private starting: Promise<void> | null = null
   private nextId = 1
   private readonly pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: NodeJS.Timeout }>()
   private readonly cliTurns = new Map<string, ChildProcessWithoutNullStreams>()
+  private login: { id: string; progress: AiLoginProgress } | null = null
+  private lastLoginCompletion: { id: string; progress: AiLoginProgress } | null = null
 
   private fail(error: Error): void {
     for (const [id, entry] of this.pending) {
@@ -33,15 +38,15 @@ export class CodexControl {
   private async start(): Promise<void> {
     if (this.starting) return this.starting
     this.starting = (async () => {
-      const command = process.env.POKEGURU_CODEX_BIN || 'codex'
-      const child = spawn(command, ['app-server', '--stdio', '--disable', 'apps', '--disable', 'plugins',
+      const launcher = codexLauncher(this.dataDir())
+      const child = spawn(launcher.command, [...launcher.prefix, 'app-server', '--stdio', '--disable', 'apps', '--disable', 'plugins',
         '--config', 'web_search="disabled"', '--config', 'mcp_servers={}'],
       { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
       this.child = child
       child.stderr.resume()
       child.on('error', (error) => {
         if (this.child === child) this.fail(new Error(error.message.includes('ENOENT')
-          ? 'Codex CLI non trovato. Installa Codex o rendilo disponibile nel PATH.'
+          ? 'Codex non disponibile. Verifica l’installazione di Pokéguru.'
           : 'Impossibile avviare Codex App Server.'))
       })
       child.on('close', () => {
@@ -51,6 +56,13 @@ export class CodexControl {
       this.lines.on('line', (line) => {
         let message: RpcResponse
         try { message = JSON.parse(line) as RpcResponse } catch { return }
+        if (message.method === 'account/login/completed' && message.params?.loginId) {
+          const progress: AiLoginProgress = message.params.success
+            ? { state: 'success', error: null }
+            : { state: 'error', error: message.params.error || 'Accesso Codex non riuscito. Riprova.' }
+          this.lastLoginCompletion = { id: message.params.loginId, progress }
+          if (this.login?.id === message.params.loginId) this.login.progress = progress
+        }
         if (typeof message.id !== 'number') return
         const entry = this.pending.get(message.id)
         if (!entry) return
@@ -136,17 +148,36 @@ export class CodexControl {
     return result
   }
 
-  async startLogin(): Promise<string> {
-    const result = await this.request('account/login/start', {
-      type: 'chatgpt', useHostedLoginSuccessPage: true, appBrand: 'codex'
-    }) as { authUrl?: string }
-    if (!result?.authUrl) throw new Error('Codex non ha restituito un collegamento di accesso.')
-    const url = new URL(result.authUrl)
+  async startLogin(mode: 'browser' | 'device' = 'browser'): Promise<AiLoginStart & { url: string }> {
+    const result = await this.request('account/login/start', mode === 'browser'
+      ? { type: 'chatgpt', useHostedLoginSuccessPage: true, appBrand: 'codex' }
+      : { type: 'chatgptDeviceCode' }) as { loginId?: string; authUrl?: string; verificationUrl?: string; userCode?: string }
+    const rawUrl = mode === 'browser' ? result?.authUrl : result?.verificationUrl
+    if (!rawUrl) throw new Error('Codex non ha restituito un collegamento di accesso.')
+    const url = new URL(rawUrl)
     if (url.protocol !== 'https:' || !(url.hostname === 'openai.com' || url.hostname.endsWith('.openai.com') ||
       url.hostname === 'chatgpt.com' || url.hostname.endsWith('.chatgpt.com'))) {
       throw new Error('Il collegamento di accesso restituito da Codex non è riconosciuto.')
     }
-    return url.toString()
+    if (!result.loginId) throw new Error('Codex non ha restituito un identificativo di accesso.')
+    this.login = { id: result.loginId,
+      progress: this.lastLoginCompletion?.id === result.loginId
+        ? this.lastLoginCompletion.progress : { state: 'pending', error: null } }
+    if (mode === 'device') {
+      if (!result.userCode || !/^[A-Z0-9-]{4,20}$/.test(result.userCode)) {
+        throw new Error('Codex non ha restituito un codice dispositivo valido.')
+      }
+      return { mode: 'device', url: url.toString(), verificationUrl: url.toString(), userCode: result.userCode }
+    }
+    return { mode: 'browser', url: url.toString() }
+  }
+
+  loginProgress(): AiLoginProgress { return this.login?.progress ?? { state: 'idle', error: null } }
+
+  async cancelLogin(): Promise<void> {
+    const login = this.login
+    this.login = null
+    if (login?.progress.state === 'pending') await this.request('account/login/cancel', { loginId: login.id })
   }
 
   async logout(): Promise<void> {
@@ -176,7 +207,7 @@ export class CodexControl {
     try {
       if (sessionId) writeFileSync(join(directory, 'session-id.txt'), sessionId, 'utf8')
       writeFileSync(schemaPath, JSON.stringify(outputSchema), 'utf8')
-      const command = process.env.POKEGURU_CODEX_BIN || 'codex'
+      const launcher = codexLauncher(this.dataDir())
       const args = ['-C', cwd, 'exec', '--json', ...(sessionId ? ['resume'] : []), ...CODEX_ISOLATION_ARGS,
         '--config', 'approval_policy="never"', '--skip-git-repo-check',
         ...(config.model ? ['--model', config.model] : []),
@@ -184,7 +215,8 @@ export class CodexControl {
         '--output-schema', schemaPath, '--output-last-message', resultPath,
         ...(sessionId ? [sessionId] : []), '-']
       const done = await new Promise<{ sessionId: string; text: string; usage: AiTokenUsage | null }>((resolve, reject) => {
-        const child = spawn(command, args, { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
+        const child = spawn(launcher.command, [...launcher.prefix, ...args],
+          { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
         this.cliTurns.set(key, child)
         const abort = () => child.kill()
         options.signal?.addEventListener('abort', abort, { once: true })
@@ -225,7 +257,7 @@ export class CodexControl {
           options.signal?.removeEventListener('abort', abort)
           if (captureError) return reject(new Error('Impossibile conservare la sessione Codex.'))
           reject(new Error(error.message.includes('ENOENT')
-            ? 'Codex CLI non trovato. Installa Codex o rendilo disponibile nel PATH.'
+            ? 'Codex non disponibile. Verifica l’installazione di Pokéguru.'
             : 'Impossibile avviare Codex.'))
         })
         child.on('close', (code) => {
