@@ -193,6 +193,21 @@ try {
   assert.match(await firstCard.innerText(), /Rotazione: Catalogo locale non sincronizzato/)
   assert.match(await firstCard.innerText(), /Ammissione: Catalogo locale non sincronizzato/)
   await firstCard.locator('.deck-card-toggle').click()
+  await page.getByRole('group', { name: 'Vista lista principale' }).getByRole('button', { name: 'Immagini' }).click()
+  assert.equal(await page.locator('.deck-image-grid .card-image-tile').count(), 60, 'Una tessera per ogni copia della lista')
+  assert.equal(await page.locator('.deck-image-grid .card-image-tile img').count(), 0, 'Catalogo vuoto: segnaposti nella griglia')
+  const imageCard = page.locator('.deck-image-grid .card-image-tile').first()
+  await imageCard.focus()
+  await page.keyboard.press('Enter')
+  assert.ok(await page.getByRole('region', { name: /Dettaglio Mega Absol ex/ }).isVisible())
+  for (const width of [1440, 640]) {
+    await page.setViewportSize({ width, height: 720 })
+    assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
+    await page.screenshot({ path: join(screenshots, `workspace-list-images-${width}.png`) })
+  }
+  await page.getByRole('group', { name: 'Vista lista principale' }).getByRole('button', { name: 'Lista' }).click()
+  assert.ok(await page.locator('.deck-card-list').first().isVisible())
+  await page.locator('.deck-card-toggle').first().click()
   for (const [width, height] of [[1440, 900], [1280, 720], [1241, 720], [1240, 720], [1024, 768], [640, 720]]) {
     await checkGeometry(page, width, height, 'lista')
   }

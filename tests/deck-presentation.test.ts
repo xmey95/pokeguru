@@ -3,7 +3,7 @@ import { hydrappleItalianDeck } from './fixtures/hydrapple-italian'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
 import { buildDeckCards } from '../src/shared/reconciliation'
-import { deckGameplayPrint, deckThumbnail, groupDeckCards } from '../src/renderer/src/deck-presentation'
+import { deckGameplayPrint, deckImageCopies, deckThumbnail, groupDeckCards } from '../src/renderer/src/deck-presentation'
 
 const print = (id: string, category: string, thumbnail: string | null = null): CatalogPrint => ({
   id, setId: 'sv02', setName: 'Fixture', localId: id.split('-')[1], name: 'Iono',
@@ -60,6 +60,16 @@ describe('Presentazione delle categorie della lista', () => {
     expect(deckThumbnail(card)).toBe('image-b')
     expect(deckThumbnail({ ...card, prints: [print('sv02-185', 'Trainer', 'image-a'), print('sv02-254', 'Trainer')] })).toBe('image-a')
     expect(deckThumbnail({ ...card, prints: [] })).toBeNull()
+  })
+
+  it('mostra ogni copia nella stampa importata, senza sostituire una scansione assente con un’altra stampa', () => {
+    const card = buildDeckCards(baseline('2 Iono PAL 185\n1 Iono PAL 254'), catalog)[0]
+    expect(deckImageCopies(card)).toEqual([
+      { src: 'image-a', print: 'PAL 185' }, { src: 'image-a', print: 'PAL 185' },
+      { src: 'image-b', print: 'PAL 254' }
+    ])
+    const missing = { ...card, prints: [print('sv02-185', 'Trainer'), print('sv02-254', 'Trainer', 'image-b')] }
+    expect(deckImageCopies(missing).map((copy) => copy.src)).toEqual([null, null, 'image-b'])
   })
 
   it('mostra il testo di una sola stampa della stessa identità, preferendo quella importata', () => {

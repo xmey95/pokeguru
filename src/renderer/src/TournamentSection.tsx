@@ -142,7 +142,7 @@ export function TournamentSection() {
           {selected ? <>
             <h2>{selected.playerName}</h2>
             <p className="content-note">{selected.deck?.name ?? 'Archetipo non indicato'} · {selected.placing ? `${selected.placing}° posto` : 'Piazzamento non indicato'} · {selected.record ? `${selected.record.wins}V / ${selected.record.losses}S / ${selected.record.ties}P` : 'Record non indicato'}</p>
-            {selected.listStatus !== 'available' ? <p className="content-note">Lista {selected.listStatus === 'missing' ? 'assente' : 'non interpretabile'} nella risposta pubblica.</p> : <TournamentDeck cards={selected.cards} />}
+            {selected.listStatus !== 'available' ? <p className="content-note">Lista {selected.listStatus === 'missing' ? 'assente' : 'non interpretabile'} nella risposta pubblica.</p> : <TournamentDeck cards={selected.cards} source="play" />}
           </> : null}
         </div></>}
       </div>

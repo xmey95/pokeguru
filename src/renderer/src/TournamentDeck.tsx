@@ -1,21 +1,70 @@
+import { useEffect, useMemo, useState } from 'react'
 import type { TournamentCard } from '../../shared/tournament'
+import type { CardPreviewData } from '../../shared/card-preview'
+import { useViewState } from './Navigation'
 import { useCardPreview } from './CardPreview'
+import { CardImageTile } from './CardImageTile'
+import { DeckViewToggle, type DeckView } from './DeckViewToggle'
 
-export function TournamentDeck({ cards }: { cards: TournamentCard[] }) {
+const categories = ['pokemon', 'trainer', 'energy'] as const
+const categoryName = { pokemon: 'Pokémon', trainer: 'Allenatori', energy: 'Energie' }
+
+function EventImageDetail({ card, image }: { card: TournamentCard; image: string | null }) {
+  const [failed, setFailed] = useState(false)
+  const local = image && (image.startsWith('pokeguru://cards/') || image.startsWith('data:image/'))
+  return <div className="event-image-detail" role="region" aria-label={`Dettaglio ${card.name}`}>
+    <strong>{card.name}</strong><span>{card.count} copie · {card.set} {card.number}</span>
+    {local && !failed ? <img src={image} alt={`Carta ${card.name}, ${card.set} ${card.number}`}
+      loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      : <p>Immagine non disponibile nel Catalogo locale.</p>}
+  </div>
+}
+
+export function TournamentDeck({ cards, source }: { cards: TournamentCard[]; source: 'play' | 'main' }) {
   const preview = useCardPreview()
+  const [view, setView] = useViewState<DeckView>(`events.${source}.deckView`, 'list')
+  const [previews, setPreviews] = useState<{ key: string; data: CardPreviewData[] } | null>(null)
+  const [selection, setSelection] = useState<{ key: string; index: number } | null>(null)
   const total = cards.reduce((sum, card) => sum + card.count, 0)
+  const imageKey = useMemo(() => JSON.stringify(cards.map((card) => [card.name, card.set, card.number])), [cards])
+  const images = previews?.key === imageKey ? previews.data : null
+  const selectedIndex = selection?.key === imageKey ? selection.index : null
+
+  useEffect(() => {
+    if (view !== 'images' || previews?.key === imageKey) return
+    let active = true
+    const lookups = cards.map((card) => ({ name: card.name,
+      setCode: card.set || undefined, cardNumber: card.number || undefined }))
+    void window.projectsApi.getCardPreviews(lookups).then((result) => {
+      if (active) setPreviews({ key: imageKey, data: result.ok ? result.value : [] })
+    }).catch(() => { if (active) setPreviews({ key: imageKey, data: [] }) })
+    return () => { active = false }
+  }, [view, imageKey])
+
   return <>
-    <p className={total === 60 ? 'event-deck-total' : 'diagnostics'}>{total} carte{total !== 60 ? ' · Lista incompleta' : ''}</p>
-    <div className="event-deck">{(['pokemon', 'trainer', 'energy'] as const).map((category) => {
-      const entries = cards.filter((card) => card.category === category)
-      const count = entries.reduce((sum, card) => sum + card.count, 0)
+    <div className="event-deck-heading"><p className={total === 60 ? 'event-deck-total' : 'diagnostics'}>{total} carte{total !== 60 ? ' · Lista incompleta' : ''}</p>
+      <DeckViewToggle value={view} onChange={setView} label="Vista lista del torneo" /></div>
+    {view === 'images' && !images && <p className="content-note" role="status">Cerco immagini nel Catalogo locale…</p>}
+    <div className="event-deck">{categories.map((category) => {
+      const entries = cards.map((card, index) => ({ card, index })).filter(({ card }) => card.category === category)
+      const count = entries.reduce((sum, { card }) => sum + card.count, 0)
       return <section className="event-deck-group" key={category}>
-        <h3>{category === 'pokemon' ? 'Pokémon' : category === 'trainer' ? 'Allenatori' : 'Energie'}<span>{count}</span></h3>
-        {entries.length ? <ul>{entries.map((card, index) => <li key={`${card.set}:${card.number}:${index}`} tabIndex={0}
+        <h3>{categoryName[category]}<span>{count}</span></h3>
+        {view === 'list' ? entries.length ? <ul>{entries.map(({ card, index }) => <li key={`${card.set}:${card.number}:${index}`} tabIndex={0}
           {...preview({ name: card.name, setCode: card.set, cardNumber: card.number })}>
           <span className="event-card-quantity">{card.count}×</span><span className="event-card-name">{card.name}</span>
           <span className="event-card-print">{card.set} {card.number}</span>
-        </li>)}</ul> : <p className="content-note">Nessuna carta</p>}
+        </li>)}</ul> : <p className="content-note">Nessuna carta</p>
+          : entries.length ? <div className="event-image-grid" aria-label={`Immagini ${categoryName[category]}`}>
+            {entries.map(({ card, index }) => <div className="event-image-entry" key={`${card.set}:${card.number}:${index}`}>
+              {Array.from({ length: card.count }, (_, copy) => <CardImageTile
+                key={`${index}:${copy}:${images?.[index]?.image ?? ''}`} name={card.name} print={`${card.set} ${card.number}`}
+                src={images?.[index]?.image ?? null} copy={copy + 1} total={card.count} selected={selectedIndex === index}
+                onClick={() => setSelection(selectedIndex === index ? null : { key: imageKey, index })} />)}
+              {selectedIndex === index && <EventImageDetail key={`${index}:${images?.[index]?.image ?? ''}`}
+                card={card} image={images?.[index]?.image ?? null} />}
+            </div>)}
+          </div> : <p className="content-note">Nessuna carta</p>}
       </section>
     })}</div>
   </>

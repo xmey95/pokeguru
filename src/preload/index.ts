@@ -7,6 +7,7 @@ const api: ProjectsApi = {
   searchCatalog: (query, setId, offset) => ipcRenderer.invoke('catalog:search', query, setId, offset),
   getCatalogGroup: (key) => ipcRenderer.invoke('catalog:group', key),
   getCardPreview: (lookup) => ipcRenderer.invoke('catalog:card-preview', lookup),
+  getCardPreviews: (lookups) => ipcRenderer.invoke('catalog:card-previews', lookups),
   syncCatalog: () => ipcRenderer.invoke('catalog:sync'),
   syncStandardCatalog: (mode: 'new' | 'full') => ipcRenderer.invoke('catalog:sync-standard', mode),
   getCatalogSyncStatus: () => ipcRenderer.invoke('catalog:sync-status'),

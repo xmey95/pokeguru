@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useViewState } from './Navigation'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { CatalogView } from '../../shared/catalog'
-import { buildDeckCards, type DeckReconciliation } from '../../shared/reconciliation'
+import { buildDeckCards, type DeckCardEntry, type DeckReconciliation } from '../../shared/reconciliation'
 import { evaluateWesternRotation } from '../../shared/standard-rotation'
 import { evaluateDeckConstruction } from '../../shared/deck-construction'
 import { evaluateSetAdmission } from '../../shared/standard-admission'
@@ -14,7 +14,9 @@ import { BUNDLED_WESTERN_RULE_PACKAGE } from '../../shared/western-rule-package'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { reviewSummary } from './review-summary'
 import { CardThumbnail } from './CardThumbnail'
-import { deckImagePrint, deckThumbnail, groupDeckCards } from './deck-presentation'
+import { CardImageTile } from './CardImageTile'
+import { DeckViewToggle, type DeckView } from './DeckViewToggle'
+import { deckImageCopies, deckImagePrint, deckThumbnail, groupDeckCards } from './deck-presentation'
 import { useCardPreview } from './CardPreview'
 import { ExportButton } from './ExportButton'
 import { CardOverview } from './CardOverview'
@@ -50,6 +52,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
   const [saving, setSaving] = useState(false)
   const [today, setToday] = useState(localCalendarDate)
   const [referenceDate, setReferenceDate] = useViewState<string | null>('deck.referenceDate', null)
+  const [deckView, setDeckView] = useViewState<DeckView>('deck.view', 'list')
 
   useEffect(() => {
     const timer = window.setInterval(() => setToday(localCalendarDate()), 60_000)
@@ -136,6 +139,53 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
     finally { setSaving(false) }
   }
 
+  function cardDetail(card: DeckCardEntry) {
+    return <div className="deck-card-detail">
+      <CardOverview card={card} onOpenCatalog={onOpenCatalog} />
+      {card.identityId && <CardConstraints identityId={card.identityId} name={card.name} />}
+      {card.staleCorrection && <p className="diagnostics">Una correzione precedente non corrisponde più al catalogo locale. Controlla l’identità prima di usarla nell’analisi.</p>}
+      {card.status === 'ambiguous' && <p className="content-note">Le righe restano separate finché non confermi l’identità.</p>}
+      <details className="deck-import-details"><summary>Testo importato e controlli</summary>
+      <div className="deck-source-lines">{card.lines.map((line) => {
+        const result = rotationByLine.get(line.lineNumber)
+        const setResult = admissionByLine.get(line.lineNumber)
+        const promoResult = promoByLine.get(line.lineNumber)
+        const admissionResult = promoResult ?? setResult
+        const rotationIssue = result && result.status !== 'mark-accepted'
+        const admissionIssue = admissionResult && admissionResult.status !== 'admitted'
+        return <div key={line.lineNumber}><span>Riga {line.lineNumber}: {line.raw}</span>
+          {(rotationIssue || admissionIssue) && <details><summary>Controlli Standard da verificare</summary><ul>
+            {rotationIssue && <li>Rotazione: {result.message}</li>}
+            {admissionIssue && <li>Ammissione: {admissionResult.message}</li>}
+          </ul></details>}</div>
+      })}</div></details>
+      {card.prints.length > 0 && <details className="deck-print-details"><summary>Stampe e varianti ({card.prints.length})</summary>
+        <div className="catalog-print-grid">{card.prints.map((print) => <article className="catalog-print" key={print.id}>
+          {print.thumbnail ? <img src={print.thumbnail} alt={`Carta ${print.name}, ${print.setName} ${print.localId}`} /> : <div className="catalog-no-image">Miniatura assente</div>}
+          <div><strong>{print.setName}</strong><span>{print.setId} · N. {print.localId}</span>
+            {print.rarity && <span>Rarità: {print.rarity}</span>}{print.category === 'Pokemon' && print.stage && <span>Fase: {print.stage}</span>}<span>Marchio: {print.regulationMark ?? 'non indicato'}</span>{print.variants && <span>Varianti: {variantText(print.variants)}</span>}
+            {card.importedPrintIds.includes(print.id) && <span className="imported-print">Indicata nel testo importato</span>}
+          </div>
+        </article>)}</div></details>}
+      {(card.status === 'ambiguous' || card.staleCorrection || card.candidateIdentities.length > 1 ||
+        card.lines.some((line) => reconciliation?.mappings.some((item) => item.lineNumber === line.lineNumber))) &&
+        <details className="deck-identity-options">
+          <summary>Correggi l’identità della carta di gioco</summary>
+          <p className="content-note">Scegli la carta di gioco corrispondente.</p>
+          {card.lines.map((line) => <div className="deck-identity-line" key={line.lineNumber}>
+            <strong>Riga {line.lineNumber}: {line.raw}</strong>
+            {card.candidateIdentities.map((candidate) => {
+              const print = catalog?.prints.find((item) => item.id === candidate.printId)
+              return <div key={candidate.identityId}><span>{candidate.name} · {print?.setName} {print?.localId} · {candidate.basis === 'trainer-text' ? 'testo Trainer coincidente' : 'equivalenza non verificata'}</span>
+                <button type="button" className="secondary-button" disabled={saving} onClick={() => void confirmIdentity(line.lineNumber, candidate.printId)}>Conferma identità</button></div>
+            })}
+            {reconciliation?.mappings.some((item) => item.lineNumber === line.lineNumber) &&
+              <button type="button" className="text-button" disabled={saving} onClick={() => void clearIdentity(line.lineNumber)}>Rimuovi correzione</button>}
+          </div>)}
+        </details>}
+    </div>
+  }
+
   return <div className="deck-list-body" data-nav-loading={loading}>
     {error && <div className="error-banner" role="alert">{error}</div>}
     <section className="standard-deck-panel" aria-label="Esito Standard occidentale">
@@ -172,7 +222,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
       <ul>{baseline.diagnostics.map((item, index) => <li key={`${item.lineNumber}-${item.code}-${index}`}>{item.lineNumber ? `Riga ${item.lineNumber}: ` : ''}{item.message}</li>)}</ul>
     </details>}
     {!loading && !catalog?.syncedAt && <p className="diagnostics">Catalogo non sincronizzato · <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button></p>}
-    <p className="content-note">Apri una carta per leggere il testo di gioco e impostare vincoli.</p>
+    <div className="deck-view-heading"><p className="content-note">Apri una carta per leggere il testo di gioco e impostare vincoli.</p>
+      <DeckViewToggle value={deckView} onChange={setDeckView} label="Vista lista principale" /></div>
     {loading ? <LoadingSkeleton label="Caricamento carte…" /> : <div className="deck-card-groups" aria-label="Carte della lista principale">
       <nav className="deck-composition" aria-label="Composizione del mazzo">{groups.filter((group) => group.id !== 'unknown' || group.total > 0).map((group) =>
         group.total > 0 ? <a key={group.id} href={`#deck-group-${group.id}`} onClick={(event) => { event.preventDefault(); jumpToGroup(group.id) }}><span>{group.name}</span><strong>{group.total}</strong></a>
@@ -181,7 +232,16 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
       {usesImportHeadings && <p className="deck-group-note">Le categorie non riconosciute dal catalogo seguono le sezioni del testo importato.</p>}
       {groups.filter((group) => group.cards.length > 0).map((group) => <section className="deck-card-group" key={group.id} aria-labelledby={`deck-group-${group.id}`}>
         <h3 id={`deck-group-${group.id}`} tabIndex={-1}>{group.name}<span>{group.total} {group.total === 1 ? 'carta' : 'carte'}</span></h3>
-        <div className="deck-card-list">{group.cards.map((card) => {
+        {deckView === 'images' && <div className="deck-image-grid" aria-label={`Immagini ${group.name}`}>
+          {group.cards.map((card) => <div className="deck-image-entry" key={card.key}>
+            {deckImageCopies(card).map((copy, index) => <CardImageTile key={index} name={card.name} print={copy.print}
+              src={copy.src} copy={index + 1} total={card.quantity} selected={expanded === card.key}
+              onClick={() => setExpanded(expanded === card.key ? null : card.key)} />)}
+            {expanded === card.key && <div className="deck-image-detail" role="region" aria-label={`Dettaglio ${card.name}`}>
+              {cardDetail(card)}</div>}
+          </div>)}
+        </div>}
+        {deckView === 'list' && <div className="deck-card-list">{group.cards.map((card) => {
         const open = expanded === card.key
         const thumbnail = deckThumbnail(card)
         return <article className="deck-card" key={card.key} data-testid={card.identityId ? `deck-card-${card.identityId}` : `deck-line-${card.lines[0].lineNumber}`}>
@@ -192,52 +252,9 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
             <span className="deck-card-title"><strong>{card.name}</strong>{cardStatus(card.status, catalog) && <small>{cardStatus(card.status, catalog)}</small>}</span>
             <span className="deck-card-chevron"><Icon name="chevron" /></span>
           </button>
-          {open && <div className="deck-card-detail">
-            <CardOverview card={card} onOpenCatalog={onOpenCatalog} />
-            {card.identityId && <CardConstraints identityId={card.identityId} name={card.name} />}
-            {card.staleCorrection && <p className="diagnostics">Una correzione precedente non corrisponde più al catalogo locale. Controlla l’identità prima di usarla nell’analisi.</p>}
-            {card.status === 'ambiguous' && <p className="content-note">Le righe restano separate finché non confermi l’identità.</p>}
-            <details className="deck-import-details"><summary>Testo importato e controlli</summary>
-            <div className="deck-source-lines">{card.lines.map((line) => {
-              const result = rotationByLine.get(line.lineNumber)
-              const setResult = admissionByLine.get(line.lineNumber)
-              const promoResult = promoByLine.get(line.lineNumber)
-              const admissionResult = promoResult ?? setResult
-              const rotationIssue = result && result.status !== 'mark-accepted'
-              const admissionIssue = admissionResult && admissionResult.status !== 'admitted'
-              return <div key={line.lineNumber}><span>Riga {line.lineNumber}: {line.raw}</span>
-                {(rotationIssue || admissionIssue) && <details><summary>Controlli Standard da verificare</summary><ul>
-                  {rotationIssue && <li>Rotazione: {result.message}</li>}
-                  {admissionIssue && <li>Ammissione: {admissionResult.message}</li>}
-                </ul></details>}</div>
-            })}</div></details>
-            {card.prints.length > 0 && <details className="deck-print-details"><summary>Stampe e varianti ({card.prints.length})</summary>
-              <div className="catalog-print-grid">{card.prints.map((print) => <article className="catalog-print" key={print.id}>
-                {print.thumbnail ? <img src={print.thumbnail} alt={`Carta ${print.name}, ${print.setName} ${print.localId}`} /> : <div className="catalog-no-image">Miniatura assente</div>}
-                <div><strong>{print.setName}</strong><span>{print.setId} · N. {print.localId}</span>
-                  {print.rarity && <span>Rarità: {print.rarity}</span>}{print.category === 'Pokemon' && print.stage && <span>Fase: {print.stage}</span>}<span>Marchio: {print.regulationMark ?? 'non indicato'}</span>{print.variants && <span>Varianti: {variantText(print.variants)}</span>}
-                  {card.importedPrintIds.includes(print.id) && <span className="imported-print">Indicata nel testo importato</span>}
-                </div>
-              </article>)}</div></details>}
-            {(card.status === 'ambiguous' || card.staleCorrection || card.candidateIdentities.length > 1 ||
-              card.lines.some((line) => reconciliation?.mappings.some((item) => item.lineNumber === line.lineNumber))) &&
-              <details className="deck-identity-options">
-                <summary>Correggi l’identità della carta di gioco</summary>
-                 <p className="content-note">Scegli la carta di gioco corrispondente.</p>
-                {card.lines.map((line) => <div className="deck-identity-line" key={line.lineNumber}>
-                  <strong>Riga {line.lineNumber}: {line.raw}</strong>
-                  {card.candidateIdentities.map((candidate) => {
-                    const print = catalog?.prints.find((item) => item.id === candidate.printId)
-                    return <div key={candidate.identityId}><span>{candidate.name} · {print?.setName} {print?.localId} · {candidate.basis === 'trainer-text' ? 'testo Trainer coincidente' : 'equivalenza non verificata'}</span>
-                      <button type="button" className="secondary-button" disabled={saving} onClick={() => void confirmIdentity(line.lineNumber, candidate.printId)}>Conferma identità</button></div>
-                  })}
-                  {reconciliation?.mappings.some((item) => item.lineNumber === line.lineNumber) &&
-                    <button type="button" className="text-button" disabled={saving} onClick={() => void clearIdentity(line.lineNumber)}>Rimuovi correzione</button>}
-                </div>)}
-              </details>}
-          </div>}
+          {open && cardDetail(card)}
         </article>
-      })}</div>
+      })}</div>}
       </section>)}
     </div>}
     <details className="deck-technical"><summary>Rotazione, ammissione e costruzione del mazzo</summary>
