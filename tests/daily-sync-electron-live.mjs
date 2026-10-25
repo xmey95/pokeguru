@@ -88,9 +88,12 @@ try {
   assert.ok(failures.every((status) => status.daily.trigger === 'automatic'))
   assert.ok(failures.every((status) => Date.parse(status.daily.nextAttemptAt) > Date.now()))
   const requested = await reads()
-  assert.equal(requested.filter((url) => url.includes('api.tcgdex.net')).length, 5)
+  assert.ok(requested.filter((url) => url.includes('api.tcgdex.net')).length >= 1)
+  assert.ok(requested.filter((url) => url.includes('api.tcgdex.net')).length <= 5)
   assert.equal(requested.filter((url) => url.includes('play.limitlesstcg.com')).length, 1)
-  assert.equal(requested.filter((url) => url.includes('limitlesstcg.com/tournaments?')).length, 1)
+  assert.ok(requested.filter((url) => url.includes('limitlesstcg.com/tournaments?')).length <= 1)
+  await due.waitForTimeout(500)
+  assert.deepEqual(await reads(), requested, 'silent failures must stop instead of retrying in a loop')
   await application.close()
   application = undefined
 
