@@ -3,18 +3,19 @@ import type { TournamentSyncProgress } from '../../shared/tournament'
 import { useNavigation, useViewState } from './Navigation'
 import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 
-type Progress = Pick<TournamentSyncProgress, 'status' | 'mode' | 'cooldownUntil' | 'lastError'>
+type Progress = Pick<TournamentSyncProgress, 'status' | 'mode' | 'cooldownUntil' | 'lastError' | 'active' | 'stopping'>
 export const eventDateTime = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 
-export function TournamentWorkspace({ source, loading, count, busy, progress, error, startedAt, progressDetail, progressError, onRefresh, management, children }: {
+export function TournamentWorkspace({ source, loading, count, busy, progress, error, startedAt, progressDetail, progressError, onRefresh, onPause, management, children }: {
   source: 'play' | 'main'; loading: boolean; count: number; busy: boolean; progress: Progress | null; error: string | null
   startedAt: number | null; progressDetail?: string; progressError: string | null
-  onRefresh(mode: 'new' | 'full'): Promise<void>; management: ReactNode; children: ReactNode
+  onRefresh(mode: 'new' | 'full'): Promise<void>; onPause(): Promise<void>; management: ReactNode; children: ReactNode
 }) {
   const nav = useNavigation()
   const [open, setOpen] = useViewState(`events.${source}.management`, false)
   const [now, setNow] = useState(Date.now)
   const pending = progress?.status === 'running' || progress?.status === 'rate-limited'
+  const active = Boolean(progress?.active)
   const cooldown = progress?.status === 'rate-limited' && progress.cooldownUntil ? Date.parse(progress.cooldownUntil) : 0
   useEffect(() => {
     if (!cooldown || cooldown <= now) return
@@ -30,10 +31,12 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
     <div className="panel-heading">
       <div><h1>Eventi</h1><p className="content-note">{loading ? 'Archivio locale' : `${count} ${count === 1 ? 'evento disponibile' : 'eventi disponibili'} offline`}</p></div>
       <div className="catalog-actions">
-        <button type="button" className="primary-button" disabled={loading || busy || cooldown > now}
+        <button type="button" className="primary-button" disabled={loading || busy || active}
           onClick={() => void onRefresh(pending ? progress?.mode ?? 'new' : 'new')}>
-          {busy && <Spinner />}{busy ? 'Acquisizione…' : pending ? source === 'play' ? 'Continua blocco' : 'Continua blocco Regional'
+          {(busy || active) && <Spinner />}{active && cooldown > now ? 'In attesa della fonte…' : busy || active ? 'Acquisizione automatica…' : pending ? 'Riprendi scansione'
             : source === 'play' ? 'Aggiorna nuovi tornei' : 'Aggiorna nuovi Regional'}</button>
+        {active && <button type="button" className="secondary-button" disabled={busy || progress?.stopping}
+          onClick={() => void onPause()}>{progress?.stopping ? 'Pausa in corso…' : 'Pausa'}</button>}
         <button type="button" id={`${id}-trigger`} className="secondary-button event-management-trigger"
           aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>Gestisci eventi</button>
       </div>
@@ -48,13 +51,15 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
       <span className="content-note">{source === 'play' ? 'Liste e abbinamenti · Limitless Play' : 'Piazzamenti e liste · Limitless'}</span>
     </div>
     {(busy || (progress && progress.status !== 'idle' && (!error || progress.status !== 'complete'))) && <ActivityStatus
-      title={busy ? 'Acquisizione del blocco in corso…' : progress?.status === 'complete' ? 'Scansione completata.'
-        : cooldown > now ? 'Limite della fonte raggiunto' : 'Scansione da continuare'}
-      state={busy ? 'working' : progress?.status === 'complete' ? 'complete' : 'paused'}
+      title={progress?.stopping ? 'Pausa al termine della richiesta in corso…' : active && cooldown > now ? 'Limite della fonte raggiunto'
+        : busy || active ? 'Acquisizione automatica in corso…' : progress?.status === 'complete' ? 'Scansione completata.'
+          : 'Scansione in pausa'}
+      state={busy || active ? 'working' : progress?.status === 'complete' ? 'complete' : 'paused'}
       startedAt={startedAt}
-      detail={busy ? 'Gli eventi già archiviati restano consultabili.' : cooldown > now
-        ? `Ripresa disponibile dopo ${eventDateTime(progress!.cooldownUntil!)}.`
-        : progress?.status === 'complete' ? 'Gli eventi acquisiti sono disponibili offline.' : 'Sono disponibili altri dati. Continua dal prossimo blocco.'}>
+      detail={active && cooldown > now ? `Ripresa automatica dopo ${eventDateTime(progress!.cooldownUntil!)}.`
+        : busy || active ? 'I blocchi avanzano automaticamente. Gli eventi già archiviati restano consultabili.'
+          : progress?.status === 'complete' ? 'Gli eventi acquisiti sono disponibili offline.'
+            : 'Premi Riprendi scansione per proseguire dal punto salvato.'}>
       {progressDetail && <p className="activity-detail">{progressDetail}</p>}
     </ActivityStatus>}
     {progressError && <p className="warning-banner" role="status">{progressError}</p>}
@@ -64,8 +69,8 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
       onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() } }}>
       <div className="panel-heading"><h2 id={`${id}-heading`}>Gestione {source === 'play' ? 'Play online' : 'Regional'}</h2>
         <button type="button" className="text-button" onClick={close}>Chiudi gestione</button></div>
-      <button type="button" className="secondary-button" onClick={() => void onRefresh('full')} disabled={loading || busy || pending}>Scansione completa</button>
-      <p className="content-note">{pending ? 'Completa la scansione in corso prima di avviarne un’altra.' : 'Ricontrolla anche gli eventi già acquisiti, in blocchi riprendibili.'}</p>
+      <button type="button" className="secondary-button" onClick={() => void onRefresh('full')} disabled={loading || busy || active || pending}>Scansione completa</button>
+      <p className="content-note">{pending ? 'Completa la scansione in corso prima di avviarne un’altra.' : 'Ricontrolla anche gli eventi già acquisiti con avanzamento automatico.'}</p>
       {management}
     </section>
     {loading ? <LoadingSkeleton label="Caricamento archivio…" /> : children}

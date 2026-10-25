@@ -24,14 +24,18 @@ export async function eventWorkspaceScenarios(page, application, workspace) {
     globalThis.eventUiProgress = { play: { ...idle }, main: { ...idle } }
     globalThis.eventUiNext = null
     globalThis.eventUiError = false
-    for (const [source, status, sync] of [['play', 'tournament:sync-status', 'tournament:sync'], ['main', 'tournament:main-sync-status', 'tournament:main-sync']]) {
-      for (const route of [status, sync]) globalThis.eventUiOriginals.set(route, ipcMain._invokeHandlers.get(route))
+    for (const [source, status, sync, pause] of [['play', 'tournament:sync-status', 'tournament:sync', 'tournament:sync-pause'], ['main', 'tournament:main-sync-status', 'tournament:main-sync', 'tournament:main-sync-pause']]) {
+      for (const route of [status, sync, pause]) globalThis.eventUiOriginals.set(route, ipcMain._invokeHandlers.get(route))
       ipcMain.removeHandler(status); ipcMain.handle(status, () => ({ ok: true, value: globalThis.eventUiProgress[source] }))
       ipcMain.removeHandler(sync); ipcMain.handle(sync, async (_event, mode) => {
         globalThis.eventUiRequests.push([source, mode])
         if (globalThis.eventUiError) return { ok: false, error: 'Fixture: aggiornamento non riuscito.' }
         globalThis.eventUiProgress[source] = { ...globalThis.eventUiProgress[source], mode, ...globalThis.eventUiNext }
         if (globalThis.eventUiHold) await new Promise(resolve => { globalThis.eventUiRelease = resolve })
+        return { ok: true, value: globalThis.eventUiProgress[source] }
+      })
+      ipcMain.removeHandler(pause); ipcMain.handle(pause, () => {
+        globalThis.eventUiProgress[source] = { ...globalThis.eventUiProgress[source], active: false, stopping: false }
         return { ok: true, value: globalThis.eventUiProgress[source] }
       })
     }
@@ -99,10 +103,10 @@ export async function eventWorkspaceScenarios(page, application, workspace) {
     assert.equal(await search.inputValue(), '')
     assert.ok(await search.evaluate(el => el === document.activeElement))
     const update = page.getByRole('button', { name: source === 'play' ? 'Aggiorna nuovi tornei' : 'Aggiorna nuovi Regional', exact: true })
-    const resume = page.getByRole('button', { name: source === 'play' ? 'Continua blocco' : 'Continua blocco Regional', exact: true })
-    await application.evaluate(() => { globalThis.eventUiHold = true; globalThis.eventUiNext = { status: 'running', inspected: 3, saved: 2, inspectedEvents: 3, fetchedLists: 2 } })
+    const resume = page.getByRole('button', { name: 'Riprendi scansione', exact: true })
+    await application.evaluate(() => { globalThis.eventUiHold = true; globalThis.eventUiNext = { status: 'running', active: true, inspected: 3, saved: 2, inspectedEvents: 3, fetchedLists: 2 } })
     await update.click()
-    await page.getByRole('status').filter({ hasText: 'Acquisizione del blocco in corso' }).waitFor()
+    await page.getByRole('status').filter({ hasText: 'Acquisizione automatica in corso' }).waitFor()
     await page.locator('.activity-status').filter({ hasText: source === 'play' ? '2 eventi archiviati' : '2 liste scaricate' }).waitFor()
     assert.equal(await page.getByRole('progressbar').count(), 0, 'Totale eventi ignoto: nessuna percentuale')
     await auditLoading(page, workspace, 'eventi-' + source)
@@ -110,25 +114,26 @@ export async function eventWorkspaceScenarios(page, application, workspace) {
     await ready()
     await page.getByRole('button', { name: 'Indietro', exact: true }).click()
     await ready()
-    await page.getByRole('status').filter({ hasText: 'Acquisizione del blocco in corso' }).waitFor()
-    assert.ok(await page.getByRole('button', { name: 'Acquisizione…', exact: true }).isDisabled())
+    await page.getByRole('status').filter({ hasText: 'Acquisizione automatica in corso' }).waitFor()
+    assert.ok(await page.getByRole('button', { name: 'Acquisizione automatica…', exact: true }).isDisabled())
     assert.ok(await page.locator('.event-deck').isVisible())
     await application.evaluate(() => { globalThis.eventUiHold = false; globalThis.eventUiRelease() })
-    await page.getByRole('status').filter({ hasText: 'Scansione da continuare' }).waitFor()
+    await page.getByRole('button', { name: 'Pausa', exact: true }).click()
+    await page.getByRole('status').filter({ hasText: 'Scansione in pausa' }).waitFor()
     await trigger.click()
     assert.ok(await page.getByRole('button', { name: 'Scansione completa', exact: true }).isDisabled())
     await page.getByRole('button', { name: 'Chiudi gestione' }).click()
-    await application.evaluate(() => { globalThis.eventUiNext = { status: 'complete' } })
+    await application.evaluate(() => { globalThis.eventUiNext = { status: 'complete', active: false } })
     await resume.click(); await update.waitFor()
     await trigger.click()
-    await application.evaluate(() => { globalThis.eventUiNext = { status: 'rate-limited', cooldownUntil: new Date(Date.now() + 2500).toISOString(), lastError: 'Fixture: limite temporaneo.' } })
+    await application.evaluate(() => { globalThis.eventUiNext = { status: 'rate-limited', active: true, cooldownUntil: new Date(Date.now() + 2500).toISOString(), lastError: 'Fixture: limite temporaneo.' } })
     await page.getByRole('button', { name: 'Scansione completa', exact: true }).click()
     await page.getByRole('button', { name: 'Chiudi gestione' }).click()
-    await page.locator('.activity-status').filter({ hasText: 'Ripresa disponibile dopo' }).waitFor()
-    assert.ok(await resume.isDisabled())
+    await page.locator('.activity-status').filter({ hasText: 'Ripresa automatica dopo' }).waitFor()
+    assert.ok(await page.getByRole('button', { name: 'In attesa della fonte…', exact: true }).isDisabled())
     assert.ok(await page.getByRole('status').filter({ hasText: 'Fixture: limite temporaneo.' }).isVisible())
-    await page.waitForFunction(() => !document.querySelector('.tournament-section .primary-button')?.disabled)
-    await application.evaluate(() => { globalThis.eventUiNext = { status: 'complete', cooldownUntil: null, lastError: null } })
+    await page.getByRole('button', { name: 'Pausa', exact: true }).click()
+    await application.evaluate(() => { globalThis.eventUiNext = { status: 'complete', active: false, cooldownUntil: null, lastError: null } })
     await resume.click(); await update.waitFor()
     await application.evaluate(() => { globalThis.eventUiError = true })
     await update.click()

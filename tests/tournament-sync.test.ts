@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { TournamentStore } from '../src/main/tournament-store'
 import { syncTournamentBlock } from '../src/main/tournament-sync'
+import { TournamentSyncJob } from '../src/main/tournament-sync-job'
 
 const now = new Date('2026-10-24T23:00:00.000Z')
 const ids = [1, 2, 3, 4].map((number) => `6ad92350115c12b73a5a94${String(number).padStart(2, '0')}`)
@@ -36,6 +37,21 @@ function source(idsToReturn = ids): { fetcher: typeof fetch; calls: string[] } {
 }
 
 describe('global Limitless Play archive', () => {
+  it('archives all queued events from one start across persisted blocks', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-sync-auto-'))
+    try {
+      const store = new TournamentStore(join(folder, 'data.sqlite'))
+      const network = source()
+      const job = new TournamentSyncJob(() => store.progress(),
+        (mode, shouldStop) => syncTournamentBlock(store, mode, network.fetcher, now, shouldStop), 0)
+      job.start('new')
+      await vi.waitFor(() => expect(job.status()).toMatchObject({ status: 'complete', saved: 4, active: false }),
+        { timeout: 3_000 })
+      expect(store.summaries()).toHaveLength(4)
+      store.close()
+    } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
+
   it('saves three events per block and resumes the fourth after reopening', async () => {
     const folder = mkdtempSync(join(tmpdir(), 'pokeguru-sync-'))
     const path = join(folder, 'data.sqlite')
@@ -86,6 +102,34 @@ describe('global Limitless Play archive', () => {
       const resumed = await syncTournamentBlock(store, 'new', fetcher as typeof fetch,
         new Date(Date.parse(paused.cooldownUntil!) + 1000))
       expect(resumed).toMatchObject({ status: 'complete', inspected: 1, saved: 1 })
+      store.close()
+    } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('keeps the event queued when paused during its first API request', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-sync-pause-'))
+    try {
+      const store = new TournamentStore(join(folder, 'data.sqlite'))
+      const network = source([ids[0]])
+      let announce = () => {}
+      let release = () => {}
+      const started = new Promise<void>((resolve) => { announce = resolve })
+      const gate = new Promise<void>((resolve) => { release = resolve })
+      const calls: string[] = []
+      const fetcher = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        const url = String(input)
+        calls.push(url)
+        if (url.endsWith('/details')) { announce(); await gate }
+        return network.fetcher(input, init)
+      }
+      let stopped = false
+      const block = syncTournamentBlock(store, 'new', fetcher as typeof fetch, now, () => stopped)
+      await started
+      stopped = true
+      release()
+      expect(await block).toMatchObject({ status: 'running', inspected: 0, saved: 0 })
+      expect(store.progress().pending).toHaveLength(1)
+      expect(calls.filter((url) => url.includes(`/tournaments/${ids[0]}/`))).toHaveLength(1)
       store.close()
     } finally { rmSync(folder, { recursive: true, force: true }) }
   })

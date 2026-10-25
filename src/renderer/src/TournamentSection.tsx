@@ -22,7 +22,7 @@ export function TournamentSection() {
   const [busy, setBusy] = useBusyState('events.play.sync')
   const startedAt = useBusyStartedAt('events.play.sync')
   const [error, setError] = useDraftState<string | null>('events.play.error', null)
-  const progressError = useProgressPoll(busy, window.projectsApi.getTournamentSync, setProgress)
+  const progressError = useProgressPoll(busy || Boolean(progress?.active), window.projectsApi.getTournamentSync, setProgress)
   const [query, setQuery] = useViewState('events.play.query', '')
   const [selectedId, setSelectedId] = useViewState<string | null>('events.play.player', null)
 
@@ -46,7 +46,7 @@ export function TournamentSection() {
         }
       }).catch(() => { if (active) setError('Archivio tornei non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [busy])
+  }, [busy, progress?.saved, progress?.status])
 
   async function selectEvent(eventId: string): Promise<void> {
     setError(null)
@@ -78,6 +78,13 @@ export function TournamentSection() {
     } finally { setBusy(false) }
   }
 
+  async function pause(): Promise<void> {
+    const result = await window.projectsApi.pauseTournamentSync()
+    if (!nav.isCurrent()) return
+    if (result.ok) setProgress(result.value)
+    else setError(result.error)
+  }
+
   async function openSource(): Promise<void> {
     if (!snapshot) return
     const result = await window.projectsApi.openTournament(snapshot.publicUrl)
@@ -95,9 +102,9 @@ export function TournamentSection() {
   if (sourceTab === 'main') return <MainTournamentSection />
   return <TournamentWorkspace source="play" count={events.length} loading={loading} busy={busy} progress={progress} error={error}
     startedAt={startedAt} progressError={progressError} progressDetail={progress ? `${progress.saved} eventi archiviati · ${progress.inspected} controllati` : undefined}
-    onRefresh={refresh} management={<>
+    onRefresh={refresh} onPause={pause} management={<>
       {progress && progress.status !== 'idle' && <p className="content-note">{progress.inspected} eventi controllati · {progress.saved} archiviati · {progress.skipped} fuori perimetro · prossima pagina {progress.page}.</p>}
-      <p className="content-note">Ogni blocco acquisisce fino a tre eventi pubblici Standard senza regole speciali. L’aggiornamento cerca nuovi tornei dall’ultima scansione; al primo avvio, negli ultimi 90 giorni. La scansione completa percorre anche le pagine precedenti.</p>
+      <p className="content-note">La scansione avanza da sola in blocchi di tre eventi, con intervallo proporzionale alle richieste effettuate per rispettare la quota osservata della fonte. Cerca nuovi tornei dall’ultima scansione; al primo avvio, negli ultimi 90 giorni. La scansione completa percorre anche le pagine precedenti.</p>
     </>}>
     {events.length > 0 && <div className="catalog-filters event-filters"><label>Evento archiviato
         <select value={selectedEventId ?? ''} onChange={(event) => nav.visit({ 'events.play.event': event.target.value, 'events.play.player': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Play'}`)}>

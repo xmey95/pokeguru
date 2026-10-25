@@ -36,7 +36,7 @@ function selectedLists(participants: MainTournamentParticipant[]): string[] {
 
 /** Stores result rows first, then retrieves a bounded set of representative decklists over resumable blocks. */
 export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new' | 'full',
-  fetcher: typeof fetch = fetch, now = new Date()): Promise<MainTournamentSyncProgress> {
+  fetcher: typeof fetch = fetch, now = new Date(), shouldStop: () => boolean = () => false): Promise<MainTournamentSyncProgress> {
   const rotation = westernRotationRule(now.toISOString().slice(0, 10))
   if (!rotation) throw new Error('Nessuna rotazione Standard occidentale inclusa per la data corrente.')
   let progress = store.mainProgress()
@@ -57,6 +57,7 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
   }
   let requests = 0
   while (requests < REQUESTS_PER_BLOCK) {
+    if (shouldStop()) return progress
     try {
       if (progress.pendingLists.length) {
         const pending = progress.pendingLists[0]
