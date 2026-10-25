@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { ProjectStore } from './project-store'
 import type { DeckBaseline, ImportDeckInput } from '../shared/deck-import'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckThreadMessageCursor, DeckThreadMessagePage, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AdoptDeckCandidateInput, AnnotateDeckVersionInput, ContinueDeckThreadInput, CreateDeckThreadInput, DeckContextRef, DeckThread, DeckThreadMessageCursor, DeckThreadMessagePage, DeckThreadSummary, DeckVersion, RestoreDeckVersionInput, SaveDeckCandidateInput } from '../shared/deck-threads'
 import { reviewCandidate } from '../shared/candidate-review'
 import { auditStandardRuleSources } from './standard-rule-audit'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
@@ -322,10 +322,12 @@ function matchupJobBase(jobId: string, projectId: string, deckHash: string,
   sample: { url: string | null; cards: string[];
     mechanics?: { name: string; text: string; sourceUrl: string }[] },
   config: AiRunConfig, evidence: MatchupTournamentEvidence,
-  aiQueries?: AiEvidenceQueryTrace):
+  aiQueries?: AiEvidenceQueryTrace, deckVersion?: DeckContextRef | null):
   Omit<MatchupReport, 'strengths' | 'weaknesses' | 'ourKeyCards' | 'theirKeyCards' |
     'strategy' | 'limitations'> {
-  return { jobId, projectId, deckHash, metaId: snapshot.id, opponentId: opponent.id,
+  return { jobId, projectId, deckHash,
+    deckVersionId: deckVersion?.versionId ?? null, deckResolutionId: deckVersion?.resolutionId ?? null,
+    metaId: snapshot.id, opponentId: opponent.id,
     generatedAt: new Date().toISOString(), sampleDeckUrl: sample.url,
     sampleDeckCards: sample.cards, sampleDeckMechanics: sample.mechanics ?? [], ai: config,
     metaSourceUrl: snapshot.sourceUrl, metaPeriod: snapshot.period,
@@ -859,6 +861,16 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.listDeckVersions(projectId as string))
   })
 
+  ipcMain.handle('deck:annotate-version', (event, input: unknown): OperationResult<DeckVersion> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.annotateDeckVersion(input as AnnotateDeckVersionInput))
+  })
+
+  ipcMain.handle('deck:restore-version', (event, input: unknown): OperationResult<DeckBaseline> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.restoreDeckVersion(input as RestoreDeckVersionInput))
+  })
+
   ipcMain.handle('deck:list-threads', (event, projectId: unknown): OperationResult<DeckThread[]> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.listDeckThreads(projectId as string))
@@ -933,6 +945,14 @@ function registerProjectHandlers(): void {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => {
       const saved = projectStore!.createDeckThread(input as CreateDeckThreadInput)
+      return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
+    })
+  })
+
+  ipcMain.handle('deck:continue-thread', (event, input: unknown): OperationResult<DeckThread> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => {
+      const saved = projectStore!.continueDeckThread(input as ContinueDeckThreadInput)
       return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
     })
   })
@@ -1279,6 +1299,7 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Importa una lista e aggiorna il metagame prima di generare l’analisi.' }
     }
     const hash = projectStore.getCurrentDeckHash(projectId)!
+    const deckVersion = projectStore.getCurrentDeckContext(projectId)
     let job: AiJob
     try { job = aiJobStore.start('matchup-generate', projectId, `matchup:${projectId}`) }
     catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
@@ -1296,14 +1317,15 @@ function registerProjectHandlers(): void {
       const aiQueries = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
         deckContext, sample, evidence, config, controller.signal)
       const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config,
-        evidence, aiQueries)
+        evidence, aiQueries, deckVersion)
       const generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
         sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal, aiQueries,
           onPrompt: (audit) => aiJobStore!.prepare(job.id,
             { base: { ...base, promptAudit: audit } }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
-      const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt }
+      const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
+        deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
       aiJobStore.ready(job.id, { report })
       projectStore.saveMatchupReport(report)
       aiJobStore.transition(job.id, 'applied')
@@ -1343,7 +1365,9 @@ function registerProjectHandlers(): void {
       const snapshot = projectStore.getLatestMetaSnapshot()
       const opponent = snapshot?.decks.find((deck) => deck.id === discussion.opponentId)
       if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot ||
-        snapshot.id !== discussion.metaId || projectStore.getCurrentDeckHash(discussion.projectId) !== discussion.deckHash || !opponent)
+        snapshot.id !== discussion.metaId || projectStore.getCurrentDeckHash(discussion.projectId) !== discussion.deckHash ||
+        (discussion.deckVersionId && (discussion.deckVersionId !== projectStore.getCurrentDeckContext(discussion.projectId)?.versionId ||
+          discussion.deckResolutionId !== projectStore.getCurrentDeckContext(discussion.projectId)?.resolutionId)) || !opponent)
         throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
       const config = await runConfig(override)
       const context = await prepareMatchupHistory(pending, config, controller.signal)
@@ -1360,7 +1384,9 @@ function registerProjectHandlers(): void {
       const aiQueries = await matchupAiQueries(target.feedback, deckContext,
         sample, evidence, config, controller.signal, matchupHistoryContext(context))
       const base = matchupJobBase(job.id, discussion.projectId, discussion.deckHash,
-        snapshot, opponent, sample, config, evidence, aiQueries)
+        snapshot, opponent, sample, config, evidence, aiQueries,
+        discussion.deckVersionId ? { versionId: discussion.deckVersionId,
+          resolutionId: discussion.deckResolutionId ?? null } : null)
       const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot,
         opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal, aiQueries,
@@ -1368,7 +1394,8 @@ function registerProjectHandlers(): void {
             { base: { ...base, promptAudit: audit },
               discussionId: discussion.id, turnId: target.id }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
-      const report = { ...revised.report, jobId: job.id, generatedAt: base.generatedAt }
+      const report = { ...revised.report, jobId: job.id, generatedAt: base.generatedAt,
+        deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
       aiJobStore.ready(job.id, { report, changeSummary: revised.changeSummary })
       const saved = projectStore.completeMatchupFeedback(discussion.id, target.id,
         report, revised.changeSummary)
@@ -1413,11 +1440,17 @@ function registerProjectHandlers(): void {
       const snapshot = projectStore.getLatestMetaSnapshot()
       const opponent = snapshot?.decks.find((deck) => deck.id === parent.opponentId)
       const hash = projectStore.getCurrentDeckHash(parent.projectId)
+      const deckVersion = projectStore.getCurrentDeckContext(parent.projectId)
       if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot || snapshot.id !== metaId || !opponent || !hash)
         throw new Error('Importa una lista e aggiorna il metagame prima di continuare.')
-      if (parent.metaId === metaId && parent.deckHash === hash) throw new Error('Questa discussione usa già la base corrente.')
+      if (parent.metaId === metaId && parent.deckHash === hash &&
+        parent.deckVersionId === deckVersion?.versionId &&
+        parent.deckResolutionId === deckVersion?.resolutionId)
+        throw new Error('Questa discussione usa già la base corrente.')
       if (projectStore.listMatchupDiscussions(parent.projectId, parent.opponentId)
-        .some((item) => item.metaId === metaId && item.deckHash === hash))
+        .some((item) => item.metaId === metaId && item.deckHash === hash &&
+          item.deckVersionId === deckVersion?.versionId &&
+          item.deckResolutionId === deckVersion?.resolutionId))
         throw new Error('Esiste già una discussione per la base corrente.')
       const config = await runConfig(override)
       const context = await prepareMatchupHistory(parent, config, controller.signal)
@@ -1431,14 +1464,15 @@ function registerProjectHandlers(): void {
         deckContext, sample, evidence, config, controller.signal,
         matchupHistoryContext(context))
       const base = matchupJobBase(job.id, parent.projectId, hash,
-        snapshot, opponent, sample, config, evidence, aiQueries)
+        snapshot, opponent, sample, config, evidence, aiQueries, deckVersion)
       const generated = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
         config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal, aiQueries,
           onPrompt: (audit) => aiJobStore!.prepare(job.id,
             { base: { ...base, promptAudit: audit }, parentId: parent.id }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
-      const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt }
+      const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
+        deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
       aiJobStore.ready(job.id, { report })
       const saved = projectStore.saveContinuedMatchupReport(report, parent.id)
       aiJobStore.transition(job.id, 'applied')

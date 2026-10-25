@@ -6,7 +6,7 @@ import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
 import type { ClearLineMappingInput, DeckReconciliation, SaveLineMappingInput } from './reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from './constraints'
 import type { DeckExportRequest } from './deck-export'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckThreadMessageCursor, DeckThreadMessagePage, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
+import type { AdoptDeckCandidateInput, AnnotateDeckVersionInput, ContinueDeckThreadInput, CreateDeckThreadInput, DeckThread, DeckThreadMessageCursor, DeckThreadMessagePage, DeckThreadSummary, DeckVersion, RestoreDeckVersionInput, SaveDeckCandidateInput } from './deck-threads'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from './tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from './main-tournament'
 import type { StandardRuleAudit } from './standard-rule-audit'
@@ -65,6 +65,8 @@ export interface ProjectsApi {
   getBaseline(projectId: string): Promise<OperationResult<DeckBaseline | null>>
   importDeck(input: ImportDeckInput): Promise<OperationResult<DeckBaseline>>
   listDeckVersions(projectId: string): Promise<OperationResult<DeckVersion[]>>
+  annotateDeckVersion(input: AnnotateDeckVersionInput): Promise<OperationResult<DeckVersion>>
+  restoreDeckVersion(input: RestoreDeckVersionInput): Promise<OperationResult<DeckBaseline>>
   listDeckThreads(projectId: string): Promise<OperationResult<DeckThread[]>>
   listDeckThreadSummaries(projectId: string): Promise<OperationResult<DeckThreadSummary[]>>
   getDeckThread(projectId: string, threadId: string): Promise<OperationResult<DeckThread | null>>
@@ -76,6 +78,7 @@ export interface ProjectsApi {
   cancelAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
   recoverAiJobs(): Promise<OperationResult<boolean>>
   createDeckThread(input: CreateDeckThreadInput): Promise<OperationResult<DeckThread>>
+  continueDeckThread(input: ContinueDeckThreadInput): Promise<OperationResult<DeckThread>>
   addDeckThreadMessage(projectId: string, threadId: string, text: string): Promise<OperationResult<DeckThread>>
   previewDeckThreadEvidence(projectId: string, threadId: string, text: string): Promise<OperationResult<ThreadEvidencePacket>>
   askDeckThread(projectId: string, threadId: string, text: string, override?: AiPreferences | null,

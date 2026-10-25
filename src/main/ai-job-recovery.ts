@@ -137,6 +137,17 @@ export function recoverMatchupJob(job: AiJob, jobs: AiJobStore, projects: Projec
     jobs.transition(job.id, 'applied')
     return 'applied'
   }
+  if (!result.report.deckVersionId) {
+    const baseline = projects.getBaseline(job.projectId)
+    const context = projects.getCurrentDeckContext(job.projectId)
+    const matchingVersions = baseline ? projects.listDeckVersions(job.projectId)
+      .filter((version) => version.rawText === baseline.rawText) : []
+    if (!context || !baseline || matchingVersions.length !== 1 ||
+      projects.getCurrentDeckHash(job.projectId) !== result.report.deckHash)
+      throw new Error('La base della guida precedente non è determinabile. Riprova sulla lista corrente.')
+    result = { ...result, report: { ...result.report,
+      deckVersionId: context.versionId, deckResolutionId: context.resolutionId } }
+  }
   if (job.kind === 'matchup-generate') projects.saveMatchupReport(result.report)
   else if (job.kind === 'matchup-revise') {
     if (!request.discussionId || !request.turnId || typeof result.changeSummary !== 'string')

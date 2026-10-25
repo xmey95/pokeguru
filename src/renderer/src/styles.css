@@ -509,6 +509,13 @@ details[open] > summary { margin-bottom: 8px; }
 .adoption-dialog h2 { margin-bottom: 16px; }
 .adoption-dialog p { color: var(--ink-secondary); }
 .adoption-dialog input { display: block; width: 100%; margin-top: 8px; }
+.deck-history { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+.deck-history-body { display: grid; gap: 12px; padding-top: 16px; min-width: 0; }
+.deck-history-body select, .deck-history-body input, .deck-history-body textarea { width: 100%; }
+.deck-history-body pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
+.deck-history-diff ul { max-height: 230px; overflow: auto; }
+.deck-history-annotation { display: grid; gap: 8px; }
+.deck-history-annotation textarea { min-height: 80px; }
 .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 
 /* Matchup */

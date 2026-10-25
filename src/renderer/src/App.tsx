@@ -1,11 +1,13 @@
 import { InlineLoading, LoadingSkeleton, Spinner } from './Loading'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { DeckBaseline, DeckImportSource } from '../../shared/deck-import'
+import type { DeckVersion } from '../../shared/deck-threads'
 import type { Project } from '../../shared/projects'
 import { MatchupSection } from './MatchupSection'
 import { AiSettings } from './AiSettings'
 import { CatalogSection } from './CatalogSection'
 import { DeckList } from './DeckList'
+import { DeckHistory } from './DeckHistory'
 import { DeckCompanion } from './DeckCompanion'
 import { ConstraintsSection } from './ConstraintsSection'
 import { DeckConstraintsProvider } from './DeckConstraintsContext'
@@ -44,6 +46,8 @@ export function App() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useBusyState('project.create')
   const [baseline, setBaseline] = useState<DeckBaseline | null>(null)
+  const [deckVersions, setDeckVersions] = useState<DeckVersion[]>([])
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [baselineLoading, setBaselineLoading] = useState(false)
   const [draft, setDraft] = useDraftState(`${importKey}:text`, baseline?.rawText ?? '')
   const [source, setSource] = useDraftState<DeckImportSource>(`${importKey}:source`, baseline?.source ?? 'paste')
@@ -75,6 +79,8 @@ export function App() {
     setError(null)
     setBaselineLoading(true)
     setBaseline(null)
+    setDeckVersions([])
+    setHistoryOpen(false)
     try {
       let project = known
       if (!project) {
@@ -85,10 +91,14 @@ export function App() {
       }
       if (version !== selectionVersion.current) return
       setSelected(project)
-      const result = await window.projectsApi.getBaseline(id)
+      const [result, versions] = await Promise.all([
+        window.projectsApi.getBaseline(id), window.projectsApi.listDeckVersions(id)
+      ])
       if (version !== selectionVersion.current) return
       if (!result.ok) throw new Error(result.error)
+      if (!versions.ok) throw new Error(versions.error)
       setBaseline(result.value)
+      setDeckVersions(versions.value)
     } catch (cause) {
       if (version === selectionVersion.current) {
         setError(cause instanceof Error ? cause.message : 'Impossibile aprire la lista del progetto.')
@@ -241,21 +251,19 @@ export function App() {
     setImporting(true)
     setImportError(null)
     try {
-      const result = await window.projectsApi.importDeck({ projectId, rawText: draft, source, fileName })
+      const result = await window.projectsApi.importDeck({ projectId, rawText: draft, source, fileName,
+        expectedHeadId: baseline?.versionId ?? null })
       if (!result.ok) {
         setImportError(result.error)
         return
       }
-      if (!nav.isCurrent()) {
-        setDraft(result.value.rawText)
-        setSource(result.value.source)
-        setFileName(result.value.fileName)
-        return
-      }
+      if (selectionVersion.current !== importVersion || !nav.isCurrent()) return
+      const versions = await window.projectsApi.listDeckVersions(projectId)
+      if (selectionVersion.current !== importVersion || !nav.isCurrent()) return
       const updated = projectWithBaseline(selected, result.value)
       setProjects((current) => current.map((project) => project.id === projectId ? updated : project))
-      if (selectionVersion.current !== importVersion) return
       setBaseline(result.value)
+      if (versions.ok) setDeckVersions(versions.value)
       setSelected(updated)
       setDraft(result.value.rawText)
       setSource(result.value.source)
@@ -313,7 +321,8 @@ export function App() {
   }
 
   const importProblems = baseline?.diagnostics.filter((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH') ?? []
-  const showDeckCompanion = Boolean(selected && view === 'project' && activeTab !== 'deck')
+  const showDeckCompanion = Boolean(selected && view === 'project' && (activeTab !== 'deck' || historyOpen))
+  const activeSelectionVersion = selectionVersion.current
 
   return (
     <div className={`app-shell ${showDeckCompanion ? 'with-deck' : ''} ${view === 'project' ? `workspace-${activeTab}` : ''}`}>
@@ -403,17 +412,39 @@ export function App() {
                   <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
                   {importProblems.length === 0 && baseline.diagnostics.length > 0 && <details className="project-meta-details"><summary>Note sul testo importato</summary><ul>{baseline.diagnostics.map((item, index) => <li key={index}>{item.message}</li>)}</ul></details>}
                   <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>
+                  <DeckHistory projectId={selected.id} versions={deckVersions} onOpenChange={setHistoryOpen}
+                    onAnnotated={(version) => {
+                      if (selectionVersion.current === activeSelectionVersion) setDeckVersions((items) =>
+                        items.map((item) => item.id === version.id ? version : item))
+                    }}
+                    onRestored={(restored) => {
+                      if (selectionVersion.current !== activeSelectionVersion) return
+                      const restoreSelectionVersion = selectionVersion.current
+                      setBaseline(restored)
+                      setDraft(restored.rawText)
+                      setSource(restored.source)
+                      setFileName(restored.fileName)
+                      const updated = projectWithBaseline(selected, restored)
+                      setSelected(updated)
+                      setProjects((items) => items.map((item) => item.id === selected.id ? updated : item))
+                      void window.projectsApi.listDeckVersions(selected.id).then((result) => {
+                        if (result.ok && selectionVersion.current === restoreSelectionVersion) setDeckVersions(result.value)
+                      })
+                    }} />
                 </div>
               ) : null}
               {!baselineLoading && <ConstraintsSection key={selected.id}
                 selectedIdentityId={constraintTargetId} selectionVersion={constraintSelectionVersion}
                 onTargetConsumed={() => { setConstraintTargetId(null); delete nav.entry.ui['constraint.target'] }}
                 onOpenCatalog={() => setView('catalog')} />}
-              </DeckConstraintsProvider> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainImportedAt={baseline?.importedAt ?? null}
+              </DeckConstraintsProvider> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainContextKey={baseline ? `${baseline.versionId}:${baseline.resolutionId}` : null}
                 onAdopt={(adopted) => {
                   resetImportUi()
                   const updated = projectWithBaseline(selected, adopted)
                   setBaseline(adopted)
+                  void window.projectsApi.listDeckVersions(selected.id).then((result) => {
+                    if (result.ok) setDeckVersions(result.value)
+                  })
                   setDraft(adopted.rawText)
                   setSource(adopted.source)
                   setFileName(adopted.fileName)
@@ -457,7 +488,8 @@ export function App() {
             </section>
           )}
         </main>
-        {selected && showDeckCompanion && <DeckCompanion key={selected.id} baseline={baseline} loading={baselineLoading} />}
+        {selected && showDeckCompanion && <DeckCompanion key={selected.id} baseline={baseline}
+          versionSequence={deckVersions[0]?.sequence ?? null} loading={baselineLoading} />}
       </div>
       {deleteTarget && <div className="adoption-modal-backdrop" onKeyDown={(event) => {
         if (event.key === 'Escape' && !projectActionBusy) { setDeleteTarget(null); setDeleteName(''); document.getElementById('project-switcher-trigger')?.focus() }

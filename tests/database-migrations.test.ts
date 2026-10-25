@@ -254,9 +254,111 @@ it('backs up v7 before daily sync and seeds the last Catalog success', async () 
     expect(daily.due('catalog', new Date('2026-10-25T09:00:00.000Z'))).toBe(false)
     daily.close()
     completeDatabaseMigration(path, preparation)
-    expect(schemaVersion(path)).toBe(8)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
     const reopened = new CatalogStore(path)
     expect(reopened.jobStatus().runId).toBe(runId)
+    reopened.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('backs up v8 and scopes legacy guides to the list active at migration', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-deck-context-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Guida storica', format: 'STANDARD' })
+    const baseline = store.importDeck({ projectId: project.id,
+      rawText: '1 Carta A MEG 1', source: 'paste' })
+    store.saveLineMapping({ projectId: project.id, importedAt: baseline.importedAt,
+      lineNumber: 1, rawLine: baseline.rawText, printId: 'meg-001' },
+    { id: 'meg-001', name: 'Carta A', category: 'Trainer', setId: 'meg',
+      setName: 'Mega', localId: '001', rarity: null, variants: null,
+      identityId: 'identity-a', identityBasis: 'trainer-text',
+      sourceUrl: 'https://api.tcgdex.net/v2/en/cards/meg-001', sourceUpdated: null })
+    const snapshot = { id: 'a'.repeat(64), fetchedAt: '2026-10-25T10:00:00.000Z',
+      sourceUrl: 'https://limitlesstcg.com/decks', period: 'Ultimo mese',
+      circuit: 'WESTERN' as const, format: 'STANDARD' as const, cached: false,
+      decks: [{ id: '284', name: 'Dragapult ex', points: 100, share: 12,
+        url: 'https://limitlesstcg.com/decks/284' }] }
+    store.saveMetaSnapshot(snapshot)
+    store.saveMatchupReport({ projectId: project.id, metaId: snapshot.id, opponentId: '284',
+      deckHash: store.getCurrentDeckHash(project.id)!, generatedAt: '2026-10-25T10:01:00.000Z',
+      sampleDeckUrl: null, strengths: 'A', weaknesses: 'B', ourKeyCards: 'Carta A',
+      theirKeyCards: '', strategy: 'Piano', limitations: 'Campione' })
+    store.close()
+    const old = new DatabaseSync(path)
+    old.exec(`DROP TABLE deck_resolution_heads; DROP TABLE deck_resolution_revisions;
+      DROP TABLE deck_restores; DROP TABLE deck_version_annotations;
+      ALTER TABLE matchup_discussions DROP COLUMN content_hash;
+      ALTER TABLE matchup_discussions DROP COLUMN deck_version_id;
+      ALTER TABLE matchup_discussions DROP COLUMN deck_resolution_id;
+      PRAGMA user_version = 8`)
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 8, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const reopened = new ProjectStore(path)
+    completeDatabaseMigration(path, preparation)
+    const guide = reopened.listMatchupDiscussions(project.id, '284')[0]
+    expect(guide.current).toBe(true)
+    expect(guide.deckVersionId).toBe(reopened.getBaseline(project.id)?.versionId)
+    expect(reopened.listMatchupReports(project.id, snapshot.id)).toHaveLength(1)
+    reopened.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste' })
+    const head = reopened.listDeckVersions(project.id)[0]
+    reopened.restoreDeckVersion({ projectId: project.id,
+      versionId: guide.deckVersionId!, expectedHeadId: head.id })
+    expect(reopened.getMatchupDiscussion(guide.id)?.current).toBe(false)
+    expect(reopened.listMatchupReports(project.id, snapshot.id)).toEqual([])
+    reopened.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('keeps legacy guides historical when v1 and v3 contain the same text', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-ambiguous-guides-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Guide ambigue', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id, rawText: '1 Carta A MEG 1', source: 'paste' })
+    const v1 = store.listDeckVersions(project.id)[0]
+    const snapshot = (id: string) => ({ id: id.repeat(64), fetchedAt: `2026-10-25T1${id === 'a' ? 0 : 1}:00:00.000Z`,
+      sourceUrl: 'https://limitlesstcg.com/decks', period: 'Ultimo mese',
+      circuit: 'WESTERN' as const, format: 'STANDARD' as const, cached: false,
+      decks: [{ id: '284', name: 'Dragapult ex', points: 100, share: 12,
+        url: 'https://limitlesstcg.com/decks/284' }] })
+    const firstMeta = snapshot('a')
+    store.saveMetaSnapshot(firstMeta)
+    const report = (metaId: string, generatedAt: string) => ({ projectId: project.id,
+      metaId, opponentId: '284', deckHash: store.getCurrentDeckHash(project.id)!,
+      generatedAt, sampleDeckUrl: null, strengths: 'A', weaknesses: 'B',
+      ourKeyCards: 'Carta A', theirKeyCards: '', strategy: 'Piano', limitations: 'Campione' })
+    store.saveMatchupReport(report(firstMeta.id, '2026-10-25T10:01:00.000Z'))
+    store.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste' })
+    const v2 = store.listDeckVersions(project.id)[0]
+    store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: v2.id })
+    const secondMeta = snapshot('b')
+    store.saveMetaSnapshot(secondMeta)
+    store.saveMatchupReport(report(secondMeta.id, '2026-10-25T11:01:00.000Z'))
+    store.close()
+
+    const old = new DatabaseSync(path)
+    old.exec(`DROP TABLE deck_resolution_heads; DROP TABLE deck_resolution_revisions;
+      DROP TABLE deck_restores; DROP TABLE deck_version_annotations;
+      ALTER TABLE matchup_discussions DROP COLUMN content_hash;
+      ALTER TABLE matchup_discussions DROP COLUMN deck_version_id;
+      ALTER TABLE matchup_discussions DROP COLUMN deck_resolution_id;
+      PRAGMA user_version = 8`)
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    const reopened = new ProjectStore(path)
+    completeDatabaseMigration(path, preparation)
+    const discussions = reopened.listMatchupDiscussions(project.id, '284')
+    expect(discussions).toHaveLength(2)
+    expect(discussions.every((item) => !item.current && item.deckVersionId === 'legacy-unscoped')).toBe(true)
+    expect(reopened.listMatchupReports(project.id, secondMeta.id)).toEqual([])
     reopened.close()
     verifyDatabase(path)
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }

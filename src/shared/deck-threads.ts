@@ -12,6 +12,37 @@ export interface DeckVersion {
   parsed: ParsedDeck
   createdAt: string
   adoption: { threadId: string; candidateId: string } | null
+  restoredFrom: { id: string; sequence: number } | null
+  label: string
+  note: string
+  resolutionId: string | null
+  resolutionKnown: boolean
+}
+
+export interface DeckContextRef {
+  versionId: string
+  resolutionId: string | null
+}
+
+export interface RestoreDeckVersionInput {
+  projectId: string
+  versionId: string
+  expectedHeadId: string
+  expectedResolutionId?: string | null
+}
+
+export interface AnnotateDeckVersionInput {
+  projectId: string
+  versionId: string
+  label: string
+  note: string
+}
+
+export interface ContinueDeckThreadInput {
+  projectId: string
+  threadId: string
+  candidateId: string
+  title: string
 }
 
 export interface DeckThreadMessage {
@@ -38,6 +69,7 @@ export interface DeckThreadMessagePage {
 
 export interface DeckCandidate {
   id: string
+  parentCandidateId?: string | null
   sequence: number
   rawText: string
   parsed: ParsedDeck
@@ -56,6 +88,11 @@ export interface DeckThread {
   title: string
   baseVersionId: string | null
   baseVersionNumber: number | null
+  baseResolutionId: string | null
+  resolutionChanged: boolean
+  parentThreadId: string | null
+  seedCandidateId: string | null
+  seedCandidateText: string | null
   currentVersionId: string | null
   stale: boolean
   aiSessionRef: string | null

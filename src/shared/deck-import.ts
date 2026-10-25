@@ -28,6 +28,8 @@ export interface ParsedDeck {
 
 export interface DeckBaseline extends ParsedDeck {
   projectId: string
+  versionId?: string | null
+  resolutionId?: string | null
   rawText: string
   source: DeckImportSource
   fileName: string | null
@@ -36,6 +38,7 @@ export interface DeckBaseline extends ParsedDeck {
 
 export interface ImportDeckInput {
   projectId: string
+  expectedHeadId?: string | null
   rawText: string
   source: DeckImportSource
   fileName?: string | null
