@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ipcMain, protocol, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, Menu, protocol, shell } from 'electron'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { dirname, join } from 'node:path'
@@ -1299,6 +1299,7 @@ function registerProjectHandlers(): void {
 }
 
 function createWindow(): void {
+  const developmentUrl = developmentRendererUrl()
   const window = new BrowserWindow({
     title: 'Pokéguru',
     icon: app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(__dirname, '../../resources/icon.png'),
@@ -1311,10 +1312,47 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true
+      sandbox: true,
+      devTools: developmentUrl !== null
     }
   })
   mainWindow = window
+
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || input.alt || input.meta) return
+    const key = input.key.toLowerCase()
+    if (input.control) {
+      const zoom = window.webContents.getZoomLevel()
+      if (input.code === 'Equal' || input.code === 'NumpadAdd') {
+        event.preventDefault()
+        window.webContents.setZoomLevel(Math.min(3, zoom + 1))
+        return
+      }
+      if (input.code === 'Minus' || input.code === 'NumpadSubtract') {
+        event.preventDefault()
+        window.webContents.setZoomLevel(Math.max(-3, zoom - 1))
+        return
+      }
+      if (key === '0') {
+        event.preventDefault()
+        window.webContents.setZoomLevel(0)
+        return
+      }
+    }
+    if (!developmentUrl) return
+    if (key === 'f12' || (input.control && input.shift && key === 'i')) {
+      event.preventDefault()
+      setTimeout(() => {
+        if (window.isDestroyed()) return
+        if (window.webContents.isDevToolsOpened()) window.webContents.closeDevTools()
+        else window.webContents.openDevTools({ mode: 'detach' })
+      }, 0)
+    } else if (key === 'f5' || (input.control && key === 'r')) {
+      event.preventDefault()
+      if (input.shift) window.webContents.reloadIgnoringCache()
+      else window.webContents.reload()
+    }
+  })
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
@@ -1322,13 +1360,13 @@ function createWindow(): void {
     if (mainWindow === window) mainWindow = null
   })
 
-  const developmentUrl = developmentRendererUrl()
   trustedRendererUrl = developmentUrl ?? rendererUrl
   void window.loadURL(trustedRendererUrl)
 }
 
 app.whenReady().then(async () => {
   if (process.platform === 'win32') app.setAppUserModelId('io.github.xmey95.pokeguru')
+  if (process.platform === 'win32' || process.platform === 'linux') Menu.setApplicationMenu(null)
   try {
     const override = process.env.POKEGURU_DATA_DIR
     if (override) {
