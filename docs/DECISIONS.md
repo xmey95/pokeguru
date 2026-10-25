@@ -297,6 +297,10 @@ Il popup delle carte risolve prima l'ID o set/numero esatti nel Catalogo globale
 
 I blocchi Play e Regional già persistiti avanzano tramite un job del processo principale, indipendente dalla vista aperta. La pausa aspetta la richiesta in corso e impedisce la successiva; i cursori rimangono nel database. Play può effettuare fino a undici richieste per blocco (due pagine indice e tre chiamate per ciascuno dei tre eventi): dopo il blocco attende almeno 7,5 secondi per ogni richiesta effettiva, in modo prudente rispetto alla quota di 50 richieste/5 minuti osservata in F-27. La cadenza resta attiva anche dopo pausa/ripresa nella stessa sessione. Regional mantiene i 1,2 secondi fra richieste reali e un breve intervallo tra blocchi. Un 429 programma la ripresa in sessione secondo `Retry-After`; dopo riavvio il job è inattivo e l'utente lo riprende esplicitamente. Il dato persistito descrive il cursore, mentre `active` e `stopping` sono stati di sessione restituiti dall'IPC.
 
+### T-117 — Menu e scorciatoie della finestra Electron (APP-117)
+
+[Electron Menu](https://www.electronjs.org/docs/latest/api/menu) specifica che `Menu.setApplicationMenu(null)` rimuove la barra su Windows/Linux; nasconderla soltanto permette invece di richiamarla con Alt ([BrowserWindow](https://www.electronjs.org/docs/latest/api/browser-window)). Si mantiene il frame predefinito per i controlli del sistema e si gestiscono nel processo principale soltanto lo zoom Ctrl+±/0 e, con renderer di sviluppo su loopback, F12/Ctrl+Shift+I e ricarica F5/Ctrl+R tramite [`before-input-event`](https://www.electronjs.org/docs/latest/api/web-contents/). Le scorciatoie di editing restano al renderer Chromium; Alt+←/→ è già gestita dalla navigazione dell'app. `webPreferences.devTools` è disabilitato per la build locale e i pacchetti. La scelta non introduce una seconda barra: la sidebar del renderer è navigazione di prodotto distinta dal menu Electron.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |
