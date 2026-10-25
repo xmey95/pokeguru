@@ -13,16 +13,17 @@ const profileRenderer = process.argv.includes('--profile-renderer')
 const expectAllMessages = process.argv.includes('--expect-all-messages')
 const matchedEvidence = process.argv.includes('--matched-evidence')
 const markdownMessages = process.argv.includes('--markdown-messages')
-const integerOption = (name, fallback) => {
+const threadIpcOnly = process.argv.includes('--thread-ipc-only')
+const integerOption = (name, fallback, maximum = 1000) => {
   const value = process.argv.find((argument) => argument.startsWith(`--${name}=`))?.split('=')[1]
   if (value === undefined) return fallback
   const number = Number(value)
-  if (!Number.isSafeInteger(number) || number < 1 || number > 1000)
+  if (!Number.isSafeInteger(number) || number < 1 || number > maximum)
     throw new Error(`Invalid --${name} value`)
   return number
 }
 const threadCount = integerOption('threads', 160)
-const longMessages = integerOption('selected-messages', 5)
+const longMessages = integerOption('selected-messages', 5, 5000)
 const cardCount = Number(process.argv.find((argument) => argument.startsWith('--cards='))?.split('=')[1] ?? 10_000)
 if (cardCount !== 5_000 && cardCount !== 10_000) throw new Error('Use --cards=5000 or --cards=10000')
 const viewportWidth = process.argv.some((argument) => argument.startsWith('--viewport-width='))
@@ -188,6 +189,30 @@ function measureSnapshotReads(path) {
   } finally { db.close() }
 }
 
+function measureThreadReads(path, threadId) {
+  const db = new DatabaseSync(path)
+  try {
+    const query = db.prepare(`SELECT text, evidence_json FROM deck_thread_messages
+      WHERE thread_id = ? ORDER BY created_at, rowid`)
+    const querySamples = []
+    const parseSamples = []
+    let messages = 0
+    let jsonChars = 0
+    for (let index = 0; index < 3; index++) {
+      const queryStart = performance.now()
+      const rows = query.all(threadId)
+      querySamples.push(+(performance.now() - queryStart).toFixed(1))
+      const parseStart = performance.now()
+      for (const row of rows) if (row.evidence_json) JSON.parse(row.evidence_json)
+      parseSamples.push(+(performance.now() - parseStart).toFixed(1))
+      messages = rows.length
+      jsonChars = rows.reduce((sum, row) => sum + row.text.length + (row.evidence_json?.length ?? 0), 0)
+    }
+    return { messages, jsonChars, querySamples, queryMedian: median(querySamples),
+      parseSamples, parseMedian: median(parseSamples) }
+  } finally { db.close() }
+}
+
 const launch = () => electron.launch({ executablePath, args: ['.'], cwd: workspace,
   env: { ...process.env, POKEGURU_DATA_DIR: profile, POKEGURU_CODEX_BIN: join(temporary, 'missing-codex') },
   timeout: 30000 })
@@ -228,6 +253,36 @@ try {
   const heap = async () => (await cdp.send('Performance.getMetrics')).metrics
     .find((entry) => entry.name === 'JSHeapUsedSize')?.value ?? null
   const heapStart = await heap()
+  if (threadIpcOnly) {
+    const threadId = `thread-${String(threadCount - 1).padStart(3, '0')}`
+    const samples = []
+    for (let index = 0; index < 3; index++) {
+      const sample = await page.evaluate(async ({ projectId, threadId }) => {
+        const start = performance.now()
+        const result = await window.projectsApi.getDeckThread(projectId, threadId)
+        const ipcMs = performance.now() - start
+        if (!result.ok) throw new Error(result.error)
+        const serializeStart = performance.now()
+        const jsonChars = JSON.stringify(result).length
+        return { ipcMs: +ipcMs.toFixed(1), serializeMs: +(performance.now() - serializeStart).toFixed(1),
+          jsonChars, messages: result.value.messages.length }
+      }, { projectId, threadId })
+      samples.push(sample)
+      await cdp.send('HeapProfiler.enable')
+      await cdp.send('HeapProfiler.collectGarbage')
+    }
+    const heapAfterGc = await heap()
+    const processes = await application.evaluate(({ app }) => app.getAppMetrics().map((entry) => ({
+      type: entry.type, privateKiB: entry.memory?.privateBytes ?? null })))
+    await application.close()
+    application = undefined
+    const threadReads = measureThreadReads(databasePath, threadId)
+    console.log(JSON.stringify({ kind: 'Thread detail growth, offline and isolated',
+      dataset: { ...dataset, viewportWidth: viewportWidth ?? 'default' }, startupMs,
+      threadDetail: { samples, ipcMedian: median(samples.map((item) => item.ipcMs)),
+        serializeMedian: median(samples.map((item) => item.serializeMs)) },
+      threadReads, rendererHeapBytes: { start: heapStart, afterGc: heapAfterGc }, processes }, null, 2))
+  } else {
   const ipc = {}
   for (const [name, call] of Object.entries({
     catalog: 'getCatalog', catalogOverview: 'getCatalogBrowseOverview',
@@ -403,6 +458,7 @@ try {
       maxMs: longTasks.length ? Math.max(...longTasks) : 0 },
     rendererHeapBytes: { start: heapStart, end: heapEnd, afterGc: heapAfterGc },
     processes }, null, 2))
+  }
 } finally {
   if (application) await application.close()
   if (realpathSync(dirname(temporary)) !== realpathSync(tmpdir()) ||
