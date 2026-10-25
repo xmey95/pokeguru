@@ -106,10 +106,12 @@ export interface ProjectsApi {
   getTournamentEvent(eventId: string): Promise<OperationResult<TournamentSnapshot | null>>
   getTournamentSync(): Promise<OperationResult<TournamentSyncProgress>>
   syncTournaments(mode: 'new' | 'full'): Promise<OperationResult<TournamentSyncProgress>>
+  pauseTournamentSync(): Promise<OperationResult<TournamentSyncProgress>>
   listMainTournaments(): Promise<OperationResult<MainTournamentSummary[]>>
   getMainTournament(eventId: string): Promise<OperationResult<MainTournamentSnapshot | null>>
   getMainTournamentSync(): Promise<OperationResult<MainTournamentSyncProgress>>
   syncMainTournaments(mode: 'new' | 'full'): Promise<OperationResult<MainTournamentSyncProgress>>
+  pauseMainTournamentSync(): Promise<OperationResult<MainTournamentSyncProgress>>
   openMainTournament(url: string): Promise<OperationResult<boolean>>
   openTournament(url: string): Promise<OperationResult<boolean>>
   getAiPreferences(): Promise<OperationResult<AiPreferences>>

@@ -10,6 +10,10 @@ export class LimitlessRateLimitError extends Error {
   constructor(readonly retryAt: string) { super('Limitless Play ha limitato le richieste. Riprova dopo il tempo indicato.') }
 }
 
+export class LimitlessSyncPaused extends Error {
+  constructor() { super('Scansione Limitless Play in pausa.') }
+}
+
 function object(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown> : null
@@ -167,15 +171,19 @@ export function parseTournament(event: unknown, standings: unknown,
   }
 }
 
-export async function fetchTournament(eventId: string, fetcher: typeof fetch = fetch): Promise<TournamentSnapshot> {
+export async function fetchTournament(eventId: string, fetcher: typeof fetch = fetch,
+  shouldStop: () => boolean = () => false): Promise<TournamentSnapshot> {
   if (!EVENT_ID.test(eventId)) throw new Error('ID evento Limitless Play non valido.')
+  if (shouldStop()) throw new LimitlessSyncPaused()
   const details = await getJson(`/tournaments/${eventId}/details`, fetcher)
   const detail = object(details)
   if (!detail || detail.game !== 'PTCG' || detail.format !== 'STANDARD' || detail.isPublic !== true ||
     detail.decklists !== true || (Array.isArray(detail.specialRules) && detail.specialRules.length > 0) ||
     (Array.isArray(detail.bannedCards) && detail.bannedCards.length > 0))
     throw new Error('Evento fuori perimetro o con regole personalizzate.')
+  if (shouldStop()) throw new LimitlessSyncPaused()
   const standings = await getJson(`/tournaments/${eventId}/standings`, fetcher)
+  if (shouldStop()) throw new LimitlessSyncPaused()
   const pairings = await getJson(`/tournaments/${eventId}/pairings`, fetcher)
   return parseTournament(details, standings, new Date().toISOString(), pairings)
 }

@@ -68,6 +68,9 @@ export interface TournamentSnapshot {
 export interface TournamentSyncProgress {
   mode: 'new' | 'full' | null
   status: 'idle' | 'running' | 'rate-limited' | 'complete'
+  /** In-memory job state; absent from persisted legacy progress. */
+  active?: boolean
+  stopping?: boolean
   page: number
   pending: { id: string; date: string }[]
   inspected: number

@@ -293,6 +293,10 @@ L'archiviazione è uno stato del progetto (`archived_at`), non una copia: così 
 
 Il popup delle carte risolve prima l'ID o set/numero esatti nel Catalogo globale. Per una riga con sola identità o nome sceglie un'immagine locale di esempio, segnalandola come tale; corrispondenze ambigue non ricevono un'immagine arbitraria. Il processo principale legge la cache esistente e il renderer ammette soltanto `pokeguru://cards/` o vecchi `data:image/`, senza scaricare da TCGdex o Limitless su hover/focus. Un solo popup è montato per vista e conserva fino a 64 risultati piccoli: il file immagine viene caricato solo mentre il popup è visibile. Per una stampa senza file o senza URL si mostra il motivo, preservando la provenienza già registrata dal Catalogo.
 
+### T-114 — Avanzamento delle scansioni Eventi (APP-114)
+
+I blocchi Play e Regional già persistiti avanzano tramite un job del processo principale, indipendente dalla vista aperta. La pausa aspetta la richiesta in corso e impedisce la successiva; i cursori rimangono nel database. Play può effettuare fino a undici richieste per blocco (due pagine indice e tre chiamate per ciascuno dei tre eventi): dopo il blocco attende almeno 7,5 secondi per ogni richiesta effettiva, in modo prudente rispetto alla quota di 50 richieste/5 minuti osservata in F-27. La cadenza resta attiva anche dopo pausa/ripresa nella stessa sessione. Regional mantiene i 1,2 secondi fra richieste reali e un breve intervallo tra blocchi. Un 429 programma la ripresa in sessione secondo `Retry-After`; dopo riavvio il job è inattivo e l'utente lo riprende esplicitamente. Il dato persistito descrive il cursore, mentre `active` e `stopping` sono stati di sessione restituiti dall'IPC.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

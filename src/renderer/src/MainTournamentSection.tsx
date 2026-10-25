@@ -20,7 +20,7 @@ export function MainTournamentSection() {
   const [busy, setBusy] = useBusyState('events.main.sync')
   const startedAt = useBusyStartedAt('events.main.sync')
   const [error, setError] = useDraftState<string | null>('events.main.error', null)
-  const progressError = useProgressPoll(busy, window.projectsApi.getMainTournamentSync, setProgress)
+  const progressError = useProgressPoll(busy || Boolean(progress?.active), window.projectsApi.getMainTournamentSync, setProgress)
   const unavailableEvents = progress?.unavailableEvents ?? []
   const unavailableLists = progress?.unavailableLists ?? []
 
@@ -44,7 +44,7 @@ export function MainTournamentSection() {
         }
       }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Archivio Regional non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [busy])
+  }, [busy, progress?.inspectedEvents, Math.floor((progress?.fetchedLists ?? 0) / 8), progress?.status])
 
   async function choose(eventId: string): Promise<void> {
     const result = await window.projectsApi.getMainTournament(eventId)
@@ -74,6 +74,13 @@ export function MainTournamentSection() {
     finally { setBusy(false) }
   }
 
+  async function pause(): Promise<void> {
+    const result = await window.projectsApi.pauseMainTournamentSync()
+    if (!nav.isCurrent()) return
+    if (result.ok) setProgress(result.value)
+    else setError(result.error)
+  }
+
   async function openSource(url: string): Promise<void> {
     const result = await window.projectsApi.openMainTournament(url)
     if (!result.ok) setError(result.error)
@@ -89,7 +96,7 @@ export function MainTournamentSection() {
   return <TournamentWorkspace source="main" count={events.length} loading={loading} busy={busy} progress={progress} error={error}
     startedAt={startedAt} progressError={progressError} progressDetail={progress ?
       `${progress.scannedPages ?? 0}/${progress.maxPages ?? '…'} pagine · ${progress.inspectedEvents} tornei acquisiti · ${progress.fetchedLists} liste scaricate` : undefined}
-    onRefresh={sync} management={<>
+    onRefresh={sync} onPause={pause} management={<>
       {progress && progress.status !== 'idle' && <div className="content-note" role="status">
         <p>Rotazione Standard occidentale dal {progress.rotationStart ? date(progress.rotationStart) : 'periodo non noto'} · indice {progress.scannedPages ?? 0}/{progress.maxPages ?? '…'} pagine lette.</p>
         <p>Righe esaminate: {progress.indexedRows ?? 0} · Tornei eleggibili nel periodo: {progress.eligibleEvents ?? 0} · Non eleggibili: {progress.ineligibleEvents ?? 0} · Fuori rotazione: {progress.outsideRotationEvents ?? 0} · Righe non leggibili: {progress.unavailableIndexRows ?? 0}.</p>
@@ -101,7 +108,7 @@ export function MainTournamentSection() {
           ? 'Scansione terminata con lacune: Aggiorna nuovi ritenta i tornei, Scansione completa ritenta anche le liste.'
           : 'Scansione del periodo completata per l’indice consultato.'}</p>}
       </div>}
-      <p className="content-note">Ogni blocco effettua fino a 7 richieste, con almeno 1,2 secondi fra richieste reali e massimo 16 liste rappresentative per torneo. Continua i blocchi fino alla fine dell’indice nella rotazione corrente; Scansione completa ricontrolla anche i tornei già archiviati.</p>
+      <p className="content-note">La scansione avanza automaticamente fino alla fine dell’indice nella rotazione corrente, in blocchi di 7 richieste. Restano almeno 1,2 secondi fra richieste reali e un massimo di 16 liste rappresentative per torneo. Scansione completa ricontrolla anche i tornei già archiviati.</p>
     </>}>
     {events.length > 0 && <div className="catalog-filters event-filters"><label>Evento archiviato
         <select value={selectedEventId ?? ''} onChange={(event) => nav.visit({ 'events.main.event': event.target.value, 'events.main.place': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Regional'}`)}>

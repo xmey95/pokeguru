@@ -1,5 +1,5 @@
 import type { TournamentSyncProgress } from '../shared/tournament'
-import { fetchTournament, fetchTournamentIndex, LimitlessRateLimitError } from './limitless-event'
+import { fetchTournament, fetchTournamentIndex, LimitlessRateLimitError, LimitlessSyncPaused } from './limitless-event'
 import type { TournamentStore } from './tournament-store'
 
 const EVENTS_PER_BLOCK = 3
@@ -21,9 +21,9 @@ function finish(progress: TournamentSyncProgress): TournamentSyncProgress {
       ? progress.newestSeen : progress.watermark }
 }
 
-/** One explicit, persisted block makes a 50-in-5-min API quota manageable without an unbounded background job. */
+/** One persisted block; the application job advances subsequent blocks at a controlled pace. */
 export async function syncTournamentBlock(store: TournamentStore, mode: 'new' | 'full',
-  fetcher: typeof fetch = fetch, now = new Date()): Promise<TournamentSyncProgress> {
+  fetcher: typeof fetch = fetch, now = new Date(), shouldStop: () => boolean = () => false): Promise<TournamentSyncProgress> {
   let progress = store.progress()
   if (progress.mode !== mode || progress.status === 'idle' || progress.status === 'complete') {
     progress = initial(mode, progress, now)
@@ -37,6 +37,7 @@ export async function syncTournamentBlock(store: TournamentStore, mode: 'new' | 
   let processed = 0
   let pages = 0
   while (processed < EVENTS_PER_BLOCK) {
+    if (shouldStop()) return progress
     if (!progress.pending.length) {
       if (progress.stopAfterPage || progress.page > 10_000) {
         progress = finish(progress)
@@ -74,10 +75,11 @@ export async function syncTournamentBlock(store: TournamentStore, mode: 'new' | 
     }
     const candidate = progress.pending[0]
     try {
-      store.save(await fetchTournament(candidate.id, fetcher))
+      store.save(await fetchTournament(candidate.id, fetcher, shouldStop))
       progress = { ...progress, pending: progress.pending.slice(1), inspected: progress.inspected + 1,
         saved: progress.saved + 1, lastError: null }
     } catch (error) {
+      if (error instanceof LimitlessSyncPaused) return progress
       if (error instanceof LimitlessRateLimitError) {
         progress = { ...progress, status: 'rate-limited', cooldownUntil: error.retryAt }
         store.saveProgress(progress)

@@ -48,6 +48,7 @@ import { recoverMatchupJob, recoverThreadJob } from './ai-job-recovery'
 import { fetchRecentWesternTournament } from './limitless-event'
 import { syncTournamentBlock } from './tournament-sync'
 import { syncMainTournamentBlock } from './main-tournament-sync'
+import { TournamentSyncJob } from './tournament-sync-job'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../shared/tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
 import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
@@ -62,8 +63,8 @@ let aiJobStore: AiJobStore | null = null
 let projectStore: ProjectStore | null = null
 let catalogStore: CatalogStore | null = null
 let tournamentStore: TournamentStore | null = null
-let tournamentSyncBusy = false
-let mainTournamentSyncBusy = false
+let playTournamentJob: TournamentSyncJob<TournamentSyncProgress> | null = null
+let mainTournamentJob: TournamentSyncJob<MainTournamentSyncProgress> | null = null
 let storageError: string | null = null
 let aiPreferencesStore: AiPreferencesStore | null = null
 const codexControl = new CodexControl()
@@ -378,20 +379,24 @@ function registerProjectHandlers(): void {
 
   ipcMain.handle('tournament:sync-status', (event): OperationResult<TournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
-    try { return { ok: true, value: tournamentStore.progress() } }
+    if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: playTournamentJob.status() } }
     catch { return { ok: false, error: 'Stato aggiornamento tornei non leggibile.' } }
   })
 
-  ipcMain.handle('tournament:sync', async (event, mode: unknown): Promise<OperationResult<TournamentSyncProgress>> => {
+  ipcMain.handle('tournament:sync', (event, mode: unknown): OperationResult<TournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
     if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità aggiornamento non valida.' }
-    if (tournamentSyncBusy) return { ok: false, error: 'Aggiornamento tornei già in corso.' }
-    tournamentSyncBusy = true
-    try { return { ok: true, value: await syncTournamentBlock(tournamentStore, mode) } }
+    try { return { ok: true, value: playTournamentJob.start(mode) } }
     catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento tornei non riuscito.' } }
-    finally { tournamentSyncBusy = false }
+  })
+
+  ipcMain.handle('tournament:sync-pause', (event): OperationResult<TournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: playTournamentJob.pause() } }
+    catch { return { ok: false, error: 'Pausa tornei non riuscita.' } }
   })
 
   ipcMain.handle('tournament:main-list', (event): OperationResult<MainTournamentSummary[]> => {
@@ -411,25 +416,24 @@ function registerProjectHandlers(): void {
 
   ipcMain.handle('tournament:main-sync-status', (event): OperationResult<MainTournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
-    try { return { ok: true, value: tournamentStore.mainProgress() } }
+    if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: mainTournamentJob.status() } }
     catch { return { ok: false, error: 'Stato Regional non leggibile.' } }
   })
 
-  ipcMain.handle('tournament:main-sync', async (event, mode: unknown): Promise<OperationResult<MainTournamentSyncProgress>> => {
+  ipcMain.handle('tournament:main-sync', (event, mode: unknown): OperationResult<MainTournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
     if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità Regional non valida.' }
-    if (mainTournamentSyncBusy) return { ok: false, error: 'Aggiornamento Regional già in corso.' }
-    mainTournamentSyncBusy = true
-    try {
-      const value = await syncMainTournamentBlock(tournamentStore, mode)
-      if (projectStore && generatingDeckThreads.size === 0 && !hasRecoverableThreadJob())
-        tournamentStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
-      return { ok: true, value }
-    }
+    try { return { ok: true, value: mainTournamentJob.start(mode) } }
     catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento Regional non riuscito.' } }
-    finally { mainTournamentSyncBusy = false }
+  })
+
+  ipcMain.handle('tournament:main-sync-pause', (event): OperationResult<MainTournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: mainTournamentJob.pause() } }
+    catch { return { ok: false, error: 'Pausa Regional non riuscita.' } }
   })
 
   ipcMain.handle('tournament:open-main-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
@@ -1336,6 +1340,23 @@ app.whenReady().then(async () => {
     projectStore = new ProjectStore(databasePath)
     catalogStore = new CatalogStore(databasePath)
     tournamentStore = new TournamentStore(databasePath)
+    const eventStore = tournamentStore
+    let playBlockRequests = 0
+    playTournamentJob = new TournamentSyncJob(() => eventStore.progress(),
+      async (mode, shouldStop) => {
+        playBlockRequests = 0
+        const countedFetch: typeof fetch = (input, init) => {
+          playBlockRequests++
+          return fetch(input, init)
+        }
+        return syncTournamentBlock(eventStore, mode, countedFetch, new Date(), shouldStop)
+      }, () => Math.max(7_500, playBlockRequests * 7_500))
+    mainTournamentJob = new TournamentSyncJob(() => eventStore.mainProgress(),
+      (mode, shouldStop) => syncMainTournamentBlock(eventStore, mode, fetch, new Date(), shouldStop), 300,
+      () => {
+        if (projectStore && generatingDeckThreads.size === 0 && !hasRecoverableThreadJob())
+          eventStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
+      })
     aiJobStore = new AiJobStore(databasePath)
     completeDatabaseMigration(databasePath, migration)
     if (!hasRecoverableThreadJob())
@@ -1343,6 +1364,8 @@ app.whenReady().then(async () => {
     aiPreferencesStore = new AiPreferencesStore(app.getPath('userData'))
   } catch (error) {
     console.error('Impossibile aprire l’archivio locale:', error)
+    playTournamentJob?.shutdown(); playTournamentJob = null
+    mainTournamentJob?.shutdown(); mainTournamentJob = null
     tournamentStore?.close(); tournamentStore = null
     catalogStore?.close(); catalogStore = null
     aiJobStore?.close(); aiJobStore = null
@@ -1369,6 +1392,8 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   catalogShuttingDown = true
+  playTournamentJob?.shutdown()
+  mainTournamentJob?.shutdown()
   if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
   catalogStore?.interruptJob()
   catalogJobController?.abort()
