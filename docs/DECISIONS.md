@@ -268,6 +268,10 @@ Il renderer resta in un solo chunk JS finché una misura sul percorso critico no
 
 Una richiesta come «come posso arginare questa cosa?» recupera le schede usando anche il titolo del Thread e le ultime sei osservazioni dell'utente; il ranking delle liste torneo usa lo stesso testo. Le carte nominate prevalgono sulle carte non citate quando si applica il limite del pacchetto. I nomi più specifici consumano le occorrenze prima dei nomi contenuti in essi, evitando di confondere Mega Lucario ex con Lucario ex. Per gli alias fra lingue si aggiungono solo corrispondenze verificate: [Limitless in italiano](https://limitlesstcg.com/cards/it/MEG/186) registra «Compassione di Lino», mentre il catalogo TCGdex inglese registra Wally's Compassion. Il pacchetto indica entrambi i nomi e la stampa acquisita. Il confronto del testo di gioco normalizza soltanto la grafia `×`/`x` della debolezza per scegliere fra stampe equivalenti; varianti con altre regole diverse non sono inferite come equivalenti. Questo alias non costituisce una traduzione generale del catalogo.
 
+### T-86 — Posizione conservata tra le carte del Catalogo (APP-102)
+
+La selezione di una carta resta una voce distinta della cronologia. Per questo percorso la nuova voce eredita scorrimento e focus della vista corrente, mentre gli approfondimenti `<details>` della nuova carta partono chiusi. Indietro/Avanti continuano a ripristinare la presentazione specifica di ciascuna voce. Il ripristino attende la pagina di risultati e il dettaglio richiesti in modo asincrono; la prova Electron copre 10.000 stampe e layout a 1280 e 640 px.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |
