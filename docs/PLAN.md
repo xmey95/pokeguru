@@ -109,6 +109,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-126 Done (25-10-2026) — [PR #35](https://github.com/xmey95/pokeguru/pull/35):** export copiato per Pokémon TCG Live, destinazione confermata dall'utente. Converte sigle TCGdex e numeri decimali, riconosce sezioni italiane, conserva la copia immediata e blocca ID ignoti senza cambiare gli appunti. Build, 41 test mirati e smoke Electron locali passati; [CI run 40195695115](https://github.com/xmey95/pokeguru/actions/runs/40195695115) verde su Ubuntu e Windows, compresi smoke export e packaging (rerun Windows dopo timeout intermittente di un test `daily-sync` non modificato). Nessuna prova nel client Live, poiché l'utente non dispone ora di una lista rifiutata; fonti e limiti in APP-126 e T-126/F-48. Prossimo passo: verificare CI del commit documentale e coordinare il merge in `dev`; `main` e release fuori ambito.
+
 - **APP-123 integrato in `dev` — [PR #33](https://github.com/xmey95/pokeguru/pull/33), merge `37a0aa1`:** pulizia verificata della rotazione Catalogo/Eventi con backup, riferimenti storici e migrazione v7 dopo gli ID job APP-121. Sul ramo erano passati build, 197 test e smoke Electron offline; il risultato è ora nella base di APP-122. Nessuna regola 2027 inclusa.
 - **APP-120 integrato in `dev` — [PR #34](https://github.com/xmey95/pokeguru/pull/34), merge `6edcc11`:** aggiornamento giornaliero silente di Catalogo/Play/Regional e migrazione v8; quattro check CI Verify Ubuntu/Windows verdi su push e PR, compresi package e smoke. Il test locale successivo nel ramo APP-122 ha confermato startup, freschezza, offline, riavvio e concorrenza manuale.
 

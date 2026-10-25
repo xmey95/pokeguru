@@ -21,7 +21,7 @@ import { localCalendarDate } from '../shared/calendar-date'
 import { westernRotationRule, type RotationRule } from '../shared/standard-rotation'
 import { backupBeforeRotation } from './rotation-backup'
 import { readLimitedBytes, readLimitedText } from './bounded-response'
-import { OFFICIAL_SET_CODES } from '../shared/set-codes'
+import { OFFICIAL_SET_CODES, knownPrintCodes } from '../shared/set-codes'
 import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
 
 type SetResponse = {
@@ -783,7 +783,7 @@ export class CatalogStore {
     for (const row of rows) {
       const print = JSON.parse(row.payload) as CatalogPrint
       const number = print.localId.toUpperCase().replace(/^0+(?=\d)/, '')
-      for (const code of [print.setId.toUpperCase(), OFFICIAL_SET_CODES[print.setId], print.historicalSetCode,
+      for (const code of [...knownPrintCodes(print.setId), print.historicalSetCode,
         officialCodes.get(print.setId)]) {
         if (!code) continue
         const key = `${code}\0${number}\0${print.name.normalize('NFKC').trim().toLocaleLowerCase()}`
@@ -1134,8 +1134,8 @@ export class CatalogStore {
       const code = lookup.setCode.toUpperCase()
       const sets = this.db.prepare('SELECT id, abbreviation FROM catalog_sets').all() as
         { id: string; abbreviation: string | null }[]
-      const ids = sets.filter((set) => set.id.toUpperCase() === code ||
-        (set.abbreviation ?? OFFICIAL_SET_CODES[set.id])?.toUpperCase() === code).map((set) => set.id)
+      const ids = sets.filter((set) => knownPrintCodes(set.id).includes(code) ||
+        set.abbreviation?.toUpperCase() === code).map((set) => set.id)
       const raw = lookup.cardNumber
       const numbers = new Set([raw, raw.replace(/^0+(?=\d)/, ''),
         ...( /^\d+$/.test(raw) ? [raw.padStart(2, '0'), raw.padStart(3, '0'), raw.padStart(4, '0')] : [] )])
@@ -1165,6 +1165,13 @@ export class CatalogStore {
       image, reason: image ? 'available'
         : print.imageBase ? 'not-cached' : 'source-missing', sample
     }
+  }
+
+  /** Small read for export; avoids loading every catalog print on each click. */
+  setAbbreviations(): Record<string, string> {
+    const rows = this.db.prepare('SELECT id, abbreviation FROM catalog_sets WHERE abbreviation IS NOT NULL')
+      .all() as { id: string; abbreviation: string }[]
+    return Object.fromEntries(rows.map((row) => [row.id.toLowerCase(), row.abbreviation]))
   }
 
   close(): void { this.db.close() }

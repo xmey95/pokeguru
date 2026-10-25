@@ -9,6 +9,17 @@ export const OFFICIAL_SET_CODES: Readonly<Record<string, string>> = {
   sve: 'SVE', mee: 'MEE', svp: 'SVP', mep: 'MEP'
 }
 
+/** TCG Live uses PR-SV for Scarlet & Violet promos, unlike TCGdex's SVP. */
+export const LIVE_SET_CODES: Readonly<Record<string, string>> = {
+  ...OFFICIAL_SET_CODES, svp: 'PR-SV'
+}
+
+export function knownPrintCodes(setId: string, catalogAbbreviation?: string | null): string[] {
+  return [...new Set([setId.toUpperCase(), OFFICIAL_SET_CODES[setId], LIVE_SET_CODES[setId],
+    catalogAbbreviation?.toUpperCase()]
+    .filter((code): code is string => !!code))]
+}
+
 export const DOTTED_CODE_EVIDENCE: Readonly<Record<string, string>> = {
   'sv04.5': 'https://my.limitlesstcg.com/builder',
   'me02.5': 'https://my.limitlesstcg.com/builder'

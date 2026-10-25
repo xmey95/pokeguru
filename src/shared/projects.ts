@@ -85,7 +85,7 @@ export interface ProjectsApi {
   openThreadLink(url: string): Promise<OperationResult<boolean>>
   saveDeckCandidate(input: SaveDeckCandidateInput): Promise<OperationResult<DeckThread>>
   adoptDeckCandidate(input: AdoptDeckCandidateInput): Promise<OperationResult<DeckBaseline>>
-  copyDeckExport(input: DeckExportRequest): Promise<OperationResult<boolean>>
+  copyDeckExport(input: DeckExportRequest): Promise<OperationResult<string[]>>
   getReconciliation(projectId: string): Promise<OperationResult<DeckReconciliation>>
   saveLineMapping(input: SaveLineMappingInput): Promise<OperationResult<DeckReconciliation>>
   clearLineMapping(input: ClearLineMappingInput): Promise<OperationResult<DeckReconciliation>>

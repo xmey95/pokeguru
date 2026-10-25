@@ -1152,16 +1152,17 @@ function registerProjectHandlers(): void {
     const baseline = projectStore.getBaseline(request.projectId)
     if (!project || !baseline) throw new Error('Lista corrente non disponibile.')
     if (baseline.importedAt !== request.importedAt) throw new Error('La lista è cambiata. Riapri il progetto prima di esportare.')
-    return prepareDeckExport(baseline)
+    return prepareDeckExport(baseline, catalogStore?.setAbbreviations() ?? {})
   }
 
-  ipcMain.handle('deck:copy-export', (event, input: unknown): OperationResult<boolean> => {
+  ipcMain.handle('deck:copy-export', (event, input: unknown): OperationResult<string[]> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     try {
       const preview = exportFor(input)
-      if (!preview.canExport) throw new Error('Correggi le righe non interpretate prima di esportare.')
+      if (!preview.canExport) throw new Error(preview.notes.find((note) => note.startsWith('Codici TCGdex'))
+        ?? 'Correggi le righe non interpretate prima di esportare.')
       clipboard.writeText(preview.text)
-      return { ok: true, value: true }
+      return { ok: true, value: preview.notes }
     } catch (error) { return { ok: false, error: aiError(error) } }
   })
 
