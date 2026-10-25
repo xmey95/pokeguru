@@ -74,7 +74,7 @@ try {
     if (!projects.ok) throw new Error(projects.error)
     const threads = await window.projectsApi.listDeckThreadSummaries(projects.value[0].id)
     if (!threads.ok) throw new Error(threads.error)
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 120; i++) {
       const result = await window.projectsApi.addDeckThreadMessage(projects.value[0].id, threads.value[0].id,
         `Osservazione ${i + 1}: ${'confronta la proposta con il piano corrente. '.repeat(6)}`)
       if (!result.ok) throw new Error(result.error)
@@ -85,8 +85,11 @@ try {
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.locator('.thread-message').last().waitFor()
-  assert.equal(await page.locator('.thread-message').count(), 12)
+  assert.equal(await page.locator('.thread-message').count(), 50)
   await page.getByLabel('Scrivi nel thread').fill('Bozza di discussione conservata')
+  await page.getByRole('button', { name: /Mostra 50 precedenti/ }).click()
+  await page.waitForFunction(() => document.querySelectorAll('.thread-message').length === 100)
+  assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Bozza di discussione conservata')
   await checkAccess(page, 1440)
   await checkAccess(page, 640)
   assert.equal(await page.locator('.thread-candidate').count(), 1, 'Candidata duplicata nella cronologia')
@@ -94,6 +97,8 @@ try {
   await page.getByLabel('Lista completa proposta').fill('1 Mega Absol ex MEG 86\n57 Basic Psychic Energy\n2 Mega Audino ex ME02.5 172')
   await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
   await page.getByText('Candidata 2', { exact: true }).first().waitFor()
+  await page.getByRole('button', { name: /Mostra .* precedenti/ }).click()
+  await page.locator('.thread-candidate:not(.featured)').waitFor()
   assert.equal(await page.locator('.thread-candidate').count(), 2)
   assert.match(await page.locator('.candidate-access').innerText(), /Candidata 2/)
   assert.match(await page.locator('.thread-candidate:not(.featured) > summary').innerText(), /Candidata 1/)

@@ -256,6 +256,15 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [selectedDetail, setSelectedDetail] = useState<DeckThread | null>(null)
   const [olderLoading, setOlderLoading] = useState(false)
   const olderRequest = useRef(false)
+  function showDetail(next: DeckThread | null): void {
+    setSelectedDetail((current) => {
+      if (!next || !current || current.id !== next.id ||
+        current.messages.length <= next.messages.length || !current.oldestMessageCursor) return next
+      const recentIds = new Set(next.messages.map((message) => message.id))
+      return { ...next, messages: [...current.messages.filter((message) => !recentIds.has(message.id)),
+        ...next.messages], oldestMessageCursor: current.oldestMessageCursor }
+    })
+  }
   const [detailLoading, setDetailLoading] = useState(false)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const cardTargets = useMemo(() => catalogCardTargets(catalog), [catalog])
@@ -420,7 +429,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       if (!active) return
       if (!result.ok) throw new Error(result.error)
       if (!result.value) throw new Error('Thread non trovato in questo progetto.')
-      setSelectedDetail(result.value)
+      showDetail(result.value)
     }).catch((cause) => {
       if (active) { setSelectedDetail(null); setError(cause instanceof Error ? cause.message : 'Thread non disponibile.') }
     }).finally(() => { if (active) setDetailLoading(false) })
@@ -443,7 +452,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     if (aiJob?.status !== 'applied' || aiJob.projectId !== projectId ||
       aiJob.resourceId !== selectedId || !selectedId) return
     void window.projectsApi.getDeckThreadWindow(projectId, selectedId).then((result) => {
-      if (result.ok) setSelectedDetail(result.value)
+      if (result.ok) showDetail(result.value)
     })
     void refreshSummaries()
   }, [aiJob?.id, aiJob?.status, projectId, selectedId])
@@ -462,7 +471,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const status = await window.projectsApi.getAiJobStatus(projectId, selectedId)
       if (status.ok) setAiJob(status.value)
       const detail = await window.projectsApi.getDeckThreadWindow(projectId, selectedId)
-      if (detail.ok) setSelectedDetail(detail.value)
+      if (detail.ok) showDetail(detail.value)
     }
   }
 
@@ -541,7 +550,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     try {
       const result = await window.projectsApi.createDeckThread({ projectId, title, openingNote, startWithAi })
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       closeCreate()
       selectThread(result.value, '#new-thread-trigger')
@@ -549,7 +558,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         const response = await window.projectsApi.askDeckThread(projectId, result.value.id,
           openingNote.trim(), null, result.value.openingAiMessageId)
         const latest = await window.projectsApi.getDeckThreadWindow(projectId, result.value.id)
-        if (latest.ok) setSelectedDetail(latest.value)
+        if (latest.ok) showDetail(latest.value)
         if (!response.ok) setOpeningErrors((current) => ({ ...current, [result.value.id]: response.error }))
       }
     } catch (cause) { setCreateError(cause instanceof Error ? cause.message : 'Thread non creato.') }
@@ -566,13 +575,13 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const response = await window.projectsApi.askDeckThread(projectId, selected.id,
         openingAiMessage.text, selectedOverride?.model ? selectedOverride : null, openingAiMessage.id)
       if (!response.ok) throw new Error(response.error)
-      setSelectedDetail(response.value)
+      showDetail(response.value)
       await refreshSummaries()
     } catch (cause) {
       setOpeningErrors((current) => ({ ...current, [selected.id]:
         cause instanceof Error ? cause.message : 'Risposta Codex non completata.' }))
       const latest = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
-      if (latest.ok) setSelectedDetail(latest.value)
+      if (latest.ok) showDetail(latest.value)
     } finally { setWorking(false); setAsking(false) }
   }
 
@@ -584,7 +593,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     try {
       const result = await window.projectsApi.addDeckThreadMessage(projectId, selected.id, message)
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       setMessage('')
       setPreview(null)
@@ -603,14 +612,14 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       setMessage('')
       setPreview(null)
     } catch (cause) {
       setComposerError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
       const current = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
-      if (current.ok) setSelectedDetail(current.value)
+      if (current.ok) showDetail(current.value)
       await refreshSummaries()
     }
     finally { setWorking(false); setAsking(false) }
@@ -626,7 +635,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         projectId, threadId: selected.id, rawText: candidateText, note: candidateNote
       })
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       setCandidateNote('')
       invalidatePreview()
@@ -645,7 +654,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
-      setSelectedDetail(result.value)
+      showDetail(result.value)
       await refreshSummaries()
       setCandidateText(result.value.candidates.at(-1)?.rawText ?? candidateText)
       setMessage('')
@@ -653,7 +662,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     } catch (cause) {
       setComposerError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
       const current = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
-      if (current.ok) setSelectedDetail(current.value)
+      if (current.ok) showDetail(current.value)
       await refreshSummaries()
     }
     finally { setWorking(false); setProposing(false) }
@@ -675,7 +684,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       ])
       if (newVersions.ok) setVersions(newVersions.value)
       if (newThreads.ok) setThreads(newThreads.value)
-      if (newDetail.ok) setSelectedDetail(newDetail.value)
+      if (newDetail.ok) showDetail(newDetail.value)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Adozione non riuscita.') }
     finally { setWorking(false) }
   }

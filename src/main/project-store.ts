@@ -770,10 +770,9 @@ export class ProjectStore {
     return this.getDeckThread(input.projectId, id)!
   }
 
-  addDeckThreadMessage(projectId: string, threadId: string, value: string): DeckThread {
+  addDeckThreadMessage(projectId: string, threadId: string, value: string, recent = false): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    const thread = this.getDeckThread(projectId, threadId)
-    if (!thread) throw new Error('Thread non trovato in questo progetto.')
+    if (!this.hasDeckThread(projectId, threadId)) throw new Error('Thread non trovato in questo progetto.')
     const message = typeof value === 'string' ? value.trim() : ''
     if (!message || message.length > 5000 || message.includes('\0'))
       throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
@@ -785,7 +784,7 @@ export class ProjectStore {
       this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
-    return this.getDeckThread(projectId, threadId)!
+    return (recent ? this.getDeckThreadWindow(projectId, threadId) : this.getDeckThread(projectId, threadId))!
   }
 
   assignDeckAiSession(projectId: string, threadId: string, sessionId: string): DeckThread {
@@ -863,10 +862,9 @@ export class ProjectStore {
     return (row.n ?? 0) + 1
   }
 
-  saveDeckCandidate(input: SaveDeckCandidateInput): DeckThread {
+  saveDeckCandidate(input: SaveDeckCandidateInput, recent = false): DeckThread {
     if (!input || !this.get(input.projectId)) throw new Error('Progetto non trovato.')
-    const thread = this.getDeckThread(input.projectId, input.threadId)
-    if (!thread) throw new Error('Thread non trovato in questo progetto.')
+    if (!this.hasDeckThread(input.projectId, input.threadId)) throw new Error('Thread non trovato in questo progetto.')
     if (typeof input.rawText !== 'string' || !input.rawText.trim() ||
       input.rawText.length > 200_000 || input.rawText.includes('\0'))
       throw new Error('Inserisci una lista di testo non vuota, fino a 200.000 caratteri.')
@@ -880,11 +878,13 @@ export class ProjectStore {
       this.db.prepare(`INSERT INTO deck_thread_candidates
         (id, thread_id, sequence, raw_text, parsed_json, note, origin, created_at)
         VALUES (?, ?, ?, ?, ?, ?, 'manual', ?)`)
-        .run(randomUUID(), thread.id, this.nextCandidateSequence(thread.id), input.rawText, JSON.stringify(parsed), note, now)
-      this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, thread.id)
+        .run(randomUUID(), input.threadId, this.nextCandidateSequence(input.threadId), input.rawText,
+          JSON.stringify(parsed), note, now)
+      this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, input.threadId)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
-    return this.getDeckThread(input.projectId, thread.id)!
+    return (recent ? this.getDeckThreadWindow(input.projectId, input.threadId)
+      : this.getDeckThread(input.projectId, input.threadId))!
   }
 
   getReconciliation(projectId: string): DeckReconciliation {

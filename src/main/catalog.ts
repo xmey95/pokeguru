@@ -874,7 +874,7 @@ export class CatalogStore {
         print.detailAt !== null && print.identityId !== null) : []
     }
     this.viewCache = { date: today, value,
-      thumbnails: new Map([...value.prints, ...value.referencePrints].map((print) => [print.id, print.thumbnail])) }
+      thumbnails: new Map([...value.prints, ...(value.referencePrints ?? [])].map((print) => [print.id, print.thumbnail])) }
     return value
   }
 

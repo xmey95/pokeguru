@@ -15,6 +15,7 @@ const matchedEvidence = process.argv.includes('--matched-evidence')
 const markdownMessages = process.argv.includes('--markdown-messages')
 const threadIpcOnly = process.argv.includes('--thread-ipc-only')
 const pagedThreadOnly = process.argv.includes('--paged-thread-only')
+const threadWriteOnce = process.argv.includes('--thread-write-once')
 const integerOption = (name, fallback, maximum = 1000) => {
   const value = process.argv.find((argument) => argument.startsWith(`--${name}=`))?.split('=')[1]
   if (value === undefined) return fallback
@@ -287,6 +288,13 @@ try {
       return { ipcMs: +(performance.now() - start).toFixed(1), messages: result.value.messages.length,
         jsonChars: JSON.stringify(result).length }
     }, { projectId, threadId })
+    const write = threadWriteOnce ? await page.evaluate(async ({ projectId, threadId }) => {
+      const start = performance.now()
+      const result = await window.projectsApi.addDeckThreadMessage(projectId, threadId, 'Performance note')
+      if (!result.ok) throw new Error(result.error)
+      return { ipcMs: +(performance.now() - start).toFixed(1), messages: result.value.messages.length,
+        messageCount: result.value.messageCount }
+    }, { projectId, threadId }) : null
     const heapAfterGc = await heap()
     const processes = await application.evaluate(({ app }) => app.getAppMetrics().map((entry) => ({
       type: entry.type, privateKiB: entry.memory?.privateBytes ?? null })))
@@ -295,7 +303,7 @@ try {
     const threadReads = measureThreadReads(databasePath, threadId)
     console.log(JSON.stringify({ kind: 'Thread detail growth, offline and isolated',
       dataset: { ...dataset, viewportWidth: viewportWidth ?? 'default' }, startupMs,
-      threadDetail: { ...modes, olderPage },
+      threadDetail: { ...modes, olderPage, write },
       threadReads, rendererHeapBytes: { start: heapStart, afterGc: heapAfterGc }, processes }, null, 2))
   } else {
   const ipc = {}

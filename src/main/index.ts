@@ -792,10 +792,8 @@ function registerProjectHandlers(): void {
 
   ipcMain.handle('deck:add-thread-message', (event, projectId: unknown, threadId: unknown, message: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    return withStore(() => {
-      const saved = projectStore!.addDeckThreadMessage(projectId as string, threadId as string, message as string)
-      return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
-    })
+    return withStore(() => projectStore!.addDeckThreadMessage(projectId as string,
+      threadId as string, message as string, true))
   })
 
   ipcMain.handle('deck:preview-evidence', (event, projectId: unknown, threadId: unknown,
@@ -963,10 +961,7 @@ function registerProjectHandlers(): void {
 
   ipcMain.handle('deck:save-candidate', (event, input: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    return withStore(() => {
-      const saved = projectStore!.saveDeckCandidate(input as SaveDeckCandidateInput)
-      return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
-    })
+    return withStore(() => projectStore!.saveDeckCandidate(input as SaveDeckCandidateInput, true))
   })
 
   ipcMain.handle('deck:adopt-candidate', (event, input: unknown): OperationResult<DeckBaseline> => {
