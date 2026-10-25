@@ -14,7 +14,7 @@ const date = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'm
 const revisionLabel = (index: number) => index === 0 ? 'Guida iniziale' : `Revisione ${index}`
 
 export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, onRetry, onContinue,
-  onOpenCatalogCard, generating, startedAt, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached, aiControls }: {
+  onOpenCatalogCard, cardTargets, generating, startedAt, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached, aiControls }: {
   discussion: Discussion
   feedback: string
   onFeedback(value: string): void
@@ -22,6 +22,7 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
   onRetry(turnId: string): void
   onContinue(): void
   onOpenCatalogCard(identityId: string): void
+  cardTargets: ReadonlyMap<string, string>
   generating: boolean
   startedAt: number | null
   inFlight: RevisionInFlight | null
@@ -41,7 +42,7 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
   const previous = discussion.turns.filter((turn) => turn.id !== latest?.id)
   const latestIndex = optimistic ? discussion.turns.length : discussion.turns.findIndex((turn) => turn.id === latest?.id)
   const text = (value: string, turn: MatchupTurn) => <GuideText key={`${turn.id}:${value}`} text={value}
-    references={turn.report ? reportGuideReferences(turn.report) : []} onOpenCatalogCard={onOpenCatalogCard} />
+    references={turn.report ? reportGuideReferences(turn.report, cardTargets) : []} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
   const exchange = (turn: MatchupTurn) => <>
     {turn.feedback && <div className="discussion-observation"><h4>Tu</h4><p>{turn.feedback}</p></div>}
     {turn.changeSummary && <div className="discussion-change"><h4>Cosa cambia <span>· Codex</span></h4><p>{text(turn.changeSummary, turn)}</p></div>}

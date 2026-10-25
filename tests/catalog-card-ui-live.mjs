@@ -75,8 +75,12 @@ try {
   assert.equal(await detail.locator('.catalog-card-prints').evaluate((el) => el.open), false)
   assert.equal(await detail.locator('.card-overview').count(), 1)
   assert.match(await detail.locator('.card-artwork figcaption').innerText(), /Set B.*002/)
-  await detail.getByRole('button', { name: 'TCGdex ↗', exact: true }).click()
-  assert.deepEqual(await application.evaluate(() => globalThis.cardSourceOpened), ['https://api.tcgdex.net/v2/en/cards/me02.5-002'])
+  assert.equal(await detail.getByRole('button', { name: /^(TCGdex|Fonte)(?: ↗)?$/ }).count(), 0)
+  assert.equal(await detail.locator('a[href^="https://api.tcgdex.net/"]').count(), 0)
+  assert.deepEqual(await application.evaluate(() => globalThis.cardSourceOpened), [])
+  const storedCatalog = await page.evaluate(() => window.projectsApi.getCatalog())
+  assert.equal(storedCatalog.value.prints.find((print) => print.id === 'me02.5-002').sourceUrl,
+    'https://api.tcgdex.net/v2/en/cards/me02.5-002')
   let minimumContrast = Infinity
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
     await page.setViewportSize({ width, height })
@@ -90,7 +94,7 @@ try {
     })
     assert.ok(geometry, 'Immagine o testo fuori dal dettaglio')
     minimumContrast = Math.min(minimumContrast, (await auditDesignSystem(page, 'Carta Catalogo ' + width)).minimumContrast)
-    await page.screenshot({ path: join(workspace, 'node_modules', `catalog-card-${width}.png`) })
+    await page.screenshot({ path: join(profile, `catalog-card-${width}.png`) })
   }
   await page.setViewportSize({ width: 1280, height: 720 })
   await detail.locator('.catalog-card-prints > summary').focus()
@@ -101,9 +105,9 @@ try {
   assert.ok(await detail.getByText('Testo di gioco non disponibile nel catalogo locale.', { exact: true }).isVisible())
   assert.equal(await detail.locator('.card-attack').count(), 0, 'Testo preso da una stampa diversa dalla selezione')
   assert.ok(await detail.locator('#catalog-card-heading').evaluate((el) => el === document.activeElement))
-  await detail.getByRole('button', { name: 'TCGdex ↗', exact: true }).click()
-  assert.equal((await application.evaluate(() => globalThis.cardSourceOpened)).at(-1), 'https://api.tcgdex.net/v2/en/cards/me01-001')
-  await page.screenshot({ path: join(workspace, 'node_modules', 'catalog-card-missing-1280.png') })
+  assert.equal(await detail.getByRole('button', { name: /^(TCGdex|Fonte)(?: ↗)?$/ }).count(), 0)
+  assert.deepEqual(await application.evaluate(() => globalThis.cardSourceOpened), [])
+  await page.screenshot({ path: join(profile, 'catalog-card-missing-1280.png') })
   await page.getByRole('button', { name: 'Impostazioni AI', exact: true }).click()
   await ready()
   await page.getByRole('button', { name: 'Indietro', exact: true }).click()
@@ -134,7 +138,7 @@ try {
   assert.ok(await detail.locator('.catalog-card-notice').filter({ hasText: 'Promo non elencata · ammissione da verificare' }).isVisible())
   assert.ok(await detail.getByText('Fixture: scheda non acquisita.', { exact: true }).first().isVisible())
   assert.equal(await detail.locator('.catalog-card-prints').evaluate((el) => el.open), false)
-  console.log('CATALOG CARD OK: single-print gameplay, variants/filter/source, missing/broken image, partial/promo, trainer/energy, keyboard/history/constraint; 1440/1280/640; minimum contrast ' + minimumContrast.toFixed(2))
+  console.log('CATALOG CARD OK: single-print gameplay, variants/filter/provenance without JSON links, missing/broken image, partial/promo, trainer/energy, keyboard/history/constraint; 1440/1280/640; minimum contrast ' + minimumContrast.toFixed(2))
 } finally {
   await application?.close()
   rmSync(profile, { recursive: true, force: true })

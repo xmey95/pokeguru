@@ -214,7 +214,6 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
                 <div><strong>{print.setName}</strong><span>{print.setId} · N. {print.localId}</span>
                   {print.rarity && <span>Rarità: {print.rarity}</span>}{print.category === 'Pokemon' && print.stage && <span>Fase: {print.stage}</span>}<span>Marchio: {print.regulationMark ?? 'non indicato'}</span>{print.variants && <span>Varianti: {variantText(print.variants)}</span>}
                   {card.importedPrintIds.includes(print.id) && <span className="imported-print">Indicata nel testo importato</span>}
-                  <button type="button" className="text-button" onClick={() => void window.projectsApi.openCatalogSource(print.sourceUrl)}>Apri scheda fonte ↗</button>
                 </div>
               </article>)}</div></details>}
             {(card.status === 'ambiguous' || card.staleCorrection || card.candidateIdentities.length > 1 ||

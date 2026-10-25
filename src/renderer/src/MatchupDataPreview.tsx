@@ -4,7 +4,7 @@ import { GuideText } from './GuideText'
 export type MatchupAction = 'generate' | 'revise' | 'continue'
 
 export function MatchupDataPreview({ action, total, deckContext, opponent, snapshot, report,
-  currentEvidence, evidenceLoading, evidenceError, feedback, onOpenCatalogCard }: {
+  currentEvidence, evidenceLoading, evidenceError, feedback, cardTargets, onOpenCatalogCard }: {
   action: MatchupAction
   total: number
   deckContext: string | null
@@ -15,13 +15,14 @@ export function MatchupDataPreview({ action, total, deckContext, opponent, snaps
   evidenceLoading: boolean
   evidenceError: string | null
   feedback: string
+  cardTargets: ReadonlyMap<string, string>
   onOpenCatalogCard(identityId: string): void
 }) {
   const revising = action === 'revise'
   const savedEvidence = revising ? report?.tournamentEvidence : undefined
   const evidence = savedEvidence ?? currentEvidence
   const savedCards = revising ? report?.sampleDeckCards : undefined
-  const text = (value: string) => <GuideText text={value} onOpenCatalogCard={onOpenCatalogCard} />
+  const text = (value: string) => <GuideText text={value} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
   const evidenceSummary = evidence ? evidence.status === 'matched'
     ? `${evidence.matchedCompleteLists} ${evidence.matchedCompleteLists === 1 ? 'lista completa' : 'liste complete'} · ${savedEvidence ? 'evidenze salvate nella guida' : 'archivio attuale'}`
     : evidence.status === 'incompatible' ? 'Evidenze non compatibili' : 'Evidenze non disponibili'

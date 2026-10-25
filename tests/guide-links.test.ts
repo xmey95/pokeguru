@@ -2,15 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { GuideText } from '../src/renderer/src/GuideText'
-import { externalGuideTarget, guideSegments, reportGuideReferences, type GuideReference } from '../src/renderer/src/guide-links'
+import { catalogCardTargets, externalGuideTarget, guideSegments, reportGuideReferences, type GuideReference } from '../src/renderer/src/guide-links'
 import type { MatchupReport } from '../src/shared/meta-matchups'
+import type { CatalogView } from '../src/shared/catalog'
 
 const url = 'https://api.tcgdex.net/v2/en/cards/sv01-086'
-const reference: GuideReference = { label: 'Gardevoir ex', target: { kind: 'source', url } }
+const cardTargets = catalogCardTargets({ prints: [{ id: 'sv01-086', sourceUrl: url, identityId: 'pokemon:1' }],
+  referencePrints: [] } as unknown as CatalogView)
+const reference: GuideReference = { label: 'Gardevoir ex', target: { kind: 'catalog', identityId: 'pokemon:1' } }
 
 describe('guide references', () => {
   it('uses existing supported source routes and rejects executable or misleading URLs', () => {
-    expect(externalGuideTarget(url)?.kind).toBe('source')
+    expect(externalGuideTarget(url)).toBeUndefined()
     expect(externalGuideTarget('https://limitlesstcg.com/decks?format=standard')?.kind).toBe('limitless')
     expect(externalGuideTarget('https://limitlesstcg.com/decks/list/12345')?.kind).toBe('limitless')
     expect(externalGuideTarget('https://limitlesstcg.com/tournaments/582')?.kind).toBe('source')
@@ -20,12 +23,19 @@ describe('guide references', () => {
       'https://api.tcgdex.net:444/v2/en/cards/sv01-086', 'https://api.tcgdex.net/v2/en/cards/sv01-086?x=1']) {
       expect(externalGuideTarget(unsafe), unsafe).toBeUndefined()
     }
+    expect(catalogCardTargets({ prints: [], referencePrints: [{ id: 'sv01-086', sourceUrl: url,
+      identityId: 'archived-only' }] } as unknown as CatalogView).size).toBe(0)
   })
   it('preserves prose and punctuation around named, Markdown and bare references', () => {
     const text = 'Gardevoir ex: [scheda](' + url + ').\nFonte ' + url + '.'
-    const segments = guideSegments(text, [reference])
+    const segments = guideSegments(text, [reference], cardTargets)
     expect(segments.filter((item) => item.target).map((item) => item.text)).toEqual(['Gardevoir ex', 'scheda', 'Gardevoir ex'])
     expect(segments.map((item) => item.text).join('')).toBe('Gardevoir ex: scheda.\nFonte Gardevoir ex.')
+    expect(segments.filter((item) => item.target).every((item) => item.target?.kind === 'catalog')).toBe(true)
+    expect(guideSegments(`[scheda](${url})`, [], new Map())[0]).toEqual({ text: `scheda (${url})` })
+    const staleReference: GuideReference = { label: 'Gardevoir ex', target: { kind: 'source', url } }
+    expect(guideSegments('Gardevoir ex', [staleReference])).toEqual([{ text: 'Gardevoir ex' }])
+    expect(guideSegments('Gardevoir ex', [staleReference], cardTargets)[0].target?.kind).toBe('catalog')
     expect(guideSegments('https://limitlesstcg.com/decks?format=standard', [])[0].text).toBe('Meta Limitless')
   })
   it('matches whole names, longest first, with typographic apostrophes', () => {
@@ -43,7 +53,7 @@ describe('guide references', () => {
     const report = { sampleDeckMechanics: [{ name: 'Gardevoir ex', sourceUrl: url }],
       tournamentEvidence: { events: [{ name: 'Regional di prova', url: 'https://limitlesstcg.com/tournaments/582' }] }
     } as MatchupReport
-    expect(reportGuideReferences(report)).toEqual([reference, { label: 'Regional di prova',
+    expect(reportGuideReferences(report, cardTargets)).toEqual([reference, { label: 'Regional di prova',
       target: { kind: 'source', url: 'https://limitlesstcg.com/tournaments/582' } }])
     expect(reportGuideReferences({} as MatchupReport)).toEqual([])
   })

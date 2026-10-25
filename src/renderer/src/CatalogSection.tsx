@@ -202,11 +202,6 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     } finally { setRequesting(false) }
   }
 
-  async function openSource(url: string): Promise<void> {
-    const result = await window.projectsApi.openCatalogSource(url)
-    if (!result.ok) setError(result.error)
-  }
-
   const visible = page?.groups ?? []
   const selectedPrints = detail && detail.group.key === selected?.key
     ? detail.prints.filter((print) => setFilter === 'all' || print.setId === setFilter) : []
@@ -352,7 +347,6 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
         </div>
         <div className="catalog-detail">
           {selected && (selectedPrints.length ? <CatalogCardDetail key={selected.key} name={selected.name} basis={selected.basis} prints={selectedPrints}
-            onOpenSource={(url) => void openSource(url)}
             onConstrain={onConstrain && selected.canConstrain ? () => onConstrain(selected.key) : undefined} />
             : detailKeyLoaded === selected.key ? <p className="diagnostics" role="status">Dettaglio carta non disponibile.</p>
               : <LoadingSkeleton label="Caricamento dettaglio carta…" />)}

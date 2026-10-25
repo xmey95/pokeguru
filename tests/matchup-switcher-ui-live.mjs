@@ -61,6 +61,14 @@ function seed() {
           attacks: [], abilities: [], effect: 'Fixture UI, non una scheda competitiva verificata.',
           trainerType: null, weaknesses: [], resistances: [], retreat: null } }
       db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(print.id, print.setId, JSON.stringify(print))
+      db.prepare('INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date) VALUES (?, ?, 2, 2, ?, ?)')
+        .run('sv01', 'Scarlet & Violet · fixture', now, '2023-03-31')
+      for (const [id, identityId] of [['sv01-245', 'fixture-gardevoir-current'], ['sv01-086', 'fixture-gardevoir-historic']]) {
+        const gardevoir = { ...print, id, setId: 'sv01', setName: 'Scarlet & Violet · fixture',
+          localId: id.slice(-3), name: 'Gardevoir ex', identityId,
+          sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}` }
+        db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(id, 'sv01', JSON.stringify(gardevoir))
+      }
       db.prepare('INSERT INTO catalog_sync VALUES (1, ?)').run(now)
     }
     for (const meta of [oldSnapshot, snapshot]) db.prepare('INSERT INTO meta_snapshots (id, fetched_at, payload) VALUES (?, ?, ?)')
@@ -164,19 +172,25 @@ try {
     })
     const plan = page.locator('.matchup-fields > .strategy-field').first()
     const card = plan.getByRole('link', { name: 'Gardevoir ex', exact: true }).last()
+    assert.equal(await card.getAttribute('href'), '#catalog-card-fixture-gardevoir-current')
     await card.focus()
     await page.keyboard.press('Enter')
-    await plan.getByRole('link', { name: 'lista campione', exact: true }).click()
-    await plan.getByRole('link', { name: 'Regional di prova', exact: true }).click()
+    await page.locator('.catalog-detail').getByRole('heading', { name: 'Gardevoir ex', exact: true }).waitFor({ timeout: 30000 })
+    assert.deepEqual(await application.evaluate(() => globalThis.guideOpened), [], 'La carta locale non deve aprire JSON')
+    await page.getByRole('button', { name: 'Matchup', exact: true }).click()
+    await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
+    const currentPlan = page.locator('.matchup-fields > .strategy-field').first()
+    await currentPlan.getByRole('link', { name: 'lista campione', exact: true }).click()
+    await currentPlan.getByRole('link', { name: 'Regional di prova', exact: true }).click()
     assert.deepEqual(await application.evaluate(() => globalThis.guideOpened), [
-      'https://api.tcgdex.net/v2/en/cards/sv01-245', 'https://limitlesstcg.com/decks/list/12345', 'https://limitlesstcg.com/tournaments/582'
+      'https://limitlesstcg.com/decks/list/12345', 'https://limitlesstcg.com/tournaments/582'
     ], 'Le API reali non hanno aperto le destinazioni previste')
     await application.evaluate(() => { globalThis.guideOpenFails = true })
-    await card.click()
-    await plan.getByRole('alert').waitFor()
+    await currentPlan.getByRole('link', { name: 'lista campione', exact: true }).click()
+    await currentPlan.getByRole('alert').waitFor()
     await application.evaluate(() => { globalThis.guideOpenFails = false })
-    await card.click()
-    await plan.getByRole('alert').waitFor({ state: 'detached' })
+    await currentPlan.getByRole('link', { name: 'lista campione', exact: true }).click()
+    await currentPlan.getByRole('alert').waitFor({ state: 'detached' })
     assert.equal(await page.locator('.matchup-fields img, .matchup-fields a[href^="javascript:"]').count(), 0)
     assert.equal(await page.locator('.matchup-assessment').getAttribute('open'), null)
     assert.equal(await page.locator('.guide-sources').getAttribute('open'), null)
@@ -189,8 +203,7 @@ try {
     await page.locator('.discussion-history > summary').click()
     const previous = page.locator('.discussion-version').first()
     await previous.locator('summary').click()
-    assert.equal(await previous.getByRole('link', { name: 'Gardevoir ex', exact: true }).first().getAttribute('href'), 'https://api.tcgdex.net/v2/en/cards/sv01-086')
-    assert.equal(await previous.locator('a[href^="#catalog-card"]').count(), 0, 'Lo storico usa le carte della lista attuale')
+    assert.equal(await previous.getByRole('link', { name: 'Gardevoir ex', exact: true }).first().getAttribute('href'), '#catalog-card-fixture-gardevoir-historic')
     await previous.locator('summary').click()
     await page.locator('.discussion-history > summary').click()
     await plan.getByRole('link', { name: 'Mega Absol ex', exact: true }).click()
@@ -199,7 +212,7 @@ try {
     await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
   }
 
-  if (process.argv.includes('--navigation')) await navigationScenarios(page, application, workspace)
+  if (process.argv.includes('--navigation')) await navigationScenarios(page, application, profile)
   if (process.argv.includes('--ai-options')) await matchupAiScenarios(page, application, workspace)
   if (process.argv.includes('--discussion')) await discussionScenarios(page, application, workspace, profile)
 
@@ -211,7 +224,7 @@ try {
       const mainBox = await page.locator('.main-content').boundingBox()
       assert.ok(planBox.y + 40 < mainBox.y + mainBox.height, 'Il testo del piano non è visibile nella prima schermata')
     }
-    await page.screenshot({ path: join(workspace, 'node_modules', 'matchup-guide-' + width + '.png') })
+    await page.screenshot({ path: join(profile, 'matchup-guide-' + width + '.png') })
     await trigger.focus()
     await page.keyboard.press('Enter')
     await search.waitFor()
@@ -223,7 +236,7 @@ try {
     assert.match(await picker.locator('.matchup-option').last().innerText(), /Solo nello storico · Guida storica/)
     assert.doesNotMatch(await picker.locator('.matchup-option').last().innerText(), /12,34|12.34|%/)
     await geometry(page, width, height, true)
-    await page.screenshot({ path: join(workspace, 'node_modules', 'matchup-picker-' + width + '.png') })
+    await page.screenshot({ path: join(profile, 'matchup-picker-' + width + '.png') })
     await page.keyboard.press('ArrowUp')
     assert.ok(await picker.locator('.matchup-option').last().evaluate((el) => document.activeElement === el))
     await geometry(page, width, height, true)
@@ -243,7 +256,7 @@ try {
   await search.fill(' gholdengo ')
   assert.equal(await picker.locator('.matchup-option').count(), 1)
   await geometry(page, 640, 720, true)
-  await page.screenshot({ path: join(workspace, 'node_modules', 'matchup-long-name-640.png') })
+  await page.screenshot({ path: join(profile, 'matchup-long-name-640.png') })
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Tab')
   await picker.waitFor({ state: 'hidden' })
