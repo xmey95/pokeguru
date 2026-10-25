@@ -9,22 +9,24 @@ import { TournamentStore } from '../src/main/tournament-store'
 import { CURRENT_SCHEMA_VERSION, completeDatabaseMigration, prepareDatabaseMigration,
   verifyDatabase } from '../src/main/database-migrations'
 
-it('upgrades a v2 archive with a verified backup, then restores the full project after reopening', async () => {
+it('upgrades an APP-109 v3 archive with a verified backup, then restores the full project after reopening', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-project-archive-'))
   const path = join(folder, 'pokeguru.sqlite')
   try {
     const first = new ProjectStore(path)
     const project = first.create({ name: 'Archivio', format: 'STANDARD' })
     first.importDeck({ projectId: project.id, source: 'paste', rawText: '60 Carta A MEG 1' })
-    const thread = first.createDeckThread({ projectId: project.id, title: 'Proposta', openingNote: 'Conservare' })
+    const thread = first.createDeckThread({ projectId: project.id, title: 'Proposta',
+      openingNote: 'Conservare', startWithAi: true })
+    expect(thread.openingAiMessageId).toBe(thread.messages[0].id)
     first.saveDeckCandidate({ projectId: project.id, threadId: thread.id, rawText: '60 Carta B MEG 2' })
     first.close()
     const old = new DatabaseSync(path)
-    old.exec('ALTER TABLE projects DROP COLUMN archived_at; PRAGMA user_version = 2')
+    old.exec('ALTER TABLE projects DROP COLUMN archived_at; PRAGMA user_version = 3')
     old.close()
 
     const preparation = await prepareDatabaseMigration(path)
-    expect(preparation).toMatchObject({ fromVersion: 2, needsMigration: true })
+    expect(preparation).toMatchObject({ fromVersion: 3, needsMigration: true })
     expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
     const recoveredPath = join(folder, 'recovered.sqlite')
     cpSync(preparation.backupPath!, recoveredPath)
@@ -50,6 +52,7 @@ it('upgrades a v2 archive with a verified backup, then restores the full project
     expect(reopened.restore(project.id).archivedAt).toBeNull()
     expect(reopened.getBaseline(project.id)?.rawText).toBe('60 Carta A MEG 1')
     expect(reopened.getDeckThread(project.id, thread.id)).toMatchObject({
+      openingAiMessageId: thread.openingAiMessageId,
       messages: [{ text: 'Conservare' }], candidates: [{ rawText: '60 Carta B MEG 2' }]
     })
     const versionDb = new DatabaseSync(path, { readOnly: true })

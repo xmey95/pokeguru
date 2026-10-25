@@ -12,6 +12,7 @@ import { AiJobStore, type AiJob } from './ai-job-store'
 
 interface ThreadRequest {
   message: string
+  existingUserMessageId?: string
   config: AiRunConfig
   evidence: ThreadEvidencePacket
   sources?: DeckCandidate['sources']
@@ -74,7 +75,8 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
   }
   if (!thread.aiSessionRef) projects.assignDeckAiSession(job.projectId, job.resourceId, result.sessionId)
   projects.saveDeckAiExchange(job.projectId, job.resourceId, result.sessionId,
-    request.message, response!, result.turnId, request.config, proposal, request.evidence, sources)
+    request.message, response!, result.turnId, request.config, proposal, request.evidence, sources,
+    request.existingUserMessageId)
   jobs.transition(job.id, 'applied')
   return 'applied'
 }

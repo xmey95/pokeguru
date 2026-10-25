@@ -183,6 +183,7 @@ export class ProjectStore {
         title TEXT NOT NULL,
         base_version_id TEXT REFERENCES deck_versions(id),
         ai_session_ref TEXT,
+        opening_ai_message_id TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         UNIQUE(project_id, id)
@@ -233,6 +234,8 @@ export class ProjectStore {
         payload_json TEXT NOT NULL
       ) STRICT;
     `)
+    const threadColumns = new Set((this.db.prepare('PRAGMA table_info(deck_threads)').all() as { name: string }[]).map((row) => row.name))
+    if (!threadColumns.has('opening_ai_message_id')) this.db.exec('ALTER TABLE deck_threads ADD COLUMN opening_ai_message_id TEXT')
     const messageColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[]).map((row) => row.name))
     if (!messageColumns.has('ai_config_json') || !messageColumns.has('ai_turn_id')) {
       this.db.exec('BEGIN IMMEDIATE')
@@ -588,7 +591,7 @@ export class ProjectStore {
   listDeckThreadSummaries(projectId: string): DeckThreadSummary[] {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const rows = this.db.prepare(`SELECT t.id, t.project_id, t.title, t.base_version_id,
-      t.ai_session_ref, t.created_at, t.updated_at, v.sequence AS base_sequence,
+      t.ai_session_ref, t.opening_ai_message_id, t.created_at, t.updated_at, v.sequence AS base_sequence,
       h.version_id AS current_version_id,
       (SELECT id FROM (
         SELECT id, sequence FROM deck_thread_candidates WHERE thread_id = t.id
@@ -598,14 +601,15 @@ export class ProjectStore {
       LEFT JOIN deck_main_heads h ON h.project_id = t.project_id
       WHERE t.project_id = ? ORDER BY t.created_at DESC, t.rowid DESC`).all(projectId) as {
         id: string; project_id: string; title: string; base_version_id: string | null
-        ai_session_ref: string | null; created_at: string; updated_at: string
+        ai_session_ref: string | null; opening_ai_message_id: string | null; created_at: string; updated_at: string
         base_sequence: number | null; current_version_id: string | null; latest_candidate_id: string | null
       }[]
     return rows.map((row) => ({ id: row.id, projectId: row.project_id, title: row.title,
       baseVersionId: row.base_version_id, baseVersionNumber: row.base_sequence,
       currentVersionId: row.current_version_id,
       stale: row.base_version_id !== row.current_version_id,
-      aiSessionRef: row.ai_session_ref, createdAt: row.created_at, updatedAt: row.updated_at,
+      aiSessionRef: row.ai_session_ref, openingAiMessageId: row.opening_ai_message_id,
+      createdAt: row.created_at, updatedAt: row.updated_at,
       latestCandidateId: row.latest_candidate_id }))
   }
 
@@ -631,12 +635,13 @@ export class ProjectStore {
     const current = this.db.prepare('SELECT version_id FROM deck_main_heads WHERE project_id = ?')
       .get(projectId) as { version_id: string } | undefined
     const rows = this.db.prepare(`SELECT t.id, t.project_id, t.title, t.base_version_id,
-      t.ai_session_ref, t.created_at, t.updated_at, v.sequence AS base_sequence
+      t.ai_session_ref, t.opening_ai_message_id, t.created_at, t.updated_at, v.sequence AS base_sequence
       FROM deck_threads t LEFT JOIN deck_versions v ON v.id = t.base_version_id
       WHERE t.project_id = ? ${threadId === undefined ? '' : 'AND t.id = ?'}
       ORDER BY t.created_at DESC, t.rowid DESC`).all(...(threadId === undefined ? [projectId] : [projectId, threadId])) as {
         id: string; project_id: string; title: string; base_version_id: string | null
-        ai_session_ref: string | null; created_at: string; updated_at: string; base_sequence: number | null
+        ai_session_ref: string | null; opening_ai_message_id: string | null
+        created_at: string; updated_at: string; base_sequence: number | null
       }[]
     const messages = this.db.prepare(`SELECT id, text, created_at, author, ai_config_json, ai_turn_id,
       evidence_json, cited_source_ids_json FROM deck_thread_messages
@@ -650,7 +655,8 @@ export class ProjectStore {
       baseVersionId: row.base_version_id, baseVersionNumber: row.base_sequence,
       currentVersionId: current?.version_id ?? null,
       stale: row.base_version_id !== (current?.version_id ?? null),
-      aiSessionRef: row.ai_session_ref, createdAt: row.created_at, updatedAt: row.updated_at,
+      aiSessionRef: row.ai_session_ref, openingAiMessageId: row.opening_ai_message_id,
+      createdAt: row.created_at, updatedAt: row.updated_at,
       messages: (messages.all(row.id) as {
         id: string; text: string; created_at: string; author: DeckThreadMessage['author']; ai_config_json: string | null;
         ai_turn_id: string | null; evidence_json: string | null; cited_source_ids_json: string | null
@@ -689,17 +695,20 @@ export class ProjectStore {
     const openingNote = typeof input.openingNote === 'string' ? input.openingNote.trim() : ''
     if (!title || title.length > 120 || title.includes('\0')) throw new Error('Inserisci un titolo da 1 a 120 caratteri.')
     if (openingNote.length > 5000 || openingNote.includes('\0')) throw new Error('Scrivi un messaggio fino a 5.000 caratteri.')
+    if (input.startWithAi && !openingNote) throw new Error('Scrivi il primo messaggio per Codex.')
     const id = randomUUID()
+    const openingId = openingNote ? randomUUID() : null
     const now = new Date().toISOString()
     this.db.exec('BEGIN IMMEDIATE')
     try {
       const head = this.db.prepare('SELECT version_id FROM deck_main_heads WHERE project_id = ?')
         .get(input.projectId) as { version_id: string } | undefined
       this.db.prepare(`INSERT INTO deck_threads
-        (id, project_id, title, base_version_id, ai_session_ref, created_at, updated_at)
-        VALUES (?, ?, ?, ?, NULL, ?, ?)`).run(id, input.projectId, title, head?.version_id ?? null, now, now)
+        (id, project_id, title, base_version_id, ai_session_ref, opening_ai_message_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, NULL, ?, ?, ?)`).run(id, input.projectId, title, head?.version_id ?? null,
+          input.startWithAi ? openingId : null, now, now)
       if (openingNote) this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
-        VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), id, openingNote, now)
+        VALUES (?, ?, 'user', ?, ?)`).run(openingId, id, openingNote, now)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
     return this.getDeckThread(input.projectId, id)!
@@ -738,7 +747,7 @@ export class ProjectStore {
   saveDeckAiExchange(projectId: string, threadId: string, sessionId: string,
     question: string, answer: string, turnId: string, config: AiRunConfig,
     proposal?: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] },
-    evidence?: ThreadEvidencePacket, citedSourceIds: string[] = []): DeckThread {
+    evidence?: ThreadEvidencePacket, citedSourceIds: string[] = [], existingUserMessageId?: string): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const thread = this.getDeckThread(projectId, threadId)
     if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questo thread.')
@@ -759,9 +768,16 @@ export class ProjectStore {
       parsedProposal.diagnostics.some((item) => item.code === 'TOTAL_MISMATCH')))
       throw new Error('La proposta Codex non contiene una lista completa di 60 carte.')
     const now = new Date().toISOString()
+    if (existingUserMessageId) {
+      const existing = thread.messages.find((message) => message.id === existingUserMessageId)
+      if (thread.openingAiMessageId !== existingUserMessageId || !existing ||
+        existing.author !== 'user' || existing.text !== userText ||
+        thread.messages.some((message) => message.author === 'assistant'))
+        throw new Error('Primo messaggio Codex non recuperabile.')
+    }
     this.db.exec('BEGIN IMMEDIATE')
     try {
-      this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
+      if (!existingUserMessageId) this.db.prepare(`INSERT INTO deck_thread_messages (id, thread_id, author, text, created_at)
         VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), threadId, userText, now)
       this.db.prepare(`INSERT INTO deck_thread_messages
         (id, thread_id, author, text, created_at, ai_config_json, ai_turn_id,

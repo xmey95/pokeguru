@@ -77,11 +77,11 @@ try {
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Thread A')
-  await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Thread B')
-  await page.getByRole('button', { name: 'Crea thread' }).click()
+  await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
 
   if (offline) {

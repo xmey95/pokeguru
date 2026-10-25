@@ -733,7 +733,7 @@ function registerProjectHandlers(): void {
   })
 
   ipcMain.handle('deck:ask-thread', async (event, projectId: unknown, threadId: unknown,
-    message: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
+    message: unknown, override: unknown, existingUserMessageId: unknown): Promise<OperationResult<DeckThread>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!projectStore || !catalogStore || !aiJobStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
       typeof message !== 'string' || !message.trim() || message.trim().length > 5000 || message.includes('\0'))
@@ -743,6 +743,12 @@ function registerProjectHandlers(): void {
     if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le sessioni Codex sono disponibili solo per il circuito occidentale.' }
     const thread = projectStore.getDeckThread(projectId, threadId)
     if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
+    if (existingUserMessageId !== undefined && (typeof existingUserMessageId !== 'string' ||
+      thread.openingAiMessageId !== existingUserMessageId ||
+      !thread.messages.some((entry) => entry.id === existingUserMessageId &&
+        entry.author === 'user' && entry.text === message.trim()) ||
+      thread.messages.some((entry) => entry.author === 'assistant')))
+      return { ok: false, error: 'Primo messaggio Codex non recuperabile.' }
     if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questo thread.' }
     let job: AiJob
     try { job = aiJobStore.start('thread-ask', projectId, threadId) }
@@ -758,13 +764,15 @@ function registerProjectHandlers(): void {
       const evidence = buildThreadEvidence(thread, base, message.trim(),
         projectStore.listConstraints(projectId), catalogStore.view(),
         tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
-      aiJobStore.prepare(job.id, { message: message.trim(), config, evidence })
+      aiJobStore.prepare(job.id, { message: message.trim(), config, evidence, existingUserMessageId })
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
       const prompt = deckDiscussionPrompt(thread, base, message.trim(), evidence)
       const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, prompt, config,
         DECK_DISCUSSION_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal })
+          signal: controller.signal, onSessionStarted: (id) => {
+            if (!thread.aiSessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
+          } })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
       aiJobStore.ready(job.id, result)
       const sessionId = result.sessionId
@@ -772,7 +780,8 @@ function registerProjectHandlers(): void {
       const answer = readDeckDiscussionReply(result.value)
       const citedSourceIds = readDeckDiscussionSourceIds(result.value, evidence)
       const saved = projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
-        message.trim(), answer, result.turnId, config, undefined, evidence, citedSourceIds)
+        message.trim(), answer, result.turnId, config, undefined, evidence, citedSourceIds,
+        typeof existingUserMessageId === 'string' ? existingUserMessageId : undefined)
       aiJobStore.transition(job.id, 'applied')
       clearAiArtifacts(job.id)
       return { ok: true, value: saved }

@@ -24,7 +24,8 @@ export function deckDiscussionPrompt(thread: DeckThread, base: DeckVersion | nul
   let lastReply = -1
   thread.messages.forEach((message, index) => { if (message.author === 'assistant') lastReply = index })
   const notes = thread.messages.slice(lastReply + 1)
-    .filter((message) => message.author === 'user').map((message) => message.text)
+    .filter((message) => message.author === 'user' && message.id !== thread.openingAiMessageId)
+    .map((message) => message.text)
   const context = { baseVersion: base?.sequence ?? null, deck: base?.rawText ?? null,
     candidate: thread.candidates.at(-1)?.rawText ?? null,
     priorNotes: lastReply < 0 ? notes : [], newNotes: lastReply < 0 ? [] : notes,
