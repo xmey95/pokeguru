@@ -109,7 +109,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-100** | Misurare il bundle renderer e dividerlo solo se utile | Performance | R-13 / correzioni review | P2 / S | APP-093; baseline avvio e navigazione | Done |
 | **APP-101** | Includere nel Thread le schede già note citate nel contesto | Correzione AI | R-07, R-08 / feedback utente | P1 / S | APP-092/094; caso reale osservato in sola lettura | Done |
 | **APP-102** | Conservare posizione e contesto scegliendo una carta del Catalogo | Correzione UI | R-02 / feedback utente | P1 / S | APP-072/093; autorizzazione utente 25-10-2026 | Done |
-| **APP-107** | Eliminare dall'interfaccia i link TCGdex al JSON grezzo | UI/correzione | R-02, R-07, R-10 / feedback utente | P1 / S | APP-102 integrato in `dev` prima dei cambi al Catalogo | In progress |
+| **APP-107** | Eliminare dall'interfaccia i link TCGdex al JSON grezzo | UI/correzione | R-02, R-07, R-10 / feedback utente | P1 / S | APP-102 integrato in `dev` prima dei cambi al Catalogo | Done |
 | **APP-109** | Avviare Codex con il primo messaggio del nuovo Thread | Funzionalità/UX | R-03, R-07, R-11 / feedback utente | P1 / M | APP-040/058/097; autorizzazione utente 25-10-2026 | Done |
 | **APP-103** | Acquisire tutti i tornei occidentali Standard della rotazione corrente con copertura esplicita | Correzione Eventi | R-06 / feedback utente | P1 / M | APP-056, pacchetto rotazione locale | Done |
 
@@ -941,8 +941,8 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 
 - **Autorizzazione e Ready:** richiesta utente del 25-10-2026 per Catalogo, Thread e Matchup; lavorare in branch isolato e attendere APP-102 in `dev` prima di modificare il Catalogo.
 - **Accettazione:** nessun controllo dell'interfaccia apre il JSON TCGdex nel browser; le schede note si aprono nel Catalogo locale, quelle non disponibili non diventano link esterni; URL e identificativi originali restano nei dati e nelle evidenze storiche. Limitless e le altre fonti web continuano ad aprirsi.
-- **Stato:** Thread e Matchup instradano le schede note al Catalogo tramite identità locale. Una fonte TCGdex priva di scheda consultabile resta testo. Nessun dato persistito è stato trasformato. Modifiche Catalogo ancora sospese per APP-102.
-- **Verifiche parziali:** build/typecheck, 145 test unitari su Node 24, Electron Matchup `--guide-links` ed Electron Thread con profilo SQLite temporaneo passati. Il percorso Electron `--navigation` si ferma due volte sul salvataggio ritardato del Thread, dopo i controlli dei link: da riesaminare senza attribuirlo ai link. Restano prova del Catalogo, riesecuzione finale e CI Linux/Windows.
+- **Risultato:** i riferimenti TCGdex delle guide Matchup, delle revisioni storiche, delle evidenze e candidate Thread aprono il gruppo della carta nel Catalogo se la stampa ha un'identità locale consultabile. Una fonte TCGdex senza gruppo consultabile resta testo; le fonti Limitless continuano ad aprirsi nel browser. Nel Catalogo e nella Lista sono rimossi i pulsanti che aprivano il JSON; la scelta di stampa e i metadati locali restano disponibili. Gli URL TCGdex, gli ID e gli snapshot salvati non sono stati modificati, così la provenienza tecnica rimane nelle evidenze e nel Catalogo.
+- **Verifiche e limiti:** build/typecheck, 145 test unitari su Node 24, prove Electron Catalogo (1440/1280/640 px), Thread/Lista e Matchup `--guide-links` passate con profili SQLite temporanei; i test controllano anche che nessun JSON TCGdex raggiunga la shell e che gli URL restino nei dati. Non è stata eseguita una nuova sincronizzazione TCGdex. Il percorso esteso Electron `--navigation` si ferma ripetutamente sul salvataggio ritardato di un messaggio Thread, dopo i controlli dei link: non è una verifica passata e richiede analisi separata. CI Linux/Windows della PR da completare.
 
 ## Regola per i blocchi
 

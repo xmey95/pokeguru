@@ -17,12 +17,11 @@ function promoStatus(print: CatalogPrint) {
       : promo?.state === 'unlisted' ? 'Promo non elencata · ammissione da verificare' : 'Promo da verificare'
 }
 
-export function CatalogCardDetail({ name, basis, prints, onConstrain, onOpenSource }: {
+export function CatalogCardDetail({ name, basis, prints, onConstrain }: {
   name: string
   basis: CatalogPrint['identityBasis']
   prints: CatalogPrint[]
   onConstrain?: () => void
-  onOpenSource(url: string): void
 }) {
   const nav = useNavigation()
   const [printId, setPrintId] = useViewState<string | null>('catalog.print', null)
@@ -40,7 +39,7 @@ export function CatalogCardDetail({ name, basis, prints, onConstrain, onOpenSour
     {(!basis || basis === 'unverified') && <p className="content-note catalog-card-notice">Equivalenza delle stampe da verificare.</p>}
     {current.isPromo && current.promoStatus?.state !== 'available' && <p className="catalog-card-notice diagnostics" role="status">{promoStatus(current)}</p>}
     {current.error && <p className="catalog-card-notice diagnostics" role="status">{current.error}</p>}
-    <CardFace print={current} imagePrint={current} onOpenSource={onOpenSource} />
+    <CardFace print={current} imagePrint={current} />
     {onConstrain && <div className="catalog-card-actions"><button type="button" className="secondary-button" onClick={onConstrain}>Aggiungi vincolo su questa carta</button></div>}
     <details className="catalog-card-prints" id="catalog-card-prints">
       <summary>Stampe e metadati ({prints.length})</summary>
@@ -59,7 +58,6 @@ export function CatalogCardDetail({ name, basis, prints, onConstrain, onOpenSour
             <button type="button" className="text-button" aria-pressed={print.id === current.id}
               aria-label={`Mostra stampa ${print.setId} ${print.localId}`} onClick={() => showPrint(print.id)}>
               {print.id === current.id ? 'Stampa visualizzata' : 'Mostra questa stampa'}</button>
-            <button type="button" className="text-button" onClick={() => onOpenSource(print.sourceUrl)}>Fonte ↗</button>
           </div>
         </div>
       </article>)}</div>
