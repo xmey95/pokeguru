@@ -41,7 +41,10 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
   const [selectedKey, setSelectedKey] = useViewState<string | null>('catalog.selected', null)
   const [focusConsumed, setFocusConsumed] = useViewState('catalog.focusConsumed', false)
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null)
-  const busy = requesting || !!syncStatus?.running
+  const [controlPending, setControlPending] = useState(false)
+  const busy = requesting || controlPending || !!syncStatus?.running
+  const recoverableJob = syncStatus?.state === 'paused' || syncStatus?.state === 'interrupted' ||
+    syncStatus?.state === 'rate-limited'
   const [progressError, setProgressError] = useState<string | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [checkingRules, setCheckingRules] = useBusyState('catalog.rules')
@@ -191,7 +194,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
   }
 
   async function syncStandard(mode: CatalogSyncMode): Promise<void> {
-    if (busy) return
+    if (busy || (recoverableJob && syncStatus?.mode !== mode)) return
     setRequesting(true)
     setError(null)
     try {
@@ -202,6 +205,20 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       setError(`${cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.'} I dettagli già acquisiti restano salvati.`)
       try { await refreshCatalog() } catch { /* Keep the last visible overview. */ }
     } finally { setRequesting(false) }
+  }
+
+  async function controlStandard(action: 'pause' | 'cancel'): Promise<void> {
+    if (requesting || controlPending) return
+    setControlPending(true)
+    setError(null)
+    try {
+      const result = action === 'pause' ? await window.projectsApi.pauseCatalogSync()
+        : await window.projectsApi.cancelCatalogSync()
+      if (!result.ok) throw new Error(result.error)
+      setSyncStatus(result.value)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Controllo aggiornamento non riuscito.')
+    } finally { setControlPending(false) }
   }
 
   const visible = page?.groups ?? []
@@ -231,11 +248,11 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     <div className="panel-heading"><h2 id="catalog-management-heading">Gestione catalogo</h2>
       <button type="button" className="text-button" onClick={closeManagement}>Chiudi gestione</button></div>
     <div className="catalog-maintenance-actions">
-      <div><button type="button" className="secondary-button" onClick={() => void syncStandard('full')} disabled={loading || busy || !syncStatus || !!progressError}>
-          {syncStatus?.state === 'paused' && syncStatus.mode === 'full' ? 'Riprendi scansione completa' : 'Scansione completa'}
+      <div><button type="button" className="secondary-button" onClick={() => void syncStandard('full')} disabled={loading || busy || !syncStatus || !!progressError || (recoverableJob && syncStatus.mode !== 'full')}>
+          {recoverableJob && syncStatus?.mode === 'full' ? 'Riprendi scansione completa' : 'Scansione completa'}
         </button>
         <p className="content-note">Ricontrolla anche le schede già acquisite.</p></div>
-      {!standard && <div><button type="button" className="secondary-button" onClick={() => void sync()} disabled={loading || busy || !syncStatus || !!progressError}>
+      {!standard && <div><button type="button" className="secondary-button" onClick={() => void sync()} disabled={loading || busy || recoverableJob || !syncStatus || !!progressError}>
           {busy ? 'Sincronizzazione…' : catalog?.syncedAt ? 'Aggiorna campione' : 'Sincronizza campione'}
         </button>
         <p className="content-note">Acquisisce un piccolo gruppo di carte.</p></div>}
@@ -319,9 +336,11 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     <div className="panel-heading">
       <div><h1>Catalogo</h1><p className="content-note">{catalog?.syncedAt ? `Aggiornato ${date(catalog.syncedAt)}${standard ? '' : ' · campione di prova'}` : 'Carte condivise fra i progetti'}</p></div>
       <div className="catalog-actions">
-        <button type="button" className="primary-button" onClick={() => void syncStandard('new')} disabled={loading || busy || !syncStatus || !!progressError}>
+        <button type="button" className="primary-button" onClick={() => void syncStandard('new')} disabled={loading || busy || !syncStatus || !!progressError || (recoverableJob && syncStatus.mode !== 'new')}>
           {busy && <Spinner />}
-          {busy ? 'Aggiornamento in corso…' : syncStatus?.state === 'paused' && syncStatus.mode === 'new' ? 'Riprendi aggiornamento' : 'Aggiorna nuove carte'}
+          {busy ? syncStatus?.state === 'rate-limited' ? 'In attesa TCGdex…'
+            : syncStatus?.mode === 'full' ? 'Scansione in corso…' : 'Aggiornamento in corso…'
+            : recoverableJob && syncStatus?.mode === 'new' ? 'Riprendi aggiornamento' : 'Aggiorna nuove carte'}
         </button>
         <button type="button" id="catalog-management-trigger" className="secondary-button"
           aria-expanded={managementOpen} aria-controls="catalog-management" onClick={() => setManagementOpen(!managementOpen)}>Gestisci catalogo</button>
@@ -330,7 +349,9 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     {catalog?.rulePackageError && <p className="diagnostics" role="alert">{catalog.rulePackageError}</p>}
     {currentRuleAudit?.status === 'changed' && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
     {currentRuleAudit?.status === 'unavailable' && <p className="catalog-gap-summary" role="status">Fonti Standard non raggiungibili · ultimo controllo riuscito {currentRuleAudit.verifiedAt ? date(currentRuleAudit.verifiedAt) : 'mai'}.</p>}
-    <CatalogActivity status={syncStatus} requesting={requesting} startedAt={startedAt} onResume={() => void syncStandard(syncStatus?.mode ?? 'new')} />
+    <CatalogActivity status={syncStatus} requesting={requesting} controlling={controlPending} startedAt={startedAt}
+      onResume={() => void syncStandard(syncStatus?.mode ?? 'new')}
+      onPause={() => void controlStandard('pause')} onCancel={() => void controlStandard('cancel')} />
     {progressError && <p className="warning-banner" role="status">{progressError}</p>}
     {checkingRules && <ActivityStatus title="Controllo delle fonti Standard…" />}
     {syncStatus?.error && <p className="diagnostics" role="status">{syncStatus.error}</p>}

@@ -3,13 +3,22 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, expect, it, vi } from 'vitest'
-import { CatalogStore, fetchStandardManifest, syncStandardCatalog } from '../src/main/catalog'
+import { CatalogStore, fetchCatalogImage, fetchStandardManifest, syncStandardCatalog } from '../src/main/catalog'
 import { OFFICIAL_SET_RELEASE_CHECKED_AT, officialSetRelease, officialSetReleases } from '../src/main/official-set-releases'
 
 const folders: string[] = []
 afterEach(() => {
   vi.unstubAllGlobals()
   for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true })
+})
+
+it('propaga il limite 429 della fonte immagini per fermare le richieste successive', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) =>
+    String(input).endsWith('/low.webp')
+      ? new Response('', { status: 429, headers: { 'Retry-After': '90' } })
+      : new Response(null, { status: 200 })))
+  await expect(fetchCatalogImage('https://assets.tcgdex.net/en/sv/sv05/001', 'sv05-001'))
+    .rejects.toThrow('HTTP 429')
 })
 
 it('mappa le date di uscita ufficiali dei set senza inferire quelle delle promo o dei set ignoti', () => {
@@ -62,7 +71,8 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     }
     const id = url.split('/').at(-1)!
     details.set(id, (details.get(id) ?? 0) + 1)
-    if (id === 'mep-001' && failPromo) return new Response('', { status: 503 })
+    if (id === 'mep-001' && failPromo) return new Response('', { status: 503,
+      headers: { 'Retry-After': '120' } })
     const name = briefs.find((card) => card.id === id)?.name ?? 'Basic Energy'
     return Response.json({ id, localId: '001', name, category: name === 'Basic Energy' ? 'Energy' : 'Pokemon',
       image: id === 'sv05-001' ? 'https://assets.tcgdex.net/en/sv/sv05/001' : undefined,
@@ -79,7 +89,9 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   })
   const store = new CatalogStore(database)
   await expect(syncStandardCatalog(store)).rejects.toThrow('limitato temporaneamente')
-  expect(store.jobStatus()).toMatchObject({ mode: 'new', state: 'paused', expected: 6, acquired: 5 })
+  expect(store.jobStatus()).toMatchObject({ mode: 'new', state: 'rate-limited', expected: 6, acquired: 5,
+    cooldownUntil: expect.any(String) })
+  expect(Date.parse(store.jobStatus().cooldownUntil!)).toBeGreaterThan(Date.now() + 115_000)
   expect(store.view().standardCoverage).toMatchObject({ expected: 6, acquired: 5, missing: 1 })
   expect(store.getPrint('sv05-001')?.thumbnail).toBe('pokeguru://cards/sv05-001.webp')
   expect(existsSync(join(folder, 'catalog-images', 'sv05-001.webp'))).toBe(true)
@@ -116,7 +128,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     dateNote: null, checkedAt: '2026-11-01' } }])
   expect(reopened.view().prints.find((print) => print.id === 'nvp-001')?.promoStatus?.state).toBe('unlisted')
   expect(details.get('sv05-001')).toBe(1)
-  expect(details.get('mep-001')).toBe(5)
+  expect(details.get('mep-001')).toBe(2)
   expect(view.prints.find((print) => print.id === 'mep-001')?.rarity).toBe('Common')
   expect(view.prints.find((print) => print.id === 'mep-001')?.regulationMark).toBe('I')
   const standardPrint = view.prints.find((print) => print.id === 'sv05-001')!
@@ -130,7 +142,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   expect(details.get('sv05-001')).toBe(1)
   expect(reopened.getPrint('sv05-001')?.rarity).toBe('Common')
   await syncStandardCatalog(reopened, undefined, 'full')
-  expect(details.get('mep-001')).toBe(6)
+  expect(details.get('mep-001')).toBe(3)
   expect(reopened.getPrint('sv05-001')?.rarity).toBe('Rare')
   const unchangedDetailAt = reopened.getPrint('mep-001')?.detailAt
   const latestOfficialCheck = reopened.view().promoAudit?.checkedAt
@@ -143,6 +155,71 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   expect(reopened.getPrint('mep-001')?.detailAt).toBe(unchangedDetailAt)
   reopened.close()
 }, 45_000)
+
+it('prosegue oltre una scheda non disponibile, poi riprende solo quella dopo il riavvio', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-standard-blocks-'))
+  folders.push(folder)
+  const database = join(folder, 'catalog.sqlite')
+  const briefs = Array.from({ length: 14 }, (_, index) => ({
+    id: `sv05-${String(index + 1).padStart(3, '0')}`,
+    localId: String(index + 1).padStart(3, '0'), name: `Carta ${index + 1}`
+  }))
+  const energy = (set: string) => ({ id: `${set}-001`, localId: '001', name: 'Basic Energy' })
+  const sets = ['sv05', 'sve', 'mee'].map((id) => ({ id, name: id.toUpperCase(),
+    cardCount: { total: id === 'sv05' ? 14 : 1 } }))
+  let missing = true
+  const reads = new Map<string, number>()
+  vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
+    const url = String(input)
+    if (url.includes('/cards?regulationMark=eq:h')) return Response.json([])
+    if (url.includes('/cards?')) return Response.json(briefs)
+    if (url.endsWith('/sets')) return Response.json(sets)
+    if (url.includes('/sets/')) {
+      const id = url.split('/').at(-1)!
+      const set = sets.find((value) => value.id === id)!
+      return Response.json({ ...set, cards: id === 'sv05' ? briefs : [energy(id)] })
+    }
+    const id = url.split('/').at(-1)!
+    reads.set(id, (reads.get(id) ?? 0) + 1)
+    if (id === 'sv05-001' && missing) return new Response('', { status: 404 })
+    const card = [...briefs, energy('sve'), energy('mee')].find((value) => value.id === id)!
+    return Response.json({ ...card, category: 'Pokemon', stage: 'Basic', regulationMark: 'H' })
+  }))
+
+  const store = new CatalogStore(database)
+  await expect(syncStandardCatalog(store)).rejects.toThrow('1 dettaglio TCGdex non disponibile')
+  expect(store.jobStatus()).toMatchObject({ state: 'paused', expected: 16, acquired: 15 })
+  expect(reads.get('sv05-014')).toBe(1) // The second block advanced without a click.
+  store.close()
+
+  missing = false
+  const reopened = new CatalogStore(database)
+  await syncStandardCatalog(reopened)
+  expect(reopened.jobStatus()).toMatchObject({ state: 'done', expected: 16, acquired: 16 })
+  expect(reads.get('sv05-001')).toBe(2)
+  expect(reads.get('sv05-014')).toBe(1)
+  reopened.startJob('full')
+  reopened.queueJob('full')
+  reopened.pauseJob(null, 'In pausa su richiesta')
+  reopened.close()
+
+  const paused = new CatalogStore(database)
+  expect(paused.jobStatus()).toMatchObject({ state: 'paused', expected: 16, acquired: 0 })
+  expect(paused.resumeJob('full')).toBe(true)
+  paused.cancelJob()
+  paused.close()
+  const cancelled = new CatalogStore(database)
+  expect(cancelled.jobStatus()).toMatchObject({ state: 'cancelled', expected: 16, acquired: 0 })
+  expect(cancelled.resumeJob('full')).toBe(false)
+  cancelled.startJob('full')
+  cancelled.queueJob('full')
+  cancelled.interruptJob()
+  cancelled.close()
+  const interrupted = new CatalogStore(database)
+  expect(interrupted.jobStatus()).toMatchObject({ state: 'interrupted', expected: 16, acquired: 0 })
+  expect(interrupted.resumeJob('full')).toBe(true)
+  interrupted.close()
+}, 20_000)
 
 it('migra un archivio catalogo precedente senza perdere i set e salva la data nuova', () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-standard-legacy-'))
@@ -166,3 +243,37 @@ it('migra un archivio catalogo precedente senza perdere i set e salva la data nu
   expect(reopened.view().sets[0].releaseDate).toBe('2025-09-26')
   reopened.close()
 })
+
+it('conserva il 429 dell’indice Limitless e attende un clic dopo il riavvio', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-limitless-cooldown-'))
+  folders.push(folder)
+  const database = join(folder, 'catalog.sqlite')
+  const energy = (id: string) => ({ id: `${id}-001`, localId: '001', name: 'Basic Energy' })
+  const sets = ['sve', 'mee'].map((id) => ({ id, name: id.toUpperCase(), cardCount: { total: 1 } }))
+  const request = vi.fn(async (input: string | URL | Request) => {
+    const url = String(input)
+    if (url.includes('limitlesstcg.com/cards/SVE')) {
+      return new Response('', { status: 429, headers: { 'Retry-After': '90' } })
+    }
+    if (url.includes('/cards?')) return Response.json([])
+    if (url.endsWith('/sets')) return Response.json(sets)
+    if (url.includes('/sets/')) {
+      const id = url.split('/').at(-1)!
+      return Response.json({ ...sets.find((set) => set.id === id), cards: [energy(id)] })
+    }
+    throw new Error(`Unexpected request: ${url}`)
+  })
+  vi.stubGlobal('fetch', request)
+  const store = new CatalogStore(database)
+  await expect(syncStandardCatalog(store)).rejects.toThrow('Limitless: HTTP 429')
+  expect(store.jobStatus()).toMatchObject({ state: 'rate-limited', phase: 'Attesa Limitless', expected: 0,
+    cooldownUntil: expect.any(String) })
+  expect(Date.parse(store.jobStatus().cooldownUntil!)).toBeGreaterThan(Date.now() + 85_000)
+  store.close()
+
+  request.mockClear()
+  const reopened = new CatalogStore(database)
+  expect(reopened.jobStatus().state).toBe('rate-limited')
+  expect(request).not.toHaveBeenCalled()
+  reopened.close()
+}, 10_000)

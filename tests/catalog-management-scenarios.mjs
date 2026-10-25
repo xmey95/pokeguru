@@ -94,7 +94,7 @@ export async function catalogManagementScenarios(page, application, workspace) {
   await page.getByRole('button', { name: 'Chiudi gestione' }).click()
   await page.locator('.catalog-sync-status').filter({ hasText: 'Scansione completa in corso' }).waitFor()
   await application.evaluate(() => { globalThis.catalogUiStatus = { ...globalThis.catalogUiStatus, running: false, state: 'paused', error: 'Fixture: scansione interrotta.' } })
-  await page.locator('.catalog-sync-status').filter({ hasText: 'in pausa' }).waitFor()
+  await page.locator('.catalog-sync-status').filter({ hasText: 'Scansione completa in pausa' }).waitFor()
   assert.ok(await page.locator('.catalog-sync-status').getByRole('button', { name: 'Riprendi scansione' }).isVisible())
   await trigger.click()
   await page.getByRole('button', { name: 'Riprendi scansione completa' }).click()

@@ -127,6 +127,8 @@ function hasRecoverableThreadJob(): boolean {
 }
 let catalogSyncing = false
 let catalogRetryTimer: ReturnType<typeof setTimeout> | null = null
+let catalogJobController: AbortController | null = null
+let catalogShuttingDown = false
 const rendererFile = join(__dirname, '../renderer/index.html')
 const rendererUrl = 'pokeguru://bundle/index.html'
 const packagedCsp = [
@@ -153,18 +155,35 @@ function isTrustedRendererUrl(value: string): boolean {
   } catch { return false }
 }
 
+function catalogJobStatus(store: CatalogStore): CatalogSyncStatus {
+  const status = store.jobStatus()
+  return { ...status, running: status.state === 'running' ? catalogSyncing
+    : status.state === 'rate-limited' ? catalogSyncing || catalogRetryTimer !== null : false }
+}
+
 function runCatalogJob(mode: CatalogSyncMode): void {
   const store = catalogStore
   if (!store || catalogSyncing) return
+  const status = store.jobStatus()
+  if (status.state === 'rate-limited' && status.cooldownUntil &&
+    Date.parse(status.cooldownUntil) > Date.now()) {
+    if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
+    catalogRetryTimer = setTimeout(() => {
+      catalogRetryTimer = null
+      runCatalogJob(mode)
+    }, Math.min(60 * 60_000, Date.parse(status.cooldownUntil) - Date.now()))
+    return
+  }
   catalogSyncing = true
-  void syncStandardCatalog(store, undefined, mode).then(() => {
+  const controller = new AbortController()
+  catalogJobController = controller
+  void syncStandardCatalog(store, undefined, mode, controller.signal).catch(() => {
+    // The persisted job state explains the interruption and determines recovery.
+  }).finally(() => {
     catalogSyncing = false
-  }).catch((error: unknown) => {
-    catalogSyncing = false
-    const message = error instanceof Error ? error.message : 'Aggiornamento interrotto.'
-    if (/HTTP 429|HTTP 503|limitato temporaneamente/.test(message)) {
-      catalogRetryTimer = setTimeout(() => runCatalogJob(mode), 60_000)
-    }
+    if (catalogJobController === controller) catalogJobController = null
+    if (!catalogShuttingDown && catalogStore === store && store.jobStatus().state === 'rate-limited')
+      runCatalogJob(mode)
   })
 }
 async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig,
@@ -505,7 +524,7 @@ function registerProjectHandlers(): void {
   ipcMain.handle('catalog:sync-status', (event): OperationResult<CatalogSyncStatus> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!catalogStore) return { ok: false, error: unavailableMessage() }
-    return { ok: true, value: catalogStore.jobStatus() }
+    return { ok: true, value: catalogJobStatus(catalogStore) }
   })
 
   ipcMain.handle('catalog:sync-standard', (event, mode: unknown): OperationResult<CatalogSyncStatus> => {
@@ -513,9 +532,36 @@ function registerProjectHandlers(): void {
     if (!catalogStore) return { ok: false, error: unavailableMessage() }
     if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità catalogo non valida.' }
     if (catalogSyncing) return { ok: false, error: 'Sincronizzazione già in corso.' }
+    const status = catalogStore.jobStatus()
+    if (['paused', 'interrupted', 'rate-limited'].includes(status.state) && status.mode !== mode)
+      return { ok: false, error: 'Completa o annulla l’aggiornamento recuperabile prima di cambiare modalità.' }
     if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
     runCatalogJob(mode)
-    return { ok: true, value: catalogStore.jobStatus() }
+    return { ok: true, value: catalogJobStatus(catalogStore) }
+  })
+
+  ipcMain.handle('catalog:pause', (event): OperationResult<CatalogSyncStatus> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    const status = catalogStore.jobStatus()
+    if (status.state !== 'running' && status.state !== 'rate-limited')
+      return { ok: false, error: 'Nessun aggiornamento da mettere in pausa.' }
+    if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
+    catalogStore.pauseJob(null, 'In pausa su richiesta')
+    catalogJobController?.abort()
+    return { ok: true, value: catalogJobStatus(catalogStore) }
+  })
+
+  ipcMain.handle('catalog:cancel', (event): OperationResult<CatalogSyncStatus> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    const status = catalogStore.jobStatus()
+    if (!['running', 'rate-limited', 'paused', 'interrupted'].includes(status.state))
+      return { ok: false, error: 'Nessun aggiornamento da annullare.' }
+    if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
+    catalogStore.cancelJob()
+    catalogJobController?.abort()
+    return { ok: true, value: catalogJobStatus(catalogStore) }
   })
 
   ipcMain.handle('catalog:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
@@ -1277,10 +1323,6 @@ app.whenReady().then(async () => {
     completeDatabaseMigration(databasePath, migration)
     if (!hasRecoverableThreadJob())
       tournamentStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
-    const previousJob = catalogStore.jobStatus()
-    if (previousJob.state === 'paused' && previousJob.mode) {
-      setTimeout(() => runCatalogJob(previousJob.mode!), 2_000)
-    }
     aiPreferencesStore = new AiPreferencesStore(app.getPath('userData'))
   } catch (error) {
     console.error('Impossibile aprire l’archivio locale:', error)
@@ -1309,7 +1351,10 @@ app.whenReady().then(async () => {
 })
 
 app.on('before-quit', () => {
+  catalogShuttingDown = true
   if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
+  catalogStore?.interruptJob()
+  catalogJobController?.abort()
   void codexControl.stop()
   projectStore?.close()
   catalogStore?.close()

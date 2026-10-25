@@ -51,3 +51,23 @@ it('rifiuta risposte con MIME o firma PNG inattesi', async () => {
     headers: { 'content-type': 'image/png' } })))
   expect((await fetchCatalogImage(image, 'mee-001')).thumbnail).toBeNull()
 })
+
+it('non richiede il PNG dopo un annullamento e propaga il limite 429 del CDN', async () => {
+  const fetchMock = vi.fn(async () => new Response('', { status: 429,
+    headers: { 'Retry-After': '90' } }))
+  vi.stubGlobal('fetch', fetchMock)
+  const controller = new AbortController()
+  controller.abort()
+  await expect(fetchCatalogImage(image, 'mee-001', undefined, controller.signal)).rejects.toThrow()
+  expect(fetchMock).not.toHaveBeenCalled()
+
+  const results = await Promise.allSettled([
+    fetchCatalogImage(image, 'mee-001'), fetchCatalogImage(image, 'mee-001')
+  ])
+  expect(results).toHaveLength(2)
+  for (const result of results) {
+    expect(result.status).toBe('rejected')
+    if (result.status === 'rejected') expect(result.reason.message).toMatch(/Limitless: HTTP 429.*riprova dopo/)
+  }
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})

@@ -5,11 +5,12 @@ export type CatalogSyncMode = 'new' | 'full'
 export interface CatalogSyncStatus {
   running: boolean
   mode: CatalogSyncMode | null
-  state: 'idle' | 'running' | 'paused' | 'done'
+  state: 'idle' | 'running' | 'rate-limited' | 'interrupted' | 'paused' | 'cancelled' | 'done'
   phase: string
   expected: number
   acquired: number
   error: string | null
+  cooldownUntil: string | null
 }
 export const CATALOG_SET_IDS = ['sv01', 'sv02', 'sv04.5', 'me01', 'me02.5'] as const
 export interface PromoStatus {

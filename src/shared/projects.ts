@@ -48,6 +48,8 @@ export interface ProjectsApi {
   syncCatalog(): Promise<OperationResult<CatalogView>>
   syncStandardCatalog(mode: CatalogSyncMode): Promise<OperationResult<CatalogSyncStatus>>
   getCatalogSyncStatus(): Promise<OperationResult<CatalogSyncStatus>>
+  pauseCatalogSync(): Promise<OperationResult<CatalogSyncStatus>>
+  cancelCatalogSync(): Promise<OperationResult<CatalogSyncStatus>>
   openCatalogSource(url: string): Promise<OperationResult<boolean>>
   openStandardSource(sourceId: string): Promise<OperationResult<boolean>>
   getStandardRuleAudit(): Promise<OperationResult<StandardRuleAudit | null>>

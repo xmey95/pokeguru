@@ -49,11 +49,30 @@ const limitlessSets = new Set(['mee', 'mep', 'sve', 'svp'])
 const selectedNames = new Set<string>(CATALOG_NAMES)
 const candidateMarks = Array.from({ length: 'Z'.charCodeAt(0) - 'H'.charCodeAt(0) + 1 },
   (_, index) => String.fromCharCode('H'.charCodeAt(0) + index))
+const CATALOG_RETRY_MS = 60_000
+
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(signal.reason); return }
+    const onAbort = () => { clearTimeout(timer); reject(signal?.reason) }
+    const timer = setTimeout(() => { signal?.removeEventListener('abort', onAbort); resolve() }, ms)
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+function retryAt(error: string): string {
+  const date = /riprova dopo (\d{4}-\d\d-\d\dT[\d:.]+Z)/.exec(error)?.[1]
+  const parsed = date ? Date.parse(date) : NaN
+  return new Date(Math.max(Date.now() + CATALOG_RETRY_MS,
+    Number.isFinite(parsed) ? parsed : 0)).toISOString()
+}
 
 type StandardManifest = { sets: CatalogSet[]; prints: CatalogPrint[]; fetchedAt: string; promoAudit: PromoAudit }
 
 let nextLimitlessRequestAt = 0
 let limitlessRequestQueue: Promise<unknown> = Promise.resolve()
+let limitlessBlockedUntil = 0
+let limitlessBlockedStatus = 429
 
 function limitlessImageUrl(value: string, setId: string, localId: string): boolean {
   if (!/^\d{1,3}$/.test(localId)) return false
@@ -64,13 +83,28 @@ function limitlessImageUrl(value: string, setId: string, localId: string): boole
   } catch { return false }
 }
 
-async function requestLimitless(url: string): Promise<Response> {
+async function requestLimitless(url: string, signal?: AbortSignal): Promise<Response> {
   const task = limitlessRequestQueue.then(async () => {
+    signal?.throwIfAborted()
+    if (Date.now() < limitlessBlockedUntil) {
+      throw new Error(`Limitless: HTTP ${limitlessBlockedStatus}; riprova dopo ${new Date(limitlessBlockedUntil).toISOString()}`)
+    }
     const delay = Math.max(0, nextLimitlessRequestAt - Date.now())
-    if (delay) await new Promise((resolve) => setTimeout(resolve, delay))
+    if (delay) await wait(delay, signal)
+    signal?.throwIfAborted()
     nextLimitlessRequestAt = Date.now() + 1_200
-    const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(12_000) })
-    if (response.status === 429) nextLimitlessRequestAt = Date.now() + 60_000
+    const response = await fetch(url, { redirect: 'error',
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000) })
+    if (response.status === 429 || response.status === 503) {
+      const retry = response.headers.get('retry-after')
+      const seconds = retry && /^\d+$/.test(retry) ? Number(retry) * 1000 : 0
+      const date = retry && !seconds ? Date.parse(retry) - Date.now() : 0
+      nextLimitlessRequestAt = Math.max(nextLimitlessRequestAt, Date.now() + CATALOG_RETRY_MS,
+        Date.now() + Math.max(seconds, date || 0))
+      limitlessBlockedUntil = nextLimitlessRequestAt
+      limitlessBlockedStatus = response.status
+      throw new Error(`Limitless: HTTP ${response.status} per ${new URL(url).pathname}; riprova dopo ${new Date(nextLimitlessRequestAt).toISOString()}`)
+    }
     return response
   })
   limitlessRequestQueue = task.then(() => undefined, () => undefined)
@@ -78,7 +112,7 @@ async function requestLimitless(url: string): Promise<Response> {
 }
 
 /** Only exact set/number listings can supply a missing TCGdex image. */
-export async function fetchLimitlessImageIndex(prints: readonly CatalogPrint[]): Promise<Map<string, string>> {
+export async function fetchLimitlessImageIndex(prints: readonly CatalogPrint[], signal?: AbortSignal): Promise<Map<string, string>> {
   const missing = new Map<string, Set<string>>()
   for (const print of prints) {
     if (print.imageBase || !limitlessSets.has(print.setId) || !/^\d{1,3}$/.test(print.localId)) continue
@@ -89,45 +123,49 @@ export async function fetchLimitlessImageIndex(prints: readonly CatalogPrint[]):
   const images = new Map<string, string>()
   for (const [setId, numbers] of missing) {
     try {
-      const response = await requestLimitless(`https://limitlesstcg.com/cards/${setId.toUpperCase()}`)
+      const response = await requestLimitless(`https://limitlesstcg.com/cards/${setId.toUpperCase()}`, signal)
       if (!response.ok) continue
       const html = await readLimitedText(response, 500_000, 'Indice immagini Limitless troppo grande.')
       const $ = load(html)
       $('.card-search-grid > a[href] > img[src]').each((_, image) => {
-        const anchor = $(image).parent('a')
-        const href = anchor.attr('href') ?? ''
+        const href = $(image).parent('a').attr('href') ?? ''
         const match = new RegExp(`^/cards/${setId.toUpperCase()}/([1-9][0-9]{0,2})$`).exec(href)
         if (!match) return
         const localId = match[1].padStart(3, '0')
         const src = $(image).attr('src') ?? ''
-        if (numbers.has(localId) && limitlessImageUrl(src, setId, localId)) {
-          images.set(`${setId}-${localId}`, src)
-        }
+        if (numbers.has(localId) && limitlessImageUrl(src, setId, localId)) images.set(`${setId}-${localId}`, src)
       })
-    } catch { /* TCGdex details remain usable when the secondary source is unavailable. */ }
+    } catch (error) {
+      if (signal?.aborted || error instanceof Error && /HTTP 429|HTTP 503|fetch failed|network|timeout|timed out/i.test(error.message)) throw error
+      // Card details remain usable when the secondary image index is unavailable.
+    }
   }
   return images
 }
 
-async function request(url: string, method: 'GET' | 'HEAD' = 'GET'): Promise<Response> {
+async function request(url: string, method: 'GET' | 'HEAD' = 'GET', signal?: AbortSignal): Promise<Response> {
   const pauses = [500, 1_500, 4_000]
   for (let attempt = 0; attempt <= pauses.length; attempt += 1) {
-    const response = await fetch(url, { method, signal: AbortSignal.timeout(12_000) })
+    const response = await fetch(url, { method,
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000) })
     if (response.ok) return response
-    if (![429, 503].includes(response.status) || attempt === pauses.length) {
-      throw new Error(`TCGdex: HTTP ${response.status} per ${new URL(url).pathname}`)
-    }
     const retry = response.headers.get('retry-after')
     const seconds = retry && /^\d+$/.test(retry) ? Number(retry) * 1000 : 0
     const date = retry && !seconds ? Date.parse(retry) - Date.now() : 0
-    await new Promise((resolve) => setTimeout(resolve,
-      Math.min(30_000, Math.max(pauses[attempt], seconds || date || 0))))
+    if (![429, 503].includes(response.status) || attempt === pauses.length ||
+      Math.max(seconds, date) > 30_000) {
+      const after = [429, 503].includes(response.status)
+        ? `; riprova dopo ${new Date(Date.now() + Math.max(CATALOG_RETRY_MS,
+          seconds || date || 0)).toISOString()}` : ''
+      throw new Error(`TCGdex: HTTP ${response.status} per ${new URL(url).pathname}${after}`)
+    }
+    await wait(Math.max(pauses[attempt], seconds || date || 0), signal)
   }
   throw new Error('TCGdex non disponibile.')
 }
 
-async function json<T>(url: string): Promise<T> {
-  const response = await request(url)
+async function json<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await request(url, 'GET', signal)
   const body = await readLimitedText(response, 8_000_000, 'Risposta TCGdex troppo grande.')
   return JSON.parse(body) as T
 }
@@ -174,13 +212,14 @@ function identity(card: CardResponse, gameplay: CardGameplay | null): Pick<Catal
   return { identityId: card.id, identityBasis: 'unverified' }
 }
 
-export async function fetchCatalogImage(base: string | undefined, id?: string, cacheDir?: string): Promise<Pick<CatalogPrint, 'thumbnail' | 'highImageAvailable'>> {
+export async function fetchCatalogImage(base: string | undefined, id?: string, cacheDir?: string,
+  signal?: AbortSignal): Promise<Pick<CatalogPrint, 'thumbnail' | 'highImageAvailable'>> {
   if (!base) return { thumbnail: null, highImageAvailable: null }
   const limitless = id && /^(mee|mep|sve|svp)-\d{3}$/.test(id) &&
     limitlessImageUrl(base, id.split('-')[0], id.split('-')[1])
   if (limitless) {
     try {
-      const response = await requestLimitless(base)
+      const response = await requestLimitless(base, signal)
       if (!response.ok || response.headers.get('content-type')?.split(';')[0] !== 'image/png') {
         return { thumbnail: null, highImageAvailable: null }
       }
@@ -189,6 +228,7 @@ export async function fetchCatalogImage(base: string | undefined, id?: string, c
         return { thumbnail: null, highImageAvailable: null }
       }
       if (cacheDir && id) {
+        signal?.throwIfAborted()
         mkdirSync(cacheDir, { recursive: true })
         const target = join(cacheDir, `${id}.png`)
         const temporary = `${target}.tmp`
@@ -197,11 +237,14 @@ export async function fetchCatalogImage(base: string | undefined, id?: string, c
         return { thumbnail: `pokeguru://cards/${id}.png`, highImageAvailable: null }
       }
       return { thumbnail: `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`, highImageAvailable: null }
-    } catch { return { thumbnail: null, highImageAvailable: null } }
+    } catch (error) {
+      if (signal?.aborted || error instanceof Error && /HTTP 429|HTTP 503|fetch failed|network|timeout|timed out/i.test(error.message)) throw error
+      return { thumbnail: null, highImageAvailable: null }
+    }
   }
   if (!base.startsWith(`${assetOrigin}/`)) return { thumbnail: null, highImageAvailable: null }
   const [low, high] = await Promise.allSettled([
-    request(`${base}/low.webp`).then(async (response) => {
+    request(`${base}/low.webp`, 'GET', signal).then(async (response) => {
       const bytes = await readLimitedBytes(response, 1_000_000, 'Immagine TCGdex troppo grande.')
       if (response.headers.get('content-type')?.split(';')[0] !== 'image/webp') return null
       if (bytes.length < 12 || Buffer.from(bytes).toString('ascii', 0, 4) !== 'RIFF' ||
@@ -216,8 +259,11 @@ export async function fetchCatalogImage(base: string | undefined, id?: string, c
       }
       return `data:image/webp;base64,${Buffer.from(bytes).toString('base64')}`
     }),
-    request(`${base}/high.webp`, 'HEAD').then(() => true)
+    request(`${base}/high.webp`, 'HEAD', signal).then(() => true)
   ])
+  const pressure = [low, high].find((result) => result.status === 'rejected' &&
+    result.reason instanceof Error && /HTTP 429|HTTP 503|fetch failed|network|timeout|timed out/i.test(result.reason.message))
+  if (pressure?.status === 'rejected') throw pressure.reason
   return {
     thumbnail: low.status === 'fulfilled' ? low.value : null,
     highImageAvailable: high.status === 'fulfilled' ? high.value
@@ -239,15 +285,15 @@ function briefPrint(brief: CardBrief, set: Pick<SetResponse, 'id' | 'name'>): Ca
 
 async function details(brief: CardBrief, set: Pick<SetResponse, 'id' | 'name'>,
   fetchedAt: string, includeImages = true, manifestPrint?: CatalogPrint,
-  cacheDir?: string): Promise<CatalogPrint> {
+  cacheDir?: string, signal?: AbortSignal): Promise<CatalogPrint> {
   const base = manifestPrint ?? briefPrint(brief, set)
   try {
-    const card = await json<CardResponse>(base.sourceUrl)
+    const card = await json<CardResponse>(base.sourceUrl, signal)
     if (card.id !== brief.id || card.name !== brief.name || card.localId !== brief.localId) {
       throw new Error('Dettaglio incoerente con l’indice.')
     }
     const gameplay = extractCardGameplay(card)
-    const images = includeImages ? await fetchCatalogImage(card.image ?? brief.image, brief.id, cacheDir)
+    const images = includeImages ? await fetchCatalogImage(card.image ?? brief.image, brief.id, cacheDir, signal)
       : { thumbnail: null, highImageAvailable: null }
     return {
       ...base, category: card.category ?? null, stage: card.stage ?? null,
@@ -292,18 +338,18 @@ export async function fetchCatalogSample(): Promise<{ sets: CatalogSet[]; prints
   return { sets, prints, fetchedAt }
 }
 
-export async function fetchStandardManifest(): Promise<StandardManifest> {
+export async function fetchStandardManifest(signal?: AbortSignal): Promise<StandardManifest> {
   const fetchedAt = new Date().toISOString()
   // H is the first mark in the verified 2026 rotation. Future marks are inventory
   // candidates only; the legality evaluator still requires verified rules.
   const markFilter = candidateMarks.join('%7C')
   const promoAttempt = loadPromoPackage()
   const [marked, lowerMarked, setIndex, scarletEnergy, megaEnergy, promoResult] = await Promise.all([
-    json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter}`),
-    json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter.toLowerCase()}`),
-    json<unknown>(`${apiOrigin}/sets`),
-    json<SetResponse>(`${apiOrigin}/sets/sve`),
-    json<SetResponse>(`${apiOrigin}/sets/mee`),
+    json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter}`, signal),
+    json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter.toLowerCase()}`, signal),
+    json<unknown>(`${apiOrigin}/sets`, signal),
+    json<SetResponse>(`${apiOrigin}/sets/sve`, signal),
+    json<SetResponse>(`${apiOrigin}/sets/mee`, signal),
     promoAttempt
   ])
   if (!Array.isArray(marked) || !marked.every(validateBrief) ||
@@ -333,7 +379,7 @@ export async function fetchStandardManifest(): Promise<StandardManifest> {
   // set once so the date is available without inferring tournament legality.
   const detailedSets = new Map((await mapLimited([...groups.keys()], 4, async (id) => {
     const value = id === 'sve' ? scarletEnergy : id === 'mee' ? megaEnergy
-      : await json<SetResponse>(`${apiOrigin}/sets/${encodeURIComponent(id)}`)
+      : await json<SetResponse>(`${apiOrigin}/sets/${encodeURIComponent(id)}`, signal)
     validateSet(value, id)
     return value
   })).map((set) => [set.id, set]))
@@ -357,7 +403,7 @@ export async function fetchStandardManifest(): Promise<StandardManifest> {
       return { ...print, isPromo: true, promoStatus }
     })
   })
-  const fallbackImages = await fetchLimitlessImageIndex(prints)
+  const fallbackImages = await fetchLimitlessImageIndex(prints, signal)
   for (const print of prints) {
     if (!print.imageBase) print.imageBase = fallbackImages.get(print.id) ?? null
   }
@@ -370,42 +416,66 @@ export async function fetchStandardManifest(): Promise<StandardManifest> {
 
 export async function syncStandardCatalog(store: CatalogStore,
   progress?: (phase: string, expected: number, acquired: number) => void,
-  mode: CatalogSyncMode = 'new'): Promise<CatalogView> {
+  mode: CatalogSyncMode = 'new', signal?: AbortSignal): Promise<CatalogView> {
   try {
+    signal?.throwIfAborted()
     if (!store.resumeJob(mode)) {
       store.startJob(mode)
       progress?.('Lettura inventario TCGdex', 0, 0)
-      const manifest = await fetchStandardManifest()
+      const manifest = await fetchStandardManifest(signal)
+      signal?.throwIfAborted()
       store.save(manifest, 'standard-marks')
       store.queueJob(mode)
     }
     let status = store.jobStatus()
     progress?.(status.phase, status.expected, status.acquired)
+    let lastId = ''
     while (true) {
-      const batch = store.nextJobBatch(12)
+      signal?.throwIfAborted()
+      // Move past a failed card for this pass while keeping it in the durable queue.
+      const batch = store.nextJobBatch(12, lastId)
       if (batch.length === 0) break
-      const results = await mapLimited(batch, 2, async (print) =>
-        details({ id: print.id, localId: print.localId, name: print.name,
+      lastId = batch.at(-1)!.id
+      const results = await mapLimited(batch, 2, async (print) => {
+        signal?.throwIfAborted()
+        return details({ id: print.id, localId: print.localId, name: print.name,
           image: print.imageBase ?? undefined }, { id: print.setId, name: print.setName },
-        new Date().toISOString(), true, print, join(store.dataDir, 'catalog-images')))
+        new Date().toISOString(), true, print, join(store.dataDir, 'catalog-images'), signal)
+      })
+      signal?.throwIfAborted()
       store.commitJobBatch(results)
       status = store.jobStatus()
       progress?.(status.phase, status.expected, status.acquired)
       if (results.some((print) => /HTTP 429|HTTP 503/.test(print.error ?? ''))) {
-        throw new Error('TCGdex ha limitato temporaneamente le richieste. Il lavoro riprenderà senza perdere i dati acquisiti.')
+        const until = results.filter((print) => /HTTP 429|HTTP 503/.test(print.error ?? ''))
+          .map((print) => retryAt(print.error ?? '')).sort().at(-1)
+        const source = results.some((print) => /Limitless: HTTP 429|Limitless: HTTP 503/.test(print.error ?? ''))
+          ? 'Limitless' : 'TCGdex'
+        throw new Error(`${source} ha limitato temporaneamente le richieste; riprova dopo ${until}. Il lavoro riprenderà senza perdere i dati acquisiti.`)
       }
-      if (results.every((print) => print.detailAt === null)) {
-        throw new Error('Dettagli TCGdex non disponibili. Il lavoro riprenderà senza perdere i dati acquisiti.')
+      if (results.some((print) => /fetch failed|network|timeout|timed out/i.test(print.error ?? ''))) {
+        throw new Error('Rete TCGdex temporaneamente non disponibile. Il lavoro riprenderà senza perdere i dati acquisiti.')
       }
-      if (results.some((print) => print.error)) {
-        throw new Error('Alcuni dettagli TCGdex non sono disponibili. I lotti riusciti restano salvati; riprendi il lavoro più tardi.')
+      if (results.every((print) => print.error)) {
+        throw new Error('Tutti i dettagli del blocco TCGdex non sono disponibili. Il controllo si ferma per limitare le richieste; riprendi più tardi.')
       }
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await wait(400, signal)
+    }
+    status = store.jobStatus()
+    if (status.acquired < status.expected) {
+      const missing = status.expected - status.acquired
+      throw new Error(`${missing} ${missing === 1 ? 'dettaglio TCGdex non disponibile' : 'dettagli TCGdex non disponibili'}. Le altre carte sono state controllate; riprendi più tardi.`)
     }
     store.completeJob()
     return store.view()
   } catch (error) {
-    store.pauseJob(error instanceof Error ? error.message : 'Aggiornamento interrotto.')
+    const status = store.jobStatus()
+    if (status.state !== 'paused' && status.state !== 'cancelled' && status.state !== 'interrupted') {
+      const message = error instanceof Error ? error.message : 'Aggiornamento interrotto.'
+      if (/limitato temporaneamente|Rete TCGdex temporaneamente|fetch failed|network|timeout|timed out|HTTP 429|HTTP 503/i.test(message))
+        store.rateLimitJob(message, retryAt(message))
+      else store.pauseJob(message)
+    }
     throw error
   }
 }
@@ -473,7 +543,7 @@ export class CatalogStore {
       CREATE TABLE IF NOT EXISTS catalog_job (
         id INTEGER PRIMARY KEY CHECK (id = 1), mode TEXT NOT NULL,
         state TEXT NOT NULL, phase TEXT NOT NULL, expected INTEGER NOT NULL,
-        error TEXT, updated_at TEXT NOT NULL
+        error TEXT, updated_at TEXT NOT NULL, retry_at TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS catalog_job_targets (
         print_id TEXT PRIMARY KEY
@@ -487,26 +557,34 @@ export class CatalogStore {
       .map((row) => (row as { name: string }).name)
     if (!setColumns.includes('release_date')) this.db.exec('ALTER TABLE catalog_sets ADD COLUMN release_date TEXT')
     if (!setColumns.includes('abbreviation')) this.db.exec('ALTER TABLE catalog_sets ADD COLUMN abbreviation TEXT')
+    const jobColumns = this.db.prepare('PRAGMA table_info(catalog_job)').all()
+      .map((row) => (row as { name: string }).name)
+    if (!jobColumns.includes('retry_at')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN retry_at TEXT')
     // A process killed during a batch leaves only committed targets completed.
-    this.db.prepare("UPDATE catalog_job SET state = 'paused', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
+    this.db.prepare("UPDATE catalog_job SET state = 'interrupted', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
+    this.db.prepare("UPDATE catalog_job SET state = 'interrupted' WHERE state = 'paused' AND phase = 'Interrotto alla chiusura'").run()
   }
 
   jobStatus(): CatalogSyncStatus {
-    const row = this.db.prepare('SELECT mode, state, phase, expected, error FROM catalog_job WHERE id = 1')
-      .get() as { mode: CatalogSyncMode; state: CatalogSyncStatus['state']; phase: string; expected: number; error: string | null } | undefined
-    if (!row) return { running: false, mode: null, state: 'idle', phase: '', expected: 0, acquired: 0, error: null }
+    const row = this.db.prepare('SELECT mode, state, phase, expected, error, retry_at FROM catalog_job WHERE id = 1')
+      .get() as { mode: CatalogSyncMode; state: CatalogSyncStatus['state']; phase: string;
+        expected: number; error: string | null; retry_at: string | null } | undefined
+    if (!row) return { running: false, mode: null, state: 'idle', phase: '', expected: 0,
+      acquired: 0, error: null, cooldownUntil: null }
     const pending = (this.db.prepare('SELECT COUNT(*) AS n FROM catalog_job_targets').get() as { n: number }).n
-    return { running: row.state === 'running', mode: row.mode, state: row.state,
-      phase: row.phase, expected: row.expected, acquired: row.expected - pending, error: row.error }
+    return { running: row.state === 'running' || row.state === 'rate-limited', mode: row.mode,
+      state: row.state, phase: row.phase, expected: row.expected,
+      acquired: row.expected - pending, error: row.error, cooldownUntil: row.retry_at }
   }
 
   startJob(mode: CatalogSyncMode): void {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       this.db.exec('DELETE FROM catalog_job_targets')
-      this.db.prepare(`INSERT INTO catalog_job VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?)
+      this.db.prepare(`INSERT INTO catalog_job (id, mode, state, phase, expected, error, updated_at, retry_at)
+        VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?, NULL)
         ON CONFLICT(id) DO UPDATE SET mode=excluded.mode, state=excluded.state,
-        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at`)
+        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at, retry_at=NULL`)
         .run(mode, new Date().toISOString())
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
@@ -514,9 +592,10 @@ export class CatalogStore {
 
   resumeJob(mode: CatalogSyncMode): boolean {
     const status = this.jobStatus()
-    if (status.mode !== mode || status.state !== 'paused' || status.expected === 0 ||
+    if (status.mode !== mode || !['paused', 'interrupted', 'rate-limited'].includes(status.state) ||
+      status.expected === 0 ||
       status.acquired >= status.expected) return false
-    this.db.prepare("UPDATE catalog_job SET state='running', phase='Verifica dettagli', error=NULL, updated_at=? WHERE id=1")
+    this.db.prepare("UPDATE catalog_job SET state='running', phase='Verifica dettagli', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
       .run(new Date().toISOString())
     return true
   }
@@ -543,31 +622,55 @@ export class CatalogStore {
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
-  nextJobBatch(limit: number): CatalogPrint[] {
+  nextJobBatch(limit: number, afterId = ''): CatalogPrint[] {
     return this.db.prepare(`SELECT p.payload FROM catalog_job_targets j
-      JOIN catalog_prints p ON p.id=j.print_id ORDER BY j.print_id LIMIT ?`).all(limit)
+      JOIN catalog_prints p ON p.id=j.print_id WHERE j.print_id > ? ORDER BY j.print_id LIMIT ?`)
+      .all(afterId, limit)
       .map((row) => JSON.parse((row as { payload: string }).payload) as CatalogPrint)
   }
 
   commitJobBatch(prints: CatalogPrint[]): void {
+    const failed = prints.filter((print) => !!print.error)
+    const phase = `Ultimo blocco: ${prints.length - failed.length}/${prints.length} dettagli acquisiti`+
+      (failed.length ? `; ${failed.length} ${failed.length === 1 ? 'stampa da riprovare' : 'stampe da riprovare'}` : '')
+    const warning = failed.length ? `Blocco Catalogo: ${failed.slice(0, 3).map((print) => print.id).join(', ')}`+
+      (failed.length > 3 ? ` e altre ${failed.length - 3}` : '') +
+      ` ${failed.length === 1 ? 'non disponibile' : 'non disponibili'}; continuo con le altre.` : null
     this.db.exec('BEGIN IMMEDIATE')
     try {
       for (const print of prints) {
         this.upsertPrint(print)
         if (!print.error && print.detailAt) this.db.prepare('DELETE FROM catalog_job_targets WHERE print_id=?').run(print.id)
       }
-      this.db.prepare('UPDATE catalog_job SET updated_at=? WHERE id=1').run(new Date().toISOString())
+      this.db.prepare('UPDATE catalog_job SET phase=?, error=COALESCE(?, error), updated_at=? WHERE id=1')
+        .run(phase, warning, new Date().toISOString())
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
-  pauseJob(message: string): void {
-    this.db.prepare("UPDATE catalog_job SET state='paused', phase='In pausa', error=?, updated_at=? WHERE id=1")
-      .run(message, new Date().toISOString())
+  pauseJob(message: string | null, phase = 'In pausa'): void {
+    this.db.prepare("UPDATE catalog_job SET state='paused', phase=?, error=?, retry_at=NULL, updated_at=? WHERE id=1")
+      .run(phase, message, new Date().toISOString())
+  }
+
+  cancelJob(): void {
+    this.db.prepare("UPDATE catalog_job SET state='cancelled', phase='Annullato', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
+      .run(new Date().toISOString())
+  }
+
+  interruptJob(): void {
+    this.db.prepare("UPDATE catalog_job SET state='interrupted', phase='Interrotto alla chiusura', error=NULL, retry_at=NULL, updated_at=? WHERE id=1 AND state='running'")
+      .run(new Date().toISOString())
+  }
+
+  rateLimitJob(message: string, retryAt: string): void {
+    const phase = message.includes('Limitless') ? 'Attesa Limitless' : 'Attesa TCGdex'
+    this.db.prepare("UPDATE catalog_job SET state='rate-limited', phase=?, error=?, retry_at=?, updated_at=? WHERE id=1")
+      .run(phase, message, retryAt, new Date().toISOString())
   }
 
   completeJob(): void {
-    this.db.prepare("UPDATE catalog_job SET state='done', phase='Aggiornamento terminato', error=NULL, updated_at=? WHERE id=1")
+    this.db.prepare("UPDATE catalog_job SET state='done', phase='Aggiornamento terminato', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
       .run(new Date().toISOString())
   }
 

@@ -4,9 +4,9 @@ Pokéguru conserva progetti, versioni, Thread, candidate, evidenze AI, Catalogo 
 
 ## Upgrade dello schema
 
-La versione corrente è `PRAGMA user_version = 4`. La versione 0 indica l'archivio precedente alla registrazione esplicita delle migrazioni; la versione 1 precede il registro dei job Codex, la versione 2 precede il collegamento persistente del primo messaggio AI del Thread (APP-109) e la versione 3 precede l'archiviazione dei progetti (APP-106). Prima di aprire gli store con una versione precedente, l'app crea con l'API backup di SQLite una copia consistente in `data/backups/pokeguru-pre-v<versione>-*.sqlite`. Un file accanto con suffisso `.verified` indica che, al momento della creazione, la copia ha superato `integrity_check` e `foreign_key_check`. I nomi sono univoci: una nuova prova dopo un'interruzione non sovrascrive il primo backup.
+La versione corrente è `PRAGMA user_version = 5`. La versione 0 indica l'archivio precedente alla registrazione esplicita delle migrazioni; la versione 1 precede il registro dei job Codex, la versione 2 precede il collegamento persistente del primo messaggio AI del Thread (APP-109), la versione 3 precede l'archiviazione dei progetti (APP-106) e la versione 4 precede l'attesa persistente dei job Catalogo (APP-104). Prima di aprire gli store con una versione precedente, l'app crea con l'API backup di SQLite una copia consistente in `data/backups/pokeguru-pre-v<versione>-*.sqlite`. Un file accanto con suffisso `.verified` indica che, al momento della creazione, la copia ha superato `integrity_check` e `foreign_key_check`. I nomi sono univoci: una nuova prova dopo un'interruzione non sovrascrive il primo backup.
 
-Solo dopo l'apertura degli store e i controlli di integrità dell'archivio aggiornato l'app registra la versione 4. Se l'upgrade si interrompe, la versione precedente resta registrata e il successivo avvio ripete i passaggi idempotenti. Una versione più nuova di quella supportata ferma l'apertura. Le revisioni Regional precedenti all'upgrade vengono conservate tutte.
+Solo dopo l'apertura degli store e i controlli di integrità dell'archivio aggiornato l'app registra la versione 5. Se l'upgrade si interrompe, la versione precedente resta registrata e il successivo avvio ripete i passaggi idempotenti. Una versione più nuova di quella supportata ferma l'apertura. Le revisioni Regional precedenti all'upgrade vengono conservate tutte.
 
 ## Archivio e cancellazione dei progetti
 
@@ -17,6 +17,12 @@ La cancellazione rimuove il progetto dal database attivo, ma **non cancella i ba
 ## Job Codex e risultati
 
 Un job Thread o Matchup in corso conserva il contesto in `ai_jobs` e l'output CLI in `data/ai-jobs/<id>/`. Dopo un'interruzione, all'avvio l'app applica un risultato completo una volta sola; un job senza risultato viene segnato come interrotto e può essere ripetuto dall'interfaccia. La cancellazione è registrata prima dell'arresto del processo. Quando il risultato è applicato o il job termina senza risultato, il contesto e la risposta duplicati vengono rimossi dal registro; le evidenze associate ai messaggi Thread e alle guide Matchup restano nell'archivio. Le directory temporanee di un processo terminato bruscamente possono richiedere pulizia successiva dopo aver verificato che il job non sia recuperabile.
+
+## Aggiornamento Catalogo
+
+Il job Catalogo conserva modalità, coda delle stampe e numero di dettagli riusciti in SQLite. Un blocco completato è atomico: dopo un'interruzione si ripartono solo le stampe ancora in coda. Una scheda non disponibile resta in coda, ma non ferma le altre; se tutte le schede di un blocco falliscono, l'app si ferma per limitare le richieste. Dopo 429/503 o un errore temporaneo di rete, l'ora di ripresa viene salvata e rispettata, anche quando la fonte invia `Retry-After`. Nella sessione attiva il job riprova automaticamente al termine dell'attesa; dopo un riavvio resta recuperabile ma non parte senza un clic su Riprendi. La pausa manuale resta tale dopo il riavvio; l'annullamento ferma il job ma conserva le carte già acquisite. Avviare una nuova operazione dopo l'annullamento rilegge il manifest, senza cancellare i dettagli precedenti.
+
+Le miniature WebP TCGdex e PNG Limitless sono file locali in `data/catalog-images`, fuori dal backup SQLite. Dopo il ripristino del solo database, il Catalogo mostra segnaposti per i file mancanti e il successivo aggiornamento online li rimette in coda. Il fallback Limitless è limitato alle stampe esatte dei set `mee`, `mep`, `sve` e `svp`; un 429/503 da indice o CDN sospende il job con la stessa attesa persistente delle richieste TCGdex.
 
 ## Prova di recupero senza sovrascrivere il profilo attivo
 

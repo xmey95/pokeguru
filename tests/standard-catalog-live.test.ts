@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CatalogStore, fetchStandardManifest, syncStandardCatalog } from '../src/main/catalog'
@@ -27,6 +27,36 @@ it.skipIf(process.env.POKEGURU_CATALOG_LIVE !== '1')('legge l’inventario reale
   console.log(`Audit set ufficiali nel manifest: ${released.length - missing.length}/${released.length}; mancanti: ${missing.map((set) => set.setId).join(', ') || 'nessuno'}`)
   expect(missing).toEqual([])
 }, 30_000)
+
+it.skipIf(process.env.POKEGURU_CATALOG_BOUNDED_LIVE !== '1')('riprende e salva due dettagli reali senza avviare l’inventario completo', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-standard-bounded-live-'))
+  const store = new CatalogStore(join(folder, 'catalog.sqlite'))
+  try {
+    const manifest = await fetchStandardManifest()
+    const ids = new Set(['me01-086', 'sve-005'])
+    const prints = manifest.prints.filter((print) => ids.has(print.id))
+    expect(prints.map((print) => print.id).sort()).toEqual([...ids].sort())
+    const setIds = new Set(prints.map((print) => print.setId))
+    store.save({ ...manifest, sets: manifest.sets.filter((set) => setIds.has(set.id)), prints }, 'standard-marks')
+    store.startJob('new')
+    store.queueJob('new')
+    store.pauseJob(null, 'In pausa su richiesta')
+    expect(store.jobStatus()).toMatchObject({ state: 'paused', expected: 2, acquired: 0 })
+    const view = await syncStandardCatalog(store)
+    expect(store.jobStatus()).toMatchObject({ state: 'done', expected: 2, acquired: 2 })
+    expect(view.prints.find((print) => print.id === 'me01-086')).toMatchObject({
+      name: 'Mega Absol ex', regulationMark: 'I', detailAt: expect.any(String),
+      thumbnail: 'pokeguru://cards/me01-086.webp'
+    })
+    expect(existsSync(join(folder, 'catalog-images', 'me01-086.webp'))).toBe(true)
+    expect(view.prints.find((print) => print.id === 'sve-005')).toMatchObject({
+      category: 'Energy', detailAt: expect.any(String)
+    })
+  } finally {
+    store.close()
+    rmSync(folder, { recursive: true, force: true })
+  }
+}, 60_000)
 
 it.skipIf(process.env.POKEGURU_CATALOG_BULK_LIVE !== '1')('acquisisce e conserva l’inventario reale', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-standard-live-'))
