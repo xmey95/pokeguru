@@ -69,6 +69,10 @@ try {
   await stubOffline()
   await current.waitForTimeout(10_600)
   assert.deepEqual(await reads(), [], 'fresh sources must not make network requests at startup')
+  await current.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
+  await current.getByRole('button', { name: 'Eventi', exact: true }).first().click()
+  await current.getByRole('button', { name: 'Regional', exact: true }).click()
+  assert.deepEqual(await reads(), [], 'switching global views must not schedule a refresh')
   await application.close()
   application = undefined
 
