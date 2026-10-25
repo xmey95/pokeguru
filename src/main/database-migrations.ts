@@ -4,8 +4,8 @@ import { dirname, join } from 'node:path'
 import { backup, DatabaseSync } from 'node:sqlite'
 
 /** Version 1 records legacy migrations, 2 AI jobs, 3 the opening AI message link,
- * 4 project archives, 5 Catalog cooldowns. */
-export const CURRENT_SCHEMA_VERSION = 5
+ * 4 project archives, 5 Catalog cooldowns, 6 Catalog job run IDs. */
+export const CURRENT_SCHEMA_VERSION = 6
 
 export interface MigrationPreparation {
   fromVersion: number

@@ -69,19 +69,22 @@ describe('main Limitless tournament archive', () => {
       const first = await syncMainTournamentBlock(store, 'new', fetcher as typeof fetch,
         new Date('2026-10-24T12:00:00.000Z'))
       expect(first).toMatchObject({ status: 'running', inspectedEvents: 2, fetchedLists: 4 })
+      expect(first.runId).toMatch(/^[a-f0-9-]{36}$/)
       expect(store.pruneMainIntermediates(new Set())).toBeGreaterThan(0)
       store.close()
       const reopened = new TournamentStore(path)
       const done = await syncMainTournamentBlock(reopened, 'new', fetcher as typeof fetch,
         new Date('2026-10-24T12:00:00.000Z'))
       expect(done.status).toBe('complete')
+      expect(done.runId).toBe(first.runId)
       expect(reopened.mainSummaries()).toHaveLength(2)
       expect(reopened.mainSummaries()).toEqual(reopened.listMain().map(({ eventId, name, date,
         country, players, url, coverage }) => ({ eventId, name, date, country, players, url, coverage })))
       expect(reopened.getMain('582')?.coverage).toMatchObject({ fetchedLists: 2, complete60Lists: 2 })
       const before = calls.filter((url) => url.includes('/decks/list/')).length
-      await syncMainTournamentBlock(reopened, 'new', fetcher as typeof fetch,
+      const next = await syncMainTournamentBlock(reopened, 'new', fetcher as typeof fetch,
         new Date('2026-10-24T12:00:00.000Z'))
+      expect(next.runId).not.toBe(first.runId)
       expect(calls.filter((url) => url.includes('/decks/list/'))).toHaveLength(before)
       reopened.close()
     } finally { rmSync(folder, { recursive: true, force: true }) }

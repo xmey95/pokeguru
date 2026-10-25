@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -544,7 +544,7 @@ export class CatalogStore {
       CREATE TABLE IF NOT EXISTS catalog_job (
         id INTEGER PRIMARY KEY CHECK (id = 1), mode TEXT NOT NULL,
         state TEXT NOT NULL, phase TEXT NOT NULL, expected INTEGER NOT NULL,
-        error TEXT, updated_at TEXT NOT NULL, retry_at TEXT
+        error TEXT, updated_at TEXT NOT NULL, retry_at TEXT, run_id TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS catalog_job_targets (
         print_id TEXT PRIMARY KEY
@@ -561,32 +561,34 @@ export class CatalogStore {
     const jobColumns = this.db.prepare('PRAGMA table_info(catalog_job)').all()
       .map((row) => (row as { name: string }).name)
     if (!jobColumns.includes('retry_at')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN retry_at TEXT')
+    if (!jobColumns.includes('run_id')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN run_id TEXT')
     // A process killed during a batch leaves only committed targets completed.
     this.db.prepare("UPDATE catalog_job SET state = 'interrupted', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
     this.db.prepare("UPDATE catalog_job SET state = 'interrupted' WHERE state = 'paused' AND phase = 'Interrotto alla chiusura'").run()
   }
 
   jobStatus(): CatalogSyncStatus {
-    const row = this.db.prepare('SELECT mode, state, phase, expected, error, retry_at FROM catalog_job WHERE id = 1')
+    const row = this.db.prepare('SELECT mode, state, phase, expected, error, retry_at, run_id FROM catalog_job WHERE id = 1')
       .get() as { mode: CatalogSyncMode; state: CatalogSyncStatus['state']; phase: string;
-        expected: number; error: string | null; retry_at: string | null } | undefined
+        expected: number; error: string | null; retry_at: string | null; run_id: string | null } | undefined
     if (!row) return { running: false, mode: null, state: 'idle', phase: '', expected: 0,
-      acquired: 0, error: null, cooldownUntil: null }
+      acquired: 0, error: null, cooldownUntil: null, runId: null }
     const pending = (this.db.prepare('SELECT COUNT(*) AS n FROM catalog_job_targets').get() as { n: number }).n
     return { running: row.state === 'running' || row.state === 'rate-limited', mode: row.mode,
       state: row.state, phase: row.phase, expected: row.expected,
-      acquired: row.expected - pending, error: row.error, cooldownUntil: row.retry_at }
+      acquired: row.expected - pending, error: row.error, cooldownUntil: row.retry_at, runId: row.run_id }
   }
 
   startJob(mode: CatalogSyncMode): void {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       this.db.exec('DELETE FROM catalog_job_targets')
-      this.db.prepare(`INSERT INTO catalog_job (id, mode, state, phase, expected, error, updated_at, retry_at)
-        VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?, NULL)
+      this.db.prepare(`INSERT INTO catalog_job (id, mode, state, phase, expected, error, updated_at, retry_at, run_id)
+        VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?, NULL, ?)
         ON CONFLICT(id) DO UPDATE SET mode=excluded.mode, state=excluded.state,
-        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at, retry_at=NULL`)
-        .run(mode, new Date().toISOString())
+        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at, retry_at=NULL,
+        run_id=excluded.run_id`)
+        .run(mode, new Date().toISOString(), randomUUID())
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }

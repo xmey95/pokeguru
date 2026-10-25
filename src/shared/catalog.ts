@@ -3,6 +3,8 @@ export const CATALOG_GAMEPLAY_SCHEMA_VERSION = 1
 import type { WesternRulePackage } from './western-rule-package'
 export type CatalogSyncMode = 'new' | 'full'
 export interface CatalogSyncStatus {
+  /** Stable across pause/retry; changes when a new scan starts. */
+  runId?: string | null
   running: boolean
   mode: CatalogSyncMode | null
   state: 'idle' | 'running' | 'rate-limited' | 'interrupted' | 'paused' | 'cancelled' | 'done'

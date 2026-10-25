@@ -75,7 +75,7 @@ it('backs up a live WAL archive before legacy migration and restores its evidenc
   } finally { projects?.close(); rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 }, 30_000)
 
-it('backs up schema 4 before adding the Catalog retry clock', async () => {
+it('backs up schema 4 before adding the Catalog retry clock and job identity', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-catalog-'))
   const path = join(folder, 'pokeguru.sqlite')
   try {
@@ -97,11 +97,41 @@ it('backs up schema 4 before adding the Catalog retry clock', async () => {
     expect(catalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
     catalog.close()
     completeDatabaseMigration(path, preparation)
-    expect(schemaVersion(path)).toBe(5)
+    expect(schemaVersion(path)).toBe(6)
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 })
 
-it('preserves a project and Catalog job across verified v3→v4→v5 upgrades', async () => {
+it('backs up schema 5 and preserves a Catalog job while adding run identity', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-alerts-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const original = new CatalogStore(path)
+    original.startJob('new')
+    original.close()
+    const old = new DatabaseSync(path)
+    old.exec('ALTER TABLE catalog_job DROP COLUMN run_id; PRAGMA user_version = 5')
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 5, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const upgraded = new CatalogStore(path)
+    expect(upgraded.jobStatus()).toMatchObject({ state: 'interrupted', runId: null })
+    upgraded.startJob('new')
+    const runId = upgraded.jobStatus().runId
+    expect(runId).toMatch(/^[a-f0-9-]{36}$/)
+    upgraded.pauseJob(null)
+    upgraded.close()
+    completeDatabaseMigration(path, preparation)
+    const reopened = new CatalogStore(path)
+    expect(reopened.jobStatus().runId).toBe(runId)
+    reopened.startJob('new')
+    expect(reopened.jobStatus().runId).not.toBe(runId)
+    reopened.close()
+    expect(schemaVersion(path)).toBe(6)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('preserves a project and Catalog job across verified v3→v4→v6 upgrades', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-chain-'))
   const path = join(folder, 'pokeguru.sqlite')
   try {
@@ -141,7 +171,7 @@ it('preserves a project and Catalog job across verified v3→v4→v5 upgrades', 
     expect(completedCatalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
     completedCatalog.close()
     completeDatabaseMigration(path, v4)
-    expect(schemaVersion(path)).toBe(5)
+    expect(schemaVersion(path)).toBe(6)
     const reopened = new ProjectStore(path)
     expect(reopened.get(project.id)?.name).toBe('Continuità')
     reopened.close()
