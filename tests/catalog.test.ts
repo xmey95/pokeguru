@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -85,7 +85,7 @@ function fixtureFetch(): ReturnType<typeof vi.fn> {
       return new Response(JSON.stringify({ id, localId: id.split('-').at(-1), ...cards[id] }), { status: 200 })
     }
     if (options?.method === 'HEAD') return new Response(null, { status: 200 })
-    return new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'content-type': 'image/webp' } })
+    return new Response(new TextEncoder().encode('RIFF0000WEBP'), { status: 200, headers: { 'content-type': 'image/webp' } })
   })
   vi.stubGlobal('fetch', mock)
   return mock
@@ -213,6 +213,72 @@ describe('Catalogo occidentale', () => {
     store.queueJob('new')
     expect(store.nextJobBatch(20).map((print) => print.id)).toContain('me01-086')
     store.close()
+  })
+
+  it('rimette in coda una miniatura locale persa senza riscaricare immagini assenti alla fonte', async () => {
+    fixtureFetch()
+    const store = new CatalogStore(path())
+    try {
+      const sample = await fetchCatalogSample()
+      store.save({ ...sample, prints: sample.prints.map((print) => print.id === 'sv02-185'
+        ? { ...print, thumbnail: 'pokeguru://cards/sv02-185.webp' } : print) }, 'standard-marks')
+      store.startJob('new')
+      store.queueJob('new')
+      expect(store.nextJobBatch(30).map((print) => print.id)).toContain('sv02-185')
+      expect(store.getPrint('sv02-185')?.thumbnail).toBeNull()
+      mkdirSync(join(store.dataDir, 'catalog-images'), { recursive: true })
+      writeFileSync(join(store.dataDir, 'catalog-images', 'sv02-185.webp'), 'RIFF0000WEBP')
+      expect(store.getPrint('sv02-185')?.thumbnail).toBe('pokeguru://cards/sv02-185.webp')
+      store.startJob('new')
+      store.queueJob('new')
+      expect(store.nextJobBatch(30).map((print) => print.id)).not.toContain('sv02-185')
+      expect(store.browseOverview().stats.imageSourceMissing).toBeGreaterThan(0)
+    } finally { store.close() }
+  })
+
+  it('acquisisce una scansione aggiunta alla fonte dopo il primo dettaglio', async () => {
+    fixtureFetch()
+    const store = new CatalogStore(path())
+    try {
+      const sample = await fetchCatalogSample()
+      const target = sample.prints.find((print) => print.id === 'sv02-185')!
+      store.save({ ...sample, prints: sample.prints.map((print) => print.id === target.id
+        ? { ...print, imageBase: null, thumbnail: null, highImageAvailable: null } : print) }, 'standard-marks')
+      store.save({ ...sample, prints: sample.prints.map((print) => print.id === target.id
+        ? { ...print, detailAt: null, imageBase: target.imageBase, thumbnail: null } : print) }, 'standard-marks')
+      const updated = store.getPrint(target.id)!
+      expect(updated.detailAt).toBe(target.detailAt)
+      expect(updated.imageBase).toBe(target.imageBase)
+      expect(updated.thumbnail).toBeNull()
+      store.startJob('new')
+      store.queueJob('new')
+      expect(store.nextJobBatch(30).map((print) => print.id)).toContain(target.id)
+    } finally { store.close() }
+  })
+
+  it('conta una miniatura Limitless locale e la rimette in coda se il PNG manca', async () => {
+    fixtureFetch()
+    const store = new CatalogStore(path())
+    try {
+      const sample = await fetchCatalogSample()
+      const target = { ...sample.prints.find((print) => print.id === 'me01-086')!,
+        id: 'mee-001', setId: 'mee', setName: 'Mega Evolution Energy', localId: '001' }
+      const imageBase = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_001_R_EN_SM.png'
+      store.save({ ...sample, sets: [...sample.sets, { id: 'mee', name: 'Mega Evolution Energy',
+        sourceTotal: 16, sampleTotal: 1, fetchedAt: sample.fetchedAt }],
+      prints: [...sample.prints, { ...target, imageBase, thumbnail: `pokeguru://cards/${target.id}.png` }] }, 'standard-marks')
+      expect(store.getPrint(target.id)?.thumbnail).toBeNull()
+      store.startJob('new')
+      store.queueJob('new')
+      expect(store.nextJobBatch(30).map((print) => print.id)).toContain(target.id)
+      mkdirSync(join(store.dataDir, 'catalog-images'), { recursive: true })
+      writeFileSync(join(store.dataDir, 'catalog-images', `${target.id}.png`), 'PNG')
+      expect(store.getPrint(target.id)?.thumbnail).toBe(`pokeguru://cards/${target.id}.png`)
+      expect(store.browseOverview().stats.limitlessThumbnails).toBe(1)
+      store.startJob('new')
+      store.queueJob('new')
+      expect(store.nextJobBatch(30).map((print) => print.id)).not.toContain(target.id)
+    } finally { store.close() }
   })
 
   it('arricchisce prima dell’analisi una stampa esatta già salvata senza regole', async () => {

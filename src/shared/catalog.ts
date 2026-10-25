@@ -131,6 +131,9 @@ export type CatalogBrowseOverview = Omit<CatalogView, 'prints' | 'referencePrint
     variants: number
     thumbnails: number
     highImages: number
+    imageSourceMissing: number
+    imageCacheMissing: number
+    limitlessThumbnails: number
   }
 }
 

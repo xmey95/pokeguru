@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { isDeepStrictEqual } from 'node:util'
+import { load } from 'cheerio'
 import {
   CATALOG_GAMEPLAY_SCHEMA_VERSION, CATALOG_NAMES, CATALOG_SET_IDS, CATALOG_SOURCE,
   type CardGameplay, type CatalogPrint, type CatalogSet, type CatalogView,
@@ -41,11 +42,70 @@ type CardResponse = {
 
 const apiOrigin = 'https://api.tcgdex.net/v2/en'
 const assetOrigin = 'https://assets.tcgdex.net'
+const limitlessOrigin = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com'
+const limitlessSets = new Set(['mee', 'mep', 'sve', 'svp'])
 const selectedNames = new Set<string>(CATALOG_NAMES)
 const candidateMarks = Array.from({ length: 'Z'.charCodeAt(0) - 'H'.charCodeAt(0) + 1 },
   (_, index) => String.fromCharCode('H'.charCodeAt(0) + index))
 
 type StandardManifest = { sets: CatalogSet[]; prints: CatalogPrint[]; fetchedAt: string; promoAudit: PromoAudit }
+
+let nextLimitlessRequestAt = 0
+let limitlessRequestQueue: Promise<unknown> = Promise.resolve()
+
+function limitlessImageUrl(value: string, setId: string, localId: string): boolean {
+  if (!/^\d{1,3}$/.test(localId)) return false
+  try {
+    const url = new URL(value)
+    return url.origin === limitlessOrigin && !url.username && !url.password && !url.search && !url.hash &&
+      url.pathname === `/tpci/${setId.toUpperCase()}/${setId.toUpperCase()}_${localId.padStart(3, '0')}_R_EN_SM.png`
+  } catch { return false }
+}
+
+async function requestLimitless(url: string): Promise<Response> {
+  const task = limitlessRequestQueue.then(async () => {
+    const delay = Math.max(0, nextLimitlessRequestAt - Date.now())
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay))
+    nextLimitlessRequestAt = Date.now() + 1_200
+    const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(12_000) })
+    if (response.status === 429) nextLimitlessRequestAt = Date.now() + 60_000
+    return response
+  })
+  limitlessRequestQueue = task.then(() => undefined, () => undefined)
+  return task
+}
+
+/** Only exact set/number listings can supply a missing TCGdex image. */
+export async function fetchLimitlessImageIndex(prints: readonly CatalogPrint[]): Promise<Map<string, string>> {
+  const missing = new Map<string, Set<string>>()
+  for (const print of prints) {
+    if (print.imageBase || !limitlessSets.has(print.setId) || !/^\d{1,3}$/.test(print.localId)) continue
+    const set = missing.get(print.setId) ?? new Set<string>()
+    set.add(print.localId)
+    missing.set(print.setId, set)
+  }
+  const images = new Map<string, string>()
+  for (const [setId, numbers] of missing) {
+    try {
+      const response = await requestLimitless(`https://limitlesstcg.com/cards/${setId.toUpperCase()}`)
+      if (!response.ok) continue
+      const html = await readLimitedText(response, 500_000, 'Indice immagini Limitless troppo grande.')
+      const $ = load(html)
+      $('.card-search-grid > a[href] > img[src]').each((_, image) => {
+        const anchor = $(image).parent('a')
+        const href = anchor.attr('href') ?? ''
+        const match = new RegExp(`^/cards/${setId.toUpperCase()}/([1-9][0-9]{0,2})$`).exec(href)
+        if (!match) return
+        const localId = match[1].padStart(3, '0')
+        const src = $(image).attr('src') ?? ''
+        if (numbers.has(localId) && limitlessImageUrl(src, setId, localId)) {
+          images.set(`${setId}-${localId}`, src)
+        }
+      })
+    } catch { /* TCGdex details remain usable when the secondary source is unavailable. */ }
+  }
+  return images
+}
 
 async function request(url: string, method: 'GET' | 'HEAD' = 'GET'): Promise<Response> {
   const pauses = [500, 1_500, 4_000]
@@ -112,12 +172,46 @@ function identity(card: CardResponse, gameplay: CardGameplay | null): Pick<Catal
   return { identityId: card.id, identityBasis: 'unverified' }
 }
 
-async function imageStatus(base: string | undefined): Promise<Pick<CatalogPrint, 'thumbnail' | 'highImageAvailable'>> {
-  if (!base || !base.startsWith(`${assetOrigin}/`)) return { thumbnail: null, highImageAvailable: null }
+export async function fetchCatalogImage(base: string | undefined, id?: string, cacheDir?: string): Promise<Pick<CatalogPrint, 'thumbnail' | 'highImageAvailable'>> {
+  if (!base) return { thumbnail: null, highImageAvailable: null }
+  const limitless = id && /^(mee|mep|sve|svp)-\d{3}$/.test(id) &&
+    limitlessImageUrl(base, id.split('-')[0], id.split('-')[1])
+  if (limitless) {
+    try {
+      const response = await requestLimitless(base)
+      if (!response.ok || response.headers.get('content-type')?.split(';')[0] !== 'image/png') {
+        return { thumbnail: null, highImageAvailable: null }
+      }
+      const bytes = await readLimitedBytes(response, 1_000_000, 'Immagine Limitless troppo grande.')
+      if (bytes.length < 8 || !Buffer.from(bytes).subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+        return { thumbnail: null, highImageAvailable: null }
+      }
+      if (cacheDir && id) {
+        mkdirSync(cacheDir, { recursive: true })
+        const target = join(cacheDir, `${id}.png`)
+        const temporary = `${target}.tmp`
+        writeFileSync(temporary, bytes)
+        renameSync(temporary, target)
+        return { thumbnail: `pokeguru://cards/${id}.png`, highImageAvailable: null }
+      }
+      return { thumbnail: `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`, highImageAvailable: null }
+    } catch { return { thumbnail: null, highImageAvailable: null } }
+  }
+  if (!base.startsWith(`${assetOrigin}/`)) return { thumbnail: null, highImageAvailable: null }
   const [low, high] = await Promise.allSettled([
     request(`${base}/low.webp`).then(async (response) => {
-      const bytes = await readLimitedBytes(response, 250_000, 'Immagine TCGdex troppo grande.')
+      const bytes = await readLimitedBytes(response, 1_000_000, 'Immagine TCGdex troppo grande.')
       if (response.headers.get('content-type')?.split(';')[0] !== 'image/webp') return null
+      if (bytes.length < 12 || Buffer.from(bytes).toString('ascii', 0, 4) !== 'RIFF' ||
+        Buffer.from(bytes).toString('ascii', 8, 12) !== 'WEBP') return null
+      if (cacheDir && id && /^[a-zA-Z0-9.]+-[a-zA-Z0-9.]+$/.test(id)) {
+        mkdirSync(cacheDir, { recursive: true })
+        const target = join(cacheDir, `${id}.webp`)
+        const temporary = `${target}.tmp`
+        writeFileSync(temporary, bytes)
+        renameSync(temporary, target)
+        return `pokeguru://cards/${id}.webp`
+      }
       return `data:image/webp;base64,${Buffer.from(bytes).toString('base64')}`
     }),
     request(`${base}/high.webp`, 'HEAD').then(() => true)
@@ -142,7 +236,8 @@ function briefPrint(brief: CardBrief, set: Pick<SetResponse, 'id' | 'name'>): Ca
 }
 
 async function details(brief: CardBrief, set: Pick<SetResponse, 'id' | 'name'>,
-  fetchedAt: string, includeImages = true, manifestPrint?: CatalogPrint): Promise<CatalogPrint> {
+  fetchedAt: string, includeImages = true, manifestPrint?: CatalogPrint,
+  cacheDir?: string): Promise<CatalogPrint> {
   const base = manifestPrint ?? briefPrint(brief, set)
   try {
     const card = await json<CardResponse>(base.sourceUrl)
@@ -150,14 +245,15 @@ async function details(brief: CardBrief, set: Pick<SetResponse, 'id' | 'name'>,
       throw new Error('Dettaglio incoerente con l’indice.')
     }
     const gameplay = extractCardGameplay(card)
-    const images = includeImages ? await imageStatus(card.image) : { thumbnail: null, highImageAvailable: null }
+    const images = includeImages ? await fetchCatalogImage(card.image ?? brief.image, brief.id, cacheDir)
+      : { thumbnail: null, highImageAvailable: null }
     return {
       ...base, category: card.category ?? null, stage: card.stage ?? null,
       energyType: card.energyType ?? null, rarity: card.rarity ?? null,
       regulationMark: /^[A-Z]$/i.test(card.regulationMark ?? '') ? card.regulationMark!.toUpperCase() : null,
       variants: card.variants ?? null, gameplay,
       gameplaySchemaVersion: CATALOG_GAMEPLAY_SCHEMA_VERSION, ...identity(card, gameplay),
-      imageBase: card.image ?? null, ...images,
+      imageBase: card.image ?? brief.image ?? null, ...images,
       sourceUpdated: card.updated ?? null, detailAt: fetchedAt, error: null
     }
   } catch (error) {
@@ -259,6 +355,10 @@ export async function fetchStandardManifest(): Promise<StandardManifest> {
       return { ...print, isPromo: true, promoStatus }
     })
   })
+  const fallbackImages = await fetchLimitlessImageIndex(prints)
+  for (const print of prints) {
+    if (!print.imageBase) print.imageBase = fallbackImages.get(print.id) ?? null
+  }
   return { sets, prints, fetchedAt, promoAudit: {
     sourceUrl: PROMO_LEGALITY_SOURCE, checkedAt: promoResult.registry.checkedAt,
     error: promoResult.error, series: promoResult.registry.series,
@@ -285,7 +385,7 @@ export async function syncStandardCatalog(store: CatalogStore,
       const results = await mapLimited(batch, 2, async (print) =>
         details({ id: print.id, localId: print.localId, name: print.name,
           image: print.imageBase ?? undefined }, { id: print.setId, name: print.setName },
-        new Date().toISOString(), false, print))
+        new Date().toISOString(), true, print, join(store.dataDir, 'catalog-images')))
       store.commitJobBatch(results)
       status = store.jobStatus()
       progress?.(status.phase, status.expected, status.acquired)
@@ -328,6 +428,14 @@ export class CatalogStore {
     ids: string[]; search: string; setIds: Set<string>
   }>; byKey: Map<string, string[]> } | null = null
   readonly dataDir: string
+
+  private availableImage(print: CatalogPrint): CatalogPrint {
+    if (!print.thumbnail?.startsWith('pokeguru://cards/')) return print
+    const extension = print.thumbnail === `pokeguru://cards/${print.id}.webp` ? 'webp'
+      : print.thumbnail === `pokeguru://cards/${print.id}.png` ? 'png' : null
+    return extension && existsSync(join(this.dataDir, 'catalog-images', `${print.id}.${extension}`))
+      ? print : { ...print, thumbnail: null }
+  }
 
   constructor(path: string) {
     mkdirSync(dirname(path), { recursive: true })
@@ -419,8 +527,10 @@ export class CatalogStore {
       this.db.exec('DELETE FROM catalog_job_targets')
       let expected = 0
       for (const row of targets) {
-        const print = JSON.parse((row as { payload: string }).payload) as CatalogPrint
-        if (mode === 'full' || !print.detailAt || print.gameplaySchemaVersion !== CATALOG_GAMEPLAY_SCHEMA_VERSION) {
+        const print = this.availableImage(JSON.parse((row as { payload: string }).payload) as CatalogPrint)
+        const cached = !!print.thumbnail
+        if (mode === 'full' || !print.detailAt || print.gameplaySchemaVersion !== CATALOG_GAMEPLAY_SCHEMA_VERSION ||
+          (!!print.imageBase && !cached)) {
           this.db.prepare('INSERT INTO catalog_job_targets VALUES (?)').run(print.id)
           expected++
         }
@@ -465,11 +575,16 @@ export class CatalogStore {
     // A failed refresh does not discard a previously acquired detail or cached image.
     const old = previous ? JSON.parse(previous.payload) as CatalogPrint : null
     const promoStatus = print.promoStatus === undefined ? old?.promoStatus : print.promoStatus
+    const changedManifestImage = !!old?.detailAt && !!print.imageBase && print.imageBase !== old.imageBase
     const value: CatalogPrint = print.detailAt === null && old?.detailAt
       ? { ...old, setName: print.setName, name: print.name, localId: print.localId,
-        isPromo: print.isPromo ?? old.isPromo, promoStatus, error: print.error }
+        isPromo: print.isPromo ?? old.isPromo, promoStatus, error: print.error,
+        imageBase: print.imageBase ?? old.imageBase,
+        thumbnail: changedManifestImage ? null : old.thumbnail,
+        highImageAvailable: changedManifestImage ? null : old.highImageAvailable }
       : { ...print, isPromo: print.isPromo ?? old?.isPromo, promoStatus,
-        thumbnail: print.thumbnail ?? (old?.imageBase === print.imageBase ? old.thumbnail : null),
+        thumbnail: print.thumbnail ?? (old?.imageBase === print.imageBase &&
+          !!this.availableImage(old).thumbnail ? old.thumbnail : null),
         highImageAvailable: print.highImageAvailable ??
           (old?.imageBase === print.imageBase ? old.highImageAvailable : null) }
     if (old?.detailAt && value.detailAt) {
@@ -574,7 +689,7 @@ export class CatalogStore {
     const promoRegistry = loadPromoPackage().registry
     const prints = this.db.prepare('SELECT payload FROM catalog_prints ORDER BY id')
       .all().map((row) => {
-        const print = JSON.parse((row as { payload: string }).payload) as CatalogPrint
+        const print = this.availableImage(JSON.parse((row as { payload: string }).payload) as CatalogPrint)
         if (!print.isPromo) return print
         const entry = promoRegistry.entries.get(promoKey(print.setId, print.localId))
         return { ...print, promoStatus: {
@@ -662,6 +777,9 @@ export class CatalogStore {
     let variants = 0
     let thumbnails = 0
     let highImages = 0
+    let imageSourceMissing = 0
+    let imageCacheMissing = 0
+    let limitlessThumbnails = 0
     const missingPreview: CatalogBrowseOverview['stats']['missingPreview'] = []
     for (const print of prints) {
       if (print.detailAt) acquired++
@@ -669,7 +787,10 @@ export class CatalogStore {
       if (print.detailAt && print.rarity !== null) rarity++
       if (print.detailAt && print.variants !== null) variants++
       if (print.detailAt && print.thumbnail !== null) thumbnails++
+      if (print.detailAt && print.thumbnail && print.imageBase?.startsWith(`${limitlessOrigin}/`)) limitlessThumbnails++
       if (print.detailAt && print.highImageAvailable === true) highImages++
+      if (print.detailAt && !print.imageBase) imageSourceMissing++
+      if (print.detailAt && print.imageBase && !print.thumbnail) imageCacheMissing++
       const key = print.identityId ?? `pending-${print.id}`
       const group = groups.get(key) ?? { key, name: print.name, category: print.category,
         basis: print.identityBasis, printCount: 0, canConstrain: false,
@@ -688,7 +809,7 @@ export class CatalogStore {
       acquired, missing: prints.length - acquired, missingPreview,
       groups: ordered.length,
       confirmedGroups: ordered.filter((group) => group.basis && group.basis !== 'unverified').length,
-      rarity, variants, thumbnails, highImages
+      rarity, variants, thumbnails, highImages, imageSourceMissing, imageCacheMissing, limitlessThumbnails
     } }
     this.browseCache = { overview, groups: ordered,
       byKey: new Map(ordered.map((group) => [group.key, group.ids])) }
@@ -727,7 +848,7 @@ export class CatalogStore {
   getPrint(id: string): CatalogPrint | null {
     if (typeof id !== 'string' || id.length > 100) return null
     const row = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?').get(id) as { payload: string } | undefined
-    return row ? JSON.parse(row.payload) as CatalogPrint : null
+    return row ? this.availableImage(JSON.parse(row.payload) as CatalogPrint) : null
   }
 
   close(): void { this.db.close() }
