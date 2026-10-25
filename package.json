@@ -21,6 +21,7 @@
     "test:e2e": "npm run build && node tests/electron-smoke.mjs",
     "test:e2e:offline": "npm run build && node tests/electron-smoke.mjs --offline",
     "test:workspace-ui": "npm run build && node tests/workspace-ui-live.mjs",
+    "test:performance:growth": "npm run build && node tests/growth-performance-live.mjs",
     "test:reconciliation-live": "npm run build && node tests/reconciliation-live.mjs",
     "test:export-live": "npm run build && node tests/export-live.mjs",
     "test:threads-live": "npm run build && node tests/threads-live.mjs",
