@@ -125,7 +125,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-115** | Ricerca locale e copertura verificabile delle schede di gioco | Dati/ricerca | R-02, R-07, R-10 / qualità AI | P0 / M | APP-054/058/113; obiettivo utente 25-10-2026 | Done |
 | **APP-116** | Query automatiche dell'AI al motore locale e Matchup tracciabili | Funzionalità | R-02, R-10, R-13 / qualità AI | P0 / L | APP-115/057 | Done |
 | **APP-118** | Query automatiche e copertura per ogni turno Thread | Funzionalità | R-07, R-08, R-11 / qualità AI | P0 / M | APP-116/058 | Done |
-| **APP-119** | Provenienza, misura dei costi e verifica integrata dei turni AI | Verifica/integrazione | R-07, R-10, R-11, R-13 / qualità AI | P0 / M | APP-115/116/118 | In progress |
+| **APP-119** | Provenienza, misura dei costi e verifica integrata dei turni AI | Verifica/integrazione | R-07, R-10, R-11, R-13 / qualità AI | P0 / M | APP-115/116/118 | Done |
 
 ### APP-117 — Finestra senza menu Electron
 
@@ -166,7 +166,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 
 - **Ambito previsto:** rendere leggibili per ogni turno l'universo, la selezione, le omissioni e le fonti; registrare dimensione del prompt, durata e uso Codex quando disponibile. Misurare su fixture e con almeno una prova reale isolata, poi riallineare il ramo e integrare in `origin/dev` dopo i check richiesti.
 - **Accettazione:** nessuna pretesa di ricerca esaustiva senza criterio e copertura verificati; storico riapribile e verificabile, regressioni su Matchup/Thread/Standard e costi prestazionali espliciti. La PR supera i check Ubuntu e Windows e il merge parte da `origin/dev` già aggiornato con APP-114, senza inglobare modifiche non committate dell'altro checkout.
-- **Avanzamento:** dopo rebase su `origin/dev` che include APP-114, 188 test unitari passati, 27 live esclusi per default, typecheck/build passati. Prova reale del planner: 11.533 token input/56 output in circa 5,3 s; guida Matchup sintetica: 12.817 input/470 output in circa 17,8 s. Nel Thread Electron mirato dopo rebase: planner 11.933 input (9.216 cached)/56 output in 6,12 s, risposta 12.440 input/108 output in 7,28 s. La prova Electron con due Thread e due proposte reali è passata. Il turno di pianificazione aumenta sensibilmente token e latenza; queste sono misure di fixture, non una media o una soglia di spesa. Restano CI e merge.
+- **Risultato e verifiche:** dopo rebase su `origin/dev` che include APP-114, 188 test unitari passati, 27 live esclusi per default, typecheck/build passati. Prova reale del planner: 11.533 token input/56 output in circa 5,3 s; guida Matchup sintetica: 12.817 input/470 output in circa 17,8 s. Nel Thread Electron mirato dopo rebase: planner 11.933 input (9.216 cached)/56 output in 6,12 s, risposta 12.440 input/108 output in 7,28 s. La prova Electron con due Thread e due proposte reali è passata. Quattro check CI Ubuntu/Windows verdi sulla [PR #32](https://github.com/xmey95/pokeguru/pull/32). Il turno di pianificazione aumenta sensibilmente token e latenza; queste sono misure di fixture, non una media o una soglia di spesa. La ricerca resta lessicale e limitata alle schede locali; nessuna sincronizzazione completa reale o prova sull'archivio personale è stata eseguita.
 
 ### Corrispondenza degli ID assegnati sui rami paralleli
 
