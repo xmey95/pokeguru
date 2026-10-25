@@ -87,7 +87,10 @@ try {
   await installSource()
   assert.equal((await page.evaluate(() => window.projectsApi.syncStandardCatalog('new'))).ok, true)
   await waitFor(page, 'done')
-  assert.deepEqual(await status(page), { running: false, mode: 'new', state: 'done',
+  const completed = await status(page)
+  const { runId, ...completedProgress } = completed
+  assert.match(runId, /^[a-f0-9-]{36}$/)
+  assert.deepEqual(completedProgress, { running: false, mode: 'new', state: 'done',
     phase: 'Aggiornamento terminato', expected: 16, acquired: 16, error: null, cooldownUntil: null })
   assert.equal((await application.evaluate(() => globalThis.catalogAutoReads)).length, 16)
 
@@ -95,6 +98,8 @@ try {
   await page.getByRole('button', { name: 'Gestisci catalogo' }).click()
   await page.getByRole('button', { name: 'Scansione completa', exact: true }).click()
   await waitFor(page, 'first-block')
+  const fullRunId = (await status(page)).runId
+  assert.notEqual(fullRunId, runId)
   await page.locator('.catalog-sync-status').getByRole('button', { name: 'Metti in pausa' }).click()
   assert.equal((await status(page)).state, 'paused')
   assert.equal((await status(page)).acquired, 12)
@@ -112,10 +117,12 @@ try {
   await installSource()
   await page.waitForTimeout(2_500)
   assert.equal((await status(page)).state, 'paused')
+  assert.equal((await status(page)).runId, fullRunId)
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
   await page.locator('.catalog-sync-status').getByRole('button', { name: 'Riprendi scansione', exact: true }).click()
   await waitFor(page, 'done')
   assert.equal((await status(page)).acquired, 16)
+  assert.equal((await status(page)).runId, fullRunId)
   assert.equal((await application.evaluate(() => globalThis.catalogAutoReads)).length, 4)
 
   await application.evaluate(() => { globalThis.catalogDetailDelay = 600 })
