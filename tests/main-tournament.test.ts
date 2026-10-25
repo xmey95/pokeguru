@@ -193,6 +193,30 @@ describe('main Limitless tournament archive', () => {
     } finally { rmSync(folder, { recursive: true, force: true }) }
   })
 
+  it('keeps an unfinished pre-upgrade list queue while restarting the wider index scan', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-main-upgrade-'))
+    const store = new TournamentStore(join(folder, 'events.sqlite'))
+    try {
+      const entry = parseMainTournamentIndex(index)[0]
+      store.saveMain(parseMainTournament(event(entry.name, '30518', '30519'), entry))
+      store.saveMainProgress({ ...store.mainProgress(), mode: 'new', status: 'running',
+        rotationStart: null, page: 3, pendingLists: [{ eventId: '582', listId: '30518' }] })
+      const calls: string[] = []
+      const fetcher = async (input: string | URL | Request): Promise<Response> => {
+        const url = String(input); calls.push(url)
+        if (url.includes('/tournaments?')) return new Response(index)
+        if (url.endsWith('/tournaments/581')) return new Response(event('Regional Louisville, KY', '30520', '30521'))
+        return new Response(list)
+      }
+      const resumed = await syncMainTournamentBlock(store, 'new', fetcher as typeof fetch,
+        new Date('2026-10-25T12:00:00.000Z'))
+      expect(calls[0]).toContain('/decks/list/30518')
+      expect(resumed).toMatchObject({ rotationStart: '2026-04-10', scannedPages: 1,
+        alreadyAcquiredEvents: 1 })
+      expect(store.getMain('582')?.participants[0].cardTotal).toBe(60)
+    } finally { store.close(); rmSync(folder, { recursive: true, force: true }) }
+  })
+
   it('keeps completed and cited Regional snapshots while reclaiming only new intermediate revisions', () => {
     const folder = mkdtempSync(join(tmpdir(), 'pokeguru-main-retention-'))
     const path = join(folder, 'data.sqlite')

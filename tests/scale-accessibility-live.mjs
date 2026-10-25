@@ -26,7 +26,9 @@ try {
   for (const section of ['Lista', 'Thread', 'Matchup', 'Catalogo', 'Eventi', 'Impostazioni AI']) {
     const nav = page.locator('.sidebar').getByRole('button', { name: section, exact: true })
     await nav.press('Enter')
-    await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
+    await page.waitForFunction((name) => [...document.querySelectorAll('.sidebar button')]
+      .some((element) => element.getAttribute('aria-label') === name &&
+        element.classList.contains('active')) && !document.querySelector('[data-nav-loading="true"]'), section)
     assert.ok(await nav.evaluate((element) => element.classList.contains('active')),
       `${section}: Invio non ha selezionato la sezione`)
     const geometry = await page.evaluate(() => ({ width: document.documentElement.scrollWidth,

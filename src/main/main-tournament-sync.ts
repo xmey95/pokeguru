@@ -42,7 +42,12 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
   let progress = store.mainProgress()
   if (progress.mode !== mode || progress.status === 'idle' || progress.status === 'complete' ||
     progress.rotationStart !== rotation.effectiveFrom) {
-    progress = initial(mode, progress, rotation.effectiveFrom)
+    const next = initial(mode, progress, rotation.effectiveFrom)
+    // An upgrade must finish an already queued event/list before backfilling the rotation.
+    progress = progress.mode === mode && (progress.status === 'running' || progress.status === 'rate-limited')
+      ? { ...next, status: progress.status, cooldownUntil: progress.cooldownUntil,
+        pendingEvents: progress.pendingEvents, pendingLists: progress.pendingLists }
+      : next
     store.saveMainProgress(progress)
   }
   if (progress.cooldownUntil && Date.parse(progress.cooldownUntil) > now.getTime()) return progress
