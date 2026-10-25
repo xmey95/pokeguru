@@ -78,7 +78,7 @@
 }
 @container workspace (max-width: 480px) {
   .settings-grid, .constraint-fields, .matchup-form-grid, .matchup-fields { grid-template-columns: minmax(0, 1fr); }
-  .matchup-fields > .strategy-field { grid-column: 1; }
+  .matchup-fields > .strategy-field, .matchup-fields > .matchup-trust { grid-column: 1; }
   .candidate-identities { grid-template-columns: minmax(0, 1fr); }
   .candidate-identities > b { transform: rotate(90deg); }
   .catalog-print { flex-direction: column; }

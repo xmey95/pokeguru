@@ -383,18 +383,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               </button>)}
             </div>}
             {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p> : report ? <>
-              <div className="matchup-fields">
-                <div className="strategy-field"><h3>Come giocare il matchup</h3><p>{body(report.strategy)}</p></div>
-                <div className="strategy-field matchup-trust"><h3>Limiti dell’analisi</h3><p>{body(report.limitations)}</p></div>
-                <div><h3>Le nostre carte chiave</h3><p>{body(report.ourKeyCards)}</p></div>
-                <div><h3>Le loro carte chiave</h3><p>{body(report.theirKeyCards)}</p></div>
+              <div className="matchup-fields" aria-label="Guida tattica">
+                <section className="strategy-field"><h3>Piano di gioco</h3>{body(report.strategy)}</section>
+                <section><h3>Punti forti</h3>{body(report.strengths)}</section>
+                <section><h3>Rischi e punti deboli</h3>{body(report.weaknesses)}</section>
+                <section><h3>Le nostre carte chiave</h3>{body(report.ourKeyCards)}</section>
+                <section><h3>Le loro carte chiave</h3>{body(report.theirKeyCards)}</section>
+                <section className="matchup-trust"><h3>Incertezze e limiti</h3>{body(report.limitations)}</section>
               </div>
-              <details className="matchup-assessment"><summary>Punti forti e rischi</summary>
-                <div className="matchup-fields">
-                  <div><h3>Punti forti del nostro mazzo</h3><p>{body(report.strengths)}</p></div>
-                  <div><h3>Debolezze del nostro mazzo</h3><p>{body(report.weaknesses)}</p></div>
-                </div>
-              </details>
               <details className="guide-sources"><summary>Fonti e dati della guida</summary>
                 <div className="matchup-source-links"><button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.opponentSourceUrl ?? selected.url)}>Apri archetipo su Limitless ↗</button>
                   {report.metaSourceUrl && <button type="button" className="text-button"
@@ -402,10 +398,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               <details className="matchup-report-meta"><summary>Versione, modello e dati usati</summary><p>Analisi Codex generata il {date(report.generatedAt)} · Standard occidentale · lista {report.deckHash.slice(0, 12)} · snapshot Meta {report.metaId.slice(0, 12)}{report.metaPeriod ? ` · ${report.metaPeriod}` : ''}{report.metaFetchedAt ? ` · acquisito ${date(report.metaFetchedAt)}` : ''}. {report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p></details>
               {report.tournamentEvidence && <section className="rotation-panel" aria-label="Evidenze torneo del matchup">
                 <strong>{report.tournamentEvidence.schemaVersion === 2 ? 'Tornei e liste osservate' : 'Liste osservate in un evento online'}</strong>
-                <p>{body(report.tournamentEvidence.schemaVersion === 2 ? report.tournamentEvidence.detail
+                <div>{body(report.tournamentEvidence.schemaVersion === 2 ? report.tournamentEvidence.detail
                   : report.tournamentEvidence.status === 'matched'
                     ? `${report.tournamentEvidence.matchedCompleteLists} liste complete dell’archetipo in ${report.tournamentEvidence.eventName} (${report.tournamentEvidence.eventDate ? date(report.tournamentEvidence.eventDate) : 'data non indicata'}). Evento online singolo; non è un winrate.`
-                    : report.tournamentEvidence.detail)}</p>
+                    : report.tournamentEvidence.detail)}</div>
                 {report.tournamentEvidence.events && <ul>{report.tournamentEvidence.events.map((item) => <li key={`${item.source}:${item.eventId}`}>
                   {item.name} · {date(item.date)} · {item.source === 'main' ? 'Regional' : 'Play online'} · {item.matchedLists} liste dell’archetipo / {item.completeLists} liste complete acquisite · {item.visibleParticipants}/{item.totalParticipants} partecipanti visibili.
                   <button type="button" className="text-button" onClick={() => void (item.source === 'main'
@@ -419,8 +415,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                       ? '' : card.catalogStatus === 'ambiguous' ? ' · identità da verificare' : ' · non nel catalogo locale'}
                     {card.catalogIdentityId && <button type="button" className="text-button"
                       onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo</button>}
-                    {card.gameplay && <details><summary>Meccaniche verificate</summary><p>{body(card.gameplay)}</p>
-                      {card.cardSourceUrl && <small>{body(card.cardSourceUrl)}</small>}</details>}
+                    {card.gameplay && <details><summary>Meccaniche verificate</summary>{body(card.gameplay)}
+                      {card.cardSourceUrl && <small><GuideText text={card.cardSourceUrl} inline cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /></small>}</details>}
                   </li>)}</ul></details>
                   {report.tournamentEvidence.schemaVersion !== 2 && report.tournamentEvidence.eventUrl && <button type="button" className="text-button"
                     onClick={() => void window.projectsApi.openLimitless(report.tournamentEvidence!.eventUrl!)}>Apri evento online ↗</button>}

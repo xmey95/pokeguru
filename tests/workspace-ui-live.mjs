@@ -265,7 +265,7 @@ try {
   await page.getByLabel('Cerca avversario').fill('Gardevoir ex · fixture UI')
   assert.equal(await page.locator('.matchup-option').count(), 1, 'La ricerca non filtra gli archetipi')
   await page.locator('.matchup-option').filter({ hasText: 'Gardevoir ex · fixture UI' }).click({ timeout: 30000 })
-  await page.getByText('Come giocare il matchup').waitFor()
+  await page.locator('.matchup-fields').first().getByRole('heading', { name: 'Piano di gioco' }).waitFor()
   assert.equal(await page.locator('.discussion-history-item').count(), 1)
   assert.equal(await page.locator('.discussion-latest').locator('.discussion-version').count(), 0,
     'La revisione corrente ripete la guida già visibile sopra')
@@ -280,7 +280,7 @@ try {
     assert.match(await page.getByTestId('deck-companion').textContent(), /Mega Absol ex/)
     assert.ok(await page.locator('.matchup-fields').first().isVisible())
     if (width === 1280) {
-      const plan = await page.getByText('Come giocare il matchup').boundingBox()
+      const plan = await page.locator('.matchup-fields').first().getByRole('heading', { name: 'Piano di gioco' }).boundingBox()
       assert.ok(plan && plan.y + 80 < height, 'Il testo del piano Matchup non compare nella prima schermata a 1280×720')
     }
   }

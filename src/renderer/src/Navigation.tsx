@@ -120,7 +120,8 @@ export function NavigationProvider({ children }: { children: (entryId: number) =
     window.addEventListener('wheel', stop, { passive: true })
     window.addEventListener('pointerdown', stop)
     window.addEventListener('keydown', stop)
-    return () => { stop(); window.removeEventListener('wheel', stop); window.removeEventListener('pointerdown', stop); window.removeEventListener('keydown', stop) }
+    window.addEventListener('focusin', stop)
+    return () => { stop(); window.removeEventListener('wheel', stop); window.removeEventListener('pointerdown', stop); window.removeEventListener('keydown', stop); window.removeEventListener('focusin', stop) }
   }, [entry.id])
   return <Context.Provider value={value}>{children(entry.id)}</Context.Provider>
 }

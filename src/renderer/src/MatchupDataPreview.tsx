@@ -22,7 +22,7 @@ export function MatchupDataPreview({ action, total, deckContext, opponent, snaps
   const savedEvidence = revising ? report?.tournamentEvidence : undefined
   const evidence = savedEvidence ?? currentEvidence
   const savedCards = revising ? report?.sampleDeckCards : undefined
-  const text = (value: string) => <GuideText text={value} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
+  const text = (value: string) => <GuideText text={value} inline cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
   const evidenceSummary = evidence ? evidence.status === 'matched'
     ? `${evidence.matchedCompleteLists} ${evidence.matchedCompleteLists === 1 ? 'lista completa' : 'liste complete'} · ${savedEvidence ? 'evidenze salvate nella guida' : 'archivio attuale'}`
     : evidence.status === 'incompatible' ? 'Evidenze non compatibili' : 'Evidenze non disponibili'
