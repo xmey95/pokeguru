@@ -164,7 +164,7 @@ export class CodexControl {
 
   async jsonTurn(sessionId: string | null, cwd: string, prompt: string, config: AiRunConfig,
     outputSchema: Record<string, unknown>, options: { jobId?: string; jobDirectory?: string;
-      signal?: AbortSignal } = {}): Promise<{ sessionId: string; turnId: string; value: unknown }> {
+      signal?: AbortSignal; onSessionStarted?: (sessionId: string) => void } = {}): Promise<{ sessionId: string; turnId: string; value: unknown }> {
     const key = options.jobId ?? sessionId ?? `new:${randomUUID()}`
     if (this.cliTurns.has(key)) throw new Error('Questo thread Codex è già in elaborazione.')
     if (options.signal?.aborted) throw new Error('Operazione Codex annullata.')
@@ -203,7 +203,10 @@ export class CodexControl {
               if (event.type === 'thread.started') {
                 observedSessionId = event.thread_id ?? null
                 if (observedSessionId) {
-                  try { writeFileSync(join(directory, 'session-id.txt'), observedSessionId, 'utf8') }
+                  try {
+                    writeFileSync(join(directory, 'session-id.txt'), observedSessionId, 'utf8')
+                    options.onSessionStarted?.(observedSessionId)
+                  }
                   catch { captureError = true; child.kill() }
                 }
               }
