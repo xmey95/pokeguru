@@ -156,6 +156,36 @@ function seed(path, projectId, count) {
   } catch (error) { db.exec('ROLLBACK'); throw error } finally { db.close() }
 }
 
+function measureSnapshotReads(path) {
+  const db = new DatabaseSync(path)
+  try {
+    const result = {}
+    for (const [name, table] of [['play', 'tournament_snapshots'],
+      ['regional', 'main_tournament_snapshots']]) {
+      const query = db.prepare(`SELECT payload FROM ${table}
+        WHERE rowid IN (SELECT MAX(rowid) FROM ${table} GROUP BY event_id)`)
+      const querySamples = []
+      const parseSamples = []
+      let count = 0
+      let jsonChars = 0
+      for (let index = 0; index < 5; index++) {
+        const queryStart = performance.now()
+        const rows = query.all()
+        querySamples.push(+(performance.now() - queryStart).toFixed(1))
+        const parseStart = performance.now()
+        const snapshots = rows.map((row) => JSON.parse(row.payload))
+        snapshots.sort((a, b) => b.date.localeCompare(a.date) || a.eventId.localeCompare(b.eventId))
+        parseSamples.push(+(performance.now() - parseStart).toFixed(1))
+        count = rows.length
+        jsonChars = rows.reduce((sum, row) => sum + row.payload.length, 0)
+      }
+      result[name] = { count, jsonChars, querySamples, queryMedian: median(querySamples),
+        parseSamples, parseMedian: median(parseSamples) }
+    }
+    return result
+  } finally { db.close() }
+}
+
 const launch = () => electron.launch({ executablePath, args: ['.'], cwd: workspace,
   env: { ...process.env, POKEGURU_DATA_DIR: profile, POKEGURU_CODEX_BIN: join(temporary, 'missing-codex') },
   timeout: 30000 })
@@ -172,7 +202,9 @@ try {
   await application.close()
   application = undefined
 
-  const dataset = seed(join(profile, 'data', 'pokeguru.sqlite'), projectId, cardCount)
+  const databasePath = join(profile, 'data', 'pokeguru.sqlite')
+  const dataset = seed(databasePath, projectId, cardCount)
+  const snapshotReads = measureSnapshotReads(databasePath)
   const start = performance.now()
   application = await launch()
   page = await application.firstWindow()
@@ -349,7 +381,8 @@ try {
     type: entry.type, privateKiB: entry.memory?.privateBytes ?? null })))
   console.log(JSON.stringify({ kind: 'Populated Electron fixture, offline and warm cache', platform: process.platform,
     profiled: profileRenderer, rendererProfiles,
-    dataset: { ...dataset, viewportWidth: viewportWidth ?? 'default', expectAllMessages }, startupMs, ipc, navigation, scroll,
+    dataset: { ...dataset, viewportWidth: viewportWidth ?? 'default', expectAllMessages },
+    snapshotReads, startupMs, ipc, navigation, scroll,
     threadContent: { ms: threadContentMs, dom: threadDom,
       heapBeforeBytes: threadHeapBefore, heapAfterBytes: threadHeapAfter },
     threadHistoryExpansion,
