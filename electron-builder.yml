@@ -12,6 +12,7 @@ extraResources:
 linux:
   icon: build/icons
   category: Game
+  syncDesktopName: true
   target:
     - target: AppImage
       arch: [x64]

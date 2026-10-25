@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigation, useViewState, useBusyState, useBusyStartedAt, useDraftState } from './Navigation'
-import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
+import type { CatalogBrowseGroup, CatalogBrowseOverview, CatalogBrowsePage,
+  CatalogPrint, CatalogSyncMode, CatalogSyncStatus } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { CatalogCardDetail } from './CatalogCardDetail'
 import { SearchEmpty } from './SearchEmpty'
@@ -16,31 +17,25 @@ function legalDate(value: string): string {
     .format(new Date(`${value}T00:00:00Z`))
 }
 
-type Group = { key: string; name: string; category: string | null; basis: CatalogPrint['identityBasis']; prints: CatalogPrint[] }
-
-function groupPrints(prints: CatalogPrint[]): Group[] {
-  const groups = new Map<string, Group>()
-  for (const print of prints) {
-    const key = print.identityId ?? `pending-${print.id}`
-    const group = groups.get(key) ?? { key, name: print.name, category: print.category, basis: print.identityBasis, prints: [] }
-    group.prints.push(print)
-    groups.set(key, group)
-  }
-  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name) || a.key.localeCompare(b.key))
-}
-
 export function CatalogSection({ onConstrain, focusIdentityId }: {
   onConstrain?: (identityId: string) => void
   focusIdentityId?: string | null
 }) {
   const nav = useNavigation()
-  const [catalog, setCatalog] = useState<CatalogView | null>(null)
+  const [catalog, setCatalog] = useState<CatalogBrowseOverview | null>(null)
+  const [page, setPage] = useState<CatalogBrowsePage | null>(null)
+  const [pageLoading, setPageLoading] = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
+  const [detail, setDetail] = useState<{ group: CatalogBrowseGroup; prints: CatalogPrint[] } | null>(null)
+  const [detailKeyLoaded, setDetailKeyLoaded] = useState<string | null>(null)
+  const [revision, setRevision] = useState(0)
   const [requesting, setRequesting] = useBusyState('catalog.sync')
   const startedAt = useBusyStartedAt('catalog.sync')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useDraftState<string | null>('catalog.error', null)
   const [query, setQuery] = useViewState('catalog.query', '')
   const [setFilter, setSetFilter] = useViewState('catalog.set', 'all')
+  const [offset, setOffset] = useViewState('catalog.offset', 0)
   const [selectedKey, setSelectedKey] = useViewState<string | null>('catalog.selected', null)
   const [focusConsumed, setFocusConsumed] = useViewState('catalog.focusConsumed', false)
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null)
@@ -50,6 +45,13 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
   const [checkingRules, setCheckingRules] = useBusyState('catalog.rules')
   const [managementOpen, setManagementOpen] = useViewState('catalog.management', false)
 
+  async function refreshCatalog(): Promise<void> {
+    const result = await window.projectsApi.getCatalogBrowseOverview()
+    if (!result.ok) throw new Error(result.error)
+    setCatalog(result.value)
+    setRevision((value) => value + 1)
+  }
+
   function closeManagement() {
     setManagementOpen(false)
     document.getElementById('catalog-management-trigger')?.focus()
@@ -57,31 +59,71 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
 
   function selectCoveredSet(id: string) {
     setSetFilter(id)
+    setOffset(0)
     setManagementOpen(false)
     requestAnimationFrame(() => document.getElementById('catalog-set-filter')?.focus())
   }
 
   useEffect(() => {
     if (!focusIdentityId || !catalog || focusConsumed) return
-    const print = catalog.prints.find((item) => item.identityId === focusIdentityId)
-    if (!print) { setError('Questa carta non è più disponibile nel catalogo locale. Torna indietro o cerca un’altra carta.'); return }
-    setQuery(print.name)
-    setSetFilter('all')
-    setSelectedKey(focusIdentityId)
-    setFocusConsumed(true)
-    nav.entry.label = `Catalogo · ${print.name}`
+    let active = true
+    void window.projectsApi.getCatalogGroup(focusIdentityId).then((result) => {
+      if (!active) return
+      if (!result.ok || !result.value) {
+        setError('Questa carta non è più disponibile nel catalogo locale. Torna indietro o cerca un’altra carta.')
+        return
+      }
+      setQuery(result.value.group.name)
+      setSetFilter('all')
+      setOffset(0)
+      setSelectedKey(focusIdentityId)
+      setFocusConsumed(true)
+      nav.entry.label = `Catalogo · ${result.value.group.name}`
+    }).catch(() => { if (active) setError('Carta non disponibile nel catalogo locale.') })
+    return () => { active = false }
   }, [focusIdentityId, catalog?.syncedAt])
 
   useEffect(() => {
     let active = true
-    void window.projectsApi.getCatalog().then((result) => {
+    void window.projectsApi.getCatalogBrowseOverview().then((result) => {
       if (!active) return
-      if (result.ok) setCatalog(result.value)
+      if (result.ok) { setCatalog(result.value); setRevision((value) => value + 1) }
       else setError(result.error)
     }).catch(() => { if (active) setError('Catalogo locale non disponibile.') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    if (!catalog?.syncedAt) { setPage(null); return }
+    let active = true
+    setPageLoading(true)
+    setPage(null)
+    setSearchFailed(false)
+    const timer = window.setTimeout(() => {
+      void window.projectsApi.searchCatalog(query, setFilter, offset).then((result) => {
+        if (!active) return
+        if (result.ok) setPage(result.value)
+        else { setError(result.error); setSearchFailed(true) }
+      }).catch(() => { if (active) { setError('Ricerca catalogo non disponibile.'); setSearchFailed(true) } })
+        .finally(() => { if (active) setPageLoading(false) })
+    }, query ? 120 : 0)
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [catalog?.syncedAt, query, setFilter, offset, revision])
+
+  const selected = page?.groups.find((group) => group.key === selectedKey) ?? page?.groups[0]
+  useEffect(() => {
+    if (!selected) { setDetail(null); setDetailKeyLoaded(null); return }
+    let active = true
+    setDetail(null)
+    setDetailKeyLoaded(null)
+    void window.projectsApi.getCatalogGroup(selected.key).then((result) => {
+      if (active && result.ok) setDetail(result.value)
+      else if (active) setError('Dettaglio carta non disponibile.')
+    }).catch(() => { if (active) setError('Dettaglio carta non disponibile.') })
+      .finally(() => { if (active) setDetailKeyLoaded(selected.key) })
+    return () => { active = false }
+  }, [selected?.key, revision])
 
   useEffect(() => {
     let active = true
@@ -118,8 +160,11 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
         if (progress !== lastProgress && (!result.value.running || Date.now() - lastRefresh > 5_000)) {
           lastProgress = progress
           lastRefresh = Date.now()
-          const current = await window.projectsApi.getCatalog()
-          if (active && current.ok) setCatalog(current.value)
+          const current = await window.projectsApi.getCatalogBrowseOverview()
+          if (active && current.ok) {
+            setCatalog(current.value)
+            setRevision((value) => value + 1)
+          }
         }
       } catch {
         if (active) setProgressError('Avanzamento non disponibile. Nuovo controllo in corso…')
@@ -137,7 +182,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     try {
       const result = await window.projectsApi.syncCatalog()
       if (!result.ok) throw new Error(result.error)
-      setCatalog(result.value)
+      await refreshCatalog()
     } catch (cause) {
       setError(`${cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.'} I dati già acquisiti restano consultabili.`)
     } finally { setRequesting(false) }
@@ -153,8 +198,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       setSyncStatus(result.value)
     } catch (cause) {
       setError(`${cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.'} I dettagli già acquisiti restano salvati.`)
-      const current = await window.projectsApi.getCatalog()
-      if (current.ok) setCatalog(current.value)
+      try { await refreshCatalog() } catch { /* Keep the last visible overview. */ }
     } finally { setRequesting(false) }
   }
 
@@ -163,30 +207,22 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     if (!result.ok) setError(result.error)
   }
 
-  const groups = useMemo(() => groupPrints(catalog?.prints ?? []), [catalog])
-  const filtered = groups.filter((group) => {
-    const text = query.trim().toLocaleLowerCase()
-    return (!text || group.name.toLocaleLowerCase().includes(text) || group.prints.some((print) =>
-      `${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase().includes(text))) &&
-      (setFilter === 'all' || group.prints.some((print) => print.setId === setFilter))
-  })
-  const visible = filtered.slice(0, 100)
-  const selected = visible.find((group) => group.key === selectedKey) ?? visible[0]
-  const selectedPrints = selected?.prints.filter((print) => setFilter === 'all' || print.setId === setFilter) ?? []
-  const sampled = catalog?.sets.reduce((sum, set) => sum + set.sampleTotal, 0) ?? 0
-  const acquired = catalog?.prints.filter((print) => print.detailAt !== null) ?? []
-  const missing = catalog?.prints.filter((print) => print.detailAt === null) ?? []
-  const rarityCount = acquired.filter((print) => print.rarity !== null).length
-  const variantCount = acquired.filter((print) => print.variants !== null).length
-  const thumbnailCount = acquired.filter((print) => print.thumbnail !== null).length
-  const highCount = acquired.filter((print) => print.highImageAvailable === true).length
-  const confirmedGroups = groups.filter((group) => group.basis &&
-    group.basis !== 'unverified').length
+  const visible = page?.groups ?? []
+  const selectedPrints = detail && detail.group.key === selected?.key
+    ? detail.prints.filter((print) => setFilter === 'all' || print.setId === setFilter) : []
+  const sampled = catalog?.stats.sampled ?? 0
+  const acquired = catalog?.stats.acquired ?? 0
+  const missing = catalog?.stats.missing ?? 0
+  const rarityCount = catalog?.stats.rarity ?? 0
+  const variantCount = catalog?.stats.variants ?? 0
+  const thumbnailCount = catalog?.stats.thumbnails ?? 0
+  const highCount = catalog?.stats.highImages ?? 0
+  const confirmedGroups = catalog?.stats.confirmedGroups ?? 0
   const standard = catalog?.scope.kind === 'standard-marks'
 
   const coverage = catalog?.standardCoverage
   const gaps = [
-    (standard ? coverage?.missing : missing.length) ? `${standard ? coverage!.missing : missing.length} ${(standard ? coverage!.missing : missing.length) === 1 ? 'dettaglio mancante' : 'dettagli mancanti'}` : null,
+    (standard ? coverage?.missing : missing) ? `${standard ? coverage!.missing : missing} ${(standard ? coverage!.missing : missing) === 1 ? 'dettaglio mancante' : 'dettagli mancanti'}` : null,
     standard && coverage?.gameplayMissing ? `${coverage.gameplayMissing} ${coverage.gameplayMissing === 1 ? 'scheda di gioco mancante' : 'schede di gioco mancanti'}` : null,
     standard && coverage?.officialSets.missing ? `${coverage.officialSets.missing} set ${coverage.officialSets.missing === 1 ? 'assente' : 'assenti'} dall’inventario` : null
   ].filter(Boolean)
@@ -231,8 +267,8 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
           <div><strong>{catalog.standardCoverage?.promos.acquired ?? 0}/{catalog.standardCoverage?.promos.expected ?? 0}</strong><span>Promo acquisite</span></div>
         </> : <>
         <div><strong>{catalog.sets.length}/{catalog.scope.setIds.length}</strong><span>Set acquisiti</span></div>
-        <div><strong>{acquired.length}/{sampled}</strong><span>Stampe del campione</span></div>
-        <div><strong>{groups.length}</strong><span>Gruppi locali</span></div>
+        <div><strong>{acquired}/{sampled}</strong><span>Stampe del campione</span></div>
+        <div><strong>{catalog.stats.groups}</strong><span>Gruppi locali</span></div>
         </>}
       </div>
 
@@ -266,13 +302,14 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       </>
         : <p className="content-note">Set TCGdex: {catalog.sets.map((set) => `${set.id}: ${set.sourceTotal}`).join('; ')}. Rarità {rarityCount}/{sampled}, varianti {variantCount}/{sampled}, miniature {thumbnailCount}/{sampled}, immagini grandi {highCount}/{sampled}. {confirmedGroups} gruppi collegati per regole di gioco; le altre equivalenze richiedono verifica.</p>}
       </details>
-      {missing.length > 0 && <details className="diagnostics"><summary>Dettagli mancanti ({missing.length})</summary><ul>{missing.slice(0, 12).map((print) => <li key={print.id}>{print.id}: {print.error ?? 'Non ancora acquisito'}</li>)}</ul>{missing.length > 12 && <p>Mostrati i primi 12; gli altri saranno ripresi al prossimo aggiornamento.</p>}</details>}
+      {missing > 0 && <details className="diagnostics"><summary>Dettagli mancanti ({missing})</summary><ul>{catalog.stats.missingPreview.map((print) => <li key={print.id}>{print.id}: {print.error ?? 'Non ancora acquisito'}</li>)}</ul>{missing > 12 && <p>Mostrati i primi 12; gli altri saranno ripresi al prossimo aggiornamento.</p>}</details>}
 
     </>}
   </section>
 
-  return <section className="catalog-section" aria-label="Catalogo occidentale" data-nav-loading={loading}>
-    {!loading && catalog && selectedKey && !groups.some((group) => group.key === selectedKey) && <p className="error-banner" role="alert">La carta selezionata non è più disponibile. Scegli un’altra carta oppure torna indietro.</p>}
+  return <section className="catalog-section" aria-label="Catalogo occidentale"
+    data-nav-loading={loading || (!!catalog?.syncedAt && ((!page && !searchFailed) || pageLoading ||
+      (!!selected && detailKeyLoaded !== selected.key)))}>
     <div className="panel-heading">
       <div><h1>Catalogo</h1><p className="content-note">{catalog?.syncedAt ? `Aggiornato ${date(catalog.syncedAt)}${standard ? '' : ' · campione di prova'}` : 'Carte condivise fra i progetti'}</p></div>
       <div className="catalog-actions">
@@ -298,20 +335,27 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       <div className="matchup-empty">Catalogo vuoto. Usa <strong>Aggiorna nuove carte</strong> per iniziare.</div>
     ) : <>
       <div className="catalog-filters">
-        <label>Cerca carta o stampa<input id="catalog-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Iono o sv02-185" /></label>
-        <label>Espansione<select id="catalog-set-filter" value={setFilter} onChange={(event) => setSetFilter(event.target.value)}><option value="all">Tutte</option>{catalog.sets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.id})</option>)}</select></label>
+        <label>Cerca carta o stampa<input id="catalog-query" value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0) }} placeholder="Es. Iono o sv02-185" /></label>
+        <label>Espansione<select id="catalog-set-filter" value={setFilter} onChange={(event) => { setSetFilter(event.target.value); setOffset(0) }}><option value="all">Tutte</option>{catalog.sets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.id})</option>)}</select></label>
       </div>
       <div className="catalog-layout">
-        {!filtered.length ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all') } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : <>
+        {searchFailed ? <div className="error-banner" role="status">Ricerca non disponibile. <button type="button" className="text-button" onClick={() => setRevision((value) => value + 1)}>Riprova</button></div>
+          : !page || pageLoading ? <LoadingSkeleton label="Ricerca nel catalogo…" /> : page.total === 0 ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : <>
         <div className="catalog-list" aria-label="Risultati catalogo">
-          {filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`)} aria-pressed={selected?.key === group.key}>
-            <strong>{group.name}</strong><span>{group.prints.length} {group.prints.length === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
+          <p className="content-note">{page.total} risultati · {page.offset + 1}–{page.offset + visible.length}</p>{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`)} aria-pressed={selected?.key === group.key}>
+            <strong>{group.name}</strong><span>{group.printCount} {group.printCount === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
           </button>)}
+          {page.total > 100 && <div className="catalog-page-controls">
+            <button type="button" className="secondary-button" disabled={page.offset === 0} onClick={() => setOffset(Math.max(0, page.offset - 100))}>Precedenti</button>
+            <button type="button" className="secondary-button" disabled={page.offset + 100 >= page.total} onClick={() => setOffset(page.offset + 100)}>Successivi</button>
+          </div>}
         </div>
         <div className="catalog-detail">
-          {selected && <CatalogCardDetail key={selected.key} name={selected.name} basis={selected.basis} prints={selectedPrints}
+          {selected && (selectedPrints.length ? <CatalogCardDetail key={selected.key} name={selected.name} basis={selected.basis} prints={selectedPrints}
             onOpenSource={(url) => void openSource(url)}
-            onConstrain={onConstrain && selected.prints.some((print) => print.detailAt && print.identityId) ? () => onConstrain(selected.key) : undefined} />}
+            onConstrain={onConstrain && selected.canConstrain ? () => onConstrain(selected.key) : undefined} />
+            : detailKeyLoaded === selected.key ? <p className="diagnostics" role="status">Dettaglio carta non disponibile.</p>
+              : <LoadingSkeleton label="Caricamento dettaglio carta…" />)}
         </div></>}
       </div>
     </>}

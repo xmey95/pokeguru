@@ -20,6 +20,7 @@ export interface MetaSnapshot {
 }
 
 export interface MatchupReport {
+  jobId?: string
   projectId: string
   metaId: string
   opponentId: string

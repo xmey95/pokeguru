@@ -1,11 +1,11 @@
-import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
-import { mkdirSync } from 'node:fs'
+import { app, BrowserWindow, clipboard, ipcMain, protocol, shell } from 'electron'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { execFile } from 'node:child_process'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { ProjectStore } from './project-store'
 import type { DeckBaseline, ImportDeckInput } from '../shared/deck-import'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import { reviewCandidate } from '../shared/candidate-review'
 import { auditStandardRuleSources } from './standard-rule-audit'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
@@ -22,7 +22,8 @@ import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
 import { buildThreadEvidence } from './thread-evidence'
 import type { ThreadEvidencePacket } from '../shared/thread-evidence'
 import { CatalogStore, enrichCatalogPrints, fetchCatalogSample, syncStandardCatalog } from './catalog'
-import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
+import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
+  CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
 import { buildDeckCards, matchupDeckContext, snapshotPrint,
   type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
 import { multiMatchupEvidence } from '../shared/matchup-evidence'
@@ -37,7 +38,12 @@ import { BUNDLED_WESTERN_RULE_PACKAGE } from '../shared/western-rule-package'
 import { gameplaySummary } from '../shared/card-gameplay'
 import { OFFICIAL_SET_CODES } from '../shared/set-codes'
 import { evaluateStandardDeck } from '../shared/standard-deck'
+import { localCalendarDate } from '../shared/calendar-date'
 import { TournamentStore } from './tournament-store'
+import { completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
+import { AiJobStore } from './ai-job-store'
+import type { AiJob } from './ai-job-store'
+import { recoverMatchupJob, recoverThreadJob } from './ai-job-recovery'
 import { fetchRecentWesternTournament } from './limitless-event'
 import { syncTournamentBlock } from './tournament-sync'
 import { syncMainTournamentBlock } from './main-tournament-sync'
@@ -45,8 +51,12 @@ import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } fr
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
 
 app.setName('Pokeguru')
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'pokeguru', privileges: { standard: true, secure: true }
+}])
 
 let mainWindow: BrowserWindow | null = null
+let aiJobStore: AiJobStore | null = null
 let projectStore: ProjectStore | null = null
 let catalogStore: CatalogStore | null = null
 let tournamentStore: TournamentStore | null = null
@@ -57,8 +67,89 @@ let aiPreferencesStore: AiPreferencesStore | null = null
 const codexControl = new CodexControl()
 const generatingProjects = new Set<string>()
 const generatingDeckThreads = new Set<string>()
+const activeAiControllers = new Map<string, AbortController>()
+let recoveringAiJobs = false
+
+function aiArtifactDirectory(jobId: string): string {
+  if (!/^[a-f0-9-]{36}$/i.test(jobId)) throw new Error('Identificativo job AI non valido.')
+  return join(app.getPath('userData'), 'data', 'ai-jobs', jobId)
+}
+
+function clearAiArtifacts(jobId: string): void {
+  const directory = aiArtifactDirectory(jobId)
+  if (existsSync(directory)) rmSync(directory, { recursive: true, force: true })
+}
+
+function finishAiJob(job: AiJob, error: unknown): void {
+  if (!aiJobStore) return
+  const current = aiJobStore.get(job.id)
+  if (!current || current.status === 'applied') return
+  if (current.status === 'cancelled') {
+    clearAiArtifacts(job.id)
+    return
+  }
+  if (activeAiControllers.get(job.id)?.signal.aborted) {
+    aiJobStore.transition(job.id, 'cancelled')
+    clearAiArtifacts(job.id)
+  } else if (current.status === 'running' && existsSync(join(aiArtifactDirectory(job.id), 'result.json'))) {
+    // The completed CLI output is retained for recovery after a downstream failure.
+  } else if (current.status === 'ready') {
+    // A validated response is awaiting its project transaction; keep it recoverable.
+  } else {
+    aiJobStore.transition(job.id, 'failed', error instanceof Error ? error.message : 'Operazione AI non completata.')
+    clearAiArtifacts(job.id)
+  }
+}
+
+async function recoverAiJobs(): Promise<void> {
+  if (!aiJobStore || !projectStore || !catalogStore || recoveringAiJobs) return
+  recoveringAiJobs = true
+  try {
+    for (const job of aiJobStore.recoverable()) {
+      if (activeAiControllers.has(job.id)) continue
+      try {
+        const outcome = job.kind === 'thread-ask' || job.kind === 'thread-propose'
+          ? await recoverThreadJob(job, aiJobStore, projectStore, catalogStore,
+            codexControl, aiArtifactDirectory(job.id))
+          : recoverMatchupJob(job, aiJobStore, projectStore, aiArtifactDirectory(job.id))
+        if (outcome === 'applied' || outcome === 'interrupted') clearAiArtifacts(job.id)
+      } catch (error) {
+        aiJobStore.noteError(job.id, error instanceof Error ? error.message : 'Recupero Codex non riuscito.')
+      }
+    }
+  } finally { recoveringAiJobs = false }
+}
+function hasRecoverableThreadJob(): boolean {
+  return !!aiJobStore?.recoverable().some((job) =>
+    job.kind === 'thread-ask' || job.kind === 'thread-propose')
+}
 let catalogSyncing = false
 let catalogRetryTimer: ReturnType<typeof setTimeout> | null = null
+const rendererFile = join(__dirname, '../renderer/index.html')
+const rendererUrl = 'pokeguru://bundle/index.html'
+const packagedCsp = [
+  "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' data:",
+  "font-src 'self'", "connect-src 'none'", "object-src 'none'", "base-uri 'none'",
+  "form-action 'none'", "frame-src 'none'"
+].join('; ')
+let trustedRendererUrl: string | null = null
+
+function developmentRendererUrl(): string | null {
+  if (app.isPackaged || !process.env.ELECTRON_RENDERER_URL) return null
+  try {
+    const url = new URL(process.env.ELECTRON_RENDERER_URL)
+    if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
+      url.username || url.password || url.search || url.hash) return null
+    return url.toString()
+  } catch { return null }
+}
+
+function isTrustedRendererUrl(value: string): boolean {
+  if (!trustedRendererUrl) return false
+  try {
+    return new URL(value).href === new URL(trustedRendererUrl).href
+  } catch { return false }
+}
 
 function runCatalogJob(mode: CatalogSyncMode): void {
   const store = catalogStore
@@ -74,14 +165,15 @@ function runCatalogJob(mode: CatalogSyncMode): void {
     }
   })
 }
-async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig): Promise<MatchupDiscussion> {
+async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig,
+  signal?: AbortSignal): Promise<MatchupDiscussion> {
   if (!projectStore) throw new Error(unavailableMessage())
   let current = discussion
   const lastToSummarize = current.turns.length - 5
   while (lastToSummarize > current.summarizedThrough) {
     const through = Math.min(current.summarizedThrough + 5, lastToSummarize)
     if (!current.turns[through]?.report) break
-    const summary = await summarizeMatchupContext(current, through, config)
+    const summary = await summarizeMatchupContext(current, through, config, signal)
     projectStore.saveMatchupContextSummary(current.id, summary, through)
     current = projectStore.getMatchupDiscussion(current.id)!
   }
@@ -110,7 +202,7 @@ function unavailableMessage(): string {
 
 function currentMatchupDeckContext(projectId: string, baseline: DeckBaseline): string {
   const catalog = catalogStore?.view() ?? null
-  const asOf = new Date().toISOString().slice(0, 10)
+  const asOf = localCalendarDate()
   const standard = evaluateStandardDeck(baseline, catalog, asOf,
     projectStore?.getStandardRuleAudit() ?? null)
   return matchupDeckContext(baseline, projectStore!.getReconciliation(projectId), catalog, standard)
@@ -131,6 +223,21 @@ async function enrichMatchupDeck(projectId: string, baseline: DeckBaseline): Pro
 function currentMatchupEvidence(snapshot: MetaSnapshot, opponent: MetaDeck): MatchupTournamentEvidence {
   return multiMatchupEvidence(snapshot, opponent, tournamentStore?.list() ?? [],
     tournamentStore?.listMain() ?? [], catalogStore?.view() ?? null)
+}
+
+function matchupJobBase(jobId: string, projectId: string, deckHash: string,
+  snapshot: MetaSnapshot, opponent: MetaDeck,
+  sample: { url: string | null; cards: string[];
+    mechanics?: { name: string; text: string; sourceUrl: string }[] },
+  config: AiRunConfig, evidence: MatchupTournamentEvidence):
+  Omit<MatchupReport, 'strengths' | 'weaknesses' | 'ourKeyCards' | 'theirKeyCards' |
+    'strategy' | 'limitations'> {
+  return { jobId, projectId, deckHash, metaId: snapshot.id, opponentId: opponent.id,
+    generatedAt: new Date().toISOString(), sampleDeckUrl: sample.url,
+    sampleDeckCards: sample.cards, sampleDeckMechanics: sample.mechanics ?? [], ai: config,
+    metaSourceUrl: snapshot.sourceUrl, metaPeriod: snapshot.period,
+    metaFetchedAt: snapshot.fetchedAt, opponentSourceUrl: opponent.url,
+    tournamentEvidence: evidence }
 }
 
 async function enrichOpponentCards(snapshot: MetaSnapshot, opponent: MetaDeck): Promise<void> {
@@ -213,7 +320,8 @@ function withStore<T>(operation: () => T): OperationResult<T> {
 
 function registerProjectHandlers(): void {
   const isMainFrame = (event: Electron.IpcMainInvokeEvent): boolean =>
-    mainWindow !== null && event.sender === mainWindow.webContents && event.senderFrame === mainWindow.webContents.mainFrame
+    mainWindow !== null && event.sender === mainWindow.webContents &&
+    event.senderFrame === mainWindow.webContents.mainFrame && isTrustedRendererUrl(event.senderFrame.url)
 
   ipcMain.handle('tournament:get', (event): OperationResult<TournamentSnapshot | null> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
@@ -293,7 +401,12 @@ function registerProjectHandlers(): void {
     if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità Regional non valida.' }
     if (mainTournamentSyncBusy) return { ok: false, error: 'Aggiornamento Regional già in corso.' }
     mainTournamentSyncBusy = true
-    try { return { ok: true, value: await syncMainTournamentBlock(tournamentStore, mode) } }
+    try {
+      const value = await syncMainTournamentBlock(tournamentStore, mode)
+      if (projectStore && generatingDeckThreads.size === 0 && !hasRecoverableThreadJob())
+        tournamentStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
+      return { ok: true, value }
+    }
     catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento Regional non riuscito.' } }
     finally { mainTournamentSyncBusy = false }
   })
@@ -329,6 +442,36 @@ function registerProjectHandlers(): void {
     if (!catalogStore) return { ok: false, error: unavailableMessage() }
     try { return { ok: true, value: catalogStore.view() } }
     catch { return { ok: false, error: 'Catalogo locale non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:browse-overview', (event): OperationResult<CatalogBrowseOverview> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: catalogStore.browseOverview() } }
+    catch { return { ok: false, error: 'Catalogo locale non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:search', (event, query: unknown, setId: unknown,
+    offset: unknown): OperationResult<CatalogBrowsePage> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (typeof query !== 'string' || query.length > 200 || query.includes('\0') ||
+      typeof setId !== 'string' || (setId !== 'all' && !/^[a-zA-Z0-9.]{1,20}$/.test(setId)) ||
+      !Number.isInteger(offset) || (offset as number) < 0 || (offset as number) > 1_000_000) {
+      return { ok: false, error: 'Ricerca catalogo non valida.' }
+    }
+    try { return { ok: true, value: catalogStore.browseSearch(query, setId, offset as number) } }
+    catch { return { ok: false, error: 'Ricerca catalogo non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:group', (event, key: unknown): OperationResult<{
+    group: CatalogBrowseGroup; prints: CatalogPrint[] } | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (typeof key !== 'string' || key.length > 150 || key.includes('\0'))
+      return { ok: false, error: 'Carta catalogo non valida.' }
+    try { return { ok: true, value: catalogStore.browseGroup(key) } }
+    catch { return { ok: false, error: 'Dettaglio carta non disponibile.' } }
   })
 
   ipcMain.handle('catalog:sync', async (event): Promise<OperationResult<CatalogView>> => {
@@ -482,6 +625,51 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.listDeckThreads(projectId as string))
   })
 
+  ipcMain.handle('deck:list-thread-summaries', (event, projectId: unknown): OperationResult<DeckThreadSummary[]> => {
+    if (!isMainFrame(event) || typeof projectId !== 'string') return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listDeckThreadSummaries(projectId))
+  })
+
+  ipcMain.handle('deck:get-thread', (event, projectId: unknown, threadId: unknown): OperationResult<DeckThread | null> => {
+    if (!isMainFrame(event) || typeof projectId !== 'string' || typeof threadId !== 'string')
+      return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getDeckThread(projectId, threadId))
+  })
+
+  function validAiResource(projectId: unknown, resourceId: unknown): projectId is string {
+    if (!projectStore || typeof projectId !== 'string' || typeof resourceId !== 'string' ||
+      !projectStore.get(projectId)) return false
+    return resourceId === `matchup:${projectId}` || Boolean(projectStore.getDeckThread(projectId, resourceId))
+  }
+
+  ipcMain.handle('ai:job-status', (event, projectId: unknown, resourceId: unknown) => {
+    if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
+      return { ok: false, error: 'Job AI non disponibile.' }
+    return { ok: true, value: aiJobStore.latest(projectId, resourceId as string) }
+  })
+
+  ipcMain.handle('ai:cancel-job', (event, projectId: unknown, resourceId: unknown) => {
+    if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
+      return { ok: false, error: 'Job AI non disponibile.' }
+    const job = aiJobStore.active(projectId, resourceId as string)
+    if (!job) return { ok: false, error: 'Nessun job AI da annullare.' }
+    aiJobStore.transition(job.id, 'cancelled')
+    const controller = activeAiControllers.get(job.id)
+    if (controller) {
+      controller.abort()
+      codexControl.cancelTurn(job.id)
+    } else {
+      clearAiArtifacts(job.id)
+    }
+    return { ok: true, value: true }
+  })
+
+  ipcMain.handle('ai:recover-jobs', async (event) => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    await recoverAiJobs()
+    return { ok: true, value: true }
+  })
+
   ipcMain.handle('deck:create-thread', (event, input: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.createDeckThread(input as CreateDeckThreadInput))
@@ -499,7 +687,7 @@ function registerProjectHandlers(): void {
       typeof question !== 'string' || !question.trim() || question.length > 5000)
       return { ok: false, error: 'Scrivi prima una domanda o una modifica da valutare.' }
     return withStore(() => {
-      const thread = projectStore!.listDeckThreads(projectId).find((item) => item.id === threadId)
+      const thread = projectStore!.getDeckThread(projectId, threadId)
       if (!thread) throw new Error('Thread non trovato in questo progetto.')
       const base = thread.baseVersionId
         ? projectStore!.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null : null
@@ -511,15 +699,20 @@ function registerProjectHandlers(): void {
   ipcMain.handle('deck:ask-thread', async (event, projectId: unknown, threadId: unknown,
     message: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore || !catalogStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+    if (!projectStore || !catalogStore || !aiJobStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
       typeof message !== 'string' || !message.trim() || message.trim().length > 5000 || message.includes('\0'))
       return { ok: false, error: 'Scrivi una domanda da 1 a 5.000 caratteri.' }
     const project = projectStore.get(projectId)
     if (!project) return { ok: false, error: 'Progetto non trovato.' }
     if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le sessioni Codex sono disponibili solo per il circuito occidentale.' }
-    const thread = projectStore.listDeckThreads(projectId).find((item) => item.id === threadId)
+    const thread = projectStore.getDeckThread(projectId, threadId)
     if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
     if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questo thread.' }
+    let job: AiJob
+    try { job = aiJobStore.start('thread-ask', projectId, threadId) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo thread.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingDeckThreads.add(threadId)
     try {
       const config = await runConfig(override)
@@ -529,37 +722,51 @@ function registerProjectHandlers(): void {
       const evidence = buildThreadEvidence(thread, base, message.trim(),
         projectStore.listConstraints(projectId), catalogStore.view(),
         tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
+      aiJobStore.prepare(job.id, { message: message.trim(), config, evidence })
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
       const prompt = deckDiscussionPrompt(thread, base, message.trim(), evidence)
-      const sessionId = thread.aiSessionRef ?? await codexControl.startThread(cwd, config)
-      if (thread.aiSessionRef) await codexControl.resumeThread(sessionId, cwd)
-      else projectStore.assignDeckAiSession(projectId, threadId, sessionId)
-      const result = await codexControl.jsonTurn(sessionId, cwd, prompt, config, DECK_DISCUSSION_SCHEMA)
+      const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, prompt, config,
+        DECK_DISCUSSION_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      aiJobStore.ready(job.id, result)
+      const sessionId = result.sessionId
+      if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
       const answer = readDeckDiscussionReply(result.value)
       const citedSourceIds = readDeckDiscussionSourceIds(result.value, evidence)
-      return { ok: true, value: projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
-        message.trim(), answer, result.turnId, config, undefined, evidence, citedSourceIds) }
+      const saved = projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
+        message.trim(), answer, result.turnId, config, undefined, evidence, citedSourceIds)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
+      return { ok: true, value: saved }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
     } finally {
       generatingDeckThreads.delete(threadId)
+      activeAiControllers.delete(job.id)
     }
   })
 
   ipcMain.handle('deck:propose-thread', async (event, projectId: unknown, threadId: unknown,
     request: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore || !catalogStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+    if (!projectStore || !catalogStore || !aiJobStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
       typeof request !== 'string' || !request.trim() || request.trim().length > 5000 || request.includes('\0'))
       return { ok: false, error: 'Descrivi una modifica da valutare (massimo 5.000 caratteri).' }
     const project = projectStore.get(projectId)
     if (!project) return { ok: false, error: 'Progetto non trovato.' }
     if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le proposte Codex sono disponibili solo per il circuito occidentale.' }
-    const thread = projectStore.listDeckThreads(projectId).find((item) => item.id === threadId)
+    const thread = projectStore.getDeckThread(projectId, threadId)
     if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
     if (!thread.baseVersionId) return { ok: false, error: 'Importa una lista prima di chiedere una proposta completa.' }
     if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Codex sta già lavorando su questo thread.' }
+    let job: AiJob
+    try { job = aiJobStore.start('thread-propose', projectId, threadId) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo thread.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingDeckThreads.add(threadId)
     try {
       const base = projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId)
@@ -572,21 +779,30 @@ function registerProjectHandlers(): void {
       const evidence = buildThreadEvidence(thread, base, request.trim(), constraints, catalog,
         tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
       const context = deckProposalPrompt(thread, base, request.trim(), constraints, catalog, evidence)
-      const sessionId = thread.aiSessionRef ?? await codexControl.startThread(cwd, config)
-      if (thread.aiSessionRef) await codexControl.resumeThread(sessionId, cwd)
-      else projectStore.assignDeckAiSession(projectId, threadId, sessionId)
-      const result = await codexControl.jsonTurn(sessionId, cwd, context.prompt, config, DECK_PROPOSAL_SCHEMA)
+      aiJobStore.prepare(job.id, { message: request.trim(), config, evidence, sources: context.sources })
+      const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, context.prompt, config,
+        DECK_PROPOSAL_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      aiJobStore.ready(job.id, result)
+      const sessionId = result.sessionId
+      if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
       const proposal = validateDeckProposal(result.value, projectId, catalog, constraints, context.sources)
       const citedSourceIds = [...new Set((result.value as { sourceIds: string[] }).sourceIds)]
       const answer = proposal.rationale
-      return { ok: true, value: projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
+      const saved = projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
         request.trim(), answer, result.turnId, config,
         proposal.outcome === 'candidate' ? { rawText: proposal.rawText, note: proposal.rationale,
-          sources: proposal.sources, checks: proposal.checks } : undefined, evidence, citedSourceIds) }
+          sources: proposal.sources, checks: proposal.checks } : undefined, evidence, citedSourceIds)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
+      return { ok: true, value: saved }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
     } finally {
       generatingDeckThreads.delete(threadId)
+      activeAiControllers.delete(job.id)
     }
   })
 
@@ -618,10 +834,10 @@ function registerProjectHandlers(): void {
     return withStore(() => {
       if (!catalogStore || !input || typeof input !== 'object') throw new Error('Catalogo o richiesta non disponibile.')
       const request = input as AdoptDeckCandidateInput
-      const thread = projectStore!.listDeckThreads(request.projectId).find((item) => item.id === request.threadId)
+      const thread = projectStore!.getDeckThread(request.projectId, request.threadId)
       const candidate = thread?.candidates.find((item) => item.id === request.candidateId)
       if (!thread || !candidate) throw new Error('Candidata non trovata in questo progetto.')
-      const today = new Date().toLocaleDateString('sv-SE')
+      const today = localCalendarDate()
       const review = reviewCandidate(request.projectId, candidate, catalogStore.view(),
         projectStore!.listConstraints(request.projectId), today, projectStore!.getStandardRuleAudit())
       if (review.blockers.length) throw new Error(`Adozione bloccata: ${review.blockers.join(' ')}`)
@@ -750,7 +966,7 @@ function registerProjectHandlers(): void {
 
   ipcMain.handle('matchups:generate', async (event, projectId: unknown, metaId: unknown, opponentId: unknown, override: unknown): Promise<OperationResult<MatchupReport>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore) return { ok: false, error: unavailableMessage() }
+    if (!projectStore || !aiJobStore) return { ok: false, error: unavailableMessage() }
     if (typeof projectId !== 'string' || typeof metaId !== 'string' || typeof opponentId !== 'string' ||
       !/^\d+$/.test(opponentId) || generatingProjects.has(projectId)) {
       return { ok: false, error: 'Analisi già in corso o richiesta non valida.' }
@@ -763,6 +979,11 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Importa una lista e aggiorna il metagame prima di generare l’analisi.' }
     }
     const hash = projectStore.getCurrentDeckHash(projectId)!
+    let job: AiJob
+    try { job = aiJobStore.start('matchup-generate', projectId, `matchup:${projectId}`) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingProjects.add(projectId)
     try {
       const config = await runConfig(override)
@@ -772,21 +993,38 @@ function registerProjectHandlers(): void {
       const sample = await opponentSampleWithMechanics(sampleDeck, currentMatchupEvidence(snapshot, opponent))
       const deckContext = currentMatchupDeckContext(projectId, baseline)
       const evidence = currentMatchupEvidence(snapshot, opponent)
-      const report = await generateMatchup(projectId, hash, deckContext, snapshot, opponent, sample, config, evidence)
+      const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config, evidence)
+      aiJobStore.prepare(job.id, { base })
+      const generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
+        sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt }
+      aiJobStore.ready(job.id, { report })
       projectStore.saveMatchupReport(report)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
       return { ok: true, value: report }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: error instanceof Error ? error.message : 'Analisi non completata.' }
     } finally {
       generatingProjects.delete(projectId)
+      activeAiControllers.delete(job.id)
     }
   })
 
   async function runRevision(discussionId: unknown, turnId: unknown, feedback: unknown,
     override: unknown): Promise<OperationResult<MatchupDiscussion>> {
-    if (!projectStore || typeof discussionId !== 'string') return { ok: false, error: 'Discussione Matchup non valida.' }
+    if (!projectStore || !aiJobStore || typeof discussionId !== 'string') return { ok: false, error: 'Discussione Matchup non valida.' }
     const discussion = projectStore.getMatchupDiscussion(discussionId)
     if (!discussion || generatingProjects.has(discussion.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
+    let job: AiJob
+    try { job = aiJobStore.start('matchup-revise', discussion.projectId,
+      `matchup:${discussion.projectId}`) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingProjects.add(discussion.projectId)
     try {
       const pending = turnId === null
@@ -804,7 +1042,7 @@ function registerProjectHandlers(): void {
         snapshot.id !== discussion.metaId || projectStore.getCurrentDeckHash(discussion.projectId) !== discussion.deckHash || !opponent)
         throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
       const config = await runConfig(override)
-      const context = await prepareMatchupHistory(pending, config)
+      const context = await prepareMatchupHistory(pending, config, controller.signal)
       const previousReport = [...context.turns].reverse().find((turn) => turn.report)?.report
       const sample = previousReport?.sampleDeckCards
         ? { url: previousReport.sampleDeckUrl, cards: previousReport.sampleDeckCards,
@@ -815,12 +1053,26 @@ function registerProjectHandlers(): void {
       const deckContext = currentMatchupDeckContext(discussion.projectId, baseline)
       const evidence = previousReport?.tournamentEvidence ??
         currentMatchupEvidence(snapshot, opponent)
-      const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot, opponent, sample, config, evidence)
-      return { ok: true, value: projectStore.completeMatchupFeedback(discussion.id, target.id, revised.report, revised.changeSummary) }
+      const base = matchupJobBase(job.id, discussion.projectId, discussion.deckHash,
+        snapshot, opponent, sample, config, evidence)
+      aiJobStore.prepare(job.id, { base, discussionId: discussion.id, turnId: target.id })
+      const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot,
+        opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      const report = { ...revised.report, jobId: job.id, generatedAt: base.generatedAt }
+      aiJobStore.ready(job.id, { report, changeSummary: revised.changeSummary })
+      const saved = projectStore.completeMatchupFeedback(discussion.id, target.id,
+        report, revised.changeSummary)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
+      return { ok: true, value: saved }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
     } finally {
       generatingProjects.delete(discussion.projectId)
+      activeAiControllers.delete(job.id)
     }
   }
 
@@ -837,10 +1089,15 @@ function registerProjectHandlers(): void {
   ipcMain.handle('matchups:continue', async (event, discussionId: unknown, metaId: unknown,
     override: unknown): Promise<OperationResult<MatchupDiscussion>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore || typeof discussionId !== 'string' || typeof metaId !== 'string')
+    if (!projectStore || !aiJobStore || typeof discussionId !== 'string' || typeof metaId !== 'string')
       return { ok: false, error: 'Discussione Matchup non valida.' }
     const parent = projectStore.getMatchupDiscussion(discussionId)
     if (!parent || generatingProjects.has(parent.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
+    let job: AiJob
+    try { job = aiJobStore.start('matchup-continue', parent.projectId, `matchup:${parent.projectId}`) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingProjects.add(parent.projectId)
     try {
       const project = projectStore.get(parent.projectId)
@@ -855,20 +1112,32 @@ function registerProjectHandlers(): void {
         .some((item) => item.metaId === metaId && item.deckHash === hash))
         throw new Error('Esiste già una discussione per la base corrente.')
       const config = await runConfig(override)
-      const context = await prepareMatchupHistory(parent, config)
+      const context = await prepareMatchupHistory(parent, config, controller.signal)
       const sampleDeck = await fetchOpponentSample(opponent)
       await enrichMatchupDeck(parent.projectId, baseline)
       await enrichOpponentCards(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, currentMatchupEvidence(snapshot, opponent))
       const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
       const evidence = currentMatchupEvidence(snapshot, opponent)
-      const report = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
-        config, evidence, matchupHistoryContext(context))
-      return { ok: true, value: projectStore.saveContinuedMatchupReport(report, parent.id) }
+      const base = matchupJobBase(job.id, parent.projectId, hash,
+        snapshot, opponent, sample, config, evidence)
+      aiJobStore.prepare(job.id, { base, parentId: parent.id })
+      const generated = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
+        config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt }
+      aiJobStore.ready(job.id, { report })
+      const saved = projectStore.saveContinuedMatchupReport(report, parent.id)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
+      return { ok: true, value: saved }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
     } finally {
       generatingProjects.delete(parent.projectId)
+      activeAiControllers.delete(job.id)
     }
   })
 
@@ -914,14 +1183,15 @@ function createWindow(): void {
     if (mainWindow === window) mainWindow = null
   })
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    void window.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    void window.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+  const developmentUrl = developmentRendererUrl()
+  trustedRendererUrl = developmentUrl ?? rendererUrl
+  void window.loadURL(trustedRendererUrl)
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  protocol.registerSource('pokeguru', { routes: [{ match: { host: 'bundle' },
+    source: { type: 'directory', root: dirname(rendererFile), headers: { 'Content-Security-Policy': packagedCsp } }
+  }] })
   if (process.platform === 'win32') app.setAppUserModelId('io.github.xmey95.pokeguru')
   try {
     const override = process.env.POKEGURU_DATA_DIR
@@ -930,9 +1200,14 @@ app.whenReady().then(() => {
       app.setPath('userData', override)
     }
     const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
+    const migration = await prepareDatabaseMigration(databasePath)
     projectStore = new ProjectStore(databasePath)
     catalogStore = new CatalogStore(databasePath)
     tournamentStore = new TournamentStore(databasePath)
+    aiJobStore = new AiJobStore(databasePath)
+    completeDatabaseMigration(databasePath, migration)
+    if (!hasRecoverableThreadJob())
+      tournamentStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
     const previousJob = catalogStore.jobStatus()
     if (previousJob.state === 'paused' && previousJob.mode) {
       setTimeout(() => runCatalogJob(previousJob.mode!), 2_000)
@@ -940,11 +1215,16 @@ app.whenReady().then(() => {
     aiPreferencesStore = new AiPreferencesStore(app.getPath('userData'))
   } catch (error) {
     console.error('Impossibile aprire l’archivio locale:', error)
+    tournamentStore?.close(); tournamentStore = null
+    catalogStore?.close(); catalogStore = null
+    aiJobStore?.close(); aiJobStore = null
+    projectStore?.close(); projectStore = null
     storageError = 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
   }
 
   registerProjectHandlers()
   createWindow()
+  setTimeout(() => { void recoverAiJobs() }, 0)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -957,7 +1237,9 @@ app.on('before-quit', () => {
   projectStore?.close()
   catalogStore?.close()
   tournamentStore?.close()
+  aiJobStore?.close()
   projectStore = null
+  aiJobStore = null
 })
 
 app.on('window-all-closed', () => {

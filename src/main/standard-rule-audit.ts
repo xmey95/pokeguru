@@ -2,6 +2,7 @@ import { load } from 'cheerio'
 import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
 import { SET_ADMISSION_RULE_SOURCE } from '../shared/standard-admission'
 import { STANDARD_RULE_PACKAGE_VERSION, type RuleSourceAudit, type StandardRuleAudit } from '../shared/standard-rule-audit'
+import { readLimitedText } from './bounded-response'
 
 const sources = [
   { id: 'rotation-2026', url: WESTERN_ROTATION_RULES[1].sourceUrl },
@@ -37,8 +38,7 @@ export async function auditStandardRuleSources(previous: StandardRuleAudit | nul
     try {
       const response = await fetcher(url, { headers: { Accept: 'text/html' }, signal: AbortSignal.timeout(12_000) })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const html = await response.text()
-      if (html.length > 2_000_000) throw new Error('Pagina troppo grande')
+      const html = await readLimitedText(response, 2_000_000, 'Pagina troppo grande')
       if (/request unsuccessful|incapsula incident id/i.test(html))
         throw new Error('La fonte ha bloccato la richiesta automatica')
       return checkRuleSourceText(id, html)

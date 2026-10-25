@@ -1,15 +1,17 @@
 import type { DeckBaseline, ImportDeckInput } from './deck-import'
 import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from './meta-matchups'
 import type { AiConnection, AiPreferences } from './ai'
-import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from './catalog'
+import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
+  CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from './catalog'
 import type { ClearLineMappingInput, DeckReconciliation, SaveLineMappingInput } from './reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from './constraints'
 import type { DeckExportRequest } from './deck-export'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from './tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from './main-tournament'
 import type { StandardRuleAudit } from './standard-rule-audit'
 import type { ThreadEvidencePacket } from './thread-evidence'
+import type { AiJobSummary } from './ai-job'
 
 export type ProjectFormat = 'STANDARD'
 export type CompetitiveCircuit = 'WESTERN' | 'JAPAN'
@@ -37,6 +39,9 @@ export type OperationResult<T> =
 
 export interface ProjectsApi {
   getCatalog(): Promise<OperationResult<CatalogView>>
+  getCatalogBrowseOverview(): Promise<OperationResult<CatalogBrowseOverview>>
+  searchCatalog(query: string, setId: string, offset: number): Promise<OperationResult<CatalogBrowsePage>>
+  getCatalogGroup(key: string): Promise<OperationResult<{ group: CatalogBrowseGroup; prints: CatalogPrint[] } | null>>
   syncCatalog(): Promise<OperationResult<CatalogView>>
   syncStandardCatalog(mode: CatalogSyncMode): Promise<OperationResult<CatalogSyncStatus>>
   getCatalogSyncStatus(): Promise<OperationResult<CatalogSyncStatus>>
@@ -51,6 +56,11 @@ export interface ProjectsApi {
   importDeck(input: ImportDeckInput): Promise<OperationResult<DeckBaseline>>
   listDeckVersions(projectId: string): Promise<OperationResult<DeckVersion[]>>
   listDeckThreads(projectId: string): Promise<OperationResult<DeckThread[]>>
+  listDeckThreadSummaries(projectId: string): Promise<OperationResult<DeckThreadSummary[]>>
+  getDeckThread(projectId: string, threadId: string): Promise<OperationResult<DeckThread | null>>
+  getAiJobStatus(projectId: string, resourceId: string): Promise<OperationResult<AiJobSummary | null>>
+  cancelAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
+  recoverAiJobs(): Promise<OperationResult<boolean>>
   createDeckThread(input: CreateDeckThreadInput): Promise<OperationResult<DeckThread>>
   addDeckThreadMessage(projectId: string, threadId: string, text: string): Promise<OperationResult<DeckThread>>
   previewDeckThreadEvidence(projectId: string, threadId: string, text: string): Promise<OperationResult<ThreadEvidencePacket>>

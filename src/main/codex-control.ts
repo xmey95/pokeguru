@@ -1,19 +1,13 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { createInterface, type Interface } from 'node:readline'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import type { AiConnection, AiModel, AiRunConfig } from '../shared/ai'
+import { CODEX_ISOLATION_ARGS } from './codex-isolation'
 
 type RpcResponse = { id?: number; result?: unknown; error?: { message?: string } }
-type AgentMessage = { type?: string; text?: string; phase?: string | null }
-type TurnNotification = { method?: string; params?: {
-  threadId?: string; item?: AgentMessage; turn?: {
-    id?: string; status?: string; error?: { message?: string } | null; items?: AgentMessage[]
-  }
-} }
-type ActiveTurn = {
-  finalText: string | null; latestText: string | null
-  resolve(value: { turnId: string; text: string }): void; reject(error: Error): void
-  timer: NodeJS.Timeout
-}
 
 export class CodexControl {
   private child: ChildProcessWithoutNullStreams | null = null
@@ -21,18 +15,13 @@ export class CodexControl {
   private starting: Promise<void> | null = null
   private nextId = 1
   private readonly pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: NodeJS.Timeout }>()
-  private readonly activeTurns = new Map<string, ActiveTurn>()
+  private readonly cliTurns = new Map<string, ChildProcessWithoutNullStreams>()
 
   private fail(error: Error): void {
     for (const [id, entry] of this.pending) {
       clearTimeout(entry.timer)
       entry.reject(error)
       this.pending.delete(id)
-    }
-    for (const [threadId, entry] of this.activeTurns) {
-      clearTimeout(entry.timer)
-      entry.reject(error)
-      this.activeTurns.delete(threadId)
     }
     this.child = null
     this.starting = null
@@ -44,7 +33,9 @@ export class CodexControl {
     if (this.starting) return this.starting
     this.starting = (async () => {
       const command = process.env.POKEGURU_CODEX_BIN || 'codex'
-      const child = spawn(command, ['app-server', '--stdio'], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
+      const child = spawn(command, ['app-server', '--stdio', '--disable', 'apps', '--disable', 'plugins',
+        '--config', 'web_search="disabled"', '--config', 'mcp_servers={}'],
+      { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
       this.child = child
       child.stderr.resume()
       child.on('error', (error) => {
@@ -57,12 +48,9 @@ export class CodexControl {
       })
       this.lines = createInterface({ input: child.stdout })
       this.lines.on('line', (line) => {
-        let message: RpcResponse & TurnNotification
-        try { message = JSON.parse(line) as RpcResponse & TurnNotification } catch { return }
-        if (typeof message.id !== 'number') {
-          this.receiveNotification(message)
-          return
-        }
+        let message: RpcResponse
+        try { message = JSON.parse(line) as RpcResponse } catch { return }
+        if (typeof message.id !== 'number') return
         const entry = this.pending.get(message.id)
         if (!entry) return
         clearTimeout(entry.timer)
@@ -70,7 +58,8 @@ export class CodexControl {
         if (message.error) entry.reject(new Error(message.error.message ?? 'Risposta Codex non valida.'))
         else entry.resolve(message.result)
       })
-      await this.send('initialize', { clientInfo: { name: 'pokeguru', title: 'Pokéguru', version: '0.1.0' } })
+      await this.send('initialize', { clientInfo: { name: 'pokeguru', title: 'Pokéguru', version: '0.1.0' },
+        capabilities: { experimentalApi: true } })
       child.stdin.write(`${JSON.stringify({ method: 'initialized', params: {} })}\n`)
     })().catch((error: unknown) => {
       this.child?.kill()
@@ -163,90 +152,109 @@ export class CodexControl {
     await this.request('account/logout')
   }
 
-  private receiveNotification(message: TurnNotification): void {
-    const threadId = message.params?.threadId
-    if (!threadId) return
-    const active = this.activeTurns.get(threadId)
-    if (!active) return
-    if (message.method === 'item/completed' && message.params?.item?.type === 'agentMessage') {
-      const item = message.params.item
-      if (typeof item.text === 'string') {
-        active.latestText = item.text
-        if (item.phase === 'final_answer') active.finalText = item.text
+  async latestTurnId(sessionId: string): Promise<string> {
+    const turns = await this.request('thread/turns/list', { threadId: sessionId,
+      limit: 1, sortDirection: 'desc', itemsView: 'notLoaded' }) as {
+        data?: Array<{ id?: string; status?: string }>
       }
-    }
-    if (message.method !== 'turn/completed') return
-    clearTimeout(active.timer)
-    this.activeTurns.delete(threadId)
-    const turn = message.params?.turn
-    if (turn?.status !== 'completed') {
-      active.reject(new Error(turn?.error?.message ||
-        (turn?.status === 'interrupted' ? 'La risposta Codex è stata interrotta.' : 'Codex non ha completato la risposta.')))
-      return
-    }
-    const fromTurn = [...(turn.items ?? [])].reverse().find((item) =>
-      item.type === 'agentMessage' && item.phase === 'final_answer' && typeof item.text === 'string')?.text
-    const text = active.finalText ?? fromTurn ?? active.latestText
-    if (!turn.id || !text) active.reject(new Error('Codex non ha restituito una risposta completa.'))
-    else active.resolve({ turnId: turn.id, text })
+    const turnId = turns.data?.[0]?.id
+    if (!turnId) throw new Error('Codex non ha restituito l’identificativo del turno salvato.')
+    return turnId
   }
 
-  async startThread(cwd: string, config: AiRunConfig): Promise<string> {
-    const response = await this.request('thread/start', {
-      cwd, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: false,
-      ...(config.model ? { model: config.model } : {}), serviceName: 'pokeguru'
-    }) as { thread?: { id?: string } }
-    if (!response.thread?.id) throw new Error('Codex non ha creato una sessione.')
-    return response.thread.id
-  }
-
-  async resumeThread(threadId: string, cwd: string): Promise<void> {
-    const response = await this.request('thread/resume', {
-      threadId, cwd, approvalPolicy: 'never', sandbox: 'read-only', excludeTurns: true
-    }) as { thread?: { id?: string } }
-    if (response.thread?.id !== threadId) throw new Error('La sessione Codex salvata non è disponibile.')
-  }
-
-  async jsonTurn(threadId: string, cwd: string, prompt: string, config: AiRunConfig,
-    outputSchema: Record<string, unknown>): Promise<{ turnId: string; value: unknown }> {
-    if (this.activeTurns.has(threadId)) throw new Error('Questo thread Codex è già in elaborazione.')
-    let resolveTurn!: ActiveTurn['resolve']
-    let rejectTurn!: ActiveTurn['reject']
-    const completed = new Promise<{ turnId: string; text: string }>((resolve, reject) => {
-      resolveTurn = resolve; rejectTurn = reject
-    })
-    void completed.catch(() => undefined)
-    const timer = setTimeout(() => {
-      this.activeTurns.delete(threadId)
-      rejectTurn(new Error('Codex non ha completato il turno entro quattro minuti.'))
-    }, 240_000)
-    this.activeTurns.set(threadId, { finalText: null, latestText: null, resolve: resolveTurn, reject: rejectTurn, timer })
+  async jsonTurn(sessionId: string | null, cwd: string, prompt: string, config: AiRunConfig,
+    outputSchema: Record<string, unknown>, options: { jobId?: string; jobDirectory?: string;
+      signal?: AbortSignal } = {}): Promise<{ sessionId: string; turnId: string; value: unknown }> {
+    const key = options.jobId ?? sessionId ?? `new:${randomUUID()}`
+    if (this.cliTurns.has(key)) throw new Error('Questo thread Codex è già in elaborazione.')
+    if (options.signal?.aborted) throw new Error('Operazione Codex annullata.')
+    const directory = options.jobDirectory ?? mkdtempSync(join(tmpdir(), 'pokeguru-codex-turn-'))
+    mkdirSync(directory, { recursive: true })
+    const schemaPath = join(directory, 'schema.json')
+    const resultPath = join(directory, 'result.json')
     try {
-      const response = await this.request('turn/start', {
-        threadId, input: [{ type: 'text', text: prompt }], cwd,
-        approvalPolicy: 'never', sandboxPolicy: { type: 'readOnly', networkAccess: false },
-        ...(config.model ? { model: config.model } : {}),
-        ...(config.reasoningEffort ? { effort: config.reasoningEffort } : {}), outputSchema
-      }) as { turn?: { id?: string } }
-      if (!response.turn?.id) throw new Error('Codex non ha avviato il turno.')
-      const done = await completed
-      if (done.turnId !== response.turn.id) throw new Error('Risposta Codex associata a un turno diverso.')
+      if (sessionId) writeFileSync(join(directory, 'session-id.txt'), sessionId, 'utf8')
+      writeFileSync(schemaPath, JSON.stringify(outputSchema), 'utf8')
+      const command = process.env.POKEGURU_CODEX_BIN || 'codex'
+      const args = ['-C', cwd, 'exec', '--json', ...(sessionId ? ['resume'] : []), ...CODEX_ISOLATION_ARGS,
+        '--config', 'approval_policy="never"', '--skip-git-repo-check',
+        ...(config.model ? ['--model', config.model] : []),
+        ...(config.reasoningEffort ? ['--config', `model_reasoning_effort=${JSON.stringify(config.reasoningEffort)}`] : []),
+        '--output-schema', schemaPath, '--output-last-message', resultPath,
+        ...(sessionId ? [sessionId] : []), '-']
+      const done = await new Promise<{ sessionId: string; text: string }>((resolve, reject) => {
+        const child = spawn(command, args, { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
+        this.cliTurns.set(key, child)
+        const abort = () => child.kill()
+        options.signal?.addEventListener('abort', abort, { once: true })
+        let observedSessionId: string | null = null
+        let stdout = ''
+        let stderr = ''
+        let timedOut = false
+        let captureError = false
+        const timer = setTimeout(() => { timedOut = true; child.kill() }, 240_000)
+        child.stdout.on('data', (chunk: Buffer) => {
+          stdout += chunk.toString()
+          const lines = stdout.split('\n')
+          stdout = lines.pop() ?? ''
+          for (const line of lines) {
+            try {
+              const event = JSON.parse(line) as { type?: string; thread_id?: string }
+              if (event.type === 'thread.started') {
+                observedSessionId = event.thread_id ?? null
+                if (observedSessionId) {
+                  try { writeFileSync(join(directory, 'session-id.txt'), observedSessionId, 'utf8') }
+                  catch { captureError = true; child.kill() }
+                }
+              }
+            } catch { /* Ignore non-event output. */ }
+          }
+          if (stdout.length > 1_000_000) child.kill()
+        })
+        child.stderr.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString()).slice(-2000) })
+        child.stdin.on('error', () => undefined)
+        child.stdin.end(prompt)
+        child.on('error', (error) => {
+          clearTimeout(timer)
+          options.signal?.removeEventListener('abort', abort)
+          if (captureError) return reject(new Error('Impossibile conservare la sessione Codex.'))
+          reject(new Error(error.message.includes('ENOENT')
+            ? 'Codex CLI non trovato. Installa Codex o rendilo disponibile nel PATH.'
+            : 'Impossibile avviare Codex.'))
+        })
+        child.on('close', (code) => {
+          clearTimeout(timer)
+          options.signal?.removeEventListener('abort', abort)
+          if (captureError) return reject(new Error('Impossibile conservare la sessione Codex.'))
+          if (options.signal?.aborted) return reject(new Error('Operazione Codex annullata.'))
+          if (timedOut) return reject(new Error('Codex non ha completato il turno entro quattro minuti.'))
+          if (code !== 0) return reject(new Error(stderr.includes('Not logged in')
+            ? 'Accedi a Codex prima di generare le analisi.'
+            : 'Codex non ha completato la risposta nel profilo isolato. Controlla supporto sandbox, connessione e modello.'))
+          if (!(observedSessionId ?? sessionId) ||
+            (sessionId && observedSessionId && sessionId !== observedSessionId)) {
+            return reject(new Error('Codex non ha restituito l’identificativo atteso della sessione.'))
+          }
+          try { resolve({ sessionId: observedSessionId ?? sessionId!,
+            text: readFileSync(resultPath, 'utf8') }) }
+          catch { reject(new Error('Codex non ha restituito una risposta completa.')) }
+        })
+      })
       if (done.text.length > 100_000) throw new Error('Risposta Codex troppo lunga.')
-      try { return { turnId: done.turnId, value: JSON.parse(done.text) as unknown } }
+      const turnId = await this.latestTurnId(done.sessionId)
+      try { return { sessionId: done.sessionId, turnId,
+        value: JSON.parse(done.text) as unknown } }
       catch { throw new Error('Codex ha restituito una risposta JSON non valida.') }
-    } catch (error) {
-      // A request failure can occur before turn/completed; release its waiter.
-      const active = this.activeTurns.get(threadId)
-      if (active) {
-        clearTimeout(active.timer)
-        this.activeTurns.delete(threadId)
-        active.reject(error instanceof Error ? error : new Error('Turno Codex non riuscito.'))
-      }
-      throw error
+    } finally {
+      this.cliTurns.delete(key)
+      if (!options.jobDirectory) rmSync(directory, { recursive: true, force: true })
     }
   }
+
+  cancelTurn(jobId: string): void { this.cliTurns.get(jobId)?.kill() }
 
   stop(): Promise<void> {
+    for (const child of this.cliTurns.values()) child.kill()
     const child = this.child
     const closed = child ? new Promise<void>((resolve) => child.once('close', () => resolve())) : Promise.resolve()
     child?.kill()

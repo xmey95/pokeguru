@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
 import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
@@ -18,7 +19,8 @@ async function launch(profile) {
   return electron.launch({
     executablePath,
     args: process.platform === 'linux' ? ['--no-sandbox'] : [],
-    env: { ...process.env, POKEGURU_DATA_DIR: profile },
+    env: { ...process.env, POKEGURU_DATA_DIR: profile,
+      ELECTRON_RENDERER_URL: 'data:text/html,<title>Untrusted renderer</title>' },
     timeout: 45000
   })
 }
@@ -27,6 +29,25 @@ try {
   const profile = join(temporary, 'profile')
   application = await launch(profile)
   let page = await application.firstWindow()
+  assert.equal(page.url(), 'pokeguru://bundle/index.html', 'Il pacchetto deve ignorare l’URL renderer nell’ambiente')
+  const documentResponse = page.waitForResponse((response) => response.url() === page.url())
+  await page.reload()
+  assert.match(await (await documentResponse).headerValue('content-security-policy'), /script-src 'self'/)
+  assert.equal(await page.evaluate(async () => {
+    const script = document.createElement('script')
+    script.textContent = 'window.__injectedScriptRan = true'
+    document.body.append(script)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    return window.__injectedScriptRan === true
+  }), false, 'La CSP deve impedire script inline nel pacchetto')
+  const outsideImage = join(temporary, 'outside.svg')
+  writeFileSync(outsideImage, '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')
+  assert.equal(await page.evaluate((source) => new Promise((resolve) => {
+    const image = new Image()
+    image.onload = () => resolve(true)
+    image.onerror = () => resolve(false)
+    image.src = source
+  }), pathToFileURL(outsideImage).href), false, 'Il renderer non deve caricare un file locale esterno')
   await createProjectFromStart(page, 'Pacchetto isolato')
   await page.getByTestId('selected-project-name').filter({ hasText: 'Pacchetto isolato' }).waitFor()
   await openDeckImport(page)

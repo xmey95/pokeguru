@@ -43,6 +43,12 @@ jobs:
       - name: Exercise offline desktop flow on Windows
         if: runner.os == 'Windows'
         run: npm run test:e2e:offline
+      - name: Check accessible navigation at 200% scale on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/scale-accessibility-live.mjs
+      - name: Check accessible navigation at 200% scale on Windows
+        if: runner.os == 'Windows'
+        run: node tests/scale-accessibility-live.mjs
       - name: Exercise catalog set coverage on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/catalog-ui-live.mjs

@@ -1,0 +1,9 @@
+# Verifiche di interfaccia e accessibilità
+
+APP-099 ha usato profili temporanei su Windows ed Electron Linux in Ubuntu 24.04 WSL2 con Xvfb. L'AppImage è stata costruita nella copia Linux del progetto, avviata dal contenuto estratto e controllata per salvataggio, riapertura e migrazione offline. La voce `.desktop` estratta si chiama `io.github.xmey95.pokeguru.desktop` e contiene `StartupWMClass=io.github.xmey95.pokeguru`.
+
+Il test del workspace Linux copre Lista, Thread e Matchup a 1440×900, 1280×720, 1241×720, 1240×720, 1024×768 e 640×720; Catalogo, Eventi e Impostazioni AI a 640×580. Ha verificato navigazione da tastiera e assenza di sovrapposizioni o scorrimento orizzontale. La prova di caricamento Linux verifica stati `role=status`, errori/recupero, contrasto e movimento ridotto. `tests/scale-accessibility-live.mjs` passa su Windows e Linux con DPR Chromium 2, finestra 640×580 CSS, Invio sui sei controlli di navigazione, nomi non ignorati nell'albero di accessibilità Chromium e assenza di overflow orizzontale.
+
+Queste prove non equivalgono a un lettore di schermo reale né a un cambio della scala del sistema operativo. NVDA/Orca non erano disponibili nel test; Xvfb non rappresenta il comportamento di GNOME/KDE installati e non prova annunci parlati, dock, tray o contrasto forzato. Prima della prossima release con modifiche UX, una sessione manuale dovrebbe percorrere con NVDA su Windows e Orca su una distribuzione Linux desktop: scelta progetto, import lista, ricerca Catalogo, Eventi, cambio Thread, stato di un job Codex, Matchup, errori e recupero; annotare ordine del focus, nomi dei controlli e annunci delle attese. Ripetere a scala OS 200% e finestra stretta. Conservare nel task l'esito reale senza interpretare l'albero Chromium come prova dell'output parlato.
+
+Fonte per la correzione dell'associazione finestra/launcher: [electron-builder 26, desktopName e syncDesktopName](https://www.electron.build/v26/docs/linux/).

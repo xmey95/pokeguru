@@ -8,7 +8,7 @@ import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot, MatchupT
 import type { CreateProjectInput, Project } from '../shared/projects'
 import type { ClearLineMappingInput, DeckLineMapping, DeckReconciliation, IdentityTotal, MappedPrint, SaveLineMappingInput } from '../shared/reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import type { AiRunConfig } from '../shared/ai'
 import { normalizeDeckCodes } from '../shared/deck-code-normalization'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
@@ -93,6 +93,8 @@ export class ProjectStore {
     this.db = new DatabaseSync(filePath)
     this.db.exec('PRAGMA journal_mode = WAL')
     this.db.exec('PRAGMA foreign_keys = ON')
+    const needsLegacyMigration = (this.db.prepare('PRAGMA user_version').get() as
+      { user_version: number }).user_version === 0
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS projects (
         id TEXT PRIMARY KEY,
@@ -241,8 +243,10 @@ export class ProjectStore {
       .map((row) => row.name))
     if (!evidenceColumns.has('evidence_json')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN evidence_json TEXT')
     if (!evidenceColumns.has('cited_source_ids_json')) this.db.exec('ALTER TABLE deck_thread_messages ADD COLUMN cited_source_ids_json TEXT')
-    this.migrateDeckVersions()
-    this.repairTrainerSectionImports()
+    if (needsLegacyMigration) {
+      this.migrateDeckVersions()
+      this.repairTrainerSectionImports()
+    }
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS matchup_notes (
         id TEXT PRIMARY KEY,
@@ -298,7 +302,7 @@ export class ProjectStore {
         UNIQUE(discussion_id, turn_no)
       ) STRICT;
     `)
-    this.migrateMatchupReports()
+    if (needsLegacyMigration) this.migrateMatchupReports()
   }
 
   private migrateDeckVersions(): void {
@@ -535,14 +539,56 @@ export class ProjectStore {
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
+  listDeckThreadSummaries(projectId: string): DeckThreadSummary[] {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    const rows = this.db.prepare(`SELECT t.id, t.project_id, t.title, t.base_version_id,
+      t.ai_session_ref, t.created_at, t.updated_at, v.sequence AS base_sequence,
+      h.version_id AS current_version_id,
+      (SELECT id FROM (
+        SELECT id, sequence FROM deck_thread_candidates WHERE thread_id = t.id
+        UNION ALL SELECT id, sequence FROM deck_ai_candidates WHERE thread_id = t.id
+      ) ORDER BY sequence DESC LIMIT 1) AS latest_candidate_id
+      FROM deck_threads t LEFT JOIN deck_versions v ON v.id = t.base_version_id
+      LEFT JOIN deck_main_heads h ON h.project_id = t.project_id
+      WHERE t.project_id = ? ORDER BY t.created_at DESC, t.rowid DESC`).all(projectId) as {
+        id: string; project_id: string; title: string; base_version_id: string | null
+        ai_session_ref: string | null; created_at: string; updated_at: string
+        base_sequence: number | null; current_version_id: string | null; latest_candidate_id: string | null
+      }[]
+    return rows.map((row) => ({ id: row.id, projectId: row.project_id, title: row.title,
+      baseVersionId: row.base_version_id, baseVersionNumber: row.base_sequence,
+      currentVersionId: row.current_version_id,
+      stale: row.base_version_id !== row.current_version_id,
+      aiSessionRef: row.ai_session_ref, createdAt: row.created_at, updatedAt: row.updated_at,
+      latestCandidateId: row.latest_candidate_id }))
+  }
+
+  referencedTournamentSnapshotIds(): Set<string> {
+    const rows = this.db.prepare(`SELECT DISTINCT json_extract(event.value, '$.snapshotId') AS id
+      FROM deck_thread_messages AS message,
+        json_each(CASE WHEN json_valid(message.evidence_json) THEN message.evidence_json
+          ELSE '{}' END, '$.events') AS event
+      WHERE json_type(event.value, '$.snapshotId') = 'text'`).all() as { id: string }[]
+    return new Set(rows.map((row) => row.id))
+  }
+
+  getDeckThread(projectId: string, threadId: string): DeckThread | null {
+    return this.readDeckThreads(projectId, threadId)[0] ?? null
+  }
+
   listDeckThreads(projectId: string): DeckThread[] {
+    return this.readDeckThreads(projectId)
+  }
+
+  private readDeckThreads(projectId: string, threadId?: string): DeckThread[] {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const current = this.db.prepare('SELECT version_id FROM deck_main_heads WHERE project_id = ?')
       .get(projectId) as { version_id: string } | undefined
     const rows = this.db.prepare(`SELECT t.id, t.project_id, t.title, t.base_version_id,
       t.ai_session_ref, t.created_at, t.updated_at, v.sequence AS base_sequence
       FROM deck_threads t LEFT JOIN deck_versions v ON v.id = t.base_version_id
-      WHERE t.project_id = ? ORDER BY t.created_at DESC, t.rowid DESC`).all(projectId) as {
+      WHERE t.project_id = ? ${threadId === undefined ? '' : 'AND t.id = ?'}
+      ORDER BY t.created_at DESC, t.rowid DESC`).all(...(threadId === undefined ? [projectId] : [projectId, threadId])) as {
         id: string; project_id: string; title: string; base_version_id: string | null
         ai_session_ref: string | null; created_at: string; updated_at: string; base_sequence: number | null
       }[]
@@ -610,12 +656,12 @@ export class ProjectStore {
         VALUES (?, ?, 'user', ?, ?)`).run(randomUUID(), id, openingNote, now)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
-    return this.listDeckThreads(input.projectId).find((thread) => thread.id === id)!
+    return this.getDeckThread(input.projectId, id)!
   }
 
   addDeckThreadMessage(projectId: string, threadId: string, value: string): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
+    const thread = this.getDeckThread(projectId, threadId)
     if (!thread) throw new Error('Thread non trovato in questo progetto.')
     const message = typeof value === 'string' ? value.trim() : ''
     if (!message || message.length > 5000 || message.includes('\0'))
@@ -628,19 +674,19 @@ export class ProjectStore {
       this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
-    return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+    return this.getDeckThread(projectId, threadId)!
   }
 
   assignDeckAiSession(projectId: string, threadId: string, sessionId: string): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     if (!sessionId || sessionId.length > 200) throw new Error('Sessione Codex non valida.')
-    const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
+    const thread = this.getDeckThread(projectId, threadId)
     if (!thread) throw new Error('Thread non trovato in questo progetto.')
     if (thread.aiSessionRef && thread.aiSessionRef !== sessionId) throw new Error('Il thread ha già una sessione Codex diversa.')
     this.db.prepare(`UPDATE deck_threads SET ai_session_ref = ?, updated_at = ?
       WHERE id = ? AND project_id = ? AND (ai_session_ref IS NULL OR ai_session_ref = ?)`)
       .run(sessionId, new Date().toISOString(), threadId, projectId, sessionId)
-    return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+    return this.getDeckThread(projectId, threadId)!
   }
 
   saveDeckAiExchange(projectId: string, threadId: string, sessionId: string,
@@ -648,7 +694,7 @@ export class ProjectStore {
     proposal?: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] },
     evidence?: ThreadEvidencePacket, citedSourceIds: string[] = []): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    const thread = this.listDeckThreads(projectId).find((item) => item.id === threadId)
+    const thread = this.getDeckThread(projectId, threadId)
     if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questo thread.')
     const userText = typeof question === 'string' ? question.trim() : ''
     const aiText = typeof answer === 'string' ? answer.trim() : ''
@@ -688,7 +734,7 @@ export class ProjectStore {
       this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
-    return this.listDeckThreads(projectId).find((item) => item.id === threadId)!
+    return this.getDeckThread(projectId, threadId)!
   }
 
   private nextCandidateSequence(threadId: string): number {
@@ -701,7 +747,7 @@ export class ProjectStore {
 
   saveDeckCandidate(input: SaveDeckCandidateInput): DeckThread {
     if (!input || !this.get(input.projectId)) throw new Error('Progetto non trovato.')
-    const thread = this.listDeckThreads(input.projectId).find((item) => item.id === input.threadId)
+    const thread = this.getDeckThread(input.projectId, input.threadId)
     if (!thread) throw new Error('Thread non trovato in questo progetto.')
     if (typeof input.rawText !== 'string' || !input.rawText.trim() ||
       input.rawText.length > 200_000 || input.rawText.includes('\0'))
@@ -720,7 +766,7 @@ export class ProjectStore {
       this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, thread.id)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
-    return this.listDeckThreads(input.projectId).find((item) => item.id === thread.id)!
+    return this.getDeckThread(input.projectId, thread.id)!
   }
 
   getReconciliation(projectId: string): DeckReconciliation {
@@ -991,6 +1037,11 @@ export class ProjectStore {
       WHERE project_id = ? AND meta_id = ? AND deck_hash = ?`)
       .all(projectId, metaId, hash) as { payload: string }[]
     return rows.map((row) => JSON.parse(row.payload) as MatchupReport)
+  }
+
+  hasMatchupJobResult(jobId: string): boolean {
+    return !!this.db.prepare(`SELECT 1 FROM matchup_turns
+      WHERE json_extract(report_payload, '$.jobId') = ? LIMIT 1`).get(jobId)
   }
 
   saveMatchupReport(report: MatchupReport): void {

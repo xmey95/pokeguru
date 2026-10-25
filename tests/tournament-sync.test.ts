@@ -50,6 +50,9 @@ describe('global Limitless Play archive', () => {
       const finished = await syncTournamentBlock(reopened, 'new', network.fetcher, now)
       expect(finished).toMatchObject({ status: 'complete', inspected: 4, saved: 4 })
       expect(reopened.summaries()).toHaveLength(4)
+      expect(reopened.summaries()).toEqual(reopened.list().map(({ eventId, name, date, circuit, platform,
+        isOnline, reportedPlayers, coverage, pairingCoverage }) => ({ eventId, name, date, circuit,
+        platform, isOnline, reportedPlayers, coverage, pairingCoverage })))
       expect(reopened.getEvent(ids[0])?.pairingCoverage?.decided).toBe(1)
       expect(network.calls.filter((url) => url.includes('/tournaments?'))).toHaveLength(1)
       const before = network.calls.filter((url) => url.includes('/details')).length

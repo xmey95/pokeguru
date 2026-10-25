@@ -13,6 +13,10 @@ import type { TournamentCard, TournamentSnapshot } from '../shared/tournament'
 const MAX_CARDS = 36
 const MAX_LISTS = 6
 const MAX_EVENTS = 4
+// Verified Italian/English names for cards discussed by users but indexed in the English catalog.
+const CARD_NAME_ALIASES: readonly (readonly [string, string])[] = [
+  ['Compassione di Lino', "Wally's Compassion"]
+]
 
 function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -47,7 +51,11 @@ function choosePrint(name: string, line: ReturnType<typeof parseDeck>['lines'][n
   if (matches.length === 1) return { print: matches[0],
     status: matches[0].gameplay ? 'same-gameplay' : 'unverified' }
   const identities = new Set(matches.map((print) => print.identityId).filter(Boolean))
-  if (identities.size !== 1 || matches.some((print) => !print.gameplay))
+  const gameplayTexts = new Set(matches.map((print) => print.gameplay
+    ? JSON.stringify({ ...print.gameplay, weaknesses: print.gameplay.weaknesses.map((weakness) =>
+      ({ ...weakness, value: weakness.value.replace(/[×x]/gi, 'x') })) }) : null))
+  if (matches.some((print) => !print.gameplay) ||
+    (identities.size !== 1 && gameplayTexts.size !== 1))
     return { print: null, status: 'ambiguous' }
   return { print: matches.sort((a, b) => (b.detailAt ?? '').localeCompare(a.detailAt ?? ''))[0],
     status: 'same-gameplay' }
@@ -124,9 +132,28 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
     const prior = byName.get(key)
     byName.set(key, { name, quantity: (prior?.quantity ?? 0) + (line.quantity ?? 0), line })
   }
-  const mentioned = new Set(catalog.prints.filter((print) => print.name.length >= 4 &&
-    normal(question).includes(normal(print.name))).map((print) => normal(print.name)))
-  const normalizedQuestion = normal(question)
+  const searchText = [thread.title, ...thread.messages.filter((message) => message.author === 'user')
+    .slice(-6).map((message) => message.text), question].join('\n')
+  const normalizedQuestion = normal(searchText)
+  const mentioned = new Set<string>()
+  let unmatchedText = ` ${normalizedQuestion} `
+  const catalogNames = [...new Set(catalog.prints.map((print) => normal(print.name))
+    .filter((name) => name.length >= 4))].sort((a, b) => b.length - a.length)
+  for (const name of catalogNames) {
+    const phrase = ` ${name} `
+    if (!unmatchedText.includes(phrase)) continue
+    mentioned.add(name)
+    while (unmatchedText.includes(phrase)) unmatchedText = unmatchedText.replace(phrase, ' ')
+  }
+  const matchedAliases = new Map<string, string>()
+  for (const [alias, canonical] of CARD_NAME_ALIASES) {
+    const key = normal(canonical)
+    if (` ${normalizedQuestion} `.includes(` ${normal(alias)} `) &&
+      catalog.prints.some((print) => normal(print.name) === key && print.detailAt)) {
+      mentioned.add(key)
+      matchedAliases.set(key, alias)
+    }
+  }
   const explicitPrints = new Map<string, CatalogPrint[]>()
   for (const print of catalog.prints.filter((item) => item.detailAt && mentioned.has(normal(item.name)))) {
     const set = catalog.sets.find((item) => item.id === print.setId)
@@ -138,7 +165,7 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   for (const constraint of constraints) mentioned.add(normal(constraint.identityName))
   const ownPokemon = new Set([...byName.values()].filter((item) =>
     choosePrint(item.name, item.line, catalog).print?.category === 'Pokemon').map((item) => normal(item.name)))
-  const ranked = eventRows(play, main, question, ownPokemon)
+  const ranked = eventRows(play, main, searchText, ownPokemon)
   const chosenRows: ListRow[] = []
   const perEvent = new Map<string, number>()
   for (const row of ranked) {
@@ -148,15 +175,16 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
     chosenRows.push(row)
     perEvent.set(row.eventId, (perEvent.get(row.eventId) ?? 0) + 1)
   }
-  const names = [...byName.values()].sort((a, b) => Number(mentioned.has(normal(b.name))) -
-    Number(mentioned.has(normal(a.name))) ||
-    Number(choosePrint(b.name, b.line, catalog).print?.category === 'Pokemon') -
-    Number(choosePrint(a.name, a.line, catalog).print?.category === 'Pokemon') ||
-    b.quantity - a.quantity || a.name.localeCompare(b.name))
+  const names = [...byName.values()]
   for (const key of mentioned) if (!byName.has(key)) {
     const print = catalog.prints.find((item) => normal(item.name) === key)
     if (print) names.push({ name: print.name, quantity: 0, line: null })
   }
+  names.sort((a, b) => Number(mentioned.has(normal(b.name))) -
+    Number(mentioned.has(normal(a.name))) ||
+    Number(choosePrint(b.name, b.line, catalog).print?.category === 'Pokemon') -
+    Number(choosePrint(a.name, a.line, catalog).print?.category === 'Pokemon') ||
+    b.quantity - a.quantity || a.name.localeCompare(b.name))
   const observed = new Map<string, { name: string; count: number; category: TournamentCard['category'] }>()
   for (const row of chosenRows) for (const card of row.cards) {
     const key = normal(card.name)
@@ -173,7 +201,9 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
     const explicit = explicitPrints.get(normal(item.name)) ?? []
     const chosen = choosePrint(item.name, item.line, catalog, explicit.length === 1 ? explicit[0] : null)
     const print = chosen.print
-    return { name: item.name, quantity: item.quantity, printId: print?.id ?? null,
+    return { name: item.name, ...(matchedAliases.has(normal(item.name))
+      ? { mentionedAs: matchedAliases.get(normal(item.name)) } : {}),
+      quantity: item.quantity, printId: print?.id ?? null,
       setId: print?.setId ?? null, localId: print?.localId ?? null,
       category: print?.category ?? null, regulationMark: print?.regulationMark ?? null,
       identityStatus: chosen.status, gameplay: print?.gameplay ?? null,

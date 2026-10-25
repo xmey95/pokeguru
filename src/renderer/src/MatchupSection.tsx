@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { AiConnection, AiPreferences } from '../../shared/ai'
+import type { AiJobSummary } from '../../shared/ai-job'
 import type { CatalogView } from '../../shared/catalog'
 import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { evaluateStandardDeck } from '../../shared/standard-deck'
+import { localCalendarDate } from '../../shared/calendar-date'
 import { buildDeckCards, matchupDeckContext, type DeckReconciliation } from '../../shared/reconciliation'
 import { MatchupSwitcher } from './MatchupSwitcher'
 import { MatchupDiscussion as DiscussionView, type RevisionInFlight } from './MatchupDiscussion'
@@ -40,6 +42,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [feedback, setFeedback] = useDraftState(`matchup.feedback:${projectId}:${selectedId}:${activeDiscussionId}`, '')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useBusyState(`matchup:${projectId}:${selectedId}`)
+  const [aiJob, setAiJob] = useState<AiJobSummary | null>(null)
+  const aiBusy = aiJob?.status === 'running' || aiJob?.status === 'ready'
   const startedAt = useBusyStartedAt(`matchup:${projectId}:${selectedId}`)
   const revisionKey = `matchup.revision:${projectId}:${selectedId}`
   const revisionErrorKey = `matchup.revision-error:${projectId}:${selectedId}:${activeDiscussionId}`
@@ -172,8 +176,46 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     return () => { active = false }
   }, [projectId, selectedId, snapshot?.id, baselineKey, generating])
 
+  useEffect(() => {
+    let active = true
+    const resourceId = `matchup:${projectId}`
+    const refresh = async () => {
+      const result = await window.projectsApi.getAiJobStatus(projectId, resourceId)
+      if (active && result.ok) setAiJob(result.value)
+    }
+    void refresh()
+    const timer = window.setInterval(() => { void refresh() }, 1500)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [projectId, generating])
+
+  useEffect(() => {
+    if (aiJob?.status !== 'applied' || aiJob.projectId !== projectId || !snapshot) return
+    void window.projectsApi.listMatchupReports(projectId, snapshot.id).then((result) => {
+      if (result.ok) setReports(result.value)
+    })
+    if (selectedId) void reloadDiscussions(selectedId)
+  }, [aiJob?.id, aiJob?.status, projectId, snapshot?.id, selectedId])
+
+  async function cancelAi(): Promise<void> {
+    const result = await window.projectsApi.cancelAiJob(projectId, `matchup:${projectId}`)
+    if (!result.ok) setError(result.error)
+    else setAiJob((current) => current ? { ...current, status: 'cancelled' } : null)
+  }
+
+  async function recoverAi(): Promise<void> {
+    const result = await window.projectsApi.recoverAiJobs()
+    if (!result.ok) { setError(result.error); return }
+    const status = await window.projectsApi.getAiJobStatus(projectId, `matchup:${projectId}`)
+    if (status.ok) setAiJob(status.value)
+    if (snapshot) {
+      const reports = await window.projectsApi.listMatchupReports(projectId, snapshot.id)
+      if (reports.ok) setReports(reports.value)
+    }
+    if (selectedId) await reloadDiscussions(selectedId)
+  }
+
   async function generate(): Promise<void> {
-    if (!snapshot || !selectedId || !hasBaseline || !reconciliation || generating) return
+    if (!snapshot || !selectedId || !hasBaseline || !reconciliation || generating || aiBusy) return
     setGenerating(true)
     setError(null)
     setRevisionError(null)
@@ -199,7 +241,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   }
 
   async function submitFeedback(retryTurnId?: string): Promise<void> {
-    if (!discussion || !reconciliation || generating) return
+    if (!discussion || !reconciliation || generating || aiBusy) return
     setGenerating(true)
     setError(null)
     setRevisionError(null)
@@ -240,7 +282,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   }
 
   async function continueOnCurrentBase(): Promise<void> {
-    if (!discussion || !snapshot || !reconciliation || generating) return
+    if (!discussion || !snapshot || !reconciliation || generating || aiBusy) return
     setGenerating(true)
     setError(null)
     setRevisionError(null)
@@ -277,7 +319,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     currentReports.find((item) => item.opponentId === selectedId)
   const pendingTurn = discussion?.turns.find((turn) => !turn.report)
   const standard = baseline ? evaluateStandardDeck(baseline, catalog,
-    new Date().toISOString().slice(0, 10), ruleAudit) : null
+    localCalendarDate(), ruleAudit) : null
   const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog, standard) : null
   const ourCatalogCards = baseline && (!discussion || discussion.current) ? buildDeckCards(baseline, catalog, reconciliation)
     .filter((card) => card.status === 'recognized' && card.identityId) : []
@@ -293,7 +335,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const aiControls = hasBaseline && <MatchupAiControls connection={connection} connectionError={connectionError}
     loading={connectionLoading} onReload={() => setConnectionRequest((value) => value + 1)}
     model={overrideModel} effort={overrideEffort} onModel={(value) => { setOverrideModel(value); setOverrideEffort('') }}
-    onEffort={setOverrideEffort} disabled={generating} onOpenSettings={onOpenAiSettings}>
+    onEffort={setOverrideEffort} disabled={generating || aiBusy} onOpenSettings={onOpenAiSettings}>
     {preview(discussion ? discussion.current ? 'revise' : 'continue' : 'generate')}
   </MatchupAiControls>
 
@@ -316,6 +358,16 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     {loading && snapshot && <ActivityStatus title="Aggiornamento del metagame…" detail="La guida salvata resta consultabile." />}
     {generating && !revisionInFlight && <ActivityStatus title="Codex sta analizzando…" startedAt={startedAt}
       detail="La guida sarà disponibile al termine. Puoi consultare la lista o cambiare sezione." />}
+    {aiJob && (aiJob.status === 'running' || aiJob.status === 'ready') &&
+      <div className="content-note" role="status">{aiJob.status === 'running'
+        ? 'Job Codex Matchup in corso.' : 'Risultato Codex in attesa di recupero.'}
+        <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla job</button>
+        {(aiJob.status === 'ready' || aiJob.error) &&
+          <button type="button" className="text-button" onClick={() => void recoverAi()}>Recupera risultato</button>}
+      </div>}
+    {aiJob && (aiJob.status === 'interrupted' || aiJob.status === 'failed' || aiJob.status === 'cancelled') &&
+      <p className="content-note" role="status">{aiJob.status === 'cancelled'
+        ? 'Job Codex annullato.' : 'Il job Codex precedente non è stato completato. Puoi riprovare.'}</p>}
     {loading && !snapshot ? <LoadingSkeleton label="Caricamento del metagame Limitless…" rows={3} /> : snapshot && <>
       <div className="meta-layout">
         <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading || generating} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
@@ -382,13 +434,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 onSubmit={() => void submitFeedback()} onRetry={(turnId) => void submitFeedback(turnId)}
                 onContinue={() => void continueOnCurrentBase()} onOpenCatalogCard={onOpenCatalogCard}
                 generating={generating} startedAt={startedAt} inFlight={revisionInFlight} error={revisionError}
-                canRevise={!snapshot.cached && !!reconciliation} canRetry={!!reconciliation}
-                canContinue={!currentDiscussion && selectedInCurrentMeta && hasBaseline}
+                canRevise={!aiBusy && !snapshot.cached && !!reconciliation} canRetry={!aiBusy && !!reconciliation}
+                canContinue={!aiBusy && !currentDiscussion && selectedInCurrentMeta && hasBaseline}
                 absentFromMeta={!selectedInCurrentMeta} cached={snapshot.cached} aiControls={aiControls} />}
             </> : <p className="matchup-empty">Nessuna guida per questo archetipo e questa lista.</p>}
             {selectedInCurrentMeta && (!discussion || discussion.current) && <div className="matchup-generation-actions">
               {!discussion && aiControls}
-              <button type="button" className={report ? 'secondary-button matchup-regenerate' : 'primary-button'} onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
+              <button type="button" className={report ? 'secondary-button matchup-regenerate' : 'primary-button'} onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || aiBusy || snapshot.cached || !!pendingTurn}>
               {generating && !revisionInFlight && <Spinner />}{generating && !revisionInFlight ? 'Analisi in corso…' : report ? 'Rigenera guida' : 'Genera analisi con Codex'}
               </button>
               {report && discussion && <details className="matchup-regenerate-data"><summary>Dati per rigenerare</summary>{preview('generate')}</details>}

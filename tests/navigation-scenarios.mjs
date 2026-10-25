@@ -169,9 +169,9 @@ export async function navigationScenarios(page, application, workspace) {
 
   // Returning while a read is pending must never paint the abandoned Catalog in Matchup.
   await application.evaluate(({ ipcMain }) => {
-    const original = ipcMain._invokeHandlers.get('catalog:get')
+    const original = ipcMain._invokeHandlers.get('catalog:browse-overview')
     globalThis.navigationCatalogHandler = original
-    if (original) { ipcMain.removeHandler('catalog:get'); ipcMain.handle('catalog:get', async (...args) => { await new Promise((resolve) => setTimeout(resolve, 600)); return original(...args) }) }
+    if (original) { ipcMain.removeHandler('catalog:browse-overview'); ipcMain.handle('catalog:browse-overview', async (...args) => { await new Promise((resolve) => setTimeout(resolve, 600)); return original(...args) }) }
   })
 
   // Simulated unavailable destination; no production data is deleted.
@@ -205,7 +205,7 @@ export async function navigationScenarios(page, application, workspace) {
   assert.equal(await page.locator('.catalog-section').count(), 0)
   assert.match(await page.locator('#matchup-switcher-trigger').innerText(), /Gardevoir/)
   await application.evaluate(({ ipcMain }) => {
-    if (globalThis.navigationCatalogHandler) { ipcMain.removeHandler('catalog:get'); ipcMain.handle('catalog:get', globalThis.navigationCatalogHandler) }
+    if (globalThis.navigationCatalogHandler) { ipcMain.removeHandler('catalog:browse-overview'); ipcMain.handle('catalog:browse-overview', globalThis.navigationCatalogHandler) }
   })
 
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {

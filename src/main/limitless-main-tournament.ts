@@ -3,6 +3,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { load } from 'cheerio'
 import type { MainTournamentEntry, MainTournamentSnapshot } from '../shared/main-tournament'
 import type { TournamentCard } from '../shared/tournament'
+import { readLimitedText } from './bounded-response'
 
 const ROOT = 'https://limitlesstcg.com'
 const COUNTRY = new Set('US CA MX BR AR CL CO PE UY PY BO EC VE CR PA GT SV HN NI DO PR FR GB DE IT ES PT NL BE CH AT PL CZ SK HU RO BG GR DK NO SE FI IE IS LU SI HR RS EE LV LT UA TR AU NZ'.split(' '))
@@ -30,10 +31,7 @@ async function getHtml(path: string, fetcher: typeof fetch = fetch): Promise<str
     throw new MainLimitlessRateLimitError(new Date(Date.now() + Math.max(1, Math.min(seconds, 3600)) * 1000).toISOString())
   }
   if (!response.ok) throw new Error(`Limitless principale: HTTP ${response.status}.`)
-  if (Number(response.headers.get('content-length') ?? 0) > 1_500_000)
-    throw new Error('Pagina torneo Limitless troppo grande.')
-  const html = await response.text()
-  if (html.length > 1_500_000) throw new Error('Pagina torneo Limitless troppo grande.')
+  const html = await readLimitedText(response, 1_500_000, 'Pagina torneo Limitless troppo grande.')
   return html
 }
 

@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { parseMainTournamentIndex, parseMainTournament, parseMainDecklist } from '../src/main/limitless-main-tournament'
 import { syncMainTournamentBlock } from '../src/main/main-tournament-sync'
 import { TournamentStore } from '../src/main/tournament-store'
+import { ProjectStore } from '../src/main/project-store'
 
 const index = `<div data-selection><span data-key="format" data-value="standard"></span></div>
   <ul class="pagination" data-max="1"></ul><table>
@@ -62,12 +64,15 @@ describe('main Limitless tournament archive', () => {
       const first = await syncMainTournamentBlock(store, 'new', fetcher as typeof fetch,
         new Date('2026-10-24T12:00:00.000Z'))
       expect(first).toMatchObject({ status: 'running', inspectedEvents: 2, fetchedLists: 4 })
+      expect(store.pruneMainIntermediates(new Set())).toBeGreaterThan(0)
       store.close()
       const reopened = new TournamentStore(path)
       const done = await syncMainTournamentBlock(reopened, 'new', fetcher as typeof fetch,
         new Date('2026-10-24T12:00:00.000Z'))
       expect(done.status).toBe('complete')
       expect(reopened.mainSummaries()).toHaveLength(2)
+      expect(reopened.mainSummaries()).toEqual(reopened.listMain().map(({ eventId, name, date,
+        country, players, url, coverage }) => ({ eventId, name, date, country, players, url, coverage })))
       expect(reopened.getMain('582')?.coverage).toMatchObject({ fetchedLists: 2, complete60Lists: 2 })
       const before = calls.filter((url) => url.includes('/decks/list/')).length
       await syncMainTournamentBlock(reopened, 'new', fetcher as typeof fetch,
@@ -75,5 +80,63 @@ describe('main Limitless tournament archive', () => {
       expect(calls.filter((url) => url.includes('/decks/list/'))).toHaveLength(before)
       reopened.close()
     } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('keeps completed and cited Regional snapshots while reclaiming only new intermediate revisions', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-main-retention-'))
+    const path = join(folder, 'data.sqlite')
+    const store = new TournamentStore(path)
+    const db = new DatabaseSync(path)
+    try {
+      const snapshot = (id: string, fetchedLists: number) => ({ id, eventId: '582',
+        name: 'Regional Nice', date: '2026-10-17', country: 'FR', players: 20,
+        url: 'https://limitlesstcg.com/tournaments/582', fetchedAt: '2026-10-24T12:00:00Z',
+        source: 'Limitless tournament database' as const, circuit: 'WESTERN' as const,
+        format: 'STANDARD' as const, type: 'IN_PERSON' as const, participants: [], cached: false,
+        coverage: { returnedParticipants: 20, listedDecks: 20, fetchedLists,
+          complete60Lists: fetchedLists, noListLink: 0 } })
+      store.saveMain(snapshot('intermediate-a', 0))
+      store.saveMain(snapshot('cited-b', 1))
+      store.saveMain(snapshot('final-c', 2), true)
+      const projects = new ProjectStore(path)
+      try {
+        const project = projects.create({ name: 'Evidenza', format: 'STANDARD' })
+        const thread = projects.createDeckThread({ projectId: project.id, title: 'Citazione' })
+        db.prepare(`INSERT INTO deck_thread_messages
+          (id, thread_id, author, text, created_at, evidence_json)
+          VALUES ('citation', ?, 'assistant', 'Evidence', '2026-10-24', ?)`)
+          .run(thread.id, JSON.stringify({ schemaVersion: 1, events: [{ snapshotId: 'cited-b' }] }))
+        expect(projects.referencedTournamentSnapshotIds()).toEqual(new Set(['cited-b']))
+        expect(store.pruneMainIntermediates(projects.referencedTournamentSnapshotIds())).toBe(1)
+        expect(db.prepare('SELECT id FROM main_tournament_snapshots ORDER BY rowid').all())
+          .toMatchObject([{ id: 'cited-b' }, { id: 'final-c' }])
+        expect(store.getMain('582')?.id).toBe('final-c')
+      } finally { projects.close() }
+    } finally { db.close(); store.close(); rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('pins all Regional snapshots found before the retention schema is installed', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-main-legacy-'))
+    const path = join(folder, 'legacy.sqlite')
+    const db = new DatabaseSync(path)
+    try {
+      db.exec(`CREATE TABLE main_tournament_snapshots (
+        id TEXT PRIMARY KEY, event_id TEXT NOT NULL, fetched_at TEXT NOT NULL,
+        payload TEXT NOT NULL) STRICT`)
+      const insert = db.prepare(`INSERT INTO main_tournament_snapshots
+        (id, event_id, fetched_at, payload) VALUES (?, '582', '2026-10-24', '{}')`)
+      insert.run('old-1')
+      insert.run('old-2')
+      db.close()
+      const store = new TournamentStore(path)
+      try {
+        expect(store.pruneMainIntermediates(new Set())).toBe(0)
+      } finally { store.close() }
+      const reopened = new DatabaseSync(path)
+      try {
+        expect(reopened.prepare('SELECT id FROM main_tournament_snapshot_pins ORDER BY id').all())
+          .toMatchObject([{ id: 'old-1' }, { id: 'old-2' }])
+      } finally { reopened.close() }
+    } finally { if (db.isOpen) db.close(); rmSync(folder, { recursive: true, force: true }) }
   })
 })

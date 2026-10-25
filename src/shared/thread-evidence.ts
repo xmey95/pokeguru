@@ -9,6 +9,8 @@ export interface ThreadEvidenceSource {
 
 export interface ThreadCardEvidence {
   name: string
+  /** Localized name found in the discussion when the catalog uses another language. */
+  mentionedAs?: string
   quantity: number
   printId: string | null
   setId: string | null

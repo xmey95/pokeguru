@@ -21,7 +21,7 @@ try {
   await page.getByLabel('Testo lista').fill(input)
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
-  const expected = 'Trainer: 3\n2 Iono PAL 185\n1 Iono PAL 254\n1 Rare Candy PAF 089\n\nTotal Cards: 4\n'
+  const expected = 'Trainer: 4\n2 Iono PAL 185\n1 Iono PAL 254\n1 Rare Candy PAF 089\n\nTotal Cards: 4\n'
   await page.getByRole('button', { name: 'Copia export' }).click()
   await page.getByText('Export copiato negli appunti.').waitFor()
   assert.equal(await application.evaluate(({ clipboard }) => clipboard.readText()), expected)

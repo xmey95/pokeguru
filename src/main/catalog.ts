@@ -5,7 +5,8 @@ import { DatabaseSync } from 'node:sqlite'
 import { isDeepStrictEqual } from 'node:util'
 import {
   CATALOG_GAMEPLAY_SCHEMA_VERSION, CATALOG_NAMES, CATALOG_SET_IDS, CATALOG_SOURCE,
-  type CardGameplay, type CatalogPrint, type CatalogSet, type CatalogView, type PromoAudit,
+  type CardGameplay, type CatalogPrint, type CatalogSet, type CatalogView,
+  type CatalogBrowseGroup, type CatalogBrowseOverview, type CatalogBrowsePage, type PromoAudit,
   type CatalogSyncMode, type CatalogSyncStatus
 } from '../shared/catalog'
 import { extractCardGameplay, hasComparableGameplay } from '../shared/card-gameplay'
@@ -15,6 +16,8 @@ import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
   OFFICIAL_SET_RELEASE_VERSION, officialSetRelease, officialSetReleases } from './official-set-releases'
 import { BUNDLED_WESTERN_RULE_PACKAGE,
   type WesternRulePackage } from '../shared/western-rule-package'
+import { localCalendarDate } from '../shared/calendar-date'
+import { readLimitedBytes, readLimitedText } from './bounded-response'
 
 type SetResponse = {
   id: string; name: string; cardCount: { total: number }; releaseDate?: string
@@ -63,10 +66,7 @@ async function request(url: string, method: 'GET' | 'HEAD' = 'GET'): Promise<Res
 
 async function json<T>(url: string): Promise<T> {
   const response = await request(url)
-  const length = Number(response.headers.get('content-length') ?? 0)
-  if (length > 8_000_000) throw new Error('Risposta TCGdex troppo grande.')
-  const body = await response.text()
-  if (body.length > 8_000_000) throw new Error('Risposta TCGdex troppo grande.')
+  const body = await readLimitedText(response, 8_000_000, 'Risposta TCGdex troppo grande.')
   return JSON.parse(body) as T
 }
 
@@ -116,8 +116,8 @@ async function imageStatus(base: string | undefined): Promise<Pick<CatalogPrint,
   if (!base || !base.startsWith(`${assetOrigin}/`)) return { thumbnail: null, highImageAvailable: null }
   const [low, high] = await Promise.allSettled([
     request(`${base}/low.webp`).then(async (response) => {
-      const bytes = new Uint8Array(await response.arrayBuffer())
-      if (bytes.length > 250_000 || response.headers.get('content-type')?.split(';')[0] !== 'image/webp') return null
+      const bytes = await readLimitedBytes(response, 250_000, 'Immagine TCGdex troppo grande.')
+      if (response.headers.get('content-type')?.split(';')[0] !== 'image/webp') return null
       return `data:image/webp;base64,${Buffer.from(bytes).toString('base64')}`
     }),
     request(`${base}/high.webp`, 'HEAD').then(() => true)
@@ -324,6 +324,9 @@ export async function enrichCatalogPrints(store: CatalogStore, ids: readonly str
 
 export class CatalogStore {
   private readonly db: DatabaseSync
+  private browseCache: { overview: CatalogBrowseOverview; groups: Array<CatalogBrowseGroup & {
+    ids: string[]; search: string; setIds: Set<string>
+  }>; byKey: Map<string, string[]> } | null = null
   readonly dataDir: string
 
   constructor(path: string) {
@@ -457,6 +460,7 @@ export class CatalogStore {
   }
 
   private upsertPrint(print: CatalogPrint): void {
+    this.browseCache = null
     const previous = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?').get(print.id) as { payload: string } | undefined
     // A failed refresh does not discard a previously acquired detail or cached image.
     const old = previous ? JSON.parse(previous.payload) as CatalogPrint : null
@@ -521,6 +525,7 @@ export class CatalogStore {
       this.db.prepare(`INSERT INTO catalog_sync VALUES (1, ?)
         ON CONFLICT(id) DO UPDATE SET fetched_at=excluded.fetched_at`).run(sample.fetchedAt)
       this.db.exec('COMMIT')
+      this.browseCache = null
     } catch (error) {
       this.db.exec('ROLLBACK')
       throw error
@@ -591,7 +596,7 @@ export class CatalogStore {
     const acquiredPromos = promoTargets.filter((print) => print.detailAt !== null).length
     const targetSetIds = [...new Set(targetPrints.map((print) => print.setId))].sort()
     const officialReleased = officialSetReleases().filter((set) =>
-      set.releaseDate <= new Date().toISOString().slice(0, 10))
+      set.releaseDate <= localCalendarDate())
     const officialMissing = officialReleased.filter((set) => !targetSetIds.includes(set.setId))
     const printsBySet = new Map<string, CatalogPrint[]>()
     for (const print of targetPrints) {
@@ -644,6 +649,79 @@ export class CatalogStore {
       referencePrints: targetIds ? prints.filter((print) => !targetIds.has(print.id) &&
         print.detailAt !== null && print.identityId !== null) : []
     }
+  }
+
+  private browseData(): NonNullable<CatalogStore['browseCache']> {
+    if (this.browseCache) return this.browseCache
+    const { prints, referencePrints: _referencePrints, ...metadata } = this.view()
+    const groups = new Map<string, CatalogBrowseGroup & {
+      ids: string[]; search: string; setIds: Set<string>
+    }>()
+    let acquired = 0
+    let rarity = 0
+    let variants = 0
+    let thumbnails = 0
+    let highImages = 0
+    const missingPreview: CatalogBrowseOverview['stats']['missingPreview'] = []
+    for (const print of prints) {
+      if (print.detailAt) acquired++
+      else if (missingPreview.length < 12) missingPreview.push({ id: print.id, error: print.error })
+      if (print.detailAt && print.rarity !== null) rarity++
+      if (print.detailAt && print.variants !== null) variants++
+      if (print.detailAt && print.thumbnail !== null) thumbnails++
+      if (print.detailAt && print.highImageAvailable === true) highImages++
+      const key = print.identityId ?? `pending-${print.id}`
+      const group = groups.get(key) ?? { key, name: print.name, category: print.category,
+        basis: print.identityBasis, printCount: 0, canConstrain: false,
+        ids: [], search: print.name.toLocaleLowerCase(), setIds: new Set<string>() }
+      group.printCount++
+      group.canConstrain ||= !!(print.detailAt && print.identityId)
+      group.ids.push(print.id)
+      group.setIds.add(print.setId)
+      group.search += ` ${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase()
+      groups.set(key, group)
+    }
+    const ordered = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name) ||
+      a.key.localeCompare(b.key))
+    const overview: CatalogBrowseOverview = { ...metadata, stats: {
+      sampled: metadata.sets.reduce((sum, set) => sum + set.sampleTotal, 0),
+      acquired, missing: prints.length - acquired, missingPreview,
+      groups: ordered.length,
+      confirmedGroups: ordered.filter((group) => group.basis && group.basis !== 'unverified').length,
+      rarity, variants, thumbnails, highImages
+    } }
+    this.browseCache = { overview, groups: ordered,
+      byKey: new Map(ordered.map((group) => [group.key, group.ids])) }
+    return this.browseCache
+  }
+
+  browseOverview(): CatalogBrowseOverview { return this.browseData().overview }
+
+  browseSearch(query: string, setId: string, offset: number, limit = 100): CatalogBrowsePage {
+    const text = query.trim().toLocaleLowerCase()
+    const matched = this.browseData().groups.filter((group) =>
+      (!text || group.search.includes(text)) && (setId === 'all' || group.setIds.has(setId)))
+    const start = Math.min(Math.max(0, offset),
+      Math.max(0, Math.ceil(matched.length / limit) - 1) * limit)
+    return { total: matched.length, offset: start, groups: matched.slice(start, start + limit).map(
+      ({ ids: _ids, search: _search, setIds: _setIds, ...summary }) => summary) }
+  }
+
+  browseGroup(key: string): { group: CatalogBrowseGroup; prints: CatalogPrint[] } | null {
+    const data = this.browseData()
+    const ids = data.byKey.get(key)
+    if (!ids) return null
+    const indexed = data.groups.find((group) => group.key === key)!
+    const { ids: _ids, search: _search, setIds: _setIds, ...group } = indexed
+    const registry = loadPromoPackage().registry
+    const prints = ids.map((id) => this.getPrint(id)).filter((print): print is CatalogPrint => !!print)
+      .map((print) => print.isPromo ? { ...print, promoStatus: {
+        state: registry.entries.get(promoKey(print.setId, print.localId))?.state ?? 'unlisted',
+        legalDate: registry.entries.get(promoKey(print.setId, print.localId))?.legalDate ?? null,
+        dateNote: registry.entries.get(promoKey(print.setId, print.localId))?.dateNote ?? null,
+        checkedAt: registry.checkedAt
+      } } as CatalogPrint : print)
+    return { group, prints }
   }
 
   getPrint(id: string): CatalogPrint | null {

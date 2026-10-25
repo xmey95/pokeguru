@@ -43,7 +43,7 @@ try {
   await release()
   await creation
   await page.getByRole('heading', { name: 'Avvio dopo caricamento', exact: true }).waitFor()
-  for (const [label, route, name] of [['Catalogo', 'catalog:get', 'apertura-catalogo'], ['Eventi', 'tournament:list', 'apertura-eventi']]) {
+  for (const [label, route, name] of [['Catalogo', 'catalog:browse-overview', 'apertura-catalogo'], ['Eventi', 'tournament:list', 'apertura-eventi']]) {
     await hold(route)
     await page.locator('.sidebar').getByRole('button', { name: label, exact: true }).click()
     await auditLoading(page, workspace, name, '.loading-skeleton')

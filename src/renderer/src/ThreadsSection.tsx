@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { DeckThread, DeckThreadMessage, DeckVersion } from '../../shared/deck-threads'
+import type { DeckThread, DeckThreadMessage, DeckThreadSummary, DeckVersion } from '../../shared/deck-threads'
 import type { DeckCandidate } from '../../shared/deck-threads'
 import type { AiModel, AiPreferences } from '../../shared/ai'
 import type { DeckBaseline, ParsedDeck } from '../../shared/deck-import'
@@ -10,6 +10,8 @@ import { compareDecks, type DeckDiff } from '../../shared/deck-diff'
 import { reviewCandidate } from '../../shared/candidate-review'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import type { ThreadEvidencePacket } from '../../shared/thread-evidence'
+import type { AiJobSummary } from '../../shared/ai-job'
+import { localCalendarDate } from '../../shared/calendar-date'
 import { reviewSummary } from './review-summary'
 import { ThreadSwitcher } from './ThreadSwitcher'
 import { Icon } from './Icon'
@@ -67,7 +69,7 @@ function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
     {packet.change.updated.length + packet.change.added.length + packet.change.removed.length > 0 &&
       <p>Rispetto alla risposta precedente: {packet.change.updated.length} fonti aggiornate, {packet.change.added.length} nuove nella selezione, {packet.change.removed.length} non più selezionate.</p>}
     <details><summary>Carte e fonti che verranno inviate</summary>
-      <ul>{packet.cards.map((card) => <li key={card.name}><strong>{card.name}</strong> · {card.identityStatus === 'ambiguous' ? 'identità ambigua' : card.identityStatus === 'missing' ? 'scheda assente' : card.printId}
+      <ul>{packet.cards.map((card) => <li key={card.name}><strong>{card.name}</strong>{card.mentionedAs ? ` (citata come ${card.mentionedAs})` : ''} · {card.identityStatus === 'ambiguous' ? 'identità ambigua' : card.identityStatus === 'missing' ? 'scheda assente' : card.printId}
         {card.gameplayText && <p>{card.gameplayText}</p>}</li>)}</ul>
       {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte omesse per il limite del contesto.</p>}
       {packet.events.map((event) => <details key={event.eventId}><summary>{event.name} · {event.date} · {event.lists.length} liste</summary>
@@ -88,7 +90,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
   const current = versions[0]
   const adopted = versions.find((version) => version.adoption?.candidateId === candidate.id)
   const review = catalog ? reviewCandidate(thread.projectId, candidate, catalog, constraints,
-    new Date().toLocaleDateString('sv-SE'), audit) : null
+    localCalendarDate(), audit) : null
   const comparisonDeck = review ? parseDeck(review.normalizedRawText) : candidate.parsed
   const reviewItems = review ? reviewSummary(review.toReview) : []
   const diff = current ? compareDecks(current.parsed, comparisonDeck) : null
@@ -206,7 +208,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [createError, setCreateError] = useState<string | null>(null)
   const adoptionTrigger = useRef<HTMLElement | null>(null)
   const [versions, setVersions] = useState<DeckVersion[]>([])
-  const [threads, setThreads] = useState<DeckThread[]>([])
+  const [threads, setThreads] = useState<DeckThreadSummary[]>([])
+  const [selectedDetail, setSelectedDetail] = useState<DeckThread | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [constraints, setConstraints] = useState<DeckConstraint[]>([])
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
@@ -233,6 +237,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const [proposing, setProposing] = useBusyState(`thread.propose:${projectId}:${selectedId}`)
   const startedAt = useBusyStartedAt(`thread:${projectId}:${selectedId}`)
   const [error, setError] = useState<string | null>(null)
+  const [aiJob, setAiJob] = useState<AiJobSummary | null>(null)
+  const aiBusy = aiJob?.status === 'running' || aiJob?.status === 'ready'
   const [confirmCandidate, setConfirmCandidate] = useState<DeckCandidate | null>(null)
   useEffect(() => {
     if (creating) focusInWorkspace(newThreadTitle.current)
@@ -260,7 +266,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     setConfirmCandidate(candidate)
   }
 
-  const selected = threads.find((thread) => thread.id === selectedId) ?? null
+  const selectedSummary = threads.find((thread) => thread.id === selectedId) ?? null
+  const selected = selectedDetail?.id === selectedId ? selectedDetail : null
   const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
   useEffect(() => { if (selected) nav.entry.label = `Thread · ${selected.title}` }, [selected?.id])
   const featuredCandidate = selected?.candidates.at(-1) ?? null
@@ -276,7 +283,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     setLoading(!hasLoaded.current)
     setError(null)
     invalidatePreview()
-    void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId),
+    void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreadSummaries(projectId),
       window.projectsApi.getCatalog(), window.projectsApi.listConstraints(projectId), window.projectsApi.getStandardRuleAudit()])
       .then(([versionResult, threadResult, catalogResult, constraintResult, auditResult]) => {
         if (!active) return
@@ -296,7 +303,67 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Impossibile leggere i thread.') })
       .finally(() => { if (active) { hasLoaded.current = true; setLoading(false) } })
     return () => { active = false; previewRequest.current++ }
-  }, [projectId, mainImportedAt, working])
+  }, [projectId, mainImportedAt])
+
+  useEffect(() => {
+    if (!selectedId) { setSelectedDetail(null); setDetailLoading(false); return }
+    let active = true
+    setDetailLoading(true)
+    void window.projectsApi.getDeckThread(projectId, selectedId).then((result) => {
+      if (!active) return
+      if (!result.ok) throw new Error(result.error)
+      if (!result.value) throw new Error('Thread non trovato in questo progetto.')
+      setSelectedDetail(result.value)
+    }).catch((cause) => {
+      if (active) { setSelectedDetail(null); setError(cause instanceof Error ? cause.message : 'Thread non disponibile.') }
+    }).finally(() => { if (active) setDetailLoading(false) })
+    return () => { active = false }
+  }, [projectId, selectedId])
+
+  useEffect(() => {
+    if (!selectedId) { setAiJob(null); return }
+    let active = true
+    const refresh = async () => {
+      const result = await window.projectsApi.getAiJobStatus(projectId, selectedId)
+      if (active && result.ok) setAiJob(result.value)
+    }
+    void refresh()
+    const timer = window.setInterval(() => { void refresh() }, 1500)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [projectId, selectedId, working])
+
+  useEffect(() => {
+    if (aiJob?.status !== 'applied' || aiJob.projectId !== projectId ||
+      aiJob.resourceId !== selectedId || !selectedId) return
+    void window.projectsApi.getDeckThread(projectId, selectedId).then((result) => {
+      if (result.ok) setSelectedDetail(result.value)
+    })
+    void refreshSummaries()
+  }, [aiJob?.id, aiJob?.status, projectId, selectedId])
+
+  async function cancelAi(): Promise<void> {
+    if (!selectedId) return
+    const result = await window.projectsApi.cancelAiJob(projectId, selectedId)
+    if (!result.ok) setComposerError(result.error)
+    else setAiJob((current) => current ? { ...current, status: 'cancelled' } : null)
+  }
+
+  async function recoverAi(): Promise<void> {
+    const result = await window.projectsApi.recoverAiJobs()
+    if (!result.ok) setComposerError(result.error)
+    else if (selectedId) {
+      const status = await window.projectsApi.getAiJobStatus(projectId, selectedId)
+      if (status.ok) setAiJob(status.value)
+      const detail = await window.projectsApi.getDeckThread(projectId, selectedId)
+      if (detail.ok) setSelectedDetail(detail.value)
+    }
+  }
+
+  async function refreshSummaries(): Promise<void> {
+    const result = await window.projectsApi.listDeckThreadSummaries(projectId)
+    if (result.ok) setThreads(result.value)
+    else setError(result.error)
+  }
 
   async function refreshAiModels() {
     const request = ++aiModelsRequest.current
@@ -318,7 +385,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     return () => { aiModelsRequest.current++ }
   }, [])
 
-  function selectThread(thread: DeckThread, focus = '#thread-switcher-trigger'): void {
+  function selectThread(thread: Pick<DeckThreadSummary, 'id' | 'title'>, focus = '#thread-switcher-trigger'): void {
     if (thread.id === selectedId && !creating) return
     nav.visit({ 'thread.selected': thread.id, 'thread.creating': false, 'nav.focus': focus }, `Thread · ${thread.title}`)
   }
@@ -368,7 +435,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     try {
       const result = await window.projectsApi.createDeckThread({ projectId, title, openingNote })
       if (!result.ok) throw new Error(result.error)
-      setThreads((current) => [result.value, ...current])
+      setSelectedDetail(result.value)
+      await refreshSummaries()
       closeCreate()
       selectThread(result.value, '#new-thread-trigger')
     } catch (cause) { setCreateError(cause instanceof Error ? cause.message : 'Thread non creato.') }
@@ -383,7 +451,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
     try {
       const result = await window.projectsApi.addDeckThreadMessage(projectId, selected.id, message)
       if (!result.ok) throw new Error(result.error)
-      setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
+      setSelectedDetail(result.value)
+      await refreshSummaries()
       setMessage('')
       setPreview(null)
     } catch (cause) { setComposerError(cause instanceof Error ? cause.message : 'Messaggio non salvato.') }
@@ -392,7 +461,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
 
   async function ask(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working || !message.trim()) return
+    if (!selected || working || aiBusy || !message.trim()) return
     setWorking(true)
     setAsking(true)
     setComposerError(null)
@@ -401,13 +470,15 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
-      setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
+      setSelectedDetail(result.value)
+      await refreshSummaries()
       setMessage('')
       setPreview(null)
     } catch (cause) {
       setComposerError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
-      const current = await window.projectsApi.listDeckThreads(projectId)
-      if (current.ok) setThreads(current.value)
+      const current = await window.projectsApi.getDeckThread(projectId, selected.id)
+      if (current.ok) setSelectedDetail(current.value)
+      await refreshSummaries()
     }
     finally { setWorking(false); setAsking(false) }
   }
@@ -422,7 +493,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         projectId, threadId: selected.id, rawText: candidateText, note: candidateNote
       })
       if (!result.ok) throw new Error(result.error)
-      setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
+      setSelectedDetail(result.value)
+      await refreshSummaries()
       setCandidateNote('')
       invalidatePreview()
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Candidata non salvata.') }
@@ -431,7 +503,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
 
   async function propose(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working || !selected.baseVersionId || !message.trim()) return
+    if (!selected || working || aiBusy || !selected.baseVersionId || !message.trim()) return
     setWorking(true)
     setProposing(true)
     setComposerError(null)
@@ -440,14 +512,16 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
-      setThreads((current) => current.map((thread) => thread.id === selected.id ? result.value : thread))
+      setSelectedDetail(result.value)
+      await refreshSummaries()
       setCandidateText(result.value.candidates.at(-1)?.rawText ?? candidateText)
       setMessage('')
       setPreview(null)
     } catch (cause) {
       setComposerError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
-      const current = await window.projectsApi.listDeckThreads(projectId)
-      if (current.ok) setThreads(current.value)
+      const current = await window.projectsApi.getDeckThread(projectId, selected.id)
+      if (current.ok) setSelectedDetail(current.value)
+      await refreshSummaries()
     }
     finally { setWorking(false); setProposing(false) }
   }
@@ -462,22 +536,24 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       if (!result.ok) throw new Error(result.error)
       onAdopt(result.value)
       setConfirmCandidate(null)
-      const [newVersions, newThreads] = await Promise.all([
-        window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreads(projectId)
+      const [newVersions, newThreads, newDetail] = await Promise.all([
+        window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreadSummaries(projectId),
+        window.projectsApi.getDeckThread(projectId, selected.id)
       ])
       if (newVersions.ok) setVersions(newVersions.value)
       if (newThreads.ok) setThreads(newThreads.value)
+      if (newDetail.ok) setSelectedDetail(newDetail.value)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Adozione non riuscita.') }
     finally { setWorking(false) }
   }
 
-  return <><section className="threads-section" aria-label="Thread del mazzo" data-nav-loading={loading}>
+  return <><section className="threads-section" aria-label="Thread del mazzo" data-nav-loading={loading || detailLoading}>
     <div className="panel-heading"><h2>Thread</h2></div>
     {error && !confirmCandidate && <div className="error-banner" role="alert">{error}</div>}
     {loading ? <LoadingSkeleton label="Caricamento thread…" rows={3} /> : <>
       <div className="threads-layout">
         <div className="threads-toolbar">
-          <ThreadSwitcher threads={threads} selected={selected} versions={versions} disabled={working || creating}
+          <ThreadSwitcher threads={threads} selected={selectedSummary} versions={versions} disabled={working || creating}
             onSelect={selectThread} />
           <button ref={newThreadTrigger} id="new-thread-trigger" type="button" className="secondary-button" aria-expanded={creating}
             aria-controls="new-thread-form" disabled={working} onClick={() => creating ? closeCreate() : setCreating(true)}>
@@ -500,7 +576,16 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
             </div>
         </form>}
         <div className="thread-detail">
-          {selected ? <>
+          {detailLoading && !selected ? <LoadingSkeleton label="Caricamento dettaglio thread…" rows={3} /> : selected ? <>
+            {aiJob && (aiJob.status === 'running' || aiJob.status === 'ready') &&
+              <div className="content-note" role="status">{aiJob.status === 'running'
+                ? 'Job Codex in corso per questo thread.' : 'Risultato Codex in attesa di recupero.'}
+                <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla job</button>
+                {aiJob.status === 'ready' && <button type="button" className="text-button" onClick={() => void recoverAi()}>Recupera risultato</button>}
+              </div>}
+            {aiJob && (aiJob.status === 'interrupted' || aiJob.status === 'failed' || aiJob.status === 'cancelled') &&
+              <p className="content-note" role="status">{aiJob.status === 'cancelled'
+                ? 'Job Codex annullato.' : 'Il job Codex precedente non è stato completato. Puoi inviare di nuovo la richiesta.'}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
               catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured onAdopt={confirmAdoption} />
@@ -526,7 +611,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 : !selected.baseVersionId ? 'Per proporre una lista serve una lista iniziale del thread.' : 'Ricevi una lista completa da confrontare.'}</p>
               {composerError && <div ref={composerErrorElement} className="error-banner" role="alert" tabIndex={-1}>{composerError}</div>}
               <div className="composer-actions"><div className="thread-form-actions">
-                <button className="primary-button" disabled={working || !message.trim() || (composerMode === 'proposal' && !selected.baseVersionId)}>
+                <button className="primary-button" disabled={working || aiBusy || !message.trim() || (composerMode === 'proposal' && !selected.baseVersionId)}>
                   {(asking || proposing) && <Spinner />}{asking ? 'Risposta in corso…' : proposing ? 'Proposta in corso…'
                     : composerMode === 'ask' ? 'Chiedi a Codex' : 'Genera proposta Codex'}
                 </button>
