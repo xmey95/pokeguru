@@ -33,6 +33,9 @@ describe('guide references', () => {
     expect(segments.map((item) => item.text).join('')).toBe('Gardevoir ex: scheda.\nFonte Gardevoir ex.')
     expect(segments.filter((item) => item.target).every((item) => item.target?.kind === 'catalog')).toBe(true)
     expect(guideSegments(`[scheda](${url})`, [], new Map())[0]).toEqual({ text: `scheda (${url})` })
+    const staleReference: GuideReference = { label: 'Gardevoir ex', target: { kind: 'source', url } }
+    expect(guideSegments('Gardevoir ex', [staleReference])).toEqual([{ text: 'Gardevoir ex' }])
+    expect(guideSegments('Gardevoir ex', [staleReference], cardTargets)[0].target?.kind).toBe('catalog')
     expect(guideSegments('https://limitlesstcg.com/decks?format=standard', [])[0].text).toBe('Meta Limitless')
   })
   it('matches whole names, longest first, with typographic apostrophes', () => {

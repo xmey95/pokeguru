@@ -78,7 +78,11 @@ const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').r
 
 export function guideSegments(text: string, references: GuideReference[], cardTargets: ReadonlyMap<string, string> = new Map()): GuideSegment[] {
   const grouped = new Map<string, GuideReference[]>()
-  for (const reference of references) {
+  const safeReferences = references.flatMap((reference): GuideReference[] => {
+    const target = reference.target.kind === 'catalog' ? reference.target : guideSourceTarget(reference.target.url, cardTargets)
+    return target ? [{ label: reference.label, target }] : []
+  })
+  for (const reference of safeReferences) {
     const name = key(reference.label)
     if (!name.trim()) continue
     grouped.set(name, [...(grouped.get(name) ?? []), reference])
@@ -98,7 +102,7 @@ export function guideSegments(text: string, references: GuideReference[], cardTa
     } else if (/^https?:\/\//i.test(match[0])) {
       const url = match[0].replace(/[.,;:!?)}]+$/, '')
       const target = guideSourceTarget(url, cardTargets)
-      result.push({ text: target ? sourceLabel(url, references, target) : url, target })
+      result.push({ text: target ? sourceLabel(url, safeReferences, target) : url, target })
       if (url.length < match[0].length) result.push({ text: match[0].slice(url.length) })
     } else {
       const reference = unique.find((item) => key(item.label) === key(match[0]))
