@@ -56,6 +56,8 @@ import { fetchRecentWesternTournament } from './limitless-event'
 import { syncTournamentBlock } from './tournament-sync'
 import { syncMainTournamentBlock } from './main-tournament-sync'
 import { TournamentSyncJob } from './tournament-sync-job'
+import { DailySyncStore } from './daily-sync'
+import type { DailySyncSource } from '../shared/daily-sync'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../shared/tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
 import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
@@ -70,6 +72,7 @@ let aiJobStore: AiJobStore | null = null
 let projectStore: ProjectStore | null = null
 let catalogStore: CatalogStore | null = null
 let tournamentStore: TournamentStore | null = null
+let dailySyncStore: DailySyncStore | null = null
 let playTournamentJob: TournamentSyncJob<TournamentSyncProgress> | null = null
 let mainTournamentJob: TournamentSyncJob<MainTournamentSyncProgress> | null = null
 let storageError: string | null = null
@@ -137,6 +140,7 @@ let catalogSyncing = false
 let catalogRetryTimer: ReturnType<typeof setTimeout> | null = null
 let catalogJobController: AbortController | null = null
 let catalogShuttingDown = false
+let startupSyncTimer: ReturnType<typeof setTimeout> | null = null
 const rendererFile = join(__dirname, '../renderer/index.html')
 const rendererUrl = 'pokeguru://bundle/index.html'
 const packagedCsp = [
@@ -165,11 +169,11 @@ function isTrustedRendererUrl(value: string): boolean {
 
 function catalogJobStatus(store: CatalogStore): CatalogSyncStatus {
   const status = store.jobStatus()
-  return { ...status, running: status.state === 'running' ? catalogSyncing
+  return { ...status, daily: dailySyncStore?.read('catalog'), running: status.state === 'running' ? catalogSyncing
     : status.state === 'rate-limited' ? catalogSyncing || catalogRetryTimer !== null : false }
 }
 
-function runCatalogJob(mode: CatalogSyncMode): void {
+function runCatalogJob(mode: CatalogSyncMode, background = false): void {
   const store = catalogStore
   if (!store || catalogSyncing) return
   const status = store.jobStatus()
@@ -178,21 +182,54 @@ function runCatalogJob(mode: CatalogSyncMode): void {
     if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
     catalogRetryTimer = setTimeout(() => {
       catalogRetryTimer = null
-      runCatalogJob(mode)
+      runCatalogJob(mode, background)
     }, Math.min(60 * 60_000, Date.parse(status.cooldownUntil) - Date.now()))
     return
   }
   catalogSyncing = true
   const controller = new AbortController()
   catalogJobController = controller
-  void syncStandardCatalog(store, undefined, mode, controller.signal).catch(() => {
-    // The persisted job state explains the interruption and determines recovery.
+  void syncStandardCatalog(store, undefined, mode, controller.signal).then(() => {
+    if (!catalogShuttingDown) dailySyncStore?.success('catalog')
+  }).catch((error) => {
+    if (!catalogShuttingDown && !controller.signal.aborted) {
+      const message = error instanceof Error ? error.message : 'Catalogo non aggiornato.'
+      dailySyncStore?.failed('catalog', message,
+        /HTTP 429|HTTP 503|limitato temporaneamente/i.test(message) ? store.jobStatus().cooldownUntil : null)
+    }
   }).finally(() => {
     catalogSyncing = false
     if (catalogJobController === controller) catalogJobController = null
-    if (!catalogShuttingDown && catalogStore === store && store.jobStatus().state === 'rate-limited')
+    if (!background && !catalogShuttingDown && catalogStore === store && store.jobStatus().state === 'rate-limited')
       runCatalogJob(mode)
   })
+}
+
+function startDailySync(): void {
+  startupSyncTimer = null
+  if (catalogShuttingDown || !dailySyncStore || !catalogStore || !playTournamentJob || !mainTournamentJob) return
+  const attempt = (source: DailySyncSource, allowed: boolean, start: () => void): void => {
+    if (!allowed || !dailySyncStore?.claim(source)) return
+    try { start() }
+    catch (error) { dailySyncStore?.failed(source, error instanceof Error ? error.message : 'Avvio non riuscito.') }
+  }
+  const catalog = catalogStore.jobStatus()
+  attempt('catalog', !catalogSyncing && !catalogRetryTimer &&
+    !(catalog.state === 'paused' && dailySyncStore.read('catalog').outcome === 'paused') &&
+    !(catalog.mode === 'full' && !['done', 'idle'].includes(catalog.state)),
+  () => runCatalogJob('new', true))
+  const play = tournamentStore?.progress()
+  attempt('play', !playTournamentJob.status().active &&
+    !(dailySyncStore.read('play').outcome === 'idle' && play &&
+      (play.status === 'running' || play.status === 'rate-limited')) &&
+    !(play?.mode === 'full' && play.status !== 'complete') && dailySyncStore.read('play').outcome !== 'paused',
+  () => { playTournamentJob!.start('new', true) })
+  const main = tournamentStore?.mainProgress()
+  attempt('main', !mainTournamentJob.status().active &&
+    !(dailySyncStore.read('main').outcome === 'idle' && main &&
+      (main.status === 'running' || main.status === 'rate-limited')) &&
+    !(main?.mode === 'full' && main.status !== 'complete') && dailySyncStore.read('main').outcome !== 'paused',
+  () => { mainTournamentJob!.start('new', true) })
 }
 async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig,
   signal?: AbortSignal): Promise<MatchupDiscussion> {
@@ -416,7 +453,7 @@ function registerProjectHandlers(): void {
   ipcMain.handle('tournament:sync-status', (event): OperationResult<TournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
-    try { return { ok: true, value: playTournamentJob.status() } }
+    try { return { ok: true, value: { ...playTournamentJob.status(), daily: dailySyncStore?.read('play') } } }
     catch { return { ok: false, error: 'Stato aggiornamento tornei non leggibile.' } }
   })
 
@@ -424,14 +461,25 @@ function registerProjectHandlers(): void {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
     if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità aggiornamento non valida.' }
-    try { return { ok: true, value: playTournamentJob.start(mode) } }
-    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento tornei non riuscito.' } }
+    try {
+      if (!playTournamentJob.status().active) dailySyncStore?.started('play')
+      return { ok: true, value: { ...playTournamentJob.start(mode), daily: dailySyncStore?.read('play') } }
+    }
+    catch (error) {
+      dailySyncStore?.failed('play', error instanceof Error ? error.message : 'Aggiornamento tornei non riuscito.')
+      return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento tornei non riuscito.' }
+    }
   })
 
   ipcMain.handle('tournament:sync-pause', (event): OperationResult<TournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
-    try { return { ok: true, value: playTournamentJob.pause() } }
+    if (!playTournamentJob.status().active) return { ok: false, error: 'Nessuna scansione da mettere in pausa.' }
+    try {
+      const value = playTournamentJob.pause()
+      dailySyncStore?.paused('play')
+      return { ok: true, value: { ...value, daily: dailySyncStore?.read('play') } }
+    }
     catch { return { ok: false, error: 'Pausa tornei non riuscita.' } }
   })
 
@@ -453,7 +501,7 @@ function registerProjectHandlers(): void {
   ipcMain.handle('tournament:main-sync-status', (event): OperationResult<MainTournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
-    try { return { ok: true, value: mainTournamentJob.status() } }
+    try { return { ok: true, value: { ...mainTournamentJob.status(), daily: dailySyncStore?.read('main') } } }
     catch { return { ok: false, error: 'Stato Regional non leggibile.' } }
   })
 
@@ -461,14 +509,25 @@ function registerProjectHandlers(): void {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
     if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità Regional non valida.' }
-    try { return { ok: true, value: mainTournamentJob.start(mode) } }
-    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento Regional non riuscito.' } }
+    try {
+      if (!mainTournamentJob.status().active) dailySyncStore?.started('main')
+      return { ok: true, value: { ...mainTournamentJob.start(mode), daily: dailySyncStore?.read('main') } }
+    }
+    catch (error) {
+      dailySyncStore?.failed('main', error instanceof Error ? error.message : 'Aggiornamento Regional non riuscito.')
+      return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento Regional non riuscito.' }
+    }
   })
 
   ipcMain.handle('tournament:main-sync-pause', (event): OperationResult<MainTournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
-    try { return { ok: true, value: mainTournamentJob.pause() } }
+    if (!mainTournamentJob.status().active) return { ok: false, error: 'Nessuna scansione da mettere in pausa.' }
+    try {
+      const value = mainTournamentJob.pause()
+      dailySyncStore?.paused('main')
+      return { ok: true, value: { ...value, daily: dailySyncStore?.read('main') } }
+    }
     catch { return { ok: false, error: 'Pausa Regional non riuscita.' } }
   })
 
@@ -576,6 +635,7 @@ function registerProjectHandlers(): void {
     if (['paused', 'interrupted', 'rate-limited'].includes(status.state) && status.mode !== mode)
       return { ok: false, error: 'Completa o annulla l’aggiornamento recuperabile prima di cambiare modalità.' }
     if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
+    dailySyncStore?.started('catalog')
     runCatalogJob(mode)
     return { ok: true, value: catalogJobStatus(catalogStore) }
   })
@@ -588,6 +648,7 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Nessun aggiornamento da mettere in pausa.' }
     if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
     catalogStore.pauseJob(null, 'In pausa su richiesta')
+    dailySyncStore?.paused('catalog')
     catalogJobController?.abort()
     return { ok: true, value: catalogJobStatus(catalogStore) }
   })
@@ -600,6 +661,7 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Nessun aggiornamento da annullare.' }
     if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
     catalogStore.cancelJob()
+    dailySyncStore?.cancelled('catalog')
     catalogJobController?.abort()
     return { ok: true, value: catalogJobStatus(catalogStore) }
   })
@@ -1450,6 +1512,7 @@ app.whenReady().then(async () => {
     projectStore = new ProjectStore(databasePath)
     catalogStore = new CatalogStore(databasePath)
     tournamentStore = new TournamentStore(databasePath)
+    dailySyncStore = new DailySyncStore(databasePath)
     const eventStore = tournamentStore
     let playBlockRequests = 0
     playTournamentJob = new TournamentSyncJob(() => eventStore.progress(),
@@ -1460,12 +1523,18 @@ app.whenReady().then(async () => {
           return fetch(input, init)
         }
         return syncTournamentBlock(eventStore, mode, countedFetch, new Date(), shouldStop)
-      }, () => Math.max(7_500, playBlockRequests * 7_500))
+      }, () => Math.max(7_500, playBlockRequests * 7_500), undefined, (result) => {
+        if (result.kind === 'success') dailySyncStore?.success('play')
+        else dailySyncStore?.failed('play', result.error ?? 'Play non aggiornato.', result.retryAt)
+      })
     mainTournamentJob = new TournamentSyncJob(() => eventStore.mainProgress(),
       (mode, shouldStop) => syncMainTournamentBlock(eventStore, mode, fetch, new Date(), shouldStop), 300,
       () => {
         if (projectStore && generatingDeckThreads.size === 0 && !hasRecoverableThreadJob())
           eventStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
+      }, (result) => {
+        if (result.kind === 'success') dailySyncStore?.success('main')
+        else dailySyncStore?.failed('main', result.error ?? 'Regional non aggiornati.', result.retryAt)
       })
     aiJobStore = new AiJobStore(databasePath)
     completeDatabaseMigration(databasePath, migration)
@@ -1477,6 +1546,7 @@ app.whenReady().then(async () => {
     playTournamentJob?.shutdown(); playTournamentJob = null
     mainTournamentJob?.shutdown(); mainTournamentJob = null
     tournamentStore?.close(); tournamentStore = null
+    dailySyncStore?.close(); dailySyncStore = null
     catalogStore?.close(); catalogStore = null
     aiJobStore?.close(); aiJobStore = null
     projectStore?.close(); projectStore = null
@@ -1493,6 +1563,12 @@ app.whenReady().then(async () => {
 
   registerProjectHandlers()
   createWindow()
+  if (process.env.POKEGURU_AUTO_SYNC !== '0') {
+    const requestedDelay = Number(process.env.POKEGURU_AUTO_SYNC_DELAY_MS)
+    const delay = Number.isFinite(requestedDelay) && requestedDelay >= 3_000 && requestedDelay <= 30_000
+      ? requestedDelay : 3_000
+    startupSyncTimer = setTimeout(startDailySync, delay)
+  }
   setTimeout(() => { void recoverAiJobs() }, 0)
 
   app.on('activate', () => {
@@ -1502,6 +1578,7 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   catalogShuttingDown = true
+  if (startupSyncTimer) clearTimeout(startupSyncTimer)
   playTournamentJob?.shutdown()
   mainTournamentJob?.shutdown()
   if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
@@ -1511,6 +1588,7 @@ app.on('before-quit', () => {
   projectStore?.close()
   catalogStore?.close()
   tournamentStore?.close()
+  dailySyncStore?.close()
   aiJobStore?.close()
   projectStore = null
   aiJobStore = null

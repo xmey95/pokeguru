@@ -9,6 +9,25 @@ const idle = (): Progress => ({ mode: null, status: 'idle', cooldownUntil: null,
 afterEach(() => vi.useRealTimers())
 
 describe('automatic event acquisition', () => {
+  it('stops a silent run after one 429 and reports the retry time', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-25T10:00:00Z'))
+    const retryAt = new Date(Date.now() + 60_000).toISOString()
+    let persisted: Progress = idle()
+    const block = vi.fn(async () => {
+      persisted = { ...persisted, mode: 'new', status: 'rate-limited', cooldownUntil: retryAt }
+      return persisted
+    })
+    const terminal = vi.fn()
+    const job = new TournamentSyncJob(() => persisted, block, 100, undefined, terminal)
+    job.start('new', true)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(block).toHaveBeenCalledTimes(1)
+    expect(job.status().active).toBe(false)
+    expect(terminal).toHaveBeenCalledWith(expect.objectContaining({ kind: 'rate-limited', retryAt }))
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(block).toHaveBeenCalledTimes(1)
+  })
   it('advances persisted blocks to completion after one start', async () => {
     vi.useFakeTimers()
     let persisted = idle()

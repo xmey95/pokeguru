@@ -7,6 +7,7 @@ import { CatalogCardDetail } from './CatalogCardDetail'
 import { SearchEmpty } from './SearchEmpty'
 import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 import { CatalogActivity } from './CatalogActivity'
+import { DailySyncNotice } from './DailySyncNotice'
 import { useCardPreview } from './CardPreview'
 
 function date(value: string): string {
@@ -349,6 +350,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     {catalog?.rulePackageError && <p className="diagnostics" role="alert">{catalog.rulePackageError}</p>}
     {currentRuleAudit?.status === 'changed' && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
     {currentRuleAudit?.status === 'unavailable' && <p className="catalog-gap-summary" role="status">Fonti Standard non raggiungibili · ultimo controllo riuscito {currentRuleAudit.verifiedAt ? date(currentRuleAudit.verifiedAt) : 'mai'}.</p>}
+    <DailySyncNotice state={syncStatus?.daily} active={syncStatus?.running} />
     <CatalogActivity status={syncStatus} requesting={requesting} controlling={controlPending} startedAt={startedAt}
       onResume={() => void syncStandard(syncStatus?.mode ?? 'new')}
       onPause={() => void controlStandard('pause')} onCancel={() => void controlStandard('cancel')} />
