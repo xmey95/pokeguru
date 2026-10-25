@@ -27,12 +27,10 @@ try {
     const nav = page.locator('.sidebar').getByRole('button', { name: section, exact: true })
     // The previous route restores focus over two animation frames; let it finish before keyboard input.
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
-    await nav.focus()
-    await page.keyboard.press('Enter')
+    await nav.press('Enter')
     try {
-      await page.waitForFunction((name) => [...document.querySelectorAll('.sidebar button')]
-        .some((element) => element.getAttribute('aria-label') === name &&
-          element.classList.contains('active')) && !document.querySelector('[data-nav-loading="true"]'), section,
+      await page.waitForFunction((name) => document.querySelector(`.sidebar button[aria-label="${name}"]`)?.getAttribute('aria-current') === 'page' &&
+        !document.querySelector('[data-nav-loading="true"]'), section,
       { timeout: 10_000 })
     } catch (error) {
       const state = await page.evaluate(() => ({ active: document.querySelector('.sidebar button.active')?.getAttribute('aria-label'),
