@@ -474,6 +474,7 @@ function registerProjectHandlers(): void {
   ipcMain.handle('tournament:sync-pause', (event): OperationResult<TournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
+    if (!playTournamentJob.status().active) return { ok: false, error: 'Nessuna scansione da mettere in pausa.' }
     try {
       const value = playTournamentJob.pause()
       dailySyncStore?.paused('play')
@@ -521,6 +522,7 @@ function registerProjectHandlers(): void {
   ipcMain.handle('tournament:main-sync-pause', (event): OperationResult<MainTournamentSyncProgress> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
+    if (!mainTournamentJob.status().active) return { ok: false, error: 'Nessuna scansione da mettere in pausa.' }
     try {
       const value = mainTournamentJob.pause()
       dailySyncStore?.paused('main')
@@ -659,7 +661,7 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Nessun aggiornamento da annullare.' }
     if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
     catalogStore.cancelJob()
-    dailySyncStore?.paused('catalog')
+    dailySyncStore?.cancelled('catalog')
     catalogJobController?.abort()
     return { ok: true, value: catalogJobStatus(catalogStore) }
   })

@@ -68,6 +68,10 @@ describe('daily background acquisition', () => {
     expect(store.claim('main', now)).toBe(false)
     store.success('main', now)
     expect(store.due('main', new Date('2026-10-25T15:00:00Z'))).toBe(false)
+    store.cancelled('catalog')
+    expect(store.claim('catalog', new Date('2026-10-27T12:00:00Z'))).toBe(false)
+    store.started('catalog', now)
+    expect(store.read('catalog').outcome).toBe('running')
     store.close()
   })
 

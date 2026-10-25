@@ -16,6 +16,7 @@ export function DailySyncNotice({ state, active = false }: { state?: DailySyncSt
       ? automatic ? 'Aggiornamento giornaliero in background completato.'
         : state.trigger === 'manual' ? 'Aggiornamento manuale completato.' : 'Ultimo aggiornamento completato.'
       : state.outcome === 'paused' ? 'Aggiornamento in pausa su richiesta.'
+        : state.outcome === 'cancelled' ? 'Aggiornamento automatico annullato su richiesta.'
         : state.outcome === 'rate-limited' ? 'La fonte ha limitato l’aggiornamento in background.'
         : automatic ? 'Aggiornamento giornaliero in background non riuscito.' : 'Aggiornamento non riuscito.'
   return <p className="content-note" role="status">{message} {last}

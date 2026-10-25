@@ -26,7 +26,8 @@ export class DailySyncStore {
       const legacy = this.db.prepare('SELECT state, updated_at, retry_at FROM catalog_job WHERE id=1').get() as
         { state: string; updated_at: string; retry_at: string | null } | undefined
       if (legacy?.state === 'done') this.success('catalog', new Date(legacy.updated_at))
-      else if (legacy?.state === 'paused' || legacy?.state === 'cancelled') this.paused('catalog')
+      else if (legacy?.state === 'paused') this.paused('catalog')
+      else if (legacy?.state === 'cancelled') this.cancelled('catalog')
       else if (legacy && legacy.state !== 'idle') this.failed('catalog', 'Aggiornamento precedente interrotto.',
         legacy.retry_at, Number.isFinite(Date.parse(legacy.updated_at)) ? new Date(legacy.updated_at) : new Date())
     }
@@ -47,7 +48,7 @@ export class DailySyncStore {
   /** Require 24 elapsed hours, regardless of midnight, timezone or DST. */
   due(source: DailySyncSource, now = new Date()): boolean {
     const state = this.read(source)
-    if (state.outcome === 'paused') return false
+    if (state.outcome === 'paused' || state.outcome === 'cancelled') return false
     if (state.lastSuccessAt && now.getTime() - Date.parse(state.lastSuccessAt) < DAILY_INTERVAL_MS)
       return false
     return !state.nextAttemptAt || Date.parse(state.nextAttemptAt) <= now.getTime()
@@ -98,6 +99,13 @@ export class DailySyncStore {
       (source, last_attempt_at, last_success_at, trigger, outcome, next_attempt_at, error)
       VALUES (?, NULL, NULL, NULL, 'paused', NULL, NULL)
       ON CONFLICT(source) DO UPDATE SET outcome='paused', next_attempt_at=NULL`).run(source)
+  }
+
+  cancelled(source: DailySyncSource): void {
+    this.db.prepare(`INSERT INTO daily_sync
+      (source, last_attempt_at, last_success_at, trigger, outcome, next_attempt_at, error)
+      VALUES (?, NULL, NULL, NULL, 'cancelled', NULL, NULL)
+      ON CONFLICT(source) DO UPDATE SET outcome='cancelled', next_attempt_at=NULL`).run(source)
   }
 
   close(): void { this.db.close() }
