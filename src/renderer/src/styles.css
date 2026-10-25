@@ -30,7 +30,15 @@ li + li { margin-top: 4px; }
 a { color: var(--accent); }
 .icon { width: 20px; height: 20px; display: inline-block; flex: none; vertical-align: middle; }
 .project-picker { position: fixed; inset: auto; margin: 0; padding: 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); box-shadow: 0 12px 36px #12273526; overflow: hidden; }
-.project-picker:popover-open { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px; }
+.project-picker:popover-open { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; gap: 12px; }
+.project-picker-tabs { display: flex; gap: 8px; }
+.project-picker-tabs button { min-height: 36px; padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); }
+.project-picker-tabs button[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 650; }
+.project-picker-row { border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.project-row-actions { display: flex; justify-content: flex-end; gap: 6px; padding: 0 8px 4px; }
+.project-row-actions button { min-height: 32px; padding: 4px 7px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--accent); font-size: var(--text-xs); }
+.project-row-actions button:hover { background: var(--accent-soft); }
+.project-row-actions .project-delete-action { color: var(--danger); }
 .project-picker-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
 .project-picker-head h2 { margin: 0; font-size: var(--text-md); }
 .project-picker-head > span { color: var(--ink-muted); font-size: var(--text-xs); }
@@ -443,6 +451,7 @@ details[open] > summary { margin-bottom: 8px; }
 .adoption-dialog { width: min(520px, 100%); max-height: calc(100vh - 48px); overflow: auto; padding: 32px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-dialog); }
 .adoption-dialog h2 { margin-bottom: 16px; }
 .adoption-dialog p { color: var(--ink-secondary); }
+.adoption-dialog input { display: block; width: 100%; margin-top: 8px; }
 .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 
 /* Matchup */

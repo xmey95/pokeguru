@@ -268,6 +268,10 @@ Il renderer resta in un solo chunk JS finché una misura sul percorso critico no
 
 Una richiesta come «come posso arginare questa cosa?» recupera le schede usando anche il titolo del Thread e le ultime sei osservazioni dell'utente; il ranking delle liste torneo usa lo stesso testo. Le carte nominate prevalgono sulle carte non citate quando si applica il limite del pacchetto. I nomi più specifici consumano le occorrenze prima dei nomi contenuti in essi, evitando di confondere Mega Lucario ex con Lucario ex. Per gli alias fra lingue si aggiungono solo corrispondenze verificate: [Limitless in italiano](https://limitlesstcg.com/cards/it/MEG/186) registra «Compassione di Lino», mentre il catalogo TCGdex inglese registra Wally's Compassion. Il pacchetto indica entrambi i nomi e la stampa acquisita. Il confronto del testo di gioco normalizza soltanto la grafia `×`/`x` della debolezza per scegliere fra stampe equivalenti; varianti con altre regole diverse non sono inferite come equivalenti. Questo alias non costituisce una traduzione generale del catalogo.
 
+### T-106 — Archivio reversibile e cancellazione esplicita dei progetti (APP-106)
+
+L'archiviazione è uno stato del progetto (`archived_at`), non una copia: così tutte le relazioni, versioni e prove AI restano intatte e il ripristino riattiva lo stesso ID. Le API operative espongono solo i progetti attivi. Lo schema v3 usa il backup verificato esistente prima dell'upgrade e aggiunge la colonna in modo idempotente. La cancellazione è ammessa solo dopo l'archiviazione e la digitazione esatta del nome; una transazione elimina i job AI registrati e il progetto con le relazioni, mentre Catalogo, Eventi e snapshot Metagame globali restano condivisi. I job AI attivi bloccano l'azione e le relative directory temporanee sono rimosse dopo il commit. Le copie pre-upgrade restano indipendenti: cancellarle automaticamente comprometterebbe il recupero di altri progetti e non garantirebbe la rimozione di eventuali copie esterne.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

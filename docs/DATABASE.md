@@ -4,9 +4,15 @@ Pokéguru conserva progetti, versioni, Thread, candidate, evidenze AI, Catalogo 
 
 ## Upgrade dello schema
 
-La versione corrente è `PRAGMA user_version = 2`. La versione 0 indica l'archivio precedente alla registrazione esplicita delle migrazioni; la versione 1 precede il registro dei job Codex. Prima di aprire gli store con una versione precedente, l'app crea con l'API backup di SQLite una copia consistente in `data/backups/pokeguru-pre-v<versione>-*.sqlite`. Un file accanto con suffisso `.verified` indica che, al momento della creazione, la copia ha superato `integrity_check` e `foreign_key_check`. I nomi sono univoci: una nuova prova dopo un'interruzione non sovrascrive il primo backup.
+La versione corrente è `PRAGMA user_version = 3`. La versione 0 indica l'archivio precedente alla registrazione esplicita delle migrazioni; la versione 1 precede il registro dei job Codex e la versione 2 precede l'archiviazione dei progetti. Prima di aprire gli store con una versione precedente, l'app crea con l'API backup di SQLite una copia consistente in `data/backups/pokeguru-pre-v<versione>-*.sqlite`. Un file accanto con suffisso `.verified` indica che, al momento della creazione, la copia ha superato `integrity_check` e `foreign_key_check`. I nomi sono univoci: una nuova prova dopo un'interruzione non sovrascrive il primo backup.
 
-Solo dopo l'apertura degli store e i controlli di integrità dell'archivio aggiornato l'app registra la versione 2. Se l'upgrade si interrompe, la versione precedente resta registrata e il successivo avvio ripete i passaggi idempotenti. Una versione più nuova di quella supportata ferma l'apertura. Le revisioni Regional precedenti all'upgrade vengono conservate tutte.
+Solo dopo l'apertura degli store e i controlli di integrità dell'archivio aggiornato l'app registra la versione 3. Se l'upgrade si interrompe, la versione precedente resta registrata e il successivo avvio ripete i passaggi idempotenti. Una versione più nuova di quella supportata ferma l'apertura. Le revisioni Regional precedenti all'upgrade vengono conservate tutte.
+
+## Archivio e cancellazione dei progetti
+
+`projects.archived_at` è nullo per i progetti attivi, compresi quelli preesistenti dopo la migrazione. **Archivia** nasconde un progetto dalle viste operative senza modificarne liste, vincoli, Thread, candidate, guide o evidenze; **Ripristina** lo riattiva. Un job Codex in corso deve terminare o essere annullato prima di archiviare. La cancellazione è disponibile solo per progetti archiviati e richiede il nome esatto. In una transazione vengono rimossi i job AI e il progetto con le sue relazioni; Catalogo, snapshot Metagame ed Eventi globali restano condivisi. I file temporanei dei job registrati vengono puliti dopo la transazione.
+
+La cancellazione rimuove il progetto dal database attivo, ma **non cancella i backup pre-upgrade già creati**. Queste copie sono indipendenti, possono contenere dati storici e vanno gestite dall'utente separatamente dopo aver valutato le esigenze di recupero. Anche i normali meccanismi del sistema, come copie esterne o pagine SQLite già scritte, non sono una garanzia di cancellazione fisica irreversibile.
 
 ## Job Codex e risultati
 

@@ -35,7 +35,11 @@ export function App() {
   const { view, tab: activeTab } = nav.entry.route
   const importKey = `import:${nav.entry.route.projectId}`
   const [projects, setProjects] = useState<Project[]>([])
+  const [archivedProjects, setArchivedProjects] = useState<Project[]>([])
   const [selected, setSelected] = useState<Project | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
+  const [deleteName, setDeleteName] = useState('')
+  const [projectActionBusy, setProjectActionBusy] = useState(false)
   const [name, setName] = useDraftState('project-name', '')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useBusyState('project.create')
@@ -99,13 +103,15 @@ export function App() {
     async function load(): Promise<void> {
       try {
         if (!window.projectsApi?.list) throw new Error('Collegamento con l’archivio locale non disponibile.')
-        const result = await window.projectsApi.list()
+        const [result, archived] = await Promise.all([window.projectsApi.list(), window.projectsApi.listArchived()])
         if (!active) return
         if (!result.ok) {
           setError(result.error)
           return
         }
+        if (!archived.ok) throw new Error(archived.error)
         setProjects(result.value)
+        setArchivedProjects(archived.value)
         const requested = nav.entry.route.projectId
         const project = requested ? result.value.find((item) => item.id === requested) : result.value[0]
         if (project) {
@@ -124,6 +130,50 @@ export function App() {
 
   async function openProject(id: string): Promise<void> {
     nav.go({ view: 'project', projectId: id }, undefined, `${activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup'} · ${projects.find((item) => item.id === id)?.name ?? 'Progetto'}`)
+  }
+
+  async function archiveProject(id: string): Promise<void> {
+    if (projectActionBusy) return
+    setProjectActionBusy(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.archive(id)
+      if (!result.ok) throw new Error(result.error)
+      const remaining = projects.filter((project) => project.id !== id)
+      setProjects(remaining)
+      setArchivedProjects((current) => [result.value, ...current])
+      if (selected?.id === id) nav.go({ view: 'project', tab: 'deck', projectId: remaining[0]?.id ?? null })
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Archiviazione non riuscita.') }
+    finally { setProjectActionBusy(false) }
+  }
+
+  async function restoreProject(id: string): Promise<void> {
+    if (projectActionBusy) return
+    setProjectActionBusy(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.restore(id)
+      if (!result.ok) throw new Error(result.error)
+      setArchivedProjects((current) => current.filter((project) => project.id !== id))
+      setProjects((current) => [result.value, ...current])
+      nav.go({ view: 'project', tab: 'deck', projectId: id })
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Ripristino non riuscito.') }
+    finally { setProjectActionBusy(false) }
+  }
+
+  async function deleteArchivedProject(): Promise<void> {
+    if (!deleteTarget || projectActionBusy || deleteName !== deleteTarget.name) return
+    setProjectActionBusy(true)
+    setError(null)
+    try {
+      const result = await window.projectsApi.deleteArchived(deleteTarget.id, deleteName)
+      if (!result.ok) throw new Error(result.error)
+      setArchivedProjects((current) => current.filter((project) => project.id !== deleteTarget.id))
+      setDeleteTarget(null)
+      setDeleteName('')
+      document.getElementById('project-switcher-trigger')?.focus()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Cancellazione non riuscita.') }
+    finally { setProjectActionBusy(false) }
   }
 
   function selectConstraintTarget(identityId: string): void {
@@ -280,8 +330,10 @@ export function App() {
             <img className="brand-mark" src="./favicon.svg" alt="Pokéguru" width="40" height="40" />
             <div><strong aria-hidden="true">Pokéguru</strong><span>Analisi competitiva</span></div>
           </div>
-          <ProjectSwitcher projects={projects} selected={selected} loading={loading}
+          <ProjectSwitcher projects={projects} archivedProjects={archivedProjects} selected={selected} loading={loading || projectActionBusy}
             onSelect={(id) => void openProject(id)}
+            onArchive={(id) => void archiveProject(id)} onRestore={(id) => void restoreProject(id)}
+            onDelete={(project) => { setDeleteTarget(project); setDeleteName(''); setError(null) }}
             onCreate={() => { if (view === 'project') setShowCompactCreate(true); else nav.go({ view: 'project' }, { 'project.create': true }) }} />
           <nav className="workspace-nav" aria-label="Aree del progetto">
             <span className="rail-caption">Area di lavoro</span>
@@ -407,6 +459,22 @@ export function App() {
         </main>
         {selected && showDeckCompanion && <DeckCompanion key={selected.id} baseline={baseline} loading={baselineLoading} />}
       </div>
+      {deleteTarget && <div className="adoption-modal-backdrop" onKeyDown={(event) => {
+        if (event.key === 'Escape' && !projectActionBusy) { setDeleteTarget(null); setDeleteName(''); document.getElementById('project-switcher-trigger')?.focus() }
+      }}>
+        <div className="adoption-dialog" role="dialog" aria-modal="true" aria-labelledby="project-delete-title" aria-describedby="project-delete-description">
+          <h2 id="project-delete-title">Elimina definitivamente “{deleteTarget.name}”?</h2>
+          <p id="project-delete-description">Questa azione cancella dall’archivio attivo il progetto, le versioni della lista, i vincoli, i Thread, le candidate, le guide Matchup e le evidenze AI collegate. Non può essere annullata. Il Catalogo e l’archivio globale Eventi restano disponibili.</p>
+          <p>Le copie di backup pre-aggiornamento già create possono ancora contenere questo progetto: vanno gestite separatamente.</p>
+          <label htmlFor="project-delete-name">Scrivi esattamente <strong>{deleteTarget.name}</strong> per confermare</label>
+          <input id="project-delete-name" autoFocus value={deleteName} onChange={(event) => setDeleteName(event.target.value)} autoComplete="off" />
+          {error && <p className="error-banner" role="alert">{error}</p>}
+          <div className="dialog-actions">
+            <button type="button" className="secondary-button" disabled={projectActionBusy} onClick={() => { setDeleteTarget(null); setDeleteName(''); document.getElementById('project-switcher-trigger')?.focus() }}>Annulla</button>
+            <button type="button" className="danger-button" disabled={projectActionBusy || deleteName !== deleteTarget.name} onClick={() => void deleteArchivedProject()}>{projectActionBusy ? 'Eliminazione…' : 'Elimina definitivamente'}</button>
+          </div>
+        </div>
+      </div>}
     </div>
   )
 }

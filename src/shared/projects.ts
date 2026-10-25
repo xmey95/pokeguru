@@ -24,6 +24,7 @@ export interface Project {
   circuitAssignment: 'CREATED' | 'MIGRATED'
   createdAt: string
   updatedAt: string
+  archivedAt: string | null
   status: 'DA_COSTRUIRE' | 'BOZZA' | 'PRONTA_PER_CONTROLLO'
   cardTotal: number | null
 }
@@ -50,8 +51,12 @@ export interface ProjectsApi {
   getStandardRuleAudit(): Promise<OperationResult<StandardRuleAudit | null>>
   checkStandardRuleSources(): Promise<OperationResult<StandardRuleAudit>>
   list(): Promise<OperationResult<Project[]>>
+  listArchived(): Promise<OperationResult<Project[]>>
   get(id: string): Promise<OperationResult<Project | null>>
   create(input: CreateProjectInput): Promise<OperationResult<Project>>
+  archive(id: string): Promise<OperationResult<Project>>
+  restore(id: string): Promise<OperationResult<Project>>
+  deleteArchived(id: string, confirmationName: string): Promise<OperationResult<boolean>>
   getBaseline(projectId: string): Promise<OperationResult<DeckBaseline | null>>
   importDeck(input: ImportDeckInput): Promise<OperationResult<DeckBaseline>>
   listDeckVersions(projectId: string): Promise<OperationResult<DeckVersion[]>>

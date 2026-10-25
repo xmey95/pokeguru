@@ -22,6 +22,7 @@ interface ProjectRow {
   circuit_assignment: Project['circuitAssignment']
   created_at: string
   updated_at: string
+  archived_at: string | null
   baseline_total: number | null
   baseline_problem_count: number | null
 }
@@ -40,13 +41,14 @@ function toProject(row: ProjectRow): Project {
     circuitAssignment: row.circuit_assignment,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    archivedAt: row.archived_at,
     status,
     cardTotal: row.baseline_total
   }
 }
 
 const projectQuery = `
-  SELECT p.id, p.name, p.format, p.circuit, p.circuit_assignment, p.created_at, p.updated_at,
+  SELECT p.id, p.name, p.format, p.circuit, p.circuit_assignment, p.created_at, p.updated_at, p.archived_at,
          b.interpreted_total AS baseline_total, b.problem_count AS baseline_problem_count
   FROM projects p LEFT JOIN deck_baselines b ON b.project_id = p.id
 `
@@ -103,7 +105,8 @@ export class ProjectStore {
         circuit TEXT NOT NULL DEFAULT 'WESTERN' CHECK (circuit IN ('WESTERN', 'JAPAN')),
         circuit_assignment TEXT NOT NULL DEFAULT 'CREATED' CHECK (circuit_assignment IN ('CREATED', 'MIGRATED')),
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        archived_at TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS deck_baselines (
         project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
@@ -155,6 +158,7 @@ export class ProjectStore {
         throw error
       }
     }
+    if (!columns.has('archived_at')) this.db.exec('ALTER TABLE projects ADD COLUMN archived_at TEXT')
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS deck_versions (
         id TEXT PRIMARY KEY,
@@ -388,7 +392,13 @@ export class ProjectStore {
 
   list(): Project[] {
     const rows = this.db
-      .prepare(`${projectQuery} ORDER BY p.created_at DESC, p.id DESC`)
+      .prepare(`${projectQuery} WHERE p.archived_at IS NULL ORDER BY p.created_at DESC, p.id DESC`)
+      .all() as unknown as ProjectRow[]
+    return rows.map(toProject)
+  }
+
+  listArchived(): Project[] {
+    const rows = this.db.prepare(`${projectQuery} WHERE p.archived_at IS NOT NULL ORDER BY p.archived_at DESC, p.id DESC`)
       .all() as unknown as ProjectRow[]
     return rows.map(toProject)
   }
@@ -398,9 +408,44 @@ export class ProjectStore {
       return null
     }
     const row = this.db
-      .prepare(`${projectQuery} WHERE p.id = ?`)
+      .prepare(`${projectQuery} WHERE p.id = ? AND p.archived_at IS NULL`)
       .get(id) as ProjectRow | undefined
     return row ? toProject(row) : null
+  }
+
+  archive(id: string): Project {
+    if (!this.get(id)) throw new Error('Progetto attivo non trovato.')
+    const changed = this.db.prepare('UPDATE projects SET archived_at = ? WHERE id = ? AND archived_at IS NULL')
+      .run(new Date().toISOString(), id)
+    if (changed.changes !== 1) throw new Error('Archiviazione non riuscita.')
+    return this.listArchived().find((project) => project.id === id)!
+  }
+
+  restore(id: string): Project {
+    if (typeof id !== 'string' || id.length > 100) throw new Error('Progetto archiviato non valido.')
+    const changed = this.db.prepare('UPDATE projects SET archived_at = NULL WHERE id = ? AND archived_at IS NOT NULL').run(id)
+    if (changed.changes !== 1) throw new Error('Progetto archiviato non trovato.')
+    return this.get(id)!
+  }
+
+  deleteArchived(id: string, confirmationName: string): string[] {
+    if (typeof id !== 'string' || id.length > 100 || typeof confirmationName !== 'string')
+      throw new Error('Conferma di cancellazione non valida.')
+    const archived = this.listArchived().find((project) => project.id === id)
+    if (!archived) throw new Error('Progetto archiviato non trovato.')
+    if (confirmationName !== archived.name) throw new Error('Il nome di conferma non corrisponde al progetto.')
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const active = this.db.prepare("SELECT 1 FROM ai_jobs WHERE project_id = ? AND status IN ('running', 'ready') LIMIT 1")
+        .get(id)
+      if (active) throw new Error('Attendi o annulla il job AI prima di cancellare il progetto.')
+      const jobs = this.db.prepare('SELECT id FROM ai_jobs WHERE project_id = ?').all(id) as { id: string }[]
+      this.db.prepare('DELETE FROM ai_jobs WHERE project_id = ?').run(id)
+      const changed = this.db.prepare('DELETE FROM projects WHERE id = ? AND archived_at IS NOT NULL').run(id)
+      if (changed.changes !== 1) throw new Error('Cancellazione non riuscita.')
+      this.db.exec('COMMIT')
+      return jobs.map((job) => job.id)
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
   create(input: CreateProjectInput): Project {
@@ -421,6 +466,7 @@ export class ProjectStore {
       circuitAssignment: 'CREATED',
       createdAt: now,
       updatedAt: now,
+      archivedAt: null,
       status: 'DA_COSTRUIRE',
       cardTotal: null
     }
@@ -431,7 +477,7 @@ export class ProjectStore {
   }
 
   getBaseline(projectId: string): DeckBaseline | null {
-    if (typeof projectId !== 'string' || projectId.length > 100) return null
+    if (!this.get(projectId)) return null
     const row = this.db.prepare(`
       SELECT project_id, source, file_name, raw_text, parsed_json, imported_at
       FROM deck_baselines WHERE project_id = ?

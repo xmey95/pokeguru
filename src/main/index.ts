@@ -595,6 +595,11 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.list())
   })
 
+  ipcMain.handle('projects:list-archived', (event): OperationResult<Project[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listArchived())
+  })
+
   ipcMain.handle('projects:get', (event, id: unknown): OperationResult<Project | null> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.get(id as string))
@@ -603,6 +608,37 @@ function registerProjectHandlers(): void {
   ipcMain.handle('projects:create', (event, input: unknown): OperationResult<Project> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.create(input as Parameters<ProjectStore['create']>[0]))
+  })
+
+  function projectHasActiveAiJob(id: string): boolean {
+    return Boolean(aiJobStore?.recoverable().some((job) => job.projectId === id)) ||
+      generatingProjects.has(id) || Boolean(projectStore?.listDeckThreadSummaries(id).some((thread) => generatingDeckThreads.has(thread.id)))
+  }
+
+  ipcMain.handle('projects:archive', (event, id: unknown): OperationResult<Project> => {
+    if (!isMainFrame(event) || typeof id !== 'string') return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore?.get(id)) return { ok: false, error: 'Progetto attivo non trovato.' }
+    if (projectHasActiveAiJob(id)) return { ok: false, error: 'Attendi o annulla il job AI prima di archiviare il progetto.' }
+    return withStore(() => projectStore!.archive(id))
+  })
+
+  ipcMain.handle('projects:restore', (event, id: unknown): OperationResult<Project> => {
+    if (!isMainFrame(event) || typeof id !== 'string') return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.restore(id))
+  })
+
+  ipcMain.handle('projects:delete-archived', (event, id: unknown, confirmationName: unknown): OperationResult<boolean> => {
+    if (!isMainFrame(event) || typeof id !== 'string' || typeof confirmationName !== 'string')
+      return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (generatingProjects.has(id) || Boolean(aiJobStore?.recoverable().some((job) => job.projectId === id)))
+      return { ok: false, error: 'Attendi o annulla il job AI prima di cancellare il progetto.' }
+    const result = withStore(() => projectStore!.deleteArchived(id, confirmationName))
+    if (!result.ok) return result
+    for (const jobId of result.value) {
+      try { clearAiArtifacts(jobId) }
+      catch (error) { console.warn('Pulizia dei file temporanei AI da completare:', jobId, error) }
+    }
+    return { ok: true, value: true }
   })
 
   ipcMain.handle('projects:get-baseline', (event, projectId: unknown): OperationResult<DeckBaseline | null> => {

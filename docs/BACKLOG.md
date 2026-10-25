@@ -108,6 +108,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-099** | Verificare UX Linux, lettore di schermo e scala OS elevata | Verifica UX | R-13 / correzioni review | P1 / M | Build installabile; strumenti di accessibilità | Done |
 | **APP-100** | Misurare il bundle renderer e dividerlo solo se utile | Performance | R-13 / correzioni review | P2 / S | APP-093; baseline avvio e navigazione | Done |
 | **APP-101** | Includere nel Thread le schede già note citate nel contesto | Correzione AI | R-07, R-08 / feedback utente | P1 / S | APP-092/094; caso reale osservato in sola lettura | Done |
+| **APP-106** | Archiviare, ripristinare ed eliminare progetti con conferma | Funzionalità/persistenza | R-01, R-03 / manutenzione pre-I4 | P1 / M | APP-096/097; migrazione e backup verificati | Done |
 
 ### Corrispondenza degli ID assegnati sui rami paralleli
 
@@ -912,6 +913,14 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Accettazione:** una domanda ellittica dopo una nota iniziale su Mega Lucario ex e Compassione di Lino deve includere nell'evidenza il testo di gioco di entrambe le carte già presenti nel Catalogo; il nome italiano deve essere collegato alla scheda inglese verificata; stampe con regole realmente diverse non vengono dichiarate equivalenti. Nessuna risposta storica o dato personale va alterato.
 - **Risultato:** la ricerca delle evidenze usa titolo e ultime sei osservazioni dell'utente oltre alla domanda, dando priorità alle carte nominate anche quando il limite di 36 schede è raggiunto. I nomi sovrapposti sono riconosciuti dal più specifico. Un alias verificato collega «Compassione di Lino» a Wally's Compassion nel catalogo inglese; il pacchetto e l'anteprima espongono questa corrispondenza. La sola differenza tipografica `×2`/`x2` nella debolezza non rende ambigua la scheda di Mega Lucario ex; testi di gioco diversi restano ambigui. La risposta già salvata resta storica e non viene riscritta.
 - **Verifiche e limiti:** sul profilo personale letto in sola lettura il nuovo selettore ha restituito 23/23 schede con testo, comprese le due carte richieste, senza includere Lucario e Lucario ex omonimi parziali; nessuna chiamata AI è stata eseguita sul profilo. Build/typecheck, regressione sintetica, 234 test unitari e smoke Electron Thread offline passati. L'alias è puntuale, non una copertura completa dei nomi italiani; una nuova risposta Codex non è stata generata automaticamente e la qualità tattica resta da osservare nel prossimo turno utente.
+
+### APP-106 — Archiviare, ripristinare ed eliminare progetti con conferma
+
+- **Autorizzazione e Ready:** richiesta esplicita del 25-10-2026. Perimetro: progetti locali, relazioni SQLite, selettore UI e backup; nessuna modifica a Catalogo/Eventi globali o flussi AI.
+- **Accettazione:** archiviazione reversibile con elenco separato e ripristino integrale dopo riapertura; cancellazione disponibile solo dall'archivio con nome esatto, senza toccare altri progetti o dati condivisi. Bloccare archiviazione/cancellazione se un job AI è attivo; backup e limite della cancellazione espliciti.
+- **Risultato:** schema v3 con `archived_at` nullo per tutti i progetti esistenti; lista attiva e archivio separati, azioni nel selettore e conferma testuale per eliminazione. Il progetto archiviato non è aperto dalle API operative. La cancellazione transazionale elimina relazioni, job AI e poi i file temporanei dei job registrati; snapshot Metagame, Catalogo ed Eventi rimangono globali. Decisione T-106 e procedura in `DATABASE.md`.
+- **Verifiche Windows:** build/typecheck e suite generale (`147` passati, `18` live esclusi); test di migrazione v2→v3 con backup `.verified`, riapertura e ripristino di lista/Thread/candidata; test di cancellazione con nome errato, job attivo, adozione, discussioni collegate, isolamento e `foreign_key_check`; percorso Electron a 640 px con archivio, ripristino, conferma, annullamento e riapertura su profilo temporaneo passato. Smoke Electron offline esistente passato dopo aver aggiornato l'aspettativa dello schema v3. Check CI Linux/Windows da registrare nella PR.
+- **Limiti:** la cancellazione riguarda il database attivo; backup pre-upgrade, copie esterne e residui fisici SQLite non vengono eliminati automaticamente. Nessun profilo personale o generazione AI reale usato nella prova.
 
 ## Regola per i blocchi
 
