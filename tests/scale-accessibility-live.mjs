@@ -25,10 +25,26 @@ try {
   const session = await page.context().newCDPSession(page)
   for (const section of ['Lista', 'Thread', 'Matchup', 'Catalogo', 'Eventi', 'Impostazioni AI']) {
     const nav = page.locator('.sidebar').getByRole('button', { name: section, exact: true })
-    await nav.press('Enter')
+    // Navigation restores focus over two frames after a route change.
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    await nav.focus()
+    await page.waitForFunction((name) => document.activeElement?.getAttribute('aria-label') === name, section)
+    await page.keyboard.press('Enter')
     // Navigation renders on the next React commit; the previous view may already be idle.
-    await page.waitForFunction((name) => [...document.querySelectorAll('.sidebar button')]
-      .some((button) => button.getAttribute('aria-label') === name && button.classList.contains('active')), section)
+    try {
+      await page.waitForFunction((name) => [...document.querySelectorAll('.sidebar button')]
+        .some((button) => button.getAttribute('aria-label') === name && button.classList.contains('active')),
+      section, { timeout: 5_000 })
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        title: document.querySelector('.topbar')?.textContent,
+        buttons: [...document.querySelectorAll('.sidebar button')].map((button) => ({
+          name: button.getAttribute('aria-label'), active: button.classList.contains('active'),
+          focused: button === document.activeElement
+        }))
+      }))
+      throw new Error(`${section}: navigazione non attivata dopo Invio; ${JSON.stringify(state)}`, { cause: error })
+    }
     await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
     assert.ok(await nav.evaluate((element) => element.classList.contains('active')),
       `${section}: Invio non ha selezionato la sezione`)
