@@ -276,6 +276,10 @@ La selezione di una carta resta una voce distinta della cronologia. Per questo p
 
 L'archiviazione è uno stato del progetto (`archived_at`), non una copia: così tutte le relazioni, versioni e prove AI restano intatte e il ripristino riattiva lo stesso ID. Le API operative espongono solo i progetti attivi. Lo schema v4 segue il v3 del primo messaggio Codex di APP-109, usa il backup verificato esistente prima dell'upgrade e aggiunge la colonna in modo idempotente. La cancellazione è ammessa solo dopo l'archiviazione e la digitazione esatta del nome; una transazione elimina i job AI registrati e il progetto con le relazioni, mentre Catalogo, Eventi e snapshot Metagame globali restano condivisi. I job AI attivi bloccano l'azione e le relative directory temporanee sono rimosse dopo il commit. Le copie pre-upgrade restano indipendenti: cancellarle automaticamente comprometterebbe il recupero di altri progetti e non garantirebbe la rimozione di eventuali copie esterne.
 
+### T-105 — Anteprima delle stampe dalla cache locale (APP-105)
+
+Il popup delle carte risolve prima l'ID o set/numero esatti nel Catalogo globale. Per una riga con sola identità o nome sceglie un'immagine locale di esempio, segnalandola come tale; corrispondenze ambigue non ricevono un'immagine arbitraria. Il processo principale legge la cache esistente e il renderer ammette soltanto `pokeguru://cards/` o vecchi `data:image/`, senza scaricare da TCGdex o Limitless su hover/focus. Un solo popup è montato per vista e conserva fino a 64 risultati piccoli: il file immagine viene caricato solo mentre il popup è visibile. Per una stampa senza file o senza URL si mostra il motivo, preservando la provenienza già registrata dal Catalogo.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

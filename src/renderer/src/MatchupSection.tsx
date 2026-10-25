@@ -13,6 +13,8 @@ import { MatchupDiscussion as DiscussionView, type RevisionInFlight } from './Ma
 import { MatchupAiControls } from './MatchupAiControls'
 import { MatchupDataPreview, type MatchupAction } from './MatchupDataPreview'
 import { GuideText } from './GuideText'
+import { useCardPreview } from './CardPreview'
+import { ExpandablePreviewDeck } from './PreviewDeckLines'
 import { catalogCardTargets, reportGuideReferences, type GuideReference } from './guide-links'
 import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
 import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
@@ -27,6 +29,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   onOpenAiSettings(): void
   onOpenCatalogCard(identityId: string): void
 }) {
+  const cardPreview = useCardPreview()
   const nav = useNavigation()
   const hasBaseline = baseline !== null
   const baselineKey = baseline?.rawText ?? null
@@ -410,7 +413,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 {report.tournamentEvidence.opponentFieldRecord && <p>Risultati osservati dell’archetipo avversario contro il campo online: {report.tournamentEvidence.opponentFieldRecord.wins}V / {report.tournamentEvidence.opponentFieldRecord.losses}S / {report.tournamentEvidence.opponentFieldRecord.ties}P su {report.tournamentEvidence.opponentFieldRecord.denominator} match con esito ({report.tournamentEvidence.opponentFieldRecord.eligiblePairings} abbinamenti pertinenti, {report.tournamentEvidence.opponentFieldRecord.events} eventi, {date(report.tournamentEvidence.opponentFieldRecord.windowStart)}–{date(report.tournamentEvidence.opponentFieldRecord.windowEnd)}). Non è il winrate del tuo mazzo contro questo archetipo.</p>}
                 {report.tournamentEvidence.status === 'matched' && <>
                   <details className="observed-cards"><summary>Carte osservate · frequenza e meccaniche</summary><p className="content-note">Numero di liste, non copie.</p>
-                  <ul className="evidence-card-list">{report.tournamentEvidence.observedCards.slice(0, 18).map((card) => <li key={card.name}>
+                  <ul className="evidence-card-list">{report.tournamentEvidence.observedCards.slice(0, 18).map((card) => <li key={card.name} tabIndex={0}
+                    {...cardPreview({ name: card.name, identityId: card.catalogIdentityId })}>
                     {card.name} · {card.lists}/{report.tournamentEvidence!.matchedCompleteLists} liste{card.catalogStatus === 'recognized'
                       ? '' : card.catalogStatus === 'ambiguous' ? ' · identità da verificare' : ' · non nel catalogo locale'}
                     {card.catalogIdentityId && <button type="button" className="text-button"
@@ -420,9 +424,12 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                   </li>)}</ul></details>
                   {report.tournamentEvidence.schemaVersion !== 2 && report.tournamentEvidence.eventUrl && <button type="button" className="text-button"
                     onClick={() => void window.projectsApi.openLimitless(report.tournamentEvidence!.eventUrl!)}>Apri evento online ↗</button>}
-                  {report.tournamentEvidence.sampleLists.map((list, index) => <button type="button" className="text-button" key={list.url}
-                    onClick={() => void (list.source === 'main' ? window.projectsApi.openMainTournament(list.url)
-                      : window.projectsApi.openLimitless(list.url))}>Lista osservata {index + 1}{list.eventName ? ` · ${list.eventName}` : ''} ↗</button>)}
+                  {report.tournamentEvidence.sampleLists.map((list, index) => <div key={list.url}>
+                    <button type="button" className="text-button"
+                      onClick={() => void (list.source === 'main' ? window.projectsApi.openMainTournament(list.url)
+                        : window.projectsApi.openLimitless(list.url))}>Lista osservata {index + 1}{list.eventName ? ` · ${list.eventName}` : ''} ↗</button>
+                    {!!list.cards?.length && <ExpandablePreviewDeck summary="Carte della lista osservata" lines={list.cards} />}
+                  </div>)}
                 </>}
               </section>}
               {report.sampleDeckUrl && <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.sampleDeckUrl!)}>Apri la lista avversaria usata ↗</button>}

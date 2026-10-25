@@ -19,6 +19,8 @@ import { Icon } from './Icon'
 import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
 import { ActivityStatus, InlineLoading, LoadingSkeleton, Spinner } from './Loading'
 import { catalogCardTargets, guideSourceTarget, tcgdexCardPrintId } from './guide-links'
+import { useCardPreview } from './CardPreview'
+import { ExpandablePreviewDeck } from './PreviewDeckLines'
 
 interface Props {
   projectId: string
@@ -31,31 +33,43 @@ function ThreadSource({ source, cardTargets, onOpenCatalogCard }: {
   cardTargets: ReadonlyMap<string, string>
   onOpenCatalogCard(identityId: string): void
 }) {
+  const preview = useCardPreview()
+  const printId = source.url ? tcgdexCardPrintId(source.url) : null
+  const previewProps = printId ? preview({ name: source.label, printId }) : {}
   const target = source.url ? guideSourceTarget(source.url, cardTargets) : undefined
   if (target?.kind === 'catalog') return <button type="button" className="text-button"
-    onClick={() => onOpenCatalogCard(target.identityId)}>{source.label} · Catalogo</button>
+    onClick={() => onOpenCatalogCard(target.identityId)} {...previewProps}>{source.label} · Catalogo</button>
   if (target) return <button type="button" className="text-button"
     onClick={() => void (target.kind === 'limitless' ? window.projectsApi.openLimitless(target.url)
       : window.projectsApi.openDeckSource(target.url))}>{source.label} ↗</button>
-  return <span>{source.label}{source.url && tcgdexCardPrintId(source.url) ? ' · scheda non disponibile nel Catalogo locale' : ''}</span>
+  return <span tabIndex={printId ? 0 : undefined} {...previewProps}>{source.label}{printId ? ' · scheda non disponibile nel Catalogo locale' : ''}</span>
 }
 
 function DiffView({ title, diff, beforeLabel = 'PRINCIPALE' }: { title: string; diff: DeckDiff; beforeLabel?: string }) {
+  const preview = useCardPreview()
   return <div className="thread-diff"><strong>{title}: {diff.beforeTotal} → {diff.afterTotal} carte</strong>
     {diff.byName.length === 0 ? <p>Nessuna variazione nelle quantità per nome.</p> : <div className="diff-table" role="table" aria-label={title}>
       <div className="diff-row diff-header" role="row"><span role="columnheader">{beforeLabel}</span><span role="columnheader">CAMBIO</span><span role="columnheader">PROPOSTA</span></div>
-      {diff.byName.map((item) => <div className="diff-row" role="row" key={item.name}>
+      {diff.byName.map((item) => <div className="diff-row" role="row" key={item.name} tabIndex={0}
+        {...preview({ name: item.name })}>
         <span role="cell">{item.before}× {item.name}</span><strong role="cell" className={`delta ${item.delta > 0 ? 'plus' : 'minus'}`}>{item.delta > 0 ? '+' : ''}{item.delta}</strong>
         <span role="cell">{item.after}× {item.name}</span></div>)}</div>}
-    {diff.byPrint.length > 0 && <details><summary>Stampe indicate ({diff.byPrint.length} variazioni)</summary><ul>{diff.byPrint.map((item) =>
-      <li key={item.name}>{item.name}: {item.before} → {item.after}</li>)}</ul></details>}
+    {diff.byPrint.length > 0 && <details><summary>Stampe indicate ({diff.byPrint.length} variazioni)</summary><ul>{diff.byPrint.map((item) => {
+      const match = /^(.*?) · ([A-Z0-9.]+) ([A-Z0-9/.-]+)$/.exec(item.name)
+      return <li key={item.name} tabIndex={0} {...preview(match
+        ? { name: match[1], setCode: match[2], cardNumber: match[3] } : { name: item.name })}>
+        {item.name}: {item.before} → {item.after}</li>
+    })}</ul></details>}
   </div>
 }
 
 function ComparisonList({ title, parsed }: { title: string; parsed: ParsedDeck | null }) {
+  const preview = useCardPreview()
   return <section className="comparison-list"><div className="comparison-list-title"><strong>{title}</strong><span>{parsed?.interpretedTotal ?? 0} carte</span></div>
     <div className="comparison-list-scroll" role="region" aria-label={title} tabIndex={0}>{parsed ? parsed.lines.filter((line) => line.kind === 'card').map((line) =>
-      <div className="comparison-card" key={line.lineNumber}><strong>{line.quantity}×</strong><span>{line.name}</span><small>{line.setCode ? `${line.setCode} ${line.cardNumber}` : 'stampa non indicata'}</small></div>)
+      <div className="comparison-card" key={line.lineNumber} tabIndex={0}
+        {...preview({ name: line.name ?? line.raw, setCode: line.setCode, cardNumber: line.cardNumber })}>
+        <strong>{line.quantity}×</strong><span>{line.name}</span><small>{line.setCode ? `${line.setCode} ${line.cardNumber}` : 'stampa non indicata'}</small></div>)
       : <p>Nessuna lista principale.</p>}</div></section>
 }
 
@@ -81,17 +95,20 @@ function ThreadMessageEvidence({ message, cardTargets, onOpenCatalogCard }: {
 }
 
 function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
+  const preview = useCardPreview()
   return <div className="thread-review"><strong>Anteprima dei dati locali</strong>
     <p>{packet.cardCoverage.withGameplay}/{packet.cardCoverage.selected} schede con testo di gioco; {packet.events.length} eventi, {packet.events.reduce((sum, item) => sum + item.lists.length, 0)} liste selezionate.</p>
     {packet.change.updated.length + packet.change.added.length + packet.change.removed.length > 0 &&
       <p>Rispetto alla risposta precedente: {packet.change.updated.length} fonti aggiornate, {packet.change.added.length} nuove nella selezione, {packet.change.removed.length} non più selezionate.</p>}
     <details><summary>Carte e fonti che verranno inviate</summary>
-      <ul>{packet.cards.map((card) => <li key={card.name}><strong>{card.name}</strong>{card.mentionedAs ? ` (citata come ${card.mentionedAs})` : ''} · {card.identityStatus === 'ambiguous' ? 'identità ambigua' : card.identityStatus === 'missing' ? 'scheda assente' : card.printId}
+      <ul>{packet.cards.map((card) => <li key={card.name} tabIndex={0}
+        {...preview({ name: card.name, printId: card.printId })}><strong>{card.name}</strong>{card.mentionedAs ? ` (citata come ${card.mentionedAs})` : ''} · {card.identityStatus === 'ambiguous' ? 'identità ambigua' : card.identityStatus === 'missing' ? 'scheda assente' : card.printId}
         {card.gameplayText && <p>{card.gameplayText}</p>}</li>)}</ul>
       {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte omesse per il limite del contesto.</p>}
       {packet.events.map((event) => <details key={event.eventId}><summary>{event.name} · {event.date} · {event.lists.length} liste</summary>
         <p>{event.kind === 'online' ? 'Online' : 'In presenza'} · {event.completeLists} liste complete su {event.participants} partecipazioni visibili.</p>
-        {event.lists.map((list) => <details key={list.sourceId}><summary>{list.deck} · posto {list.placing ?? '?'}</summary><pre>{list.cards.join('\n')}</pre></details>)}
+        {event.lists.map((list) => <ExpandablePreviewDeck key={list.sourceId}
+          summary={`${list.deck} · posto ${list.placing ?? '?'}`} lines={list.cards} />)}
       </details>)}
     </details>
     <p>Il pacchetto viene ricalcolato al momento dell'invio, così include eventuali aggiornamenti locali nel frattempo.</p>

@@ -1,5 +1,6 @@
 import { LoadingSkeleton } from './Loading'
 import { useMemo } from 'react'
+import { useCardPreview } from './CardPreview'
 import type { DeckBaseline, DeckLine } from '../../shared/deck-import'
 
 interface DeckGroup {
@@ -43,6 +44,7 @@ function deckState(baseline: DeckBaseline | null, loading: boolean): string {
 }
 
 export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | null; loading: boolean }) {
+  const preview = useCardPreview()
   const groups = useMemo(() => baseline ? groupCards(baseline) : [], [baseline])
   const namedGroups = groups.filter((group) => group.name !== 'Carte importate')
   return <aside className="deck-companion" aria-label="Lista principale persistente" data-testid="deck-companion">
@@ -59,7 +61,8 @@ export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | 
       {loading ? <LoadingSkeleton label="Caricamento lista…" rows={3} /> : !baseline ? <p>Aggiungi una lista dalla sezione Lista.</p>
         : groups.map((group, index) => <section className="companion-group" key={`${group.name}-${index}`}>
             <h3>{group.name}<span>{group.total}</span></h3>
-            {group.lines.map((line) => <div className="companion-row" key={line.lineNumber}>
+            {group.lines.map((line) => <div className="companion-row" key={line.lineNumber} tabIndex={0}
+              {...preview({ name: line.name ?? line.raw, setCode: line.setCode, cardNumber: line.cardNumber })}>
               <strong>{line.quantity}</strong><span title={line.name}>{line.name}</span>
               {line.setCode && <small>{line.setCode} {line.cardNumber}</small>}</div>)}
           </section>)}

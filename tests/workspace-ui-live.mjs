@@ -21,6 +21,21 @@ async function launch() {
     env: { ...process.env, POKEGURU_DATA_DIR: profile }, timeout: 30000 })
 }
 
+async function checkCardPreview(page, selector) {
+  const row = page.locator(selector).first()
+  await row.focus()
+  const popup = page.getByTestId('card-preview')
+  await popup.getByText('Carta non trovata nel Catalogo locale.').waitFor()
+  assert.equal(await row.getAttribute('aria-describedby'), 'card-preview')
+  const bounds = await popup.boundingBox()
+  const viewport = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
+  assert.ok(bounds && bounds.x >= 0 && bounds.y >= 0 &&
+    bounds.x + bounds.width <= viewport.width && bounds.y + bounds.height <= viewport.height,
+  `${selector}: anteprima fuori finestra`)
+  await page.keyboard.press('Escape')
+  await popup.waitFor({ state: 'hidden' })
+}
+
 async function checkGeometry(page, width, height, view) {
   await page.setViewportSize({ width, height })
   const boxes = await page.evaluate(() => {
@@ -93,7 +108,14 @@ function seedMatchup() {
     ourKeyCards: 'Mega Absol ex, Mega Audino ex, Rare Candy e Night Stretcher.',
     theirKeyCards: 'Gardevoir ex e il motore di evoluzione avversario.',
     strategy: 'Apri cercando Ralts e una carta di ricerca. A metà partita conserva una via di recupero e valuta quando investire Energie su Mega Absol ex. In chiusura usa Boss’s Orders solo quando il bersaglio porta a un premio decisivo.',
-    limitations: 'Fixture UI per verificare il layout: questa guida non è stata generata da Codex e non deriva da risultati di partite.' }
+    limitations: 'Fixture UI per verificare il layout: questa guida non è stata generata da Codex e non deriva da risultati di partite.',
+    tournamentEvidence: { schemaVersion: 2, status: 'matched', detail: 'Evidenze di esempio per la UI.',
+      eventId: 'fixture-event', eventName: 'Fixture UI', eventDate: now, eventUrl: null,
+      eventLists: 1, eventParticipants: 1, matchedDeckId: opponent.id, matchedCompleteLists: 1,
+      observedCards: [{ name: 'Gardevoir ex', lists: 1, catalogIdentityId: null,
+        catalogStatus: 'not-in-catalog' }],
+      sampleLists: [{ url: 'https://limitlesstcg.com/decks/list/12345', placing: 1,
+        cards: ['2 Gardevoir ex MEG 1'] }] } }
   database.prepare('INSERT INTO meta_snapshots (id, fetched_at, payload) VALUES (?, ?, ?)')
     .run(metaId, now, JSON.stringify(snapshot))
   database.prepare('INSERT INTO matchup_reports (project_id, meta_id, opponent_id, deck_hash, generated_at, payload) VALUES (?, ?, ?, ?, ?, ?)')
@@ -154,6 +176,7 @@ try {
   await page.keyboard.press('Enter')
   assert.match(await page.locator('.deck-composition').innerText(), /Pokémon\s*16\s*Allenatori\s*33\s*Energie\s*11/)
   assert.equal(await page.locator('.deck-card .card-thumbnail img').count(), 0, 'Catalogo vuoto: non inventare immagini')
+  await checkCardPreview(page, '.deck-card-toggle')
   await page.locator('.deck-composition').getByRole('link', { name: 'Energie 11' }).click()
   assert.ok((await page.locator('#deck-group-energy').boundingBox()).y < 720, 'Il riepilogo non porta alla sezione Energie')
   await page.locator('.main-content').evaluate((element) => { element.scrollTop = 0 })
@@ -178,6 +201,7 @@ try {
   assert.equal(await page.locator('.workspace-nav button:focus').evaluate((el) => getComputedStyle(el).outlineWidth), '3px')
   await page.keyboard.press('Enter')
   await page.getByTestId('deck-companion').waitFor()
+  await checkCardPreview(page, '.companion-row')
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano più rapido')
   await page.getByLabel('Primo messaggio a Codex').fill('Vorrei conservare più risorse per il finale. Osservazione di esempio UI.')
@@ -194,6 +218,7 @@ try {
   await page.locator('.candidate-comparison > summary').focus()
   await page.keyboard.press('Enter')
   assert.ok(await page.locator('.comparison-list-scroll').first().isVisible())
+  await checkCardPreview(page, '.comparison-card')
   const scrolls = await page.evaluate(() => {
     const main = document.querySelector('.main-content')
     const list = document.querySelector('.companion-list')
@@ -266,6 +291,10 @@ try {
   assert.equal(await page.locator('.matchup-option').count(), 1, 'La ricerca non filtra gli archetipi')
   await page.locator('.matchup-option').filter({ hasText: 'Gardevoir ex · fixture UI' }).click({ timeout: 30000 })
   await page.locator('.matchup-fields').first().getByRole('heading', { name: 'Piano di gioco' }).waitFor()
+  await page.locator('.guide-sources > summary').click()
+  await page.locator('.observed-cards > summary').click()
+  await checkCardPreview(page, '.evidence-card-list li')
+  await page.locator('.guide-sources > summary').click()
   assert.equal(await page.locator('.discussion-history-item').count(), 1)
   assert.equal(await page.locator('.discussion-latest').locator('.discussion-version').count(), 0,
     'La revisione corrente ripete la guida già visibile sopra')

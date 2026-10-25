@@ -7,6 +7,7 @@ import { CatalogCardDetail } from './CatalogCardDetail'
 import { SearchEmpty } from './SearchEmpty'
 import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 import { CatalogActivity } from './CatalogActivity'
+import { useCardPreview } from './CardPreview'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -21,6 +22,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
   onConstrain?: (identityId: string) => void
   focusIdentityId?: string | null
 }) {
+  const preview = useCardPreview()
   const nav = useNavigation()
   const [catalog, setCatalog] = useState<CatalogBrowseOverview | null>(null)
   const [page, setPage] = useState<CatalogBrowsePage | null>(null)
@@ -346,7 +348,8 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
         {searchFailed ? <div className="error-banner" role="status">Ricerca non disponibile. <button type="button" className="text-button" onClick={() => setRevision((value) => value + 1)}>Riprova</button></div>
           : !page || pageLoading ? <LoadingSkeleton label="Ricerca nel catalogo…" /> : page.total === 0 ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : <>
         <div className="catalog-list" aria-label="Risultati catalogo">
-          <p className="content-note">{page.total} risultati · {page.offset + 1}–{page.offset + visible.length}</p>{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`, { preservePosition: true })} aria-pressed={selected?.key === group.key}>
+          <p className="content-note">{page.total} risultati · {page.offset + 1}–{page.offset + visible.length}</p>{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`, { preservePosition: true })} aria-pressed={selected?.key === group.key}
+            {...preview({ name: group.name, identityId: group.key })}>
             <strong>{group.name}</strong><span>{group.printCount} {group.printCount === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
           </button>)}
           {page.total > 100 && <div className="catalog-page-controls">

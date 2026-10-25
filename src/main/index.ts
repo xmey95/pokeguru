@@ -50,6 +50,7 @@ import { syncTournamentBlock } from './tournament-sync'
 import { syncMainTournamentBlock } from './main-tournament-sync'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../shared/tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
+import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
 
 app.setName('Pokeguru')
 protocol.registerSchemesAsPrivileged([{
@@ -473,6 +474,21 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Carta catalogo non valida.' }
     try { return { ok: true, value: catalogStore.browseGroup(key) } }
     catch { return { ok: false, error: 'Dettaglio carta non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:card-preview', (event, value: unknown): OperationResult<CardPreviewData> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    const input = value as Partial<CardPreviewLookup> | null
+    if (!input || typeof input.name !== 'string' || input.name.length < 1 || input.name.length > 150 ||
+      [input.name, input.printId, input.identityId, input.setCode, input.cardNumber].some((part) =>
+        part != null && (typeof part !== 'string' || part.length > 150 || part.includes('\0'))) ||
+      (input.printId != null && !/^[a-zA-Z0-9.-]{1,100}$/.test(input.printId)) ||
+      (input.setCode != null && !/^[a-zA-Z0-9.]{1,20}$/.test(input.setCode)) ||
+      (input.cardNumber != null && !/^[a-zA-Z0-9/.-]{1,20}$/.test(input.cardNumber)))
+      return { ok: false, error: 'Carta non valida.' }
+    try { return { ok: true, value: catalogStore.cardPreview(input as CardPreviewLookup) } }
+    catch { return { ok: false, error: 'Anteprima non disponibile.' } }
   })
 
   ipcMain.handle('catalog:sync', async (event): Promise<OperationResult<CatalogView>> => {

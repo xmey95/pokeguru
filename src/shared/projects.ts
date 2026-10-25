@@ -12,6 +12,7 @@ import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncP
 import type { StandardRuleAudit } from './standard-rule-audit'
 import type { ThreadEvidencePacket } from './thread-evidence'
 import type { AiJobSummary } from './ai-job'
+import type { CardPreviewData, CardPreviewLookup } from './card-preview'
 
 export type ProjectFormat = 'STANDARD'
 export type CompetitiveCircuit = 'WESTERN' | 'JAPAN'
@@ -43,6 +44,7 @@ export interface ProjectsApi {
   getCatalogBrowseOverview(): Promise<OperationResult<CatalogBrowseOverview>>
   searchCatalog(query: string, setId: string, offset: number): Promise<OperationResult<CatalogBrowsePage>>
   getCatalogGroup(key: string): Promise<OperationResult<{ group: CatalogBrowseGroup; prints: CatalogPrint[] } | null>>
+  getCardPreview(lookup: CardPreviewLookup): Promise<OperationResult<CardPreviewData>>
   syncCatalog(): Promise<OperationResult<CatalogView>>
   syncStandardCatalog(mode: CatalogSyncMode): Promise<OperationResult<CatalogSyncStatus>>
   getCatalogSyncStatus(): Promise<OperationResult<CatalogSyncStatus>>
