@@ -424,7 +424,11 @@ details[open] > summary { margin-bottom: 8px; }
 .candidate-brief-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
 .candidate-brief-heading h3 { margin: 0; font-size: var(--text-base); }
 .candidate-brief-heading h3 span { font-weight: 400; }
+.candidate-brief-heading h3:focus { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 2px; }
 .candidate-state { color: var(--proposal); font-size: var(--text-xs); font-weight: 650; }
+.candidate-return:disabled { visibility: hidden; }
+.candidate-access { position: sticky; top: 8px; z-index: 2; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); box-shadow: 0 4px 12px #142c3a1a; font-size: var(--text-sm); }
+.candidate-access > span { color: var(--proposal); font-weight: 650; }
 .candidate-brief p { margin: 8px 0 0; line-height: 1.5; }
 .candidate-change-summary span, .candidate-caution, .candidate-origin { color: var(--ink-secondary); }
 .candidate-origin { display: block; margin-top: 8px; font-size: var(--text-xs); }

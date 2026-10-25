@@ -98,10 +98,11 @@ function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
   </div>
 }
 
-function CandidateDetail({ candidate, thread, versions, catalog, constraints, audit, working, featured, cardTargets, onOpenCatalogCard, onAdopt }: {
+function CandidateDetail({ candidate, thread, versions, catalog, constraints, audit, working, featured, cardTargets, onOpenCatalogCard, onAdopt, onReturn }: {
   candidate: DeckCandidate; thread: DeckThread; versions: DeckVersion[]; catalog: CatalogView | null
   constraints: DeckConstraint[]; audit: StandardRuleAudit | null; working: boolean; featured?: boolean
   cardTargets: ReadonlyMap<string, string>; onOpenCatalogCard(identityId: string): void; onAdopt(candidate: DeckCandidate): void
+  onReturn?: () => void
 }) {
   const comparison = useRef<HTMLDetailsElement>(null)
   const base = versions.find((version) => version.id === thread.baseVersionId)
@@ -167,8 +168,10 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
   return <section className="thread-candidate featured" aria-labelledby={`candidate-title-${candidate.id}`}>
     <div className="candidate-brief">
       <div className="candidate-brief-heading">
-        <h3 id={`candidate-title-${candidate.id}`}>Candidata {candidate.sequence} <span>· {candidate.parsed.interpretedTotal} carte</span></h3>
+        <h3 id={`candidate-title-${candidate.id}`} tabIndex={-1}>Candidata {candidate.sequence} <span>· {candidate.parsed.interpretedTotal} carte</span></h3>
         <span className="candidate-state">{status}</span>
+        <button type="button" className="text-button candidate-return" disabled={!onReturn} aria-hidden={!onReturn}
+          tabIndex={onReturn ? 0 : -1} onClick={onReturn}>Torna alla conversazione</button>
       </div>
       <p className="candidate-change-summary">{diff ? <>
         {added || removed ? <strong>+{added} / −{removed} copie</strong>
@@ -183,6 +186,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
     </div>
     <details ref={comparison} className="candidate-comparison" onToggle={(event) => {
       if (event.target !== event.currentTarget || !event.currentTarget.open) return
+      if (event.currentTarget.dataset.openedFromAccess === 'true') return
       const main = event.currentTarget.closest<HTMLElement>('.main-content')
       const heading = event.currentTarget.querySelector('summary')?.getBoundingClientRect()
       if (!main || !heading) return
@@ -221,6 +225,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const newThreadTrigger = useRef<HTMLButtonElement>(null)
   const newThreadTitle = useRef<HTMLInputElement>(null)
   const newThreadError = useRef<HTMLDivElement>(null)
+  const candidateAccess = useRef<HTMLButtonElement>(null)
+  const [candidateReturn, setCandidateReturn] = useState<{ threadId: string; candidateId: string; scrollTop: number; comparisonOpen: boolean } | null>(null)
   const hasLoaded = useRef(false)
   const returnCreateFocus = useRef(false)
   const [creating, setCreating] = useViewState('thread.creating', false)
@@ -296,6 +302,32 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
   useEffect(() => { if (selected) nav.entry.label = `Thread · ${selected.title}` }, [selected?.id])
   const featuredCandidate = selected?.candidates.at(-1) ?? null
+  const returnPoint = candidateReturn?.threadId === selectedId && candidateReturn.candidateId === featuredCandidate?.id ? candidateReturn : null
+  function openFeaturedCandidate(): void {
+    if (!featuredCandidate || !selectedId) return
+    const main = candidateAccess.current?.closest<HTMLElement>('.main-content')
+    const heading = document.getElementById(`candidate-title-${featuredCandidate.id}`)
+    const comparison = heading?.closest('.thread-candidate')?.querySelector<HTMLDetailsElement>('.candidate-comparison')
+    if (!main || !heading || !comparison) return
+    setCandidateReturn({ threadId: selectedId, candidateId: featuredCandidate.id, scrollTop: main.scrollTop, comparisonOpen: comparison.open })
+    comparison.dataset.openedFromAccess = 'true'
+    comparison.open = true
+    const card = heading.closest<HTMLElement>('.thread-candidate')
+    if (card) main.scrollTop += card.getBoundingClientRect().top - main.getBoundingClientRect().top - 12
+    heading.focus({ preventScroll: true })
+  }
+  function returnToConversation(): void {
+    if (!returnPoint) return
+    const main = candidateAccess.current?.closest<HTMLElement>('.main-content')
+    const heading = document.getElementById(`candidate-title-${returnPoint.candidateId}`)
+    const comparison = heading?.closest('.thread-candidate')?.querySelector<HTMLDetailsElement>('.candidate-comparison')
+    if (!main || !comparison) return
+    comparison.open = returnPoint.comparisonOpen
+    delete comparison.dataset.openedFromAccess
+    main.scrollTop = returnPoint.scrollTop
+    setCandidateReturn(null)
+    candidateAccess.current?.focus({ preventScroll: true })
+  }
   const selectedOverride = selected ? overrides[selected.id] ?? { model: null, reasoningEffort: null } : null
   const selectedModel = aiModels.find((model) => model.id === selectedOverride?.model)
   const timeline = selected ? [
@@ -650,8 +682,13 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 {currentAiJob.error ? ` ${currentAiJob.error}` : ''}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
-              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} />
+              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption}
+              onReturn={returnPoint ? returnToConversation : undefined} />
               : <p className="thread-no-candidate">Nessuna proposta salvata.</p>}
+            {featuredCandidate && <div className="candidate-access">
+              <span>Candidata {featuredCandidate.sequence}</span>
+              <button ref={candidateAccess} type="button" className="text-button" onClick={openFeaturedCandidate}>Apri proposta e confronto</button>
+            </div>}
             <div className="thread-timeline"><h4>Conversazione</h4>
               {timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} />)}
