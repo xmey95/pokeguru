@@ -116,7 +116,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-103** | Acquisire tutti i tornei occidentali Standard della rotazione corrente con copertura esplicita | Correzione Eventi | R-06 / feedback utente | P1 / M | APP-056, pacchetto rotazione locale | Done |
 | **APP-110** | Rendere leggibile la guida Matchup lunga e strutturata | UI/contenuti | R-10, R-13 / feedback utente | P0 / M | APP-071/073; guida e revisioni già persistite | Done |
 | **APP-111** | Renderizzare le risposte Codex in Markdown nei Thread | UI/sicurezza | R-07, R-13 / feedback utente | P1 / S | APP-109 in `dev` prima di modificare la vista Thread | Done |
-| **APP-112** | Rendere la candidata raggiungibile dalla conversazione Thread | UX | R-08 / feedback utente | P1 / S | APP-111 in `dev` prima della modifica alla vista Thread | In progress |
+| **APP-112** | Rendere la candidata raggiungibile dalla conversazione Thread | UX | R-08 / feedback utente | P1 / S | APP-111 in `dev` prima della modifica alla vista Thread | Done |
 
 ### Corrispondenza degli ID assegnati sui rami paralleli
 
@@ -997,7 +997,8 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Accettazione e verifica prevista:** accesso da scambi lunghi a candidata e confronto; ritorno alla stessa posizione e bozza intatta; nessuna candidata = nessun richiamo; nuova candidata, cambio thread, adozione e base superata aggiornano il richiamo. Layout Electron desktop e dock mobile, tastiera/focus, regressione di confronto/adozione e cronologia con profilo temporaneo. Nessuna nuova generazione AI richiesta.
 - **Verifiche locali Windows dopo il rebase:** build/typecheck e 158 test unitari passati (19 live esclusi). La nuova prova Electron con profilo temporaneo passa a 1440×720 e 640×720: conversazione lunga, richiamo visibile senza coprire lista/dock, confronto aperto con riepilogo interamente visibile, ritorno alla posizione esatta, focus e bozza, nuova candidata e candidata storica, cambio thread e assenza del richiamo senza proposta. Schermate desktop/mobile ispezionate. Passano anche i percorsi Electron di adozione, Markdown e workspace completo a sei larghezze. La nuova prova è nella CI Linux/Windows.
 - **CI preliminare:** il push del commit funzionale `92b716d` ha superato entrambi i job `Verify (ubuntu-24.04)` e `Verify (windows-2022)` nel run [40151174903](https://github.com/xmey95/pokeguru/actions/runs/40151174903), inclusa la nuova prova Electron.
-- **Limiti e ripresa:** dati di prova isolati e nessuna nuova generazione Codex; non sono state verificate integrazioni AI. Resta la PR APP-112 verso `dev` e la CI sul commit finale. Nessun merge autonomo, modifica a `main` o release.
+- **CI PR:** i quattro check `Verify (ubuntu-24.04)` e `Verify (windows-2022)` di push/PR della [PR #21](https://github.com/xmey95/pokeguru/pull/21) sono verdi sul commit funzionale `96705f5`, inclusa la nuova prova Electron, packaging e smoke di entrambe le piattaforme. Il commit documentale finale deve superare gli stessi check.
+- **Limiti:** dati di prova isolati e nessuna nuova generazione Codex; non sono state verificate integrazioni AI. Il merge in `dev` resta al coordinatore. Nessuna modifica a `main` o release.
 
 ## Regola per i blocchi
 
