@@ -1,6 +1,6 @@
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { DeckCardEntry } from '../../shared/reconciliation'
-import { OFFICIAL_SET_CODES } from '../../shared/set-codes'
+import { knownPrintCodes } from '../../shared/set-codes'
 
 type GroupId = 'pokemon' | 'trainer' | 'energy' | 'unknown'
 export interface DeckCardGroup {
@@ -64,8 +64,7 @@ export function deckImageCopies(card: DeckCardEntry): { src: string | null; prin
   const copies: { src: string | null; print: string }[] = []
   for (const line of card.lines) {
     const print = line.setCode && line.cardNumber ? card.prints.find((item) =>
-      (item.setId.toUpperCase() === line.setCode!.toUpperCase() ||
-        OFFICIAL_SET_CODES[item.setId]?.toUpperCase() === line.setCode!.toUpperCase()) &&
+      knownPrintCodes(item.setId).includes(line.setCode!.toUpperCase()) &&
       item.localId.replace(/^0+(?=\d)/, '') === line.cardNumber!.replace(/^0+(?=\d)/, '')) : null
     const fallback = !line.setCode ? deckImagePrint(card) : null
     for (let index = 0; index < (line.quantity ?? 0); index++) copies.push({

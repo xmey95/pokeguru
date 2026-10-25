@@ -41,6 +41,31 @@ const catalog: CatalogView = {
 }
 
 describe('Riconciliazione APP-006', () => {
+  it('riconosce PR-SV e il numero Live della promo TCGdex SVP nel round trip', () => {
+    const promo: CatalogPrint = { ...printing('svp-189', "N's Zorua", 'zorua-promo', 'Promo'),
+      category: 'Pokemon', identityBasis: 'pokemon-text' }
+    const rawText = "1 N's Zorua PR-SV 189"
+    const baseline = { projectId: 'project', importedAt: '2026-10-25T00:00:00.000Z',
+      rawText, source: 'paste' as const, fileName: null, ...parseDeck(rawText) }
+    const cards = buildDeckCards(baseline, { ...catalog, prints: [promo] })
+    expect(cards).toMatchObject([{ status: 'recognized', importedPrintIds: ['svp-189'] }])
+    expect(suggestPrints(baseline.lines[0], { ...catalog, prints: [promo] })[0])
+      .toMatchObject({ print: { id: 'svp-189' }, reason: 'same-print' })
+  })
+
+  it('riconosce dopo reimport la sigla di un nuovo set acquisito dal Catalogo', () => {
+    const newer = printing('me06-007', 'Carta nuova', 'new-identity', 'Common')
+    const liveCatalog: CatalogView = { ...catalog, sets: [{ id: 'me06', name: 'Nuovo set',
+      abbreviation: 'NEX', sourceTotal: 1, sampleTotal: 1, fetchedAt: '2026-10-25T00:00:00.000Z' }],
+      prints: [newer] }
+    const rawText = '1 Carta nuova NEX 7'
+    const baseline = { projectId: 'project', importedAt: '2026-10-25T00:00:00.000Z',
+      rawText, source: 'paste' as const, fileName: null, ...parseDeck(rawText) }
+    expect(buildDeckCards(baseline, liveCatalog)).toMatchObject([
+      { status: 'recognized', importedPrintIds: ['me06-007'] }
+    ])
+  })
+
   it('passa al Matchup le regole della stampa e il vero esito Standard', () => {
     const baseline = {
       projectId: 'project', importedAt: '2026-10-23T00:00:00.000Z', rawText: '2 Iono PAL 185',

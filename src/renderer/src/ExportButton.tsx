@@ -14,12 +14,16 @@ export function ExportButton({ baseline }: { baseline: DeckBaseline }) {
         projectId: baseline.projectId, importedAt: baseline.importedAt
       })
       if (!result.ok) setFeedback({ message: result.error, error: true })
-      else setFeedback({
-        message: baseline.diagnostics.some((item) => item.code === 'ALT_PRINT')
-          ? 'Copiato. I codici ALT restano invariati: verifica le stampe in Limitless.'
-          : 'Export copiato negli appunti.',
-        error: false
-      })
+      else {
+        const warning = result.value.find((note) =>
+          /^(Sigle da verificare|La lista non ha sezioni|Alcune carte sono fuori dalle sezioni)/.test(note))
+        setFeedback({
+          message: `Export copiato negli appunti.${warning ? ` ${warning}` :
+            baseline.diagnostics.some((item) => item.code === 'ALT_PRINT')
+              ? ' Verifica le stampe ALT nel client.' : ''}`,
+          error: false
+        })
+      }
     } catch {
       setFeedback({ message: 'Impossibile copiare l’export. Riprova.', error: true })
     } finally {
