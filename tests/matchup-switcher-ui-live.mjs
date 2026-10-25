@@ -315,7 +315,7 @@ try {
     ipcMain.removeHandler('matchups:list-historical-opponents')
     ipcMain.handle('matchups:list-historical-opponents', () => ({ ok: false, error: 'Storico non leggibile · fixture UI' }))
   })
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByRole('button', { name: 'Matchup', exact: true }).click()
   await page.getByRole('alert').filter({ hasText: 'Storico non leggibile' }).waitFor()
   assert.match(await trigger.innerText(), /Disponibilità da verificare/)

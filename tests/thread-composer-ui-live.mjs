@@ -67,7 +67,7 @@ try {
   await page.waitForFunction(() => document.querySelector('#thread-message').value === '')
   assert.match(await page.locator('.thread-message').innerText(), /Osservazione senza lista/)
 
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(readFileSync(join(workspace, 'examples/workspace-principale.txt'), 'utf8'))
   await page.getByRole('button', { name: 'Salva lista' }).click()

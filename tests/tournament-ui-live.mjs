@@ -1,6 +1,6 @@
 import { auditDesignSystem } from './design-system-audit.mjs'
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
@@ -26,9 +26,24 @@ try {
     await emptyPage.getByText('Nessun evento salvato.', { exact: false }).waitFor()
     await emptyPage.getByRole('button', { name: 'Regional', exact: true }).click()
     await emptyPage.getByText('Nessun Regional archiviato.', { exact: false }).waitFor()
+    const sampleImage = await emptyPage.evaluate(() => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 100; canvas.height = 140
+      canvas.getContext('2d').fillRect(0, 0, 100, 140)
+      return canvas.toDataURL('image/webp').split(',')[1]
+    })
     await application.close()
     application = undefined
+    writeFileSync(join(profile, 'data', 'catalog-images', 'me01-086.webp'), Buffer.from(sampleImage, 'base64'))
     const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
+    const print = { id: 'me01-086', setId: 'me01', setName: 'Mega Evolution · fixture', localId: '086',
+      name: 'Mega Absol ex', category: 'Pokemon', rarity: null, variants: null, identityId: 'mega-absol-fixture',
+      identityBasis: 'pokemon-text', imageBase: 'https://assets.tcgdex.net/en/me01/086',
+      thumbnail: 'pokeguru://cards/me01-086.webp', highImageAvailable: null, sourceUpdated: null,
+      sourceUrl: 'https://api.tcgdex.net/v2/en/cards/me01-086', detailAt: '2026-10-23T20:00:00.000Z', error: null }
+    db.prepare('INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at) VALUES (?, ?, 1, 1, ?)')
+      .run('me01', print.setName, print.detailAt)
+    db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(print.id, print.setId, JSON.stringify(print))
     // Existing example list: layout fixture, not a verified competitive deck.
     let category = 'pokemon'
     const cards = []
@@ -102,16 +117,28 @@ try {
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
     }
     await ready()
-    const eventCard = page.locator('.event-deck-group li').first()
+    const eventCard = page.locator('.event-deck-group li').nth(1)
     await eventCard.focus()
     const cardPopup = page.getByTestId('card-preview')
-    await cardPopup.getByText('Carta non trovata nel Catalogo locale.').waitFor()
+    await cardPopup.locator('p').waitFor()
     assert.equal(await cardPopup.locator('img').count(), 0)
     assert.equal(await eventCard.getAttribute('aria-describedby'), 'card-preview')
     assert.equal(await eventCard.evaluate((element) => document.activeElement === element), true,
       'Il focus deve restare sulla riga della carta prima di Escape')
     await page.keyboard.press('Escape')
     await cardPopup.waitFor({ state: 'hidden' })
+    await page.getByRole('group', { name: 'Vista lista del torneo' }).getByRole('button', { name: 'Immagini' }).click()
+    await page.getByText('Cerco immagini nel Catalogo locale…').waitFor({ state: 'hidden' })
+    assert.equal(await page.locator('.event-image-grid .card-image-tile').count(), 60, 'Play: una tessera per copia')
+    assert.equal(await page.locator('.event-image-grid img').count(), 3, 'Play: tre copie della scansione locale')
+    await page.waitForFunction(() => [...document.querySelectorAll('.event-image-grid img')].every((image) => image.naturalWidth > 0))
+    await page.locator('.event-image-grid .card-image-tile').first().click()
+    assert.ok(await page.getByRole('region', { name: /Dettaglio Mega Absol ex/ }).isVisible())
+    await page.setViewportSize({ width: 640, height: 580 })
+    assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
+    await page.screenshot({ path: join(workspace, 'node_modules', 'content-eventi-images-640.png') })
+    await page.getByRole('group', { name: 'Vista lista del torneo' }).getByRole('button', { name: 'Lista' }).click()
+    assert.ok(await page.locator('.event-deck-group li').first().isVisible())
     await page.locator('.tournament-players button').filter({ hasText: 'Two' }).click()
     await ready()
     await page.getByLabel('Filtra giocatore o mazzo').fill('Two')
@@ -131,6 +158,10 @@ try {
     await ready()
     await page.getByRole('heading', { name: 'Eventi', exact: true }).waitFor()
     await page.getByText('Giocatore esempio', { exact: true }).waitFor()
+    await page.getByRole('group', { name: 'Vista lista del torneo' }).getByRole('button', { name: 'Immagini' }).click()
+    await page.getByText('Cerco immagini nel Catalogo locale…').waitFor({ state: 'hidden' })
+    assert.equal(await page.locator('.event-image-grid .card-image-tile').count(), 60, 'Regional: una tessera per copia')
+    await page.getByRole('group', { name: 'Vista lista del torneo' }).getByRole('button', { name: 'Lista' }).click()
     await page.getByLabel('Evento archiviato').selectOption('999998')
     await ready()
     await page.getByLabel('Filtra giocatore o mazzo').fill('Hydrapple')

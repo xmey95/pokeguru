@@ -137,7 +137,7 @@ export function MainTournamentSection() {
       </div><div className="tournament-detail">{selected ? <>
         <h2>{selected.playerName}</h2><p className="content-note">{selected.placing}° · {selected.deckName ?? 'Archetipo non indicato'}</p>
         {selected.listUrl && <button type="button" className="text-button" onClick={() => void openSource(selected.listUrl!)}>Apri lista originale ↗</button>}
-        {selected.cards ? <>{selected.listUnavailable && <p className="content-note">Lista conservata in cache; la fonte non era disponibile all’ultima scansione.</p>}<TournamentDeck cards={selected.cards} /></> : <p className="content-note">{selected.listUnavailable ? 'Lista non disponibile alla scansione. Puoi riprovare con Scansione completa o consultare la fonte.' : selected.listUrl ? 'Lista da acquisire. Puoi consultare la lista originale online.' : 'Lista non pubblicata dalla fonte.'}</p>}
+        {selected.cards ? <>{selected.listUnavailable && <p className="content-note">Lista conservata in cache; la fonte non era disponibile all’ultima scansione.</p>}<TournamentDeck cards={selected.cards} source="main" /></> : <p className="content-note">{selected.listUnavailable ? 'Lista non disponibile alla scansione. Puoi riprovare con Scansione completa o consultare la fonte.' : selected.listUrl ? 'Lista da acquisire. Puoi consultare la lista originale online.' : 'Lista non pubblicata dalla fonte.'}</p>}
       </> : null}</div></>}
       </div>
     </>}

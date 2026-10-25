@@ -594,19 +594,32 @@ function registerProjectHandlers(): void {
     catch { return { ok: false, error: 'Dettaglio carta non disponibile.' } }
   })
 
+  function validCardPreviewLookup(value: unknown): value is CardPreviewLookup {
+    const input = value as Partial<CardPreviewLookup> | null
+    return !!input && typeof input.name === 'string' && input.name.length >= 1 && input.name.length <= 150 &&
+      ![input.name, input.printId, input.identityId, input.setCode, input.cardNumber].some((part) =>
+        part != null && (typeof part !== 'string' || part.length > 150 || part.includes('\0'))) &&
+      (input.printId == null || /^[a-zA-Z0-9.-]{1,100}$/.test(input.printId)) &&
+      (input.setCode == null || /^[a-zA-Z0-9.]{1,20}$/.test(input.setCode)) &&
+      (input.cardNumber == null || /^[a-zA-Z0-9/.-]{1,20}$/.test(input.cardNumber))
+  }
+
   ipcMain.handle('catalog:card-preview', (event, value: unknown): OperationResult<CardPreviewData> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!catalogStore) return { ok: false, error: unavailableMessage() }
-    const input = value as Partial<CardPreviewLookup> | null
-    if (!input || typeof input.name !== 'string' || input.name.length < 1 || input.name.length > 150 ||
-      [input.name, input.printId, input.identityId, input.setCode, input.cardNumber].some((part) =>
-        part != null && (typeof part !== 'string' || part.length > 150 || part.includes('\0'))) ||
-      (input.printId != null && !/^[a-zA-Z0-9.-]{1,100}$/.test(input.printId)) ||
-      (input.setCode != null && !/^[a-zA-Z0-9.]{1,20}$/.test(input.setCode)) ||
-      (input.cardNumber != null && !/^[a-zA-Z0-9/.-]{1,20}$/.test(input.cardNumber)))
+    if (!validCardPreviewLookup(value))
       return { ok: false, error: 'Carta non valida.' }
-    try { return { ok: true, value: catalogStore.cardPreview(input as CardPreviewLookup) } }
+    try { return { ok: true, value: catalogStore.cardPreview(value) } }
     catch { return { ok: false, error: 'Anteprima non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:card-previews', (event, value: unknown): OperationResult<CardPreviewData[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (!Array.isArray(value) || value.length > 120 || !value.every(validCardPreviewLookup))
+      return { ok: false, error: 'Lista carte non valida.' }
+    try { return { ok: true, value: value.map((lookup) => catalogStore!.cardPreview(lookup)) } }
+    catch { return { ok: false, error: 'Immagini locali non disponibili.' } }
   })
 
   ipcMain.handle('catalog:sync', async (event): Promise<OperationResult<CatalogView>> => {

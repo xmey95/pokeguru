@@ -93,7 +93,7 @@ try {
       }] } }
     })
   })
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await assistant.getByRole('button', { name: 'Carta · Catalogo' }).press('Enter')
   try {

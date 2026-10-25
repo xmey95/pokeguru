@@ -45,6 +45,7 @@ export interface ProjectsApi {
   searchCatalog(query: string, setId: string, offset: number): Promise<OperationResult<CatalogBrowsePage>>
   getCatalogGroup(key: string): Promise<OperationResult<{ group: CatalogBrowseGroup; prints: CatalogPrint[] } | null>>
   getCardPreview(lookup: CardPreviewLookup): Promise<OperationResult<CardPreviewData>>
+  getCardPreviews(lookups: CardPreviewLookup[]): Promise<OperationResult<CardPreviewData[]>>
   syncCatalog(): Promise<OperationResult<CatalogView>>
   syncStandardCatalog(mode: CatalogSyncMode): Promise<OperationResult<CatalogSyncStatus>>
   getCatalogSyncStatus(): Promise<OperationResult<CatalogSyncStatus>>

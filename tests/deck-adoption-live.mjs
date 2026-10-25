@@ -105,7 +105,7 @@ try {
   await page.locator('.main-content').evaluate(el => { el.scrollTop = 0 })
   await auditDesignSystem(page, 'Base superata')
   await page.screenshot({ path: join(workspace, 'node_modules', 'design-stale.png') })
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   assert.equal(await page.locator('.original-text pre').textContent(), adoptedText)
   await application.close()
   application = undefined

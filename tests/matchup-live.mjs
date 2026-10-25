@@ -63,7 +63,7 @@ try {
     ])
     assert.match(await page.locator('.discussion-latest').textContent(), /Cosa cambia/)
   }
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('Pokémon: 5\n4 Mega Absol ex MEG 86\n1 Mega Audino ex MEG 84\nTrainer: 8\n4 Rare Candy\n4 Iono')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()

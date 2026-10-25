@@ -82,7 +82,7 @@ try {
     return threads.value[0].id
   })
   assert.ok(threadId)
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await page.locator('.thread-message').last().waitFor()
   assert.equal(await page.locator('.thread-message').count(), 50)
