@@ -14,7 +14,8 @@ import { BUNDLED_WESTERN_RULE_PACKAGE } from '../../shared/western-rule-package'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { reviewSummary } from './review-summary'
 import { CardThumbnail } from './CardThumbnail'
-import { deckThumbnail, groupDeckCards } from './deck-presentation'
+import { deckImagePrint, deckThumbnail, groupDeckCards } from './deck-presentation'
+import { useCardPreview } from './CardPreview'
 import { ExportButton } from './ExportButton'
 import { CardOverview } from './CardOverview'
 import { CardConstraints } from './CardConstraints'
@@ -37,6 +38,7 @@ function cardStatus(status: 'recognized' | 'unverified' | 'ambiguous' | 'outside
 export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importOpen }: {
   projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void; importOpen: boolean
 }) {
+  const preview = useCardPreview()
   const { setReconciliation: updateConstraintReconciliation } = useDeckConstraints()
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
@@ -183,7 +185,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
         const open = expanded === card.key
         const thumbnail = deckThumbnail(card)
         return <article className="deck-card" key={card.key} data-testid={card.identityId ? `deck-card-${card.identityId}` : `deck-line-${card.lines[0].lineNumber}`}>
-          <button type="button" className="deck-card-toggle" aria-expanded={open} onClick={() => setExpanded(open ? null : card.key)}>
+          <button type="button" className="deck-card-toggle" aria-expanded={open} onClick={() => setExpanded(open ? null : card.key)}
+            {...preview({ name: card.name, printId: deckImagePrint(card)?.id ?? card.prints[0]?.id })}>
             <span className="deck-card-quantity">{card.quantity}×</span>
             <CardThumbnail key={thumbnail} src={thumbnail} />
             <span className="deck-card-title"><strong>{card.name}</strong>{cardStatus(card.status, catalog) && <small>{cardStatus(card.status, catalog)}</small>}</span>

@@ -1,5 +1,7 @@
 import type { MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
 import { GuideText } from './GuideText'
+import { useCardPreview } from './CardPreview'
+import { ExpandablePreviewDeck, PreviewDeckLines } from './PreviewDeckLines'
 
 export type MatchupAction = 'generate' | 'revise' | 'continue'
 
@@ -18,6 +20,7 @@ export function MatchupDataPreview({ action, total, deckContext, opponent, snaps
   cardTargets: ReadonlyMap<string, string>
   onOpenCatalogCard(identityId: string): void
 }) {
+  const cardPreview = useCardPreview()
   const revising = action === 'revise'
   const savedEvidence = revising ? report?.tournamentEvidence : undefined
   const evidence = savedEvidence ?? currentEvidence
@@ -44,7 +47,7 @@ export function MatchupDataPreview({ action, total, deckContext, opponent, snaps
       <p>{text(`[Fonte meta](${snapshot.sourceUrl})`)} · {text(`[Archetipo avversario](${opponent.url})`)}</p>
       <h4>Lista avversaria</h4>
       {savedCards !== undefined ? <>
-        {savedCards.length ? <pre>{savedCards.join('\n')}</pre> : <p>La guida precedente non dispone di carte avversarie.</p>}
+        {savedCards.length ? <PreviewDeckLines lines={savedCards} /> : <p>La guida precedente non dispone di carte avversarie.</p>}
         {report?.sampleDeckUrl && <p>{text(`[Lista usata dalla guida](${report.sampleDeckUrl})`)}</p>}
         {!!report?.sampleDeckMechanics?.length && <details><summary>Schede avversarie salvate</summary>
           {report.sampleDeckMechanics.map((card, index) => <div key={index}><h4>{text(`[${card.name}](${card.sourceUrl})`)}</h4><p>{card.text}</p></div>)}
@@ -56,9 +59,11 @@ export function MatchupDataPreview({ action, total, deckContext, opponent, snaps
         {text(`[${event.name}](${event.url})`)} · {event.matchedLists} liste dell’archetipo / {event.completeLists} liste acquisite
       </li>)}</ul>}
       {!evidence?.events?.length && evidence?.eventUrl && <p>{text(`[${evidence.eventName ?? 'Evento osservato'}](${evidence.eventUrl})`)}</p>}
-      {!!evidence?.sampleLists.length && <ul>{evidence.sampleLists.map((list, index) => <li key={list.url}>{text(`[Lista osservata ${index + 1}${list.eventName ? ` · ${list.eventName}` : ''}](${list.url})`)}</li>)}</ul>}
+      {!!evidence?.sampleLists.length && <ul>{evidence.sampleLists.map((list, index) => <li key={list.url}>{text(`[Lista osservata ${index + 1}${list.eventName ? ` · ${list.eventName}` : ''}](${list.url})`)}
+        {!!list.cards?.length && <ExpandablePreviewDeck summary="Carte osservate" lines={list.cards} />}</li>)}</ul>}
       {!!evidence?.observedCards.length && <details><summary>Carte osservate ({evidence.observedCards.length})</summary>
-        <ul>{evidence.observedCards.map((card) => <li key={card.name}>
+        <ul>{evidence.observedCards.map((card) => <li key={card.name} tabIndex={0}
+          {...cardPreview({ name: card.name, identityId: card.catalogIdentityId })}>
           {card.cardSourceUrl ? text(`[${card.name}](${card.cardSourceUrl})`) : card.name} · {card.lists}/{evidence.matchedCompleteLists} liste
           {card.gameplay && <p>{card.gameplay}</p>}
         </li>)}</ul>

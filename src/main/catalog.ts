@@ -19,6 +19,8 @@ import { BUNDLED_WESTERN_RULE_PACKAGE,
   type WesternRulePackage } from '../shared/western-rule-package'
 import { localCalendarDate } from '../shared/calendar-date'
 import { readLimitedBytes, readLimitedText } from './bounded-response'
+import { OFFICIAL_SET_CODES } from '../shared/set-codes'
+import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
 
 type SetResponse = {
   id: string; name: string; cardCount: { total: number }; releaseDate?: string
@@ -849,6 +851,53 @@ export class CatalogStore {
     if (typeof id !== 'string' || id.length > 100) return null
     const row = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?').get(id) as { payload: string } | undefined
     return row ? this.availableImage(JSON.parse(row.payload) as CatalogPrint) : null
+  }
+
+  /** A single local lookup for a visible row; never fetch artwork from the network on hover. */
+  cardPreview(lookup: CardPreviewLookup): CardPreviewData {
+    const missing = (reason: CardPreviewData['reason']): CardPreviewData => ({
+      name: lookup.name, printLabel: null, image: null, reason, sample: false
+    })
+    let prints: CatalogPrint[] = []
+    let sample = false
+    if (lookup.printId) {
+      const print = this.getPrint(lookup.printId)
+      if (print) prints = [print]
+    } else if (lookup.setCode && lookup.cardNumber) {
+      const code = lookup.setCode.toUpperCase()
+      const sets = this.db.prepare('SELECT id, abbreviation FROM catalog_sets').all() as
+        { id: string; abbreviation: string | null }[]
+      const ids = sets.filter((set) => set.id.toUpperCase() === code ||
+        (set.abbreviation ?? OFFICIAL_SET_CODES[set.id])?.toUpperCase() === code).map((set) => set.id)
+      const raw = lookup.cardNumber
+      const numbers = new Set([raw, raw.replace(/^0+(?=\d)/, ''),
+        ...( /^\d+$/.test(raw) ? [raw.padStart(2, '0'), raw.padStart(3, '0'), raw.padStart(4, '0')] : [] )])
+      for (const setId of ids) for (const number of numbers) {
+        const print = this.getPrint(`${setId}-${number}`)
+        if (print) prints.push(print)
+      }
+      if (new Set(prints.map((print) => print.id)).size > 1) return missing('ambiguous')
+    } else if (lookup.identityId) {
+      prints = this.browseGroup(lookup.identityId)?.prints ?? []
+      sample = true
+    } else {
+      const rows = this.db.prepare(`SELECT payload FROM catalog_prints
+        WHERE json_extract(payload, '$.name') = ? COLLATE NOCASE LIMIT 51`).all(lookup.name) as { payload: string }[]
+      prints = rows.map((row) => this.availableImage(JSON.parse(row.payload) as CatalogPrint))
+      sample = true
+      if (rows.length === 51 || new Set(prints.map((print) => print.identityId ?? print.id)).size > 1)
+        return missing('ambiguous')
+    }
+    if (!prints.length) return missing('not-in-catalog')
+    const print = prints.find((item) => item.thumbnail?.startsWith('pokeguru://cards/'))
+      ?? prints.find((item) => item.thumbnail) ?? prints[0]
+    const image = print.thumbnail && (print.thumbnail.startsWith('pokeguru://cards/') ||
+      print.thumbnail.startsWith('data:image/')) ? print.thumbnail : null
+    return {
+      name: print.name, printLabel: `${print.setName} · ${print.localId}`,
+      image, reason: image ? 'available'
+        : print.imageBase ? 'not-cached' : 'source-missing', sample
+    }
   }
 
   close(): void { this.db.close() }
