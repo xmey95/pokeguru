@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
@@ -23,22 +23,27 @@ const pokemon = { ...empty, hp: 280, types: ['Darkness'], retreat: 0,
 function seed() {
   const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
   try {
-    for (const [id, name] of [['me01', 'Set A · fixture'], ['me02.5', 'Set B · fixture']]) db.prepare(
+    for (const [id, name] of [['me01', 'Set A · fixture'], ['me02.5', 'Set B · fixture'], ['mee', 'Mega Energy · fixture']]) db.prepare(
       'INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at) VALUES (?, ?, 10, 5, ?)').run(id, name, now)
     for (const [id, name, category, gameplay, image, basis, extra] of [
       ['me01-001', 'Pokémon di prova', 'Pokemon', null, 'data:image/png;base64,broken', 'pokemon-text', {}],
-      ['me02.5-002', 'Pokémon di prova', 'Pokemon', pokemon, artwork, 'pokemon-text', {}],
+      ['me02.5-002', 'Pokémon di prova', 'Pokemon', pokemon, 'pokeguru://cards/me02.5-002.webp', 'pokemon-text', {}],
       ['me01-003', 'Allenatore di prova', 'Trainer', { ...empty, trainerType: 'Supporter', effect: 'UI fixture: search your deck for a Pokémon.\nThen shuffle your deck.' }, artwork, 'trainer-text', {}],
       ['me01-004', 'Energia Base di prova', 'Energy', empty, null, 'energy-text', { energyType: 'Basic' }],
+      ['mee-001', 'Energia Limitless di prova', 'Energy', empty, 'pokeguru://cards/mee-001.png', 'energy-text', { energyType: 'Basic' }],
       ['me01-005', 'Energia speciale di prova', 'Energy', { ...empty, effect: 'UI fixture: this card provides Darkness Energy.' }, null, 'energy-text', { energyType: 'Special' }],
       ['me01-006', 'Carta parziale di prova', 'Pokemon', { ...pokemon, attacks: [{ name: 'Costo ignoto', cost: null, damage: '0', effect: null }] }, null, 'unverified', {}],
       ['me01-007', 'Promo di prova', 'Trainer', null, null, null, { isPromo: true,
         promoStatus: { state: 'upcoming', legalDate: '2027-01-01', dateNote: null, checkedAt: now }, error: 'Fixture: scheda non acquisita.' }]
     ]) {
       const setId = id.split('-')[0]
-      const print = { id, setId, setName: setId === 'me01' ? 'Set A · fixture' : 'Set B · fixture', localId: id.split('-')[1],
+      const print = { id, setId, setName: setId === 'me01' ? 'Set A · fixture' : setId === 'mee' ? 'Mega Energy · fixture' : 'Set B · fixture', localId: id.split('-')[1],
         name, category, rarity: 'Rare · fixture', variants: { holo: true }, identityId: name, identityBasis: basis,
-        gameplay, stage: category === 'Pokemon' ? 'Basic' : null, imageBase: null, thumbnail: image,
+        gameplay, stage: category === 'Pokemon' ? 'Basic' : null,
+        imageBase: id === 'mee-001'
+          ? 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_001_R_EN_SM.png'
+          : ['me01-001', 'me02.5-002', 'me01-003', 'me01-004'].includes(id)
+            ? `https://assets.tcgdex.net/en/${setId}/${id.split('-')[1]}` : null, thumbnail: image,
         highImageAvailable: null, sourceUpdated: now, sourceUrl: 'https://api.tcgdex.net/v2/en/cards/' + id,
         detailAt: now, error: null, isPromo: false, regulationMark: 'I', ...extra }
       db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(id, setId, JSON.stringify(print))
@@ -57,9 +62,31 @@ try {
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
   }
   await createProjectFromStart(page, 'Catalogo carte · fixture UI')
+  const webp = await page.evaluate(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 245; canvas.height = 337
+    const context = canvas.getContext('2d')
+    context.fillStyle = '#698e86'; context.fillRect(0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/webp').split(',')[1]
+  })
+  const imageDirectory = join(profile, 'data', 'catalog-images')
+  mkdirSync(imageDirectory, { recursive: true })
+  writeFileSync(join(imageDirectory, 'me02.5-002.webp'), Buffer.from(webp, 'base64'))
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 245; canvas.height = 337
+    const context = canvas.getContext('2d')
+    context.fillStyle = '#b8a861'; context.fillRect(0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/png').split(',')[1]
+  })
+  writeFileSync(join(imageDirectory, 'mee-001.png'), Buffer.from(png, 'base64'))
   seed()
   await application.evaluate(({ shell }) => { globalThis.cardSourceOpened = []; shell.openExternal = async (url) => { globalThis.cardSourceOpened.push(url) } })
   await page.getByRole('button', { name: 'Catalogo', exact: true }).click()
+  await page.getByRole('button', { name: 'Gestisci catalogo' }).click()
+  await page.locator('[aria-label="Copertura immagini"] strong').first().waitFor()
+  assert.deepEqual(await page.locator('[aria-label="Copertura immagini"] strong').allTextContents(), ['4/8', '1', '3', '1'])
+  await page.getByRole('button', { name: 'Chiudi gestione' }).click()
   const detail = page.locator('.catalog-detail')
   const search = page.getByLabel('Cerca carta o stampa')
   const select = async (name) => {
@@ -75,6 +102,14 @@ try {
   assert.equal(await detail.locator('.catalog-card-prints').evaluate((el) => el.open), false)
   assert.equal(await detail.locator('.card-overview').count(), 1)
   assert.match(await detail.locator('.card-artwork figcaption').innerText(), /Set B.*002/)
+  assert.equal(await detail.locator('.card-artwork img').evaluate((image) => image.naturalWidth), 245,
+    'Miniatura locale WebP bloccata da protocollo o CSP')
+  await select('Energia Limitless di prova')
+  await detail.locator('.catalog-card-prints > summary').click()
+  await detail.getByText('Immagine: Limitless').waitFor()
+  assert.equal(await detail.locator('.card-artwork img').evaluate((image) => image.naturalWidth), 245,
+    'Miniatura locale PNG bloccata da protocollo o CSP')
+  await select('Pokémon di prova')
   assert.equal(await detail.getByRole('button', { name: /^(TCGdex|Fonte)(?: ↗)?$/ }).count(), 0)
   assert.equal(await detail.locator('a[href^="https://api.tcgdex.net/"]').count(), 0)
   assert.deepEqual(await application.evaluate(() => globalThis.cardSourceOpened), [])

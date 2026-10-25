@@ -129,7 +129,7 @@ let catalogRetryTimer: ReturnType<typeof setTimeout> | null = null
 const rendererFile = join(__dirname, '../renderer/index.html')
 const rendererUrl = 'pokeguru://bundle/index.html'
 const packagedCsp = [
-  "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' data:",
+  "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' data: pokeguru://cards",
   "font-src 'self'", "connect-src 'none'", "object-src 'none'", "base-uri 'none'",
   "form-action 'none'", "frame-src 'none'"
 ].join('; ')
@@ -1245,9 +1245,6 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
-  protocol.registerSource('pokeguru', { routes: [{ match: { host: 'bundle' },
-    source: { type: 'directory', root: dirname(rendererFile), headers: { 'Content-Security-Policy': packagedCsp } }
-  }] })
   if (process.platform === 'win32') app.setAppUserModelId('io.github.xmey95.pokeguru')
   try {
     const override = process.env.POKEGURU_DATA_DIR
@@ -1277,6 +1274,14 @@ app.whenReady().then(async () => {
     projectStore?.close(); projectStore = null
     storageError = 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
   }
+
+  const imageDirectory = join(app.getPath('userData'), 'data', 'catalog-images')
+  try { mkdirSync(imageDirectory, { recursive: true }) } catch { /* Storage error is shown in the renderer. */ }
+  protocol.registerSource('pokeguru', { routes: [
+    { match: { host: 'bundle' }, source: { type: 'directory', root: dirname(rendererFile),
+      headers: { 'Content-Security-Policy': packagedCsp } } },
+    { match: { host: 'cards' }, source: { type: 'directory', root: imageDirectory } }
+  ] })
 
   registerProjectHandlers()
   createWindow()

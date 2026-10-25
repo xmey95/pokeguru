@@ -267,6 +267,15 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
         </>}
       </div>
 
+      <h3 className="catalog-coverage-heading">Immagini delle stampe acquisite</h3>
+      <p className="content-note">Le miniature conservate sono disponibili offline. Se TCGdex non ha la scansione, l'aggiornamento cerca la stampa esatta in Limitless. Le immagini assenti da entrambe le fonti mantengono il segnaposto.</p>
+      <div className="catalog-metrics" aria-label="Copertura immagini">
+        <div><strong>{thumbnailCount}/{acquired}</strong><span>Miniature conservate</span></div>
+        <div><strong>{catalog.stats.limitlessThumbnails}</strong><span>Miniature da Limitless</span></div>
+        <div><strong>{catalog.stats.imageSourceMissing}</strong><span>URL immagine assente nelle fonti</span></div>
+        <div><strong>{catalog.stats.imageCacheMissing}</strong><span>Miniature da acquisire</span></div>
+      </div>
+
       {standard && catalog.standardCoverage && <details className="catalog-set-coverage">
         <summary>Copertura per set · {catalog.standardCoverage.bySet.filter((set) => set.missing > 0).length} con dettagli mancanti</summary>
         <p className="content-note">Set ufficiali nel manifest: {catalog.standardCoverage.officialSets.present}/{catalog.standardCoverage.officialSets.expected}; {catalog.standardCoverage.officialSets.missing} mancanti. Calendario controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}.</p>
@@ -290,7 +299,7 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
       </details>}
       <details className="catalog-set-coverage"><summary>Metodo, promo e dati delle stampe</summary>
       {standard ? <>
-        <p className="content-note">Perimetro: stampe TCGdex con marchio H–Z ed Energie Base `sve`/`mee`. «Aggiorna nuove carte» completa anche le schede già presenti ma prive delle regole di gioco; «Scansione completa» ricontrolla tutti i dettagli. Miniature non scaricate in massa.</p>
+        <p className="content-note">Perimetro: stampe TCGdex con marchio H–Z ed Energie Base `sve`/`mee`. «Aggiorna nuove carte» completa anche le schede già presenti ma prive delle regole di gioco e delle miniature disponibili; «Scansione completa» ricontrolla tutti i dettagli. Le immagini grandi sono solo segnalate online.</p>
         <p className="content-note">Promo: {catalog.standardCoverage?.promos.available ?? 0} disponibili · {catalog.standardCoverage?.promos.upcoming ?? 0} future · {catalog.standardCoverage?.promos.unlisted ?? 0} non elencate · {catalog.standardCoverage?.promos.unchecked ?? 0} non verificate. Registro v{catalog.promoAudit?.packageVersion ?? '—'}, controllato il {catalog.promoAudit?.checkedAt ? date(catalog.promoAudit.checkedAt) : 'mai'}. Nuovi stati richiedono una release.
           {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('promo')}>Registro promo ufficiale ↗</button>
         </p>

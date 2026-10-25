@@ -51,6 +51,7 @@ export function CatalogCardDetail({ name, basis, prints, onConstrain }: {
           {print.isPromo && <span>{promoStatus(print)}{print.promoStatus ? ` · controllo ${date(print.promoStatus.checkedAt)}` : ''}</span>}
           {print.variants && <span>Varianti: {Object.entries(print.variants).filter(([, yes]) => yes).map(([name]) => name).join(', ') || 'nessuna indicata'}</span>}
           {print.highImageAvailable && <span>Immagine grande disponibile online</span>}
+          {print.thumbnail && <span>Immagine: {print.imageBase?.startsWith('https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/') ? 'Limitless' : 'TCGdex'}</span>}
           {print.sourceUpdated && <span>Fonte aggiornata: {date(print.sourceUpdated)}</span>}
           {print.error && <span className="catalog-error">{print.error}</span>}
           {!print.gameplay && <span>Testo di gioco non acquisito</span>}

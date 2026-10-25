@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -45,6 +45,11 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   const details = new Map<string, number>()
   vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
     const url = String(input)
+    if (url.startsWith('https://assets.tcgdex.net/')) {
+      if (url.endsWith('/high.webp')) return new Response(null, { status: 200 })
+      return new Response(new TextEncoder().encode('RIFF0000WEBP'),
+        { status: 200, headers: { 'content-type': 'image/webp' } })
+    }
     if (url.includes('/cards?regulationMark=eq:h')) return Response.json([briefs[2]])
     if (url.includes('/cards?')) return Response.json([briefs[0], briefs[1], briefs[3]])
     if (url.endsWith('/sets')) return Response.json(sets)
@@ -60,6 +65,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     if (id === 'mep-001' && failPromo) return new Response('', { status: 503 })
     const name = briefs.find((card) => card.id === id)?.name ?? 'Basic Energy'
     return Response.json({ id, localId: '001', name, category: name === 'Basic Energy' ? 'Energy' : 'Pokemon',
+      image: id === 'sv05-001' ? 'https://assets.tcgdex.net/en/sv/sv05/001' : undefined,
       regulationMark: id === 'mep-001' ? 'i' : id === 'nvp-001' ? 'K' : id.startsWith('me') ? 'I' : 'H',
       rarity: id === 'sv05-001' && updatedRarity ? 'Rare' : 'Common', stage: 'Basic', updated: '2026-10-23' })
   }))
@@ -75,6 +81,9 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   await expect(syncStandardCatalog(store)).rejects.toThrow('limitato temporaneamente')
   expect(store.jobStatus()).toMatchObject({ mode: 'new', state: 'paused', expected: 6, acquired: 5 })
   expect(store.view().standardCoverage).toMatchObject({ expected: 6, acquired: 5, missing: 1 })
+  expect(store.getPrint('sv05-001')?.thumbnail).toBe('pokeguru://cards/sv05-001.webp')
+  expect(existsSync(join(folder, 'catalog-images', 'sv05-001.webp'))).toBe(true)
+  expect(readFileSync(join(folder, 'catalog-images', 'sv05-001.webp')).toString('ascii')).toBe('RIFF0000WEBP')
   expect(store.view().standardCoverage?.officialSets).toMatchObject({
     expected: 17, present: 2, missing: 15,
     missingSets: expect.arrayContaining([{ setId: 'sv06', product: 'Scarlet & Violet—Twilight Masquerade' }])
@@ -133,7 +142,7 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     String(url).includes('promo-status-western.json'))).toBe(false)
   expect(reopened.getPrint('mep-001')?.detailAt).toBe(unchangedDetailAt)
   reopened.close()
-}, 20_000)
+}, 45_000)
 
 it('migra un archivio catalogo precedente senza perdere i set e salva la data nuova', () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-standard-legacy-'))
