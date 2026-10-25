@@ -496,7 +496,7 @@ export async function enrichCatalogPrints(store: CatalogStore, ids: readonly str
 
 export class CatalogStore {
   private readonly db: DatabaseSync
-  private viewCache: { date: string; value: CatalogView } | null = null
+  private viewCache: { date: string; value: CatalogView; thumbnails: Map<string, string | null> } | null = null
   private browseCache: { date: string; overview: CatalogBrowseOverview; groups: Array<CatalogBrowseGroup & {
     ids: string[]; search: string; setIds: Set<string>
   }>; byKey: Map<string, string[]> } | null = null
@@ -873,7 +873,8 @@ export class CatalogStore {
       referencePrints: targetIds ? prints.filter((print) => !targetIds.has(print.id) &&
         print.detailAt !== null && print.identityId !== null) : []
     }
-    this.viewCache = { date: today, value }
+    this.viewCache = { date: today, value,
+      thumbnails: new Map([...value.prints, ...value.referencePrints].map((print) => [print.id, print.thumbnail])) }
     return value
   }
 
@@ -960,7 +961,14 @@ export class CatalogStore {
   getPrint(id: string): CatalogPrint | null {
     if (typeof id !== 'string' || id.length > 100) return null
     const row = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?').get(id) as { payload: string } | undefined
-    return row ? this.availableImage(JSON.parse(row.payload) as CatalogPrint) : null
+    if (!row) return null
+    const print = this.availableImage(JSON.parse(row.payload) as CatalogPrint)
+    const cachedThumbnail = this.viewCache?.thumbnails.get(id)
+    if (cachedThumbnail !== undefined && cachedThumbnail !== print.thumbnail) {
+      this.viewCache = null
+      this.browseCache = null
+    }
+    return print
   }
 
   /** A single local lookup for a visible row; never fetch artwork from the network on hover. */

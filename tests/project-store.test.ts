@@ -23,6 +23,46 @@ afterEach(() => {
 })
 
 describe('ProjectStore', () => {
+  it('legge la cronologia del thread a pagine senza perdere messaggi con data identica', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Cronologia lunga', format: 'STANDARD' })
+    const other = store.create({ name: 'Altro progetto', format: 'STANDARD' })
+    const thread = store.createDeckThread({ projectId: project.id, title: 'Prova',
+      openingNote: 'Messaggio iniziale', startWithAi: true })
+    const db = new DatabaseSync(path)
+    const insert = db.prepare(`INSERT INTO deck_thread_messages
+      (id, thread_id, author, text, created_at, evidence_json)
+      VALUES (?, ?, 'assistant', ?, ?, ?)`)
+    db.exec('BEGIN IMMEDIATE')
+    for (let index = 1; index <= 120; index++) insert.run(`message-${index}`, thread.id,
+      `Risposta ${index}`, '2099-10-25T00:00:00.000Z', JSON.stringify({ index }))
+    db.exec('COMMIT')
+    db.close()
+
+    const recent = store.getDeckThreadWindow(project.id, thread.id)!
+    expect(recent.messageCount).toBe(121)
+    expect(recent.messages).toHaveLength(50)
+    expect(recent.messages[0].id).toBe('message-71')
+    expect(recent.openingAiMessage?.text).toBe('Messaggio iniziale')
+    expect(recent.openingAiPending).toBe(false)
+    const second = store.getDeckThreadMessagesBefore(project.id, thread.id, recent.oldestMessageCursor!)
+    expect(second.messages).toHaveLength(50)
+    expect(second.messages[0].id).toBe('message-21')
+    const first = store.getDeckThreadMessagesBefore(project.id, thread.id, second.oldestCursor!)
+    expect(first.messages.map((item) => item.id)).toEqual([
+      thread.messages[0].id, ...Array.from({ length: 20 }, (_, index) => `message-${index + 1}`)
+    ])
+    expect(first.messages[1].evidence).toEqual({ index: 1 })
+    expect(store.getDeckThread(project.id, thread.id)?.messages).toHaveLength(121)
+    expect(store.hasDeckThread(project.id, thread.id)).toBe(true)
+    expect(store.hasDeckThread(other.id, thread.id)).toBe(false)
+    expect(store.getDeckThreadWindow(other.id, thread.id)).toBeNull()
+    expect(() => store.getDeckThreadMessagesBefore(other.id, thread.id, recent.oldestMessageCursor!))
+      .toThrow('Thread non trovato')
+    store.close()
+  })
+
   it('mantiene due progetti distinti dopo la riapertura del database', () => {
     const path = databasePath()
     const firstSession = new ProjectStore(path)

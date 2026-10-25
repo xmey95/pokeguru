@@ -26,6 +26,16 @@ export interface DeckThreadMessage {
   citedSourceIds?: string[]
 }
 
+export interface DeckThreadMessageCursor {
+  createdAt: string
+  rowId: number
+}
+
+export interface DeckThreadMessagePage {
+  messages: DeckThreadMessage[]
+  oldestCursor: DeckThreadMessageCursor | null
+}
+
 export interface DeckCandidate {
   id: string
   sequence: number
@@ -54,6 +64,11 @@ export interface DeckThread {
   updatedAt: string
   messages: DeckThreadMessage[]
   candidates: DeckCandidate[]
+  /** Present on a recent-message window; older messages can be fetched with oldestMessageCursor. */
+  messageCount?: number
+  oldestMessageCursor?: DeckThreadMessageCursor | null
+  openingAiMessage?: DeckThreadMessage | null
+  openingAiPending?: boolean
 }
 
 export type DeckThreadSummary = Omit<DeckThread, 'messages' | 'candidates'> & {

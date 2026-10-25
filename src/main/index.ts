@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { ProjectStore } from './project-store'
 import type { DeckBaseline, ImportDeckInput } from '../shared/deck-import'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckThreadMessageCursor, DeckThreadMessagePage, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import { reviewCandidate } from '../shared/candidate-review'
 import { auditStandardRuleSources } from './standard-rule-audit'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
@@ -735,10 +735,23 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.getDeckThread(projectId, threadId))
   })
 
+  ipcMain.handle('deck:get-thread-window', (event, projectId: unknown, threadId: unknown): OperationResult<DeckThread | null> => {
+    if (!isMainFrame(event) || typeof projectId !== 'string' || typeof threadId !== 'string')
+      return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getDeckThreadWindow(projectId, threadId))
+  })
+
+  ipcMain.handle('deck:get-thread-before', (event, projectId: unknown, threadId: unknown,
+    cursor: unknown): OperationResult<DeckThreadMessagePage> => {
+    if (!isMainFrame(event) || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+      !cursor || typeof cursor !== 'object') return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getDeckThreadMessagesBefore(projectId, threadId, cursor as DeckThreadMessageCursor))
+  })
+
   function validAiResource(projectId: unknown, resourceId: unknown): projectId is string {
     if (!projectStore || typeof projectId !== 'string' || typeof resourceId !== 'string' ||
       !projectStore.get(projectId)) return false
-    return resourceId === `matchup:${projectId}` || Boolean(projectStore.getDeckThread(projectId, resourceId))
+    return resourceId === `matchup:${projectId}` || projectStore.hasDeckThread(projectId, resourceId)
   }
 
   ipcMain.handle('ai:job-status', (event, projectId: unknown, resourceId: unknown) => {
@@ -771,12 +784,18 @@ function registerProjectHandlers(): void {
 
   ipcMain.handle('deck:create-thread', (event, input: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    return withStore(() => projectStore!.createDeckThread(input as CreateDeckThreadInput))
+    return withStore(() => {
+      const saved = projectStore!.createDeckThread(input as CreateDeckThreadInput)
+      return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
+    })
   })
 
   ipcMain.handle('deck:add-thread-message', (event, projectId: unknown, threadId: unknown, message: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    return withStore(() => projectStore!.addDeckThreadMessage(projectId as string, threadId as string, message as string))
+    return withStore(() => {
+      const saved = projectStore!.addDeckThreadMessage(projectId as string, threadId as string, message as string)
+      return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
+    })
   })
 
   ipcMain.handle('deck:preview-evidence', (event, projectId: unknown, threadId: unknown,
@@ -847,7 +866,7 @@ function registerProjectHandlers(): void {
         typeof existingUserMessageId === 'string' ? existingUserMessageId : undefined)
       aiJobStore.transition(job.id, 'applied')
       clearAiArtifacts(job.id)
-      return { ok: true, value: saved }
+      return { ok: true, value: projectStore.getDeckThreadWindow(saved.projectId, saved.id)! }
     } catch (error) {
       finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
@@ -904,7 +923,7 @@ function registerProjectHandlers(): void {
           sources: proposal.sources, checks: proposal.checks } : undefined, evidence, citedSourceIds)
       aiJobStore.transition(job.id, 'applied')
       clearAiArtifacts(job.id)
-      return { ok: true, value: saved }
+      return { ok: true, value: projectStore.getDeckThreadWindow(saved.projectId, saved.id)! }
     } catch (error) {
       finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
@@ -944,7 +963,10 @@ function registerProjectHandlers(): void {
 
   ipcMain.handle('deck:save-candidate', (event, input: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    return withStore(() => projectStore!.saveDeckCandidate(input as SaveDeckCandidateInput))
+    return withStore(() => {
+      const saved = projectStore!.saveDeckCandidate(input as SaveDeckCandidateInput)
+      return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
+    })
   })
 
   ipcMain.handle('deck:adopt-candidate', (event, input: unknown): OperationResult<DeckBaseline> => {

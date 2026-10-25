@@ -29,6 +29,9 @@ const api: ProjectsApi = {
   listDeckThreads: (projectId) => ipcRenderer.invoke('deck:list-threads', projectId),
   listDeckThreadSummaries: (projectId) => ipcRenderer.invoke('deck:list-thread-summaries', projectId),
   getDeckThread: (projectId, threadId) => ipcRenderer.invoke('deck:get-thread', projectId, threadId),
+  getDeckThreadWindow: (projectId, threadId) => ipcRenderer.invoke('deck:get-thread-window', projectId, threadId),
+  getDeckThreadMessagesBefore: (projectId, threadId, cursor) =>
+    ipcRenderer.invoke('deck:get-thread-before', projectId, threadId, cursor),
   getAiJobStatus: (projectId, resourceId) => ipcRenderer.invoke('ai:job-status', projectId, resourceId),
   cancelAiJob: (projectId, resourceId) => ipcRenderer.invoke('ai:cancel-job', projectId, resourceId),
   recoverAiJobs: () => ipcRenderer.invoke('ai:recover-jobs'),

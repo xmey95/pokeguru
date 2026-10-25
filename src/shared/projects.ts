@@ -6,7 +6,7 @@ import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
 import type { ClearLineMappingInput, DeckReconciliation, SaveLineMappingInput } from './reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from './constraints'
 import type { DeckExportRequest } from './deck-export'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckThreadMessageCursor, DeckThreadMessagePage, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from './deck-threads'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from './tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from './main-tournament'
 import type { StandardRuleAudit } from './standard-rule-audit'
@@ -67,6 +67,9 @@ export interface ProjectsApi {
   listDeckThreads(projectId: string): Promise<OperationResult<DeckThread[]>>
   listDeckThreadSummaries(projectId: string): Promise<OperationResult<DeckThreadSummary[]>>
   getDeckThread(projectId: string, threadId: string): Promise<OperationResult<DeckThread | null>>
+  getDeckThreadWindow(projectId: string, threadId: string): Promise<OperationResult<DeckThread | null>>
+  getDeckThreadMessagesBefore(projectId: string, threadId: string,
+    cursor: DeckThreadMessageCursor): Promise<OperationResult<DeckThreadMessagePage>>
   getAiJobStatus(projectId: string, resourceId: string): Promise<OperationResult<AiJobSummary | null>>
   cancelAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
   recoverAiJobs(): Promise<OperationResult<boolean>>

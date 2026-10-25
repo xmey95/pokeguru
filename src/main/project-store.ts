@@ -8,11 +8,37 @@ import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot, MatchupT
 import type { CreateProjectInput, Project } from '../shared/projects'
 import type { ClearLineMappingInput, DeckLineMapping, DeckReconciliation, IdentityTotal, MappedPrint, SaveLineMappingInput } from '../shared/reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckCandidate, DeckThread, DeckThreadMessage, DeckThreadMessageCursor, DeckThreadMessagePage, DeckThreadSummary, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
 import type { AiRunConfig } from '../shared/ai'
 import { normalizeDeckCodes } from '../shared/deck-code-normalization'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 import type { ThreadEvidencePacket } from '../shared/thread-evidence'
+
+interface ThreadMessageRow {
+  row_id: number
+  id: string
+  text: string
+  created_at: string
+  author: DeckThreadMessage['author']
+  ai_config_json: string | null
+  ai_turn_id: string | null
+  evidence_json: string | null
+  cited_source_ids_json: string | null
+}
+
+function messageCursor(row: ThreadMessageRow): DeckThreadMessageCursor {
+  return { createdAt: row.created_at, rowId: row.row_id }
+}
+
+function parseThreadMessage(row: ThreadMessageRow): DeckThreadMessage {
+  return {
+    id: row.id, text: row.text, createdAt: row.created_at, author: row.author,
+    aiConfig: row.ai_config_json ? JSON.parse(row.ai_config_json) as AiRunConfig : null,
+    aiTurnId: row.ai_turn_id,
+    evidence: row.evidence_json ? JSON.parse(row.evidence_json) as ThreadEvidencePacket : null,
+    citedSourceIds: row.cited_source_ids_json ? JSON.parse(row.cited_source_ids_json) as string[] : []
+  }
+}
 
 interface ProjectRow {
   id: string
@@ -626,11 +652,34 @@ export class ProjectStore {
     return this.readDeckThreads(projectId, threadId)[0] ?? null
   }
 
+  hasDeckThread(projectId: string, threadId: string): boolean {
+    if (!this.get(projectId)) return false
+    return Boolean(this.db.prepare('SELECT 1 FROM deck_threads WHERE project_id = ? AND id = ?')
+      .get(projectId, threadId))
+  }
+
+  getDeckThreadWindow(projectId: string, threadId: string): DeckThread | null {
+    return this.readDeckThreads(projectId, threadId, 50)[0] ?? null
+  }
+
+  getDeckThreadMessagesBefore(projectId: string, threadId: string,
+    cursor: DeckThreadMessageCursor): DeckThreadMessagePage {
+    if (!this.hasDeckThread(projectId, threadId)) throw new Error('Thread non trovato in questo progetto.')
+    if (!cursor || typeof cursor.createdAt !== 'string' || !Number.isSafeInteger(cursor.rowId) || cursor.rowId < 1)
+      throw new Error('Cursore della cronologia non valido.')
+    const rows = this.db.prepare(`SELECT rowid AS row_id, id, text, created_at, author, ai_config_json,
+      ai_turn_id, evidence_json, cited_source_ids_json FROM deck_thread_messages
+      WHERE thread_id = ? AND (created_at < ? OR (created_at = ? AND rowid < ?))
+      ORDER BY created_at DESC, rowid DESC LIMIT 50`)
+      .all(threadId, cursor.createdAt, cursor.createdAt, cursor.rowId) as unknown as ThreadMessageRow[]
+    return { messages: rows.reverse().map(parseThreadMessage), oldestCursor: rows.length ? messageCursor(rows[0]) : null }
+  }
+
   listDeckThreads(projectId: string): DeckThread[] {
     return this.readDeckThreads(projectId)
   }
 
-  private readDeckThreads(projectId: string, threadId?: string): DeckThread[] {
+  private readDeckThreads(projectId: string, threadId?: string, recentLimit?: number): DeckThread[] {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const current = this.db.prepare('SELECT version_id FROM deck_main_heads WHERE project_id = ?')
       .get(projectId) as { version_id: string } | undefined
@@ -643,30 +692,37 @@ export class ProjectStore {
         ai_session_ref: string | null; opening_ai_message_id: string | null
         created_at: string; updated_at: string; base_sequence: number | null
       }[]
-    const messages = this.db.prepare(`SELECT id, text, created_at, author, ai_config_json, ai_turn_id,
+    const messages = this.db.prepare(`SELECT rowid AS row_id, id, text, created_at, author, ai_config_json, ai_turn_id,
       evidence_json, cited_source_ids_json FROM deck_thread_messages
-      WHERE thread_id = ? ORDER BY created_at, rowid`)
+      WHERE thread_id = ? ORDER BY created_at ${recentLimit ? 'DESC' : 'ASC'}, rowid ${recentLimit ? 'DESC' : 'ASC'}
+      ${recentLimit ? 'LIMIT 50' : ''}`)
+    const messageCount = recentLimit ? this.db.prepare('SELECT COUNT(*) AS count FROM deck_thread_messages WHERE thread_id = ?') : null
+    const openingMessage = recentLimit ? this.db.prepare(`SELECT rowid AS row_id, id, text, created_at, author,
+      ai_config_json, ai_turn_id, evidence_json, cited_source_ids_json FROM deck_thread_messages WHERE id = ? AND thread_id = ?`) : null
+    const assistantExists = recentLimit ? this.db.prepare(`SELECT 1 FROM deck_thread_messages WHERE thread_id = ? AND author = 'assistant' LIMIT 1`) : null
     const candidates = this.db.prepare(`SELECT id, sequence, raw_text, parsed_json, note, origin, created_at
       FROM deck_thread_candidates WHERE thread_id = ? ORDER BY sequence`)
     const aiCandidates = this.db.prepare(`SELECT id, sequence, raw_text, parsed_json, note, sources_json,
       checks_json, ai_config_json, ai_turn_id, created_at FROM deck_ai_candidates WHERE thread_id = ? ORDER BY sequence`)
-    return rows.map((row) => ({
+    return rows.map((row) => {
+      const messageRows = messages.all(row.id) as unknown as ThreadMessageRow[]
+      if (recentLimit) messageRows.reverse()
+      const openingRow = openingMessage && row.opening_ai_message_id
+        ? openingMessage.get(row.opening_ai_message_id, row.id) as ThreadMessageRow | undefined : undefined
+      return {
       id: row.id, projectId: row.project_id, title: row.title,
       baseVersionId: row.base_version_id, baseVersionNumber: row.base_sequence,
       currentVersionId: current?.version_id ?? null,
       stale: row.base_version_id !== (current?.version_id ?? null),
       aiSessionRef: row.ai_session_ref, openingAiMessageId: row.opening_ai_message_id,
       createdAt: row.created_at, updatedAt: row.updated_at,
-      messages: (messages.all(row.id) as {
-        id: string; text: string; created_at: string; author: DeckThreadMessage['author']; ai_config_json: string | null;
-        ai_turn_id: string | null; evidence_json: string | null; cited_source_ids_json: string | null
-      }[]).map((message): DeckThreadMessage => ({
-        id: message.id, text: message.text, createdAt: message.created_at, author: message.author,
-        aiConfig: message.ai_config_json ? JSON.parse(message.ai_config_json) as AiRunConfig : null,
-        aiTurnId: message.ai_turn_id,
-        evidence: message.evidence_json ? JSON.parse(message.evidence_json) as ThreadEvidencePacket : null,
-        citedSourceIds: message.cited_source_ids_json ? JSON.parse(message.cited_source_ids_json) as string[] : []
-      })),
+      messages: messageRows.map(parseThreadMessage),
+      ...(recentLimit ? {
+        messageCount: (messageCount!.get(row.id) as { count: number }).count,
+        oldestMessageCursor: messageRows.length ? messageCursor(messageRows[0]) : null,
+        openingAiMessage: openingRow ? parseThreadMessage(openingRow) : null,
+        openingAiPending: Boolean(openingRow && !assistantExists!.get(row.id))
+      } : {}),
       candidates: [...(candidates.all(row.id) as {
         id: string; sequence: number; raw_text: string; parsed_json: string
         note: string; origin: 'manual'; created_at: string
@@ -686,7 +742,7 @@ export class ProjectStore {
         sources: JSON.parse(candidate.sources_json) as DeckCandidate['sources'],
         checks: JSON.parse(candidate.checks_json) as string[]
       }))].sort((a, b) => a.sequence - b.sequence)
-    }))
+    }})
   }
 
   createDeckThread(input: CreateDeckThreadInput): DeckThread {

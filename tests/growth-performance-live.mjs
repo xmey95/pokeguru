@@ -14,6 +14,7 @@ const expectAllMessages = process.argv.includes('--expect-all-messages')
 const matchedEvidence = process.argv.includes('--matched-evidence')
 const markdownMessages = process.argv.includes('--markdown-messages')
 const threadIpcOnly = process.argv.includes('--thread-ipc-only')
+const pagedThreadOnly = process.argv.includes('--paged-thread-only')
 const integerOption = (name, fallback, maximum = 1000) => {
   const value = process.argv.find((argument) => argument.startsWith(`--${name}=`))?.split('=')[1]
   if (value === undefined) return fallback
@@ -255,22 +256,37 @@ try {
   const heapStart = await heap()
   if (threadIpcOnly) {
     const threadId = `thread-${String(threadCount - 1).padStart(3, '0')}`
-    const samples = []
-    for (let index = 0; index < 3; index++) {
-      const sample = await page.evaluate(async ({ projectId, threadId }) => {
+    const modes = {}
+    for (const call of pagedThreadOnly ? ['getDeckThreadWindow'] : ['getDeckThread', 'getDeckThreadWindow']) {
+      const samples = []
+      for (let index = 0; index < 3; index++) {
+      const sample = await page.evaluate(async ({ projectId, threadId, call }) => {
         const start = performance.now()
-        const result = await window.projectsApi.getDeckThread(projectId, threadId)
+        const result = await window.projectsApi[call](projectId, threadId)
         const ipcMs = performance.now() - start
         if (!result.ok) throw new Error(result.error)
         const serializeStart = performance.now()
         const jsonChars = JSON.stringify(result).length
         return { ipcMs: +ipcMs.toFixed(1), serializeMs: +(performance.now() - serializeStart).toFixed(1),
-          jsonChars, messages: result.value.messages.length }
-      }, { projectId, threadId })
+          jsonChars, messages: result.value.messages.length, messageCount: result.value.messageCount }
+      }, { projectId, threadId, call })
       samples.push(sample)
       await cdp.send('HeapProfiler.enable')
       await cdp.send('HeapProfiler.collectGarbage')
+      }
+      modes[call] = { samples, ipcMedian: median(samples.map((item) => item.ipcMs)),
+        serializeMedian: median(samples.map((item) => item.serializeMs)) }
     }
+    const olderPage = await page.evaluate(async ({ projectId, threadId }) => {
+      const detail = await window.projectsApi.getDeckThreadWindow(projectId, threadId)
+      if (!detail.ok) throw new Error(detail.error)
+      const start = performance.now()
+      const result = await window.projectsApi.getDeckThreadMessagesBefore(projectId, threadId,
+        detail.value.oldestMessageCursor)
+      if (!result.ok) throw new Error(result.error)
+      return { ipcMs: +(performance.now() - start).toFixed(1), messages: result.value.messages.length,
+        jsonChars: JSON.stringify(result).length }
+    }, { projectId, threadId })
     const heapAfterGc = await heap()
     const processes = await application.evaluate(({ app }) => app.getAppMetrics().map((entry) => ({
       type: entry.type, privateKiB: entry.memory?.privateBytes ?? null })))
@@ -279,8 +295,7 @@ try {
     const threadReads = measureThreadReads(databasePath, threadId)
     console.log(JSON.stringify({ kind: 'Thread detail growth, offline and isolated',
       dataset: { ...dataset, viewportWidth: viewportWidth ?? 'default' }, startupMs,
-      threadDetail: { samples, ipcMedian: median(samples.map((item) => item.ipcMs)),
-        serializeMedian: median(samples.map((item) => item.serializeMs)) },
+      threadDetail: { ...modes, olderPage },
       threadReads, rendererHeapBytes: { start: heapStart, afterGc: heapAfterGc }, processes }, null, 2))
   } else {
   const ipc = {}
@@ -289,7 +304,7 @@ try {
     threadSummaries: 'listDeckThreadSummaries', playSummaries: 'listTournaments',
     regionalSummaries: 'listMainTournaments', matchupEvidence: 'getMatchupEvidence',
     matchupReports: 'listMatchupReports',
-    matchupDiscussion: 'listMatchupDiscussions', threadDetail: 'getDeckThread',
+    matchupDiscussion: 'listMatchupDiscussions', threadDetail: 'getDeckThreadWindow',
     catalogSearch: 'searchCatalog'
   })) {
     const samples = []
@@ -301,7 +316,7 @@ try {
           listMatchupReports: [projectId, metaId],
           getMatchupEvidence: [metaId, '900000'],
           listMatchupDiscussions: [projectId, '900000'],
-          getDeckThread: [projectId, `thread-${String(threadCount - 1).padStart(3, '0')}`],
+          getDeckThreadWindow: [projectId, `thread-${String(threadCount - 1).padStart(3, '0')}`],
           searchCatalog: ['Synthetic card', 'all', 0] }[call] ?? []
         const result = await window.projectsApi[call](...args)
         const ms = performance.now() - start
