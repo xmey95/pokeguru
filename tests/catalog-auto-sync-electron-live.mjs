@@ -88,8 +88,12 @@ try {
   assert.equal((await page.evaluate(() => window.projectsApi.syncStandardCatalog('new'))).ok, true)
   await waitFor(page, 'done')
   const completed = await status(page)
-  const { runId, ...completedProgress } = completed
+  const { runId, rotationCleanup, ...completedProgress } = completed
   assert.match(runId, /^[a-f0-9-]{36}$/)
+  assert.deepEqual({ ...rotationCleanup, completedAt: undefined }, {
+    ruleVersion: 'play-2026-01-09', removedPrints: 0, retainedReferences: 0,
+    completedAt: undefined })
+  assert.equal(Number.isFinite(Date.parse(rotationCleanup.completedAt)), true)
   assert.deepEqual(completedProgress, { running: false, mode: 'new', state: 'done',
     phase: 'Aggiornamento terminato', expected: 16, acquired: 16, error: null, cooldownUntil: null })
   assert.equal((await application.evaluate(() => globalThis.catalogAutoReads)).length, 16)
