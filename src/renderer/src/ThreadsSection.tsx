@@ -288,7 +288,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   }
 
   const selectedSummary = threads.find((thread) => thread.id === selectedId) ?? null
-  const selected = selectedDetail?.id === selectedId ? selectedDetail : null
+  const selected = selectedSummary && selectedDetail?.id === selectedId ? selectedDetail : null
   const openingAiMessage = selected?.openingAiMessageId
     ? selected.messages.find((entry) => entry.id === selected.openingAiMessageId) : null
   const openingAiPending = !!openingAiMessage && !selected?.messages.some((entry) => entry.author === 'assistant')
@@ -342,7 +342,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       if (active) { setSelectedDetail(null); setError(cause instanceof Error ? cause.message : 'Thread non disponibile.') }
     }).finally(() => { if (active) setDetailLoading(false) })
     return () => { active = false }
-  }, [projectId, selectedId])
+  }, [projectId, selectedId, working])
 
   useEffect(() => {
     if (!selectedId) { setAiJob(null); return }

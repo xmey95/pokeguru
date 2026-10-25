@@ -203,7 +203,7 @@ try {
     assert.equal(await page.locator('.matchup-fields img, .matchup-fields a[href^="javascript:"]').count(), 0)
     assert.ok(await page.getByRole('heading', { name: 'Punti forti', exact: true }).first().isVisible())
     assert.equal(await page.locator('.guide-sources').getAttribute('open'), null)
-    assert.ok(await page.locator('.matchup-fields').first().getByRole('link', { name: 'lista campione' }).isVisible())
+    assert.ok(await page.locator('.matchup-fields').first().getByRole('link', { name: 'lista campione' }).first().isVisible())
     await page.locator('.guide-sources > summary').click()
     await page.getByRole('region', { name: 'Evidenze torneo del matchup' }).waitFor()
     await page.locator('.guide-sources > summary').click()
