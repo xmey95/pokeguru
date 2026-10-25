@@ -21,6 +21,8 @@ const integerOption = (name, fallback) => {
 }
 const threadCount = integerOption('threads', 160)
 const longMessages = integerOption('selected-messages', 5)
+const cardCount = Number(process.argv.find((argument) => argument.startsWith('--cards='))?.split('=')[1] ?? 10_000)
+if (cardCount !== 5_000 && cardCount !== 10_000) throw new Error('Use --cards=5000 or --cards=10000')
 const viewportWidth = process.argv.some((argument) => argument.startsWith('--viewport-width='))
   ? integerOption('viewport-width', 1280) : null
 const workspace = resolve(import.meta.dirname, '..')
@@ -165,7 +167,7 @@ try {
   await application.close()
   application = undefined
 
-  const dataset = seed(join(profile, 'data', 'pokeguru.sqlite'), projectId, 10_000)
+  const dataset = seed(join(profile, 'data', 'pokeguru.sqlite'), projectId, cardCount)
   const start = performance.now()
   application = await launch()
   page = await application.firstWindow()
@@ -267,6 +269,9 @@ try {
     ['Matchup', '#matchup-switcher-trigger', '.main-content']]) {
     await page.getByRole('button', { name: section, exact: true }).first().click()
     await page.locator(ready).waitFor()
+    await page.waitForFunction((name) => [...document.querySelectorAll('.sidebar button.active')]
+      .some((button) => button.textContent?.trim() === name) &&
+      !document.querySelector('[data-nav-loading="true"]'), section)
     scroll[section] = await page.evaluate(async (selector) => {
       const target = document.querySelector(selector)
       if (!target || target.scrollHeight <= target.clientHeight + 100) return { available: false }

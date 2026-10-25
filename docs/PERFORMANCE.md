@@ -2,7 +2,7 @@
 
 ## APP-113 — Baseline con archivi crescenti (25 ottobre 2026)
 
-`npm run test:performance:growth` compila l'app e avvia Electron con un profilo temporaneo. La fixture crea 10.000 stampe sintetiche, 160 Thread, 800 messaggi con pacchetti di evidenze di circa 32 KiB, 160 candidate, 120 eventi Play con 120 partecipanti, 60 Regional con 300 partecipanti, 60 avversari Matchup e 300 revisioni. La lista di base è l'esempio del repository; le guide e le carte sono sintetiche. Nessuna chiamata Codex o fonte esterna è inclusa. Il profilo viene eliminato alla fine e la prova non legge i dati personali.
+`npm run test:performance:growth` compila l'app e avvia Electron con un profilo temporaneo. La fixture predefinita crea 10.000 stampe sintetiche, 160 Thread, 800 messaggi con pacchetti di evidenze di circa 32 KiB, 160 candidate, 120 eventi Play con 120 partecipanti, 60 Regional con 300 partecipanti, 60 avversari Matchup e 300 revisioni. `--cards=5000` copre il secondo taglio; il parametro predefinito è 10.000. La lista di base è l'esempio del repository; le guide e le carte sono sintetiche. Nessuna chiamata Codex o fonte esterna è inclusa. Il profilo viene eliminato alla fine e la prova non legge i dati personali.
 
 Prima misura Windows su `0ddc49d`, Electron 45/Node 24, cache OS calda. I valori sotto sono intervalli delle mediane di cinque chiamate IPC in più prove valide con la fixture completa, salvo le evidenze Matchup misurate in tre chiamate. Il benchmark stampa tutti i campioni JSON, così il confronto dopo l'integrazione può usare gli stessi dati.
 
@@ -41,6 +41,8 @@ In due prove Electron consecutive sulla stessa fixture, il primo click Lista è 
 ### Crescita dei Thread e della conversazione
 
 La fixture consente `--threads=N`, `--selected-messages=N` e `--viewport-width=N`. Con cinque messaggi nel Thread selezionato, i riepiloghi IPC di 1/50/160 Thread sono stati 0,6/0,8/1,3 ms; il dettaglio 1,0/1,0/1,1 ms. La pagina Thread montava rispettivamente 399/644/1.194 nodi: il selettore tiene i 160 elementi nel DOM anche da chiuso, ma il suo costo resta modesto in questa scala. Il contenuto pronto nei tre cicli distinti era 209/163/385 ms, quindi non è una curva monotona controllata. Gli snapshot heap immediati non dimostrano una perdita.
+
+La fixture da 5.000 stampe con gli altri volumi predefiniti è passata due volte su Windows. Il Catalogo completo IPC restituisce circa 3,18 milioni di caratteri contro 6,37 milioni a 10.000 stampe. Fra i due cicli a 5.000 stampe la mediana IPC è variata da 28 a 63 ms per il Catalogo, da 35 a 73 ms per Play e da 124 a 332 ms per le evidenze Matchup: il carico concorrente del computer impedisce di inferire una legge di scala da questi campioni. La misura finale richiede cicli appaiati a carico controllato sul codice UI integrato.
 
 Il costo cresce nella conversazione selezionata: con 200 messaggi dotati di evidenze di circa 32 KiB, il dettaglio IPC era 6,5 milioni di caratteri e montava 2.154 nodi con un Thread, 2.949 con 160 Thread. I long task massimi erano 258 e 334 ms. Con 1.000 messaggi e un Thread la vista montava 9.354 nodi, il dettaglio IPC era 32,5 milioni di caratteri e una navigazione calda ha impiegato fino a 2,97 s, con long task di 2,87 s. Questi pacchetti ripetono intenzionalmente un'etichetta sintetica lunga: stressano il volume storico, non rappresentano qualità o dimensione media delle fonti reali.
 
