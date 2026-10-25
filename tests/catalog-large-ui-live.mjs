@@ -57,6 +57,10 @@ try {
 
   app = await launch()
   const page = await app.firstWindow()
+  const ready = async () => {
+    await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
+  }
   const start = performance.now()
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
   await page.getByLabel('Cerca carta o stampa').waitFor()
@@ -85,6 +89,58 @@ try {
   await page.getByRole('button', { name: 'Successivi' }).click()
   await page.locator('.catalog-list > .content-note').getByText(/101–200/).waitFor()
   assert.equal(await page.locator('.catalog-list > button').count(), 100)
+  for (const [width, height] of [[1280, 720], [640, 720]]) {
+    await page.setViewportSize({ width, height })
+    await page.locator('.catalog-list').evaluate((list) => { list.scrollTop = list.scrollHeight / 2 })
+    await page.locator('.main-content').evaluate((main) => { main.scrollTop = 100 })
+    const cardName = width === 1280 ? 'Card 00160' : 'Card 00170'
+    const card = page.locator('.catalog-list > button').filter({ hasText: cardName })
+    await card.evaluate((button) => {
+      button.addEventListener('click', () => {
+        globalThis.catalogClickScroll = {
+          main: document.querySelector('.main-content').scrollTop,
+          list: document.querySelector('.catalog-list').scrollTop
+        }
+      }, { once: true })
+    })
+    await card.click()
+    await ready()
+    await page.locator('.catalog-detail').getByText(cardName).waitFor()
+    await ready()
+    const after = await page.evaluate(() => ({
+      before: globalThis.catalogClickScroll,
+      main: document.querySelector('.main-content').scrollTop,
+      list: document.querySelector('.catalog-list').scrollTop,
+      selected: document.querySelector('.catalog-list > button.active')?.textContent,
+      selectedFocused: document.querySelector('.catalog-list > button.active') === document.activeElement
+    }))
+    assert.ok(Math.abs(after.main - after.before.main) <= 2, `${width}: page scroll ${JSON.stringify(after)}`)
+    assert.ok(Math.abs(after.list - after.before.list) <= 2, `${width}: list scroll ${JSON.stringify(after)}`)
+    assert.match(after.selected, new RegExp(cardName))
+    assert.equal(after.selectedFocused, true, `${width}: selected card lost focus`)
+    await page.getByRole('button', { name: 'Indietro' }).click()
+    await ready()
+    assert.ok(Math.abs(await page.locator('.catalog-list').evaluate((list) => list.scrollTop) - after.before.list) <= 2)
+    await page.getByRole('button', { name: 'Avanti' }).click()
+    await ready()
+    assert.match(await page.locator('.catalog-list > button.active').textContent(), new RegExp(cardName))
+    assert.ok(Math.abs(await page.locator('.catalog-list').evaluate((list) => list.scrollTop) - after.before.list) <= 2)
+  }
+  await page.getByLabel('Espansione').selectOption('s1')
+  await page.getByLabel('Cerca carta o stampa').fill('Card 01')
+  await page.locator('.catalog-list > button').filter({ hasText: 'Card 01030' }).waitFor()
+  await page.locator('.catalog-list > button').filter({ hasText: 'Card 01030' }).click()
+  await ready()
+  assert.equal(await page.getByLabel('Espansione').inputValue(), 's1')
+  assert.equal(await page.getByLabel('Cerca carta o stampa').inputValue(), 'Card 01')
+  assert.match(await page.locator('.catalog-list > button.active').textContent(), /Card 01030/)
+  await page.getByRole('button', { name: 'Indietro' }).click()
+  await ready()
+  await page.getByRole('button', { name: 'Avanti' }).click()
+  await ready()
+  assert.equal(await page.getByLabel('Espansione').inputValue(), 's1')
+  assert.equal(await page.getByLabel('Cerca carta o stampa').inputValue(), 'Card 01')
+  assert.match(await page.locator('.catalog-list > button.active').textContent(), /Card 01030/)
   console.log(JSON.stringify({ prints: 10_000, openMs: +openMs.toFixed(1),
     searchUiMs: +searchUiMs.toFixed(1), ipc }))
 } finally {

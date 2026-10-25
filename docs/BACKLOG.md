@@ -108,6 +108,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-099** | Verificare UX Linux, lettore di schermo e scala OS elevata | Verifica UX | R-13 / correzioni review | P1 / M | Build installabile; strumenti di accessibilità | Done |
 | **APP-100** | Misurare il bundle renderer e dividerlo solo se utile | Performance | R-13 / correzioni review | P2 / S | APP-093; baseline avvio e navigazione | Done |
 | **APP-101** | Includere nel Thread le schede già note citate nel contesto | Correzione AI | R-07, R-08 / feedback utente | P1 / S | APP-092/094; caso reale osservato in sola lettura | Done |
+| **APP-102** | Conservare posizione e contesto scegliendo una carta del Catalogo | Correzione UI | R-02 / feedback utente | P1 / S | APP-072/093; autorizzazione utente 25-10-2026 | Done |
 | **APP-106** | Archiviare, ripristinare ed eliminare progetti con conferma | Funzionalità/persistenza | R-01, R-03 / manutenzione pre-I4 | P1 / M | APP-096/097; migrazione e backup verificati | Done |
 
 ### Corrispondenza degli ID assegnati sui rami paralleli
@@ -913,6 +914,13 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Accettazione:** una domanda ellittica dopo una nota iniziale su Mega Lucario ex e Compassione di Lino deve includere nell'evidenza il testo di gioco di entrambe le carte già presenti nel Catalogo; il nome italiano deve essere collegato alla scheda inglese verificata; stampe con regole realmente diverse non vengono dichiarate equivalenti. Nessuna risposta storica o dato personale va alterato.
 - **Risultato:** la ricerca delle evidenze usa titolo e ultime sei osservazioni dell'utente oltre alla domanda, dando priorità alle carte nominate anche quando il limite di 36 schede è raggiunto. I nomi sovrapposti sono riconosciuti dal più specifico. Un alias verificato collega «Compassione di Lino» a Wally's Compassion nel catalogo inglese; il pacchetto e l'anteprima espongono questa corrispondenza. La sola differenza tipografica `×2`/`x2` nella debolezza non rende ambigua la scheda di Mega Lucario ex; testi di gioco diversi restano ambigui. La risposta già salvata resta storica e non viene riscritta.
 - **Verifiche e limiti:** sul profilo personale letto in sola lettura il nuovo selettore ha restituito 23/23 schede con testo, comprese le due carte richieste, senza includere Lucario e Lucario ex omonimi parziali; nessuna chiamata AI è stata eseguita sul profilo. Build/typecheck, regressione sintetica, 234 test unitari e smoke Electron Thread offline passati. L'alias è puntuale, non una copertura completa dei nomi italiani; una nuova risposta Codex non è stata generata automaticamente e la qualità tattica resta da osservare nel prossimo turno utente.
+
+### APP-102 — Posizione del Catalogo alla selezione di una carta
+
+- **Autorizzazione e Ready:** feedback diretto dell'utente del 25-10-2026. La selezione di una carta crea una voce di cronologia e rimonta la vista; APP-072/093 sono completati. Intervento limitato al ripristino della posizione nella navigazione del Catalogo.
+- **Accettazione:** il clic su una carta non lascia pagina e risultati all'inizio; filtro, pagina, selezione e Indietro/Avanti restano coerenti. Prova con lista lunga e layout desktop/compatto, usando un profilo Electron temporaneo.
+- **Risultato:** il test con 10.000 stampe ha riprodotto il salto a 1280 px (pagina 100→0, risultati 4204→0). La navigazione conserva scroll e focus nella nuova voce quando il Catalogo cambia carta; i dettagli della carta precedente non vengono trasferiti. Filtro, pagina, selezione e Indietro/Avanti restano coerenti.
+- **Verifiche e limiti:** build/typecheck, 145 test unitari passati e 18 live esclusi, test Electron lungo a 1280/640 px, dettaglio carta a 1440/1280/640 px e percorso gestione/catalogo a 1440/1280/640 px passati su Windows con profili temporanei. La [PR #13](https://github.com/xmey95/pokeguru/pull/13) ha superato i check Verify Ubuntu/Windows sul commit `4914d89`, compresa la nuova prova di lista lunga su entrambe le piattaforme. Le 10.000 stampe e i casi limite del dettaglio sono sintetici: non sono una nuova sincronizzazione TCGdex o una prova del database personale. Merge in `dev` coordinato separatamente; nessuna modifica a `main` o avvio di I4.
 
 ### APP-106 — Archiviare, ripristinare ed eliminare progetti con conferma
 
