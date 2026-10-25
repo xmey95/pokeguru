@@ -34,8 +34,7 @@ export class CodexControl {
     this.starting = (async () => {
       const command = process.env.POKEGURU_CODEX_BIN || 'codex'
       const child = spawn(command, ['app-server', '--stdio', '--disable', 'apps', '--disable', 'plugins',
-        '--config', 'web_search="disabled"', '--config', 'mcp_servers.node_repl.enabled=false',
-        '--config', 'mcp_servers.penpot.enabled=false'],
+        '--config', 'web_search="disabled"', '--config', 'mcp_servers={}'],
       { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
       this.child = child
       child.stderr.resume()

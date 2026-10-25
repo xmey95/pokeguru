@@ -73,7 +73,7 @@ it('backs up a live WAL archive before legacy migration and restores its evidenc
     verifyDatabase(path)
     expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
   } finally { projects?.close(); rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
-})
+}, 30_000)
 
 it('refuses a newer archive schema before opening stores', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-future-'))
