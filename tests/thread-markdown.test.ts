@@ -4,7 +4,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { ThreadMarkdown } from '../src/renderer/src/ThreadMarkdown'
 import { safeThreadLink } from '../src/shared/thread-links'
 
-const render = (text: string) => renderToStaticMarkup(createElement(ThreadMarkdown, { text }))
+const render = (text: string, cardTargets: ReadonlyMap<string, string> = new Map()) =>
+  renderToStaticMarkup(createElement(ThreadMarkdown, { text, cardTargets, onOpenCatalogCard: () => {} }))
 
 describe('Thread Markdown', () => {
   it('renders saved prose with headings, lists, emphasis and code without changing its source', () => {
@@ -35,5 +36,17 @@ describe('Thread Markdown', () => {
       'file:///tmp/a', 'https://user:pass@example.org', 'https://example.org/\npath', 'x'.repeat(2049)]) {
       expect(safeThreadLink(target), target).toBe('')
     }
+  })
+
+  it('routes TCGdex card links to the local Catalogo and leaves missing cards unlinked', () => {
+    const cardUrl = 'https://api.tcgdex.net/v2/en/cards/sv01-086'
+    const source = `[Gardevoir](${cardUrl})`
+    const local = render(source, new Map([[cardUrl, 'pokemon:1']]))
+    expect(local).toContain('<button type="button"')
+    expect(local).toContain('Gardevoir · Catalogo')
+    expect(local).not.toContain('href=')
+    const missing = render(source)
+    expect(missing).toContain('scheda non disponibile nel Catalogo locale')
+    expect(missing).not.toContain('href=')
   })
 })

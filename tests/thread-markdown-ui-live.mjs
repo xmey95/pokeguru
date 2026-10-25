@@ -12,7 +12,8 @@ const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
 const profile = mkdtempSync(join(tmpdir(), 'pokeguru-thread-markdown-'))
 const source = '# Piano iniziale\n\nPrima **difendi** e poi *attacca*.\n\n- Cerca Energia\n- Conserva la carta\n\n' +
-  '[Fonte](https://example.org/path) [vietato](javascript:alert(1)) [locale](file:///C:/secret)\n\n' +
+  '[Fonte](https://example.org/path) [Carta](https://api.tcgdex.net/v2/en/cards/sv01-086) ' +
+  '[vietato](javascript:alert(1)) [locale](file:///C:/secret)\n\n' +
   '![remoto](https://evil.test/pixel) <script>alert(2)</script>\n\n```text\n' + 'A'.repeat(240) + '\n```'
 let application
 
@@ -61,6 +62,7 @@ try {
   assert.match((await assistant.locator('pre code').innerText()).trimEnd(), /^A{240}$/)
   assert.equal(await assistant.locator('img, script').count(), 0)
   assert.equal(await assistant.locator('a').count(), 1)
+  assert.match(await assistant.innerText(), /Carta · scheda non disponibile nel Catalogo locale/)
   assert.equal(await page.locator('.thread-message[data-author="user"] p').innerText(), 'Nota **letterale**')
   await assistant.getByRole('link', { name: /Fonte/ }).click()
   assert.deepEqual(await application.evaluate(() => globalThis.markdownOpenedLinks), ['https://example.org/path'])
@@ -76,6 +78,27 @@ try {
   }
   assert.deepEqual(remoteRequests, [])
   assert.equal(database((db) => db.prepare('SELECT text FROM deck_thread_messages WHERE author = ?').get('assistant').text), source)
+  // A catalog fixture checks the integration with APP-107 without fetching TCGdex or mutating the archive.
+  await application.evaluate(({ ipcMain }) => {
+    const original = ipcMain._invokeHandlers.get('catalog:get')
+    ipcMain.removeHandler('catalog:get')
+    ipcMain.handle('catalog:get', async (...args) => {
+      const result = await original(...args)
+      if (!result.ok) return result
+      return { ...result, value: { ...result.value, prints: [...result.value.prints, {
+        id: 'sv01-086', setId: 'sv01', setName: 'Scarlet & Violet', localId: '086', name: 'Gardevoir ex',
+        category: 'Pokemon', rarity: null, variants: null, identityId: 'pokemon:fixture',
+        identityBasis: 'pokemon-text', imageBase: null, thumbnail: null, highImageAvailable: null,
+        sourceUpdated: null, sourceUrl: 'https://api.tcgdex.net/v2/en/cards/sv01-086', detailAt: null, error: null
+      }] } }
+    })
+  })
+  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await assistant.getByRole('button', { name: 'Carta · Catalogo' }).focus()
+  await page.keyboard.press('Enter')
+  await page.locator('.catalog-section').waitFor()
+  assert.deepEqual(await application.evaluate(() => globalThis.markdownOpenedLinks), ['https://example.org/path'])
   console.log('Thread Markdown Electron: struttura, link esterni, sanitizzazione, 1280/640 px e testo storico invariato: passed')
 } finally {
   if (application) await application.close()
