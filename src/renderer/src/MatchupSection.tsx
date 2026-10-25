@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { AiConnection, AiPreferences } from '../../shared/ai'
 import type { AiJobSummary } from '../../shared/ai-job'
@@ -13,7 +13,7 @@ import { MatchupDiscussion as DiscussionView, type RevisionInFlight } from './Ma
 import { MatchupAiControls } from './MatchupAiControls'
 import { MatchupDataPreview, type MatchupAction } from './MatchupDataPreview'
 import { GuideText } from './GuideText'
-import { reportGuideReferences, type GuideReference } from './guide-links'
+import { catalogCardTargets, reportGuideReferences, type GuideReference } from './guide-links'
 import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
 import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 
@@ -323,15 +323,16 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog, standard) : null
   const ourCatalogCards = baseline && (!discussion || discussion.current) ? buildDeckCards(baseline, catalog, reconciliation)
     .filter((card) => card.status === 'recognized' && card.identityId) : []
+  const cardTargets = useMemo(() => catalogCardTargets(catalog), [catalog])
   const guideReferences: GuideReference[] = report ? [
-    ...reportGuideReferences(report),
+    ...reportGuideReferences(report, cardTargets),
     ...ourCatalogCards.map((card): GuideReference => ({ label: card.name, target: { kind: 'catalog', identityId: card.identityId! } }))
   ] : []
-  const body = (text: string, references = guideReferences) => <GuideText key={`${selectedId}:${report?.metaId}:${report?.deckHash}:${report?.generatedAt}:${text}`} text={text} references={references} onOpenCatalogCard={onOpenCatalogCard} />
+  const body = (text: string, references = guideReferences) => <GuideText key={`${selectedId}:${report?.metaId}:${report?.deckHash}:${report?.generatedAt}:${text}`} text={text} references={references} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
   const preview = (action: MatchupAction) => selected && snapshot && baseline ? <MatchupDataPreview
     action={action} total={baseline.interpretedTotal} deckContext={deckContext} opponent={selected} snapshot={snapshot}
     report={report} currentEvidence={previewEvidence} evidenceLoading={evidenceLoading} evidenceError={evidenceError}
-    feedback={pendingTurn?.feedback ?? revisionInFlight?.feedback ?? feedback} onOpenCatalogCard={onOpenCatalogCard} /> : null
+    feedback={pendingTurn?.feedback ?? revisionInFlight?.feedback ?? feedback} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : null
   const aiControls = hasBaseline && <MatchupAiControls connection={connection} connectionError={connectionError}
     loading={connectionLoading} onReload={() => setConnectionRequest((value) => value + 1)}
     model={overrideModel} effort={overrideEffort} onModel={(value) => { setOverrideModel(value); setOverrideEffort('') }}
@@ -432,7 +433,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               </details>
               {discussion && <DiscussionView discussion={discussion} feedback={feedback} onFeedback={setFeedback}
                 onSubmit={() => void submitFeedback()} onRetry={(turnId) => void submitFeedback(turnId)}
-                onContinue={() => void continueOnCurrentBase()} onOpenCatalogCard={onOpenCatalogCard}
+                onContinue={() => void continueOnCurrentBase()} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard}
                 generating={generating} startedAt={startedAt} inFlight={revisionInFlight} error={revisionError}
                 canRevise={!aiBusy && !snapshot.cached && !!reconciliation} canRetry={!aiBusy && !!reconciliation}
                 canContinue={!aiBusy && !currentDiscussion && selectedInCurrentMeta && hasBaseline}

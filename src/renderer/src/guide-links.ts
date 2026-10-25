@@ -1,11 +1,41 @@
 import type { MatchupReport } from '../../shared/meta-matchups'
+import type { CatalogView } from '../../shared/catalog'
 
 export type GuideTarget = { kind: 'catalog'; identityId: string } | { kind: 'source' | 'limitless'; url: string }
 export interface GuideReference { label: string; target: GuideTarget }
 export interface GuideSegment { text: string; target?: GuideTarget }
 
-function sourceLabel(url: string, references: GuideReference[]): string {
-  const names = [...new Set(references.filter((item) => item.target.kind !== 'catalog' && item.target.url === url).map((item) => item.label))]
+export function tcgdexCardPrintId(input: string): string | null {
+  try {
+    const url = new URL(input)
+    if (url.protocol !== 'https:' || url.hostname !== 'api.tcgdex.net' || url.username || url.password ||
+      url.port || url.search || url.hash) return null
+    return /^\/v2\/en\/cards\/([a-zA-Z0-9.-]+)$/.exec(url.pathname)?.[1] ?? null
+  } catch { return null }
+}
+
+export function catalogCardTargets(catalog: Pick<CatalogView, 'prints' | 'referencePrints'> | null): ReadonlyMap<string, string> {
+  const targets = new Map<string, string>()
+  const available = new Set(catalog?.prints.map((print) => print.identityId).filter((id): id is string => !!id) ?? [])
+  for (const print of [...catalog?.prints ?? [], ...catalog?.referencePrints ?? []]) {
+    if (!print.identityId || !available.has(print.identityId)) continue
+    if (tcgdexCardPrintId(print.sourceUrl) === print.id) targets.set(print.sourceUrl, print.identityId)
+  }
+  return targets
+}
+
+export function guideSourceTarget(input: string, cardTargets: ReadonlyMap<string, string>): GuideTarget | undefined {
+  const external = externalGuideTarget(input)
+  if (external) return external
+  if (!tcgdexCardPrintId(input)) return
+  const identityId = cardTargets.get(input)
+  return identityId ? { kind: 'catalog', identityId } : undefined
+}
+
+function sourceLabel(url: string, references: GuideReference[], target?: GuideTarget): string {
+  const names = [...new Set(references.filter((item) => target?.kind === 'catalog'
+    ? item.target.kind === 'catalog' && item.target.identityId === target.identityId
+    : item.target.kind !== 'catalog' && item.target.url === url).map((item) => item.label))]
   if (names.length === 1) return names[0]
   const source = new URL(url)
   if (source.hostname === 'api.tcgdex.net') return source.pathname.includes('/cards/') ? 'Scheda TCGdex' : 'Espansione TCGdex'
@@ -24,17 +54,16 @@ export function externalGuideTarget(input: string): GuideTarget | undefined {
     if (url.hostname === 'limitlesstcg.com' && /^\/decks(?:\/\d+|\/list\/\d+)?\/?$/.test(url.pathname))
       return { kind: 'limitless', url: url.href }
     if (url.search || url.hash || input.length > 300) return
-    const tcgdex = url.hostname === 'api.tcgdex.net' && /^\/v2\/en\/(cards|sets)\/[a-zA-Z0-9.-]+$/.test(url.pathname)
     const play = url.hostname === 'play.limitlesstcg.com' && /^\/tournament\/[a-f0-9]{24}(?:\/player\/[a-zA-Z0-9_-]+\/decklist)?$/.test(url.pathname)
     const event = url.hostname === 'limitlesstcg.com' && /^\/tournaments\/\d+$/.test(url.pathname)
-    if (tcgdex || play || event) return { kind: 'source', url: url.href }
+    if (play || event) return { kind: 'source', url: url.href }
   } catch { /* Untrusted or unsupported references remain text. */ }
 }
 
-export function reportGuideReferences(report: MatchupReport): GuideReference[] {
+export function reportGuideReferences(report: MatchupReport, cardTargets: ReadonlyMap<string, string> = new Map()): GuideReference[] {
   const references: GuideReference[] = []
   const add = (label: string, url?: string | null) => {
-    const target = url ? externalGuideTarget(url) : undefined
+    const target = url ? guideSourceTarget(url, cardTargets) : undefined
     if (target) references.push({ label, target })
   }
   for (const card of report.sampleDeckMechanics ?? []) add(card.name, card.sourceUrl)
@@ -47,7 +76,7 @@ export function reportGuideReferences(report: MatchupReport): GuideReference[] {
 const key = (value: string) => value.toLocaleLowerCase('it').replaceAll('’', "'")
 const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/['’]/g, "['’]")
 
-export function guideSegments(text: string, references: GuideReference[]): GuideSegment[] {
+export function guideSegments(text: string, references: GuideReference[], cardTargets: ReadonlyMap<string, string> = new Map()): GuideSegment[] {
   const grouped = new Map<string, GuideReference[]>()
   for (const reference of references) {
     const name = key(reference.label)
@@ -64,12 +93,12 @@ export function guideSegments(text: string, references: GuideReference[]): Guide
   for (const match of text.matchAll(pattern)) {
     if (match.index > cursor) result.push({ text: text.slice(cursor, match.index) })
     if (match[1] !== undefined) {
-      const target = externalGuideTarget(match[2])
+      const target = guideSourceTarget(match[2], cardTargets)
       result.push(target ? { text: match[1], target } : { text: `${match[1]} (${match[2]})` })
     } else if (/^https?:\/\//i.test(match[0])) {
       const url = match[0].replace(/[.,;:!?)}]+$/, '')
-      const target = externalGuideTarget(url)
-      result.push({ text: target ? sourceLabel(url, references) : url, target })
+      const target = guideSourceTarget(url, cardTargets)
+      result.push({ text: target ? sourceLabel(url, references, target) : url, target })
       if (url.length < match[0].length) result.push({ text: match[0].slice(url.length) })
     } else {
       const reference = unique.find((item) => key(item.label) === key(match[0]))

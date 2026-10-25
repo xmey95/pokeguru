@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { guideSegments, type GuideReference, type GuideTarget } from './guide-links'
 
-export function GuideText({ text, references = [], onOpenCatalogCard }: {
+export function GuideText({ text, references = [], cardTargets = new Map(), onOpenCatalogCard }: {
   text: string
   references?: GuideReference[]
+  cardTargets?: ReadonlyMap<string, string>
   onOpenCatalogCard: (identityId: string) => void
 }) {
   const [error, setError] = useState<string | null>(null)
@@ -16,7 +17,7 @@ export function GuideText({ text, references = [], onOpenCatalogCard }: {
     } catch { setError('Impossibile aprire il riferimento. Riprova.') }
   }
   return <span className="guide-body">
-    {guideSegments(text, references).map((segment, index) => segment.target
+    {guideSegments(text, references, cardTargets).map((segment, index) => segment.target
       ? <a key={index} className="guide-link"
         href={segment.target.kind === 'catalog' ? `#catalog-card-${encodeURIComponent(segment.target.identityId)}` : segment.target.url}
         title={segment.target.kind === 'catalog' ? `Apri ${segment.text} nel Catalogo` : `Apri fonte nel browser: ${segment.target.url}`}
