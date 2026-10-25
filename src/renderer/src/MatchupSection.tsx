@@ -416,7 +416,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                     {card.catalogIdentityId && <button type="button" className="text-button"
                       onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo</button>}
                     {card.gameplay && <details><summary>Meccaniche verificate</summary>{body(card.gameplay)}
-                      {card.cardSourceUrl && <small><GuideText text={card.cardSourceUrl} inline onOpenCatalogCard={onOpenCatalogCard} /></small>}</details>}
+                      {card.cardSourceUrl && <small><GuideText text={card.cardSourceUrl} inline cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /></small>}</details>}
                   </li>)}</ul></details>
                   {report.tournamentEvidence.schemaVersion !== 2 && report.tournamentEvidence.eventUrl && <button type="button" className="text-button"
                     onClick={() => void window.projectsApi.openLimitless(report.tournamentEvidence!.eventUrl!)}>Apri evento online ↗</button>}

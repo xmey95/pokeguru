@@ -75,6 +75,13 @@ describe('guide references', () => {
     expect(html).toContain('href="#catalog-card-pokemon%3A1"')
     expect(html).toContain('Apri Gardevoir ex nel Catalogo')
   })
+  it('keeps inline source references routed to the local Catalog', () => {
+    const html = renderToStaticMarkup(createElement(GuideText, {
+      text: `[Gardevoir ex](${url})`, inline: true, cardTargets, onOpenCatalogCard: () => undefined
+    }))
+    expect(html).toContain('href="#catalog-card-pokemon%3A1"')
+    expect(html).not.toContain('href="' + url + '"')
+  })
   it('renders long guide phases, bullets and numbered steps as safe structured content', () => {
     const text = '## Avvio\n- Prepara **Gardevoir ex**.\n- Conserva una ricerca.\n\nSviluppo: controlla i Premi.\n\n1. Verifica la lista.\n2. Pianifica il turno.\n\n<img src=x onerror=alert(1)>'
     expect(guideBlocks(text).map((block) => block.kind)).toEqual(['heading', 'unordered', 'paragraph', 'ordered', 'paragraph'])

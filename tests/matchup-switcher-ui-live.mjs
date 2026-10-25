@@ -187,7 +187,7 @@ try {
     await page.locator('.catalog-detail').getByRole('heading', { name: 'Gardevoir ex', exact: true }).waitFor({ timeout: 30000 })
     assert.deepEqual(await application.evaluate(() => globalThis.guideOpened), [], 'La carta locale non deve aprire JSON')
     await page.getByRole('button', { name: 'Matchup', exact: true }).click()
-    await page.getByText('Come giocare il matchup', { exact: true }).waitFor()
+    await page.locator('.matchup-fields').first().getByRole('heading', { name: 'Piano di gioco' }).waitFor()
     const currentPlan = page.locator('.matchup-fields > .strategy-field').first()
     await currentPlan.getByRole('link', { name: 'lista campione', exact: true }).click()
     await currentPlan.getByRole('link', { name: 'Regional di prova', exact: true }).click()
