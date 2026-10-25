@@ -49,6 +49,9 @@ benchmark('measures full Catalog views with 5k and 10k prints', () => {
           const start = performance.now()
           const value = store.view()
           const viewMs = performance.now() - start
+          const repeatStart = performance.now()
+          store.view()
+          const repeatedViewMs = performance.now() - repeatStart
           const cloneStart = performance.now()
           structuredClone(value)
           const cloneMs = performance.now() - cloneStart
@@ -63,6 +66,7 @@ benchmark('measures full Catalog views with 5k and 10k prints', () => {
           const detail = store.browseGroup(page.groups[0].key)
           const detailMs = performance.now() - detailStart
           console.log(JSON.stringify({ prints: index + 1, viewMs: +viewMs.toFixed(2),
+            repeatedViewMs: +repeatedViewMs.toFixed(2),
             cloneMs: +cloneMs.toFixed(2), bytes,
             overviewMs: +overviewMs.toFixed(2), overviewBytes: Buffer.byteLength(JSON.stringify(overview)),
             searchMs: +searchMs.toFixed(2), searchBytes: Buffer.byteLength(JSON.stringify(page)),

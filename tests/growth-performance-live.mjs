@@ -199,7 +199,6 @@ try {
       resultBytes = measurement.bytes
     }
     ipc[name] = { samples, median: median(samples), jsonChars: resultBytes }
-    console.log(`IPC ${name}: ${ipc[name].median} ms`)
   }
   const navigation = {}
   for (const section of ['Catalogo', 'Lista', 'Thread', 'Eventi', 'Matchup']) {
@@ -227,7 +226,6 @@ try {
       samples.push(+elapsed.toFixed(1))
     }
     navigation[section] = { samples, median: median(samples) }
-    console.log(`Navigation ${section}: ${navigation[section].median} ms`)
     await page.waitForTimeout(600)
   }
   const scroll = {}

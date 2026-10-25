@@ -496,7 +496,8 @@ export async function enrichCatalogPrints(store: CatalogStore, ids: readonly str
 
 export class CatalogStore {
   private readonly db: DatabaseSync
-  private browseCache: { overview: CatalogBrowseOverview; groups: Array<CatalogBrowseGroup & {
+  private viewCache: { date: string; value: CatalogView } | null = null
+  private browseCache: { date: string; overview: CatalogBrowseOverview; groups: Array<CatalogBrowseGroup & {
     ids: string[]; search: string; setIds: Set<string>
   }>; byKey: Map<string, string[]> } | null = null
   readonly dataDir: string
@@ -676,6 +677,7 @@ export class CatalogStore {
 
   private upsertPrint(print: CatalogPrint): void {
     this.browseCache = null
+    this.viewCache = null
     const previous = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?').get(print.id) as { payload: string } | undefined
     // A failed refresh does not discard a previously acquired detail or cached image.
     const old = previous ? JSON.parse(previous.payload) as CatalogPrint : null
@@ -746,6 +748,7 @@ export class CatalogStore {
         ON CONFLICT(id) DO UPDATE SET fetched_at=excluded.fetched_at`).run(sample.fetchedAt)
       this.db.exec('COMMIT')
       this.browseCache = null
+      this.viewCache = null
     } catch (error) {
       this.db.exec('ROLLBACK')
       throw error
@@ -783,6 +786,8 @@ export class CatalogStore {
   }
 
   view(): CatalogView {
+    const today = localCalendarDate()
+    if (this.viewCache?.date === today) return this.viewCache.value
     const rules = this.rulePackage()
     const sets = this.db.prepare('SELECT id, name, source_total, sample_total, fetched_at, release_date, abbreviation FROM catalog_sets ORDER BY id')
       .all().map((row) => {
@@ -815,8 +820,7 @@ export class CatalogStore {
     const promoTargets = targetPrints.filter((print) => print.isPromo)
     const acquiredPromos = promoTargets.filter((print) => print.detailAt !== null).length
     const targetSetIds = [...new Set(targetPrints.map((print) => print.setId))].sort()
-    const officialReleased = officialSetReleases().filter((set) =>
-      set.releaseDate <= localCalendarDate())
+    const officialReleased = officialSetReleases().filter((set) => set.releaseDate <= today)
     const officialMissing = officialReleased.filter((set) => !targetSetIds.includes(set.setId))
     const printsBySet = new Map<string, CatalogPrint[]>()
     for (const print of targetPrints) {
@@ -836,7 +840,7 @@ export class CatalogStore {
         promo: promos.length > 0, promoVerified: promos.filter((print) => !!print.promoStatus).length,
         promoUnchecked: promos.filter((print) => !print.promoStatus).length }
     })
-    return {
+    const value: CatalogView = {
       circuit: 'WESTERN', source: CATALOG_SOURCE, sourceLanguage: 'en',
       rulePackage: rules.value, rulePackageError: rules.error,
       scope: kind === 'sample'
@@ -869,10 +873,13 @@ export class CatalogStore {
       referencePrints: targetIds ? prints.filter((print) => !targetIds.has(print.id) &&
         print.detailAt !== null && print.identityId !== null) : []
     }
+    this.viewCache = { date: today, value }
+    return value
   }
 
   private browseData(): NonNullable<CatalogStore['browseCache']> {
-    if (this.browseCache) return this.browseCache
+    const today = localCalendarDate()
+    if (this.browseCache?.date === today) return this.browseCache
     const { prints, referencePrints: _referencePrints, ...metadata } = this.view()
     const groups = new Map<string, CatalogBrowseGroup & {
       ids: string[]; search: string; setIds: Set<string>
@@ -916,7 +923,7 @@ export class CatalogStore {
       confirmedGroups: ordered.filter((group) => group.basis && group.basis !== 'unverified').length,
       rarity, variants, thumbnails, highImages, imageSourceMissing, imageCacheMissing, limitlessThumbnails
     } }
-    this.browseCache = { overview, groups: ordered,
+    this.browseCache = { date: today, overview, groups: ordered,
       byKey: new Map(ordered.map((group) => [group.key, group.ids])) }
     return this.browseCache
   }

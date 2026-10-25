@@ -26,6 +26,23 @@ Il click di navigazione, misurato fino a due frame dopo l'attivazione della sezi
 
 **Prossima misura:** dopo l'integrazione UI, profilare il primo accesso con sezioni isolate e contenuto pronto, includendo long task e main thread. Separare nel calcolo Matchup query/parse eventi, Catalogo, selezione e IPC; confrontare memoria dopo GC o cicli ripetuti. Applicare correzioni solo dove la riduzione è ripetibile, mantenendo fonti e snapshot; ripetere su Windows/Linux e con un pacchetto installabile se il percorso di avvio risulta critico.
 
+### Diagnosi intermedia e intervento circoscritto
+
+La priorità osservata sulla fixture è: (1) primo accesso a Lista/Matchup con long task di circa 2 s, da attribuire con profiling del renderer dopo l'integrazione UI; (2) lettura completa di Catalogo per Lista, Thread e Matchup; (3) ricostruzione delle evidenze Matchup da tutti gli snapshot Eventi e dal Catalogo; (4) riepiloghi Eventi da 37–76 ms. Dettaglio Thread, ricerca Catalogo e guide Matchup già salvate non giustificano un intervento ora. Le misure del primo accesso non autorizzano ancora una modifica del renderer.
+
+Un confronto sul database sintetico ha provato a estrarre i campi dei riepiloghi Eventi con una singola chiamata `json_extract` a più percorsi. Play è passato da 32 a 47 ms e Regional da 39 a 43 ms, con una differenza di forma nel risultato Play. L'alternativa è stata scartata.
+
+La modifica nel solo `CatalogStore` conserva una vista completa per istanza e giorno, invalidata da `save`, `savePrints` e dai lotti di aggiornamento. Il riepilogo di navigazione si rigenera anche quando cambia la data locale, perché la copertura dei set ufficiali dipende dal giorno. Il benchmark isolato a 10.000 stampe ha misurato 80,82 ms per costruire la vista e 0,18 ms per la seconda lettura invariata. In tre prove Electron successive sulla medesima fixture, la mediana IPC del Catalogo completo è stata 66,8, 80,6 e 65,4 ms; le evidenze Matchup 126,8, 146,1 e 194,7 ms. Sono misure sullo stesso computer ma non appaiate con un controllo senza cache nella stessa esecuzione: traffico IPC, scheduling e garbage collection variano. Il miglioramento del percorso caldo è coerente con la riduzione delle letture nel main process; la risposta resta di circa 6,37 milioni di caratteri e il primo caricamento continua a costruire la vista.
+
+Typecheck/build, 145 test locali passati/18 esclusi, test Catalogo e Standard mirati ed E2E Catalogo con profilo temporaneo sono passati su Windows. Il benchmark Electron popolato è passato tre volte dopo la modifica. Una sincronizzazione Standard *live* è stata interrotta prima del completamento: non è una verifica della fonte o della cache durante un download reale. Il benchmark e l'E2E usano dati sintetici o fixture; non certificano qualità delle fonti o generazioni Codex.
+
+### Criteri per il completamento dopo l'integrazione UI
+
+1. Aggiornare il ramo da `dev` dopo le PR UI, conservando gli esiti e misurando sullo stesso commit sia baseline integrata sia variante candidata; almeno tre cicli per avvio/primo accesso, cinque campioni per IPC e 120 frame per scroll. Misurare contenuto pronto, non solo il pulsante attivo.
+2. Usare un profilo CPU del renderer per assegnare i long task iniziali a funzioni concrete. Per l'anteprima Matchup separare tempo delle letture degli snapshot Play/Regional, lettura Catalogo, selezione delle liste e copia IPC. Una modifica ulteriore richiede un guadagno ripetibile sul percorso completo e nessuna perdita di provenienza.
+3. Controllare che la cache non mostri dati precedenti dopo salvataggi, sincronizzazione ripresa e cambio data; misurare heap e memoria del main dopo cicli ripetuti o GC, perché uno snapshot singolo non prova una perdita né il suo contrario.
+4. Eseguire typecheck/build, suite mirata e percorsi Electron su Lista, Thread, Catalogo, Eventi e Matchup; verificare i job CI Ubuntu e Windows della PR prima della consegna al coordinamento. Nessun merge autonomo.
+
 ## Metodo
 
 `node tests/renderer-performance-live.mjs` legge gli asset di `out/renderer/assets` dopo `npm run build`, apre cinque processi Electron con profili temporanei distinti, registra il tempo dal lancio alla vista Benvenuto e i tempi `DOMContentLoaded` del renderer. Nel primo processo crea un progetto vuoto e ripete cinque volte la navigazione fra Catalogo, Lista, Thread, Eventi, Matchup e Impostazioni AI. Il cronometro della navigazione gira nel renderer: parte dal click e termina dopo che la sezione è attiva, non mostra un caricamento di navigazione e ha completato un ulteriore frame. Il benchmark usa un errore offline immediato per `matchups:get-meta` e una CLI Codex assente; misura la navigazione, non una sincronizzazione reale né l'inferenza AI.
