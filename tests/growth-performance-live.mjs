@@ -12,6 +12,7 @@ const require = createRequire(import.meta.url)
 const profileRenderer = process.argv.includes('--profile-renderer')
 const expectAllMessages = process.argv.includes('--expect-all-messages')
 const matchedEvidence = process.argv.includes('--matched-evidence')
+const markdownMessages = process.argv.includes('--markdown-messages')
 const integerOption = (name, fallback) => {
   const value = process.argv.find((argument) => argument.startsWith(`--${name}=`))?.split('=')[1]
   if (value === undefined) return fallback
@@ -93,7 +94,8 @@ function seed(path, projectId, count) {
       thread.run(id, projectId, `Thread ${index}`, date, date)
       for (let number = 0; number < (index === threadCount - 1 ? longMessages : 5); number++)
         message.run(`${id}-message-${number}`, id,
-        `Answer ${number}`, date, evidence)
+        markdownMessages ? `Answer ${number}\n\n### Piano\n\n**Priorità:** conserva le fonti.\n\n- Osserva la lista.\n- Valuta il turno.\n\n[Lista pubblica](https://limitlesstcg.com/decks/list/123)`
+          : `Answer ${number}`, date, evidence)
       candidate.run(`${id}-candidate`, id, '60 Synthetic Card MEG 1', parsed, date)
     }
     for (let index = 0; index < 120; index++) {
@@ -152,7 +154,7 @@ function seed(path, projectId, count) {
     return { cards: count, threads: threadCount,
       messages: (threadCount - 1) * 5 + longMessages, candidates: threadCount,
       playEvents: 120, regionalEvents: 60, matchupOpponents: 60, matchupRevisions: 300,
-      matchedEvidence }
+      matchedEvidence, markdownMessages }
   } catch (error) { db.exec('ROLLBACK'); throw error } finally { db.close() }
 }
 
@@ -347,6 +349,15 @@ try {
     candidates: document.querySelectorAll('.threads-section .thread-candidate').length,
     timelineHeight: document.querySelector('.thread-timeline')?.scrollHeight ?? 0
   }), longMessages)
+  if (markdownMessages) {
+    const rendered = page.locator('.threads-section .thread-message').first()
+    const markdown = rendered.locator('.thread-markdown')
+    const structure = { heading: await markdown.locator('h3').allTextContents(),
+      listItems: await markdown.locator('li').count(), links: await markdown.locator('a').count(),
+      text: (await rendered.innerText()).slice(0, 200) }
+    if (structure.heading[0] !== 'Piano' || structure.listItems !== 2 || structure.links !== 1)
+      throw new Error(`Structured Thread Markdown was not rendered: ${JSON.stringify(structure)}`)
+  }
   let threadHistoryExpansion = null
   if (longMessages > 50 && !expectAllMessages) {
     await page.locator('#thread-message').fill('Bozza mantenuta durante la lettura')

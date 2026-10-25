@@ -282,7 +282,7 @@ Le richieste Limitless del fallback APP-108 condividono una coda con distanza mi
 
 La vista Catalogo completa viene riusata finché dati e giorno locale non cambiano; la riconciliazione costruisce indici temporanei per snapshot. Le evidenze Matchup costruiscono una mappa locale delle stampe per nome e riusano il risultato quando la stessa generazione lo richiede subito dopo. Nel Thread si montano gli ultimi 50 elementi e si rendono disponibili i precedenti a gruppi di 50. La rilettura dopo una scrittura che termina durante la navigazione è fornita da APP-110.
 
-Su 1.000 messaggi la finestra ha eliminato una pausa del renderer di oltre 2 s, ma l'IPC continua a trasferire il dettaglio completo; introdurre paginazione nel protocollo solo se la misura su archivi più grandi o reali lo richiederà. Rivedere focus, scroll e semantica della cronologia dopo APP-111/112 e misurare di nuovo sul codice integrato.
+Su 1.000 messaggi la finestra ha eliminato una pausa del renderer di oltre 2 s, ma l'IPC continua a trasferire il dettaglio completo; introdurre paginazione nel protocollo solo se la misura su archivi più grandi o reali lo richiederà. Focus, scroll e semantica della cronologia sono stati ricontrollati con il Markdown di APP-111; ripetere la misura dopo APP-112 sul codice integrato.
 
 ### T-106 — Archivio reversibile e cancellazione esplicita dei progetti (APP-106)
 
