@@ -43,13 +43,15 @@ function deckState(baseline: DeckBaseline | null, loading: boolean): string {
   return 'Pronta per controllo'
 }
 
-export function DeckCompanion({ baseline, loading }: { baseline: DeckBaseline | null; loading: boolean }) {
+export function DeckCompanion({ baseline, loading, versionSequence }: {
+  baseline: DeckBaseline | null; loading: boolean; versionSequence?: number | null
+}) {
   const preview = useCardPreview()
   const groups = useMemo(() => baseline ? groupCards(baseline) : [], [baseline])
   const namedGroups = groups.filter((group) => group.name !== 'Carte importate')
   return <aside className="deck-companion" aria-label="Lista principale persistente" data-testid="deck-companion">
     <div className="companion-top">
-      <h2>Lista principale</h2>
+      <h2>Lista principale{versionSequence ? ` · v${versionSequence}` : ''}</h2>
     </div>
     <div className="companion-summary">
       <div className="companion-total"><strong>{baseline?.interpretedTotal ?? 0}<span>/60</span></strong><span className="companion-state" data-tone={baseline && (baseline.interpretedTotal !== 60 || baseline.diagnostics.some((item) => item.code === 'UNPARSED' || item.code === 'TOTAL_MISMATCH')) ? 'warning' : 'neutral'}>{deckState(baseline, loading)}</span></div>

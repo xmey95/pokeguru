@@ -34,7 +34,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const cardPreview = useCardPreview()
   const nav = useNavigation()
   const hasBaseline = baseline !== null
-  const baselineKey = baseline?.rawText ?? null
+  const baselineKey = baseline ? `${baseline.versionId ?? baseline.rawText}:${baseline.resolutionId ?? ''}` : null
   const [snapshot, setSnapshot] = useState<MetaSnapshot | null>(null)
   const [reports, setReports] = useState<MatchupReport[]>([])
   const [historicalOpponents, setHistoricalOpponents] = useState<MetaDeck[]>([])
@@ -115,7 +115,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       if (catalogResult.ok) setCatalog(catalogResult.value)
     }).catch(() => { if (active) setError('Impossibile leggere le corrispondenze della lista.') })
     return () => { active = false }
-  }, [projectId, baseline?.importedAt])
+  }, [projectId, baselineKey])
 
   async function refresh(): Promise<void> {
     setLoading(true)

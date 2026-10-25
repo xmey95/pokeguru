@@ -142,7 +142,7 @@ it('replays a completed Matchup response exactly once and preserves the job iden
       strategy: 'Piano', limitations: 'Nessun match diretto' }))
     expect(recoverMatchupJob(jobs.get(started.id)!, jobs, projects, artifact)).toBe('applied')
     expect(projects.listMatchupReports(project.id, metaId)).toMatchObject([{ jobId: started.id,
-      strategy: 'Piano' }])
+      strategy: 'Piano', deckVersionId: projects.getCurrentDeckContext(project.id)?.versionId }])
     const discussion = projects.listMatchupDiscussions(project.id, '284')[0]
     expect(discussion.turns).toHaveLength(1)
     const second = jobs.start('matchup-generate', project.id, `matchup:${project.id}`)

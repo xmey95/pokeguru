@@ -27,7 +27,7 @@ export function deckDiscussionPrompt(thread: DeckThread, base: DeckVersion | nul
     .filter((message) => message.author === 'user' && message.id !== thread.openingAiMessageId)
     .map((message) => message.text)
   const context = { baseVersion: base?.sequence ?? null, deck: base?.rawText ?? null,
-    candidate: thread.candidates.at(-1)?.rawText ?? null,
+    candidate: thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? null,
     priorNotes: lastReply < 0 ? notes : [], newNotes: lastReply < 0 ? [] : notes,
     evidence, question, allowedSourceIds: evidence.sources.map((item) => item.id) }
   return [
@@ -81,7 +81,7 @@ export function deckProposalPrompt(thread: DeckThread, base: DeckVersion, questi
   const context = {
     circuit: 'WESTERN', format: 'STANDARD', referenceDate: localCalendarDate(),
     baseVersion: base.sequence,
-    baseList: base.rawText, latestThreadCandidate: candidate?.rawText ?? null,
+    baseList: base.rawText, latestThreadCandidate: candidate?.rawText ?? thread.seedCandidateText ?? null,
     discussion: thread.messages.slice(-12).map((message) => ({ author: message.author, text: message.text })),
     constraints: constraints.map((item) => ({ name: item.identityName, printId: item.printId,
       kind: item.kind, quantity: item.quantity })),

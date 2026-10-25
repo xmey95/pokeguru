@@ -26,7 +26,7 @@ import { AiPromptAuditView } from './AiPromptAuditView'
 
 interface Props {
   projectId: string
-  mainImportedAt: string | null
+  mainContextKey: string | null
   onAdopt(baseline: DeckBaseline): void
 }
 
@@ -122,10 +122,11 @@ function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
   </div>
 }
 
-function CandidateDetail({ candidate, thread, versions, catalog, constraints, audit, working, featured, cardTargets, onOpenCatalogCard, onAdopt, onReturn }: {
+function CandidateDetail({ candidate, thread, versions, catalog, constraints, audit, working, featured, cardTargets, onOpenCatalogCard, onAdopt, onContinue, onReturn }: {
   candidate: DeckCandidate; thread: DeckThread; versions: DeckVersion[]; catalog: CatalogView | null
   constraints: DeckConstraint[]; audit: StandardRuleAudit | null; working: boolean; featured?: boolean
-  cardTargets: ReadonlyMap<string, string>; onOpenCatalogCard(identityId: string): void; onAdopt(candidate: DeckCandidate): void
+  cardTargets: ReadonlyMap<string, string>; onOpenCatalogCard(identityId: string): void
+  onAdopt(candidate: DeckCandidate): void; onContinue(candidate: DeckCandidate): void
   onReturn?: () => void
 }) {
   const comparison = useRef<HTMLDetailsElement>(null)
@@ -167,7 +168,10 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
       {reviewItems.length > 0 && <details><summary>Da verificare ({reviewItems.length})</summary><ul>{reviewItems.map((item, index) => <li key={index}>{item}</li>)}</ul></details>}
       <p>Legalità torneo da verificare.</p>
     </div>}
-    {thread.stale && <p className="diagnostics">Base superata · adozione bloccata. Confronta la proposta con la lista principale e apri un nuovo thread.</p>}
+    {thread.stale && <div className="diagnostics"><p>Base superata · adozione bloccata. Confronta la proposta con la lista principale.</p>
+      <button type="button" className="secondary-button" disabled={working} onClick={() => onContinue(candidate)}>
+        Continua in un thread dalla lista attuale</button></div>}
+    {thread.resolutionChanged && !thread.stale && <p className="content-note">Le correzioni d’identità della lista sono cambiate dopo la partenza del thread. Controlla la candidata con i dati attuali prima dell’adozione.</p>}
     {!adopted && <div className="candidate-adoption">
       <button type="button" className="primary-button" disabled={working || thread.stale || !current || !review || review.blockers.length > 0}
         onClick={() => onAdopt(candidate)}>Adotta l'intera lista candidata</button></div>}
@@ -240,7 +244,7 @@ function focusInWorkspace(element: HTMLElement | null): void {
   if (target.top < bounds.top || target.bottom > bounds.bottom) main.scrollTop += target.top - bounds.top - 24
 }
 
-export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
+export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const nav = useNavigation()
   const onOpenCatalogCard = (identityId: string) => nav.go({ view: 'catalog' }, {
     'catalog.focus': identityId, 'catalog.focusConsumed': false, 'catalog.selected': identityId,
@@ -335,7 +339,8 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
   const openingAiMessage = selected?.openingAiMessage ?? (selected?.openingAiMessageId
     ? selected.messages.find((entry) => entry.id === selected.openingAiMessageId) : null)
   const openingAiPending = selected?.openingAiPending ?? (!!openingAiMessage && !selected?.messages.some((entry) => entry.author === 'assistant'))
-  const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
+  const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ??
+    selected?.seedCandidateText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
   useEffect(() => { if (selected) nav.entry.label = `Thread · ${selected.title}` }, [selected?.id])
   const featuredCandidate = selected?.candidates.at(-1) ?? null
   const returnPoint = candidateReturn?.threadId === selectedId && candidateReturn.candidateId === featuredCandidate?.id ? candidateReturn : null
@@ -424,7 +429,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
       .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Impossibile leggere i thread.') })
       .finally(() => { if (active) { hasLoaded.current = true; setLoading(false) } })
     return () => { active = false; previewRequest.current++ }
-  }, [projectId, mainImportedAt])
+  }, [projectId, mainContextKey])
 
   useEffect(() => {
     if (!selectedId) { setSelectedDetail(null); setDetailLoading(false); return }
@@ -567,6 +572,21 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
         if (!response.ok) setOpeningErrors((current) => ({ ...current, [result.value.id]: response.error }))
       }
     } catch (cause) { setCreateError(cause instanceof Error ? cause.message : 'Thread non creato.') }
+    finally { setWorking(false) }
+  }
+
+  async function continueFrom(candidate: DeckCandidate): Promise<void> {
+    if (!selected || working || !selected.stale) return
+    setWorking(true); setError(null)
+    try {
+      const title = `${selected.title} · nuova base`.slice(0, 120)
+      const result = await window.projectsApi.continueDeckThread({ projectId,
+        threadId: selected.id, candidateId: candidate.id, title })
+      if (!result.ok) throw new Error(result.error)
+      showDetail(result.value)
+      await refreshSummaries()
+      selectThread(result.value)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Nuovo thread non creato.') }
     finally { setWorking(false) }
   }
 
@@ -745,8 +765,9 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 ? 'Job Codex annullato.' : 'Il job Codex precedente non è stato completato. Puoi inviare di nuovo la richiesta.'}
                 {currentAiJob.error ? ` ${currentAiJob.error}` : ''}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
+            {selected.parentThreadId && <p className="content-note">Thread collegato a un percorso precedente. La candidata scelta è disponibile nel modulo manuale come testo modificabile; il thread originale resta nello storico.</p>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
-              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption}
+              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)}
               onReturn={returnPoint ? returnToConversation : undefined} />
               : <p className="thread-no-candidate">Nessuna proposta salvata.</p>}
             {featuredCandidate && <div className="candidate-access">
@@ -758,7 +779,7 @@ export function ThreadsSection({ projectId, mainImportedAt, onAdopt }: Props) {
                 Mostra {Math.min(TIMELINE_PAGE_SIZE, hiddenTimelineCount)} precedenti ({hiddenTimelineCount} nascosti)
               </button>}
               {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
-                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} />)}
+                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)} />)}
             </div>
             {(asking || proposing) && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
               title={proposing ? 'Codex sta preparando la proposta…' : 'Codex sta rispondendo…'}

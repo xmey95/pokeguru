@@ -157,6 +157,12 @@ jobs:
       - name: Exercise candidate adoption on Windows
         if: runner.os == 'Windows'
         run: node tests/deck-adoption-live.mjs
+      - name: Exercise list history and linked Thread on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/deck-history-live.mjs
+      - name: Exercise list history and linked Thread on Windows
+        if: runner.os == 'Windows'
+        run: node tests/deck-history-live.mjs
       - name: Package Linux AppImage
         if: runner.os == 'Linux'
         run: npm run package:linux

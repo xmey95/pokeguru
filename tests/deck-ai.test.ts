@@ -83,6 +83,27 @@ it('invia la lista di partenza e il pacchetto aggiornato a ogni turno', () => {
   store.close()
 })
 
+it('porta la candidata precedente nelle evidenze e nel prompt di un Thread collegato', () => {
+  const { store } = openStore()
+  const project = store.create({ name: 'Ramo', format: 'STANDARD' })
+  store.importDeck({ projectId: project.id, rawText: '60 Carta A MEG 1', source: 'paste' })
+  const old = store.createDeckThread({ projectId: project.id, title: 'Origine' })
+  const candidate = store.saveDeckCandidate({ projectId: project.id, threadId: old.id,
+    rawText: '60 Carta B MEG 2' }).candidates[0]
+  store.importDeck({ projectId: project.id, rawText: '60 Carta C MEG 3', source: 'paste' })
+  const linked = store.continueDeckThread({ projectId: project.id, threadId: old.id,
+    candidateId: candidate.id, title: 'Nuova base' })
+  const base = store.listDeckVersions(project.id)[0]
+  const catalog: CatalogView = { circuit: 'WESTERN', source: 'TCGdex REST v2/en',
+    sourceLanguage: 'en', scope: { setIds: [], names: [] }, syncedAt: null, sets: [], prints: [] }
+  const evidence = buildThreadEvidence(linked, base, 'Valuta la candidata', [], catalog, [], [])
+  expect(evidence.sources.some((source) => source.label === 'Candidata del Thread precedente')).toBe(true)
+  expect(deckDiscussionPrompt(linked, base, 'Valuta la candidata', evidence)).toContain('60 Carta B MEG 2')
+  expect(deckProposalPrompt(linked, base, 'Adatta la candidata', [], catalog, evidence).prompt)
+    .toContain('60 Carta B MEG 2')
+  store.close()
+})
+
 it('conserva le query automatiche e le fonti nel solo thread che le ha ricevute', async () => {
   const { store, path } = openStore()
   const project = store.create({ name: 'Query', format: 'STANDARD' })

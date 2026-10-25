@@ -443,4 +443,119 @@ describe('ProjectStore', () => {
     expect(again.listMatchupDiscussions(project.id, '284')[0].turns).toHaveLength(1)
     again.close()
   })
+
+  it('separa le correzioni dalle vN e ripristina testo, provenienza e correzioni senza perdere lo storico', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Versioni', format: 'STANDARD' })
+    const other = store.create({ name: 'Altro', format: 'STANDARD' })
+    const a = store.importDeck({ projectId: project.id, rawText: '1 Carta A MEG 1', source: 'paste' })
+    const v1 = store.listDeckVersions(project.id)[0]
+    const thread = store.createDeckThread({ projectId: project.id, title: 'Prima interpretazione' })
+    const print = { id: 'meg-001', name: 'Carta A', category: 'Trainer', setId: 'meg',
+      setName: 'Mega', localId: '001', rarity: null, variants: null,
+      identityId: 'identity-a', identityBasis: 'trainer-text' as const,
+      sourceUrl: 'https://api.tcgdex.net/v2/en/cards/meg-001', sourceUpdated: null }
+    store.saveLineMapping({ projectId: project.id, importedAt: a.importedAt,
+      lineNumber: 1, rawLine: '1 Carta A MEG 1', printId: print.id }, print)
+    expect(store.listDeckVersions(project.id)).toHaveLength(1)
+    expect(store.getDeckThread(project.id, thread.id)).toMatchObject({
+      stale: false, resolutionChanged: true
+    })
+    const v1Resolved = store.listDeckVersions(project.id)[0]
+    expect(v1Resolved.resolutionId).not.toBe(v1.resolutionId)
+    store.annotateDeckVersion({ projectId: project.id, versionId: v1.id,
+      label: 'Apertura', note: 'Prima direzione' })
+    const b = store.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste',
+      expectedHeadId: v1.id })
+    const v2 = store.listDeckVersions(project.id)[0]
+    expect(() => store.restoreDeckVersion({ projectId: other.id, versionId: v1.id,
+      expectedHeadId: v2.id })).toThrow()
+    expect(() => store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: 'outdated' })).toThrow('lista principale è cambiata')
+    expect(() => store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: v2.id, expectedResolutionId: v1Resolved.resolutionId }))
+      .toThrow('correzioni della lista sono cambiate')
+    const restored = store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: v2.id, expectedResolutionId: b.resolutionId })
+    expect(restored.rawText).toBe(a.rawText)
+    expect(store.getReconciliation(project.id).mappings[0].print.identityId).toBe('identity-a')
+    expect(store.listDeckVersions(project.id)).toMatchObject([
+      { sequence: 3, restoredFrom: { id: v1.id, sequence: 1 } },
+      { id: v2.id, sequence: 2 }, { id: v1.id, label: 'Apertura', note: 'Prima direzione' }
+    ])
+    store.clearLineMapping({ projectId: project.id, importedAt: restored.importedAt,
+      lineNumber: 1, rawLine: '1 Carta A MEG 1' })
+    expect(store.listDeckVersions(project.id)).toHaveLength(3)
+    store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: restored.versionId! })
+    expect(store.listDeckVersions(project.id)).toHaveLength(3)
+    expect(store.getReconciliation(project.id).mappings[0].print.identityId).toBe('identity-a')
+    expect(() => store.importDeck({ projectId: project.id, rawText: b.rawText,
+      source: 'paste', expectedHeadId: v2.id })).toThrow('lista principale è cambiata')
+    store.close()
+    const reopened = new ProjectStore(path)
+    expect(reopened.getBaseline(project.id)?.rawText).toBe(a.rawText)
+    expect(reopened.listDeckVersions(project.id)[0].restoredFrom?.id).toBe(v1.id)
+    expect(reopened.getReconciliation(project.id).mappings[0].print.identityId).toBe('identity-a')
+    reopened.close()
+  })
+
+  it('continua una candidata su nuova base in un thread collegato senza modificare l’originale', () => {
+    const store = new ProjectStore(databasePath())
+    const project = store.create({ name: 'Due rami', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id, rawText: '1 Carta A MEG 1', source: 'paste' })
+    const old = store.createDeckThread({ projectId: project.id, title: 'Piano A' })
+    const candidate = store.saveDeckCandidate({ projectId: project.id, threadId: old.id,
+      rawText: '1 Carta C MEG 3' }).candidates[0]
+    store.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste' })
+    const next = store.continueDeckThread({ projectId: project.id, threadId: old.id,
+      candidateId: candidate.id, title: 'Piano A · nuova base' })
+    expect(next).toMatchObject({ parentThreadId: old.id, seedCandidateId: candidate.id,
+      seedCandidateText: candidate.rawText, stale: false, candidates: [] })
+    expect(next.baseVersionId).toBe(store.listDeckVersions(project.id)[0].id)
+    const descendant = store.saveDeckCandidate({ projectId: project.id, threadId: next.id,
+      rawText: candidate.rawText }).candidates[0]
+    expect(descendant.parentCandidateId).toBe(candidate.id)
+    expect(store.getDeckThread(project.id, old.id)).toMatchObject({ stale: true,
+      candidates: [{ id: candidate.id }] })
+    store.close()
+  })
+
+  it('non riattiva una guida storica quando il medesimo testo torna in una nuova vN', () => {
+    const store = new ProjectStore(databasePath())
+    const project = store.create({ name: 'Ritorno', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id, rawText: '1 Carta A MEG 1', source: 'paste' })
+    const v1 = store.listDeckVersions(project.id)[0]
+    const snapshot = { id: 'd'.repeat(64), fetchedAt: '2026-10-25T10:00:00.000Z',
+      sourceUrl: 'https://limitlesstcg.com/decks', period: 'Ultimo mese',
+      circuit: 'WESTERN' as const, format: 'STANDARD' as const, cached: false,
+      decks: [{ id: '284', name: 'Dragapult ex', points: 100, share: 12,
+        url: 'https://limitlesstcg.com/decks/284' }] }
+    store.saveMetaSnapshot(snapshot)
+    const firstContext = store.getCurrentDeckContext(project.id)!
+    const report: MatchupReport = { projectId: project.id, metaId: snapshot.id,
+      opponentId: '284', deckHash: store.getCurrentDeckHash(project.id)!,
+      deckVersionId: firstContext.versionId, deckResolutionId: firstContext.resolutionId,
+      generatedAt: '2026-10-25T10:01:00.000Z', sampleDeckUrl: null,
+      strengths: 'A', weaknesses: 'B', ourKeyCards: 'Carta A', theirKeyCards: '',
+      strategy: 'Piano iniziale', limitations: 'Campione' }
+    store.saveMatchupReport(report)
+    const old = store.listMatchupDiscussions(project.id, '284')[0]
+    store.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste' })
+    const v2 = store.listDeckVersions(project.id)[0]
+    store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: v2.id })
+    expect(store.getMatchupDiscussion(old.id)?.current).toBe(false)
+    expect(store.listMatchupReports(project.id, snapshot.id)).toEqual([])
+    const newContext = store.getCurrentDeckContext(project.id)!
+    const newReport = { ...report, deckVersionId: newContext.versionId,
+      deckResolutionId: newContext.resolutionId, generatedAt: '2026-10-25T10:02:00.000Z' }
+    store.saveContinuedMatchupReport(newReport, old.id)
+    const discussions = store.listMatchupDiscussions(project.id, '284')
+    expect(discussions).toHaveLength(2)
+    expect(discussions.find((item) => item.id !== old.id)?.current).toBe(true)
+    expect(store.getMatchupDiscussion(old.id)?.current).toBe(false)
+    store.close()
+  })
 })

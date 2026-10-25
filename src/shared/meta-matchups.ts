@@ -26,6 +26,8 @@ export interface MatchupReport {
   metaId: string
   opponentId: string
   deckHash: string
+  deckVersionId?: string | null
+  deckResolutionId?: string | null
   generatedAt: string
   sampleDeckUrl: string | null
   sampleDeckCards?: string[]
@@ -86,6 +88,8 @@ export interface MatchupDiscussion {
   metaId: string
   opponentId: string
   deckHash: string
+  deckVersionId?: string | null
+  deckResolutionId?: string | null
   parentId: string | null
   current: boolean
   createdAt: string

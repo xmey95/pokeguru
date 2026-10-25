@@ -124,7 +124,7 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   constraints: DeckConstraint[], catalog: CatalogView, play: TournamentSnapshot[],
   main: MainTournamentSnapshot[]): ThreadEvidencePacket {
   const candidate = thread.candidates.at(-1) ?? null
-  const deckText = candidate?.rawText ?? base?.rawText ?? ''
+  const deckText = candidate?.rawText ?? thread.seedCandidateText ?? base?.rawText ?? ''
   const lines = parseDeck(deckText).lines.filter((line) => line.kind === 'card')
   const byName = new Map<string, { name: string; quantity: number; line: typeof lines[number] | null }>()
   for (const line of lines) {
@@ -221,6 +221,8 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   const sources: ThreadEvidenceSource[] = []
   if (base) sources.push(source('base', `Lista base v${base.sequence}`, null, base.rawText))
   if (candidate) sources.push(source('candidate', `Candidata ${candidate.sequence}`, null, candidate.rawText))
+  else if (thread.seedCandidateText) sources.push(source('seed-candidate',
+    'Candidata del Thread precedente', null, thread.seedCandidateText))
   if (constraints.length) sources.push(source('constraints', 'Vincoli del progetto', null, constraints))
   for (const card of cards) {
     const print = catalog.prints.find((item) => item.id === card.printId)
