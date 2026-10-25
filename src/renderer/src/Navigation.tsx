@@ -34,7 +34,7 @@ interface NavigationContextValue {
   subscribe(listener: () => void): () => void
   notify(): void
   go(patch: Partial<Route>, ui?: Record<string, unknown>, label?: string): void
-  visit(ui: Record<string, unknown>, label: string): void
+  visit(ui: Record<string, unknown>, label: string, options?: { preservePosition?: boolean }): void
   move(delta: -1 | 1): void
   isCurrent(): boolean
 }
@@ -52,11 +52,15 @@ export function NavigationProvider({ children }: { children: (entryId: number) =
   const listeners = useRef(new Set<() => void>()).current
   const [, render] = useState(0)
   const entry = history.current
-  function update(action: () => boolean) {
+  function update(action: () => boolean, preservePosition = false) {
     const before = history.current.id
     const presentation = capture()
     if (!action()) return
     presentations.set(before, presentation)
+    // A same-view selection needs its current viewport, but the new detail starts closed.
+    if (preservePosition) presentations.set(history.current.id, {
+      details: [], scrolls: presentation.scrolls, focus: presentation.focus
+    })
     for (const id of presentations.keys()) if (!history.entries.some((item) => item.id === id)) presentations.delete(id)
     document.querySelectorAll<HTMLElement>(':popover-open').forEach((item) => item.hidePopover())
     render((value) => value + 1)
@@ -67,7 +71,7 @@ export function NavigationProvider({ children }: { children: (entryId: number) =
     notify: () => listeners.forEach((listener) => listener()),
     isCurrent: () => history.current.id === entry.id,
     go: (patch, ui, label) => { if (history.current.id === entry.id) update(() => history.push({ ...entry.route, ...patch }, ui, label)) },
-    visit: (ui, label) => { if (history.current.id === entry.id) update(() => history.push({ ...entry.route }, ui, label)) },
+    visit: (ui, label, options) => { if (history.current.id === entry.id) update(() => history.push({ ...entry.route }, ui, label), options?.preservePosition) },
     move: (delta) => update(() => history.move(delta))
   }
   useEffect(() => {
