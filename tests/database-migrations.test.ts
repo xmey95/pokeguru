@@ -138,7 +138,7 @@ it('backs up schema 5 and preserves a Catalog job while adding run identity', as
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 })
 
-it('preserves a project and Catalog job across verified v3→v4→v6 upgrades', async () => {
+it('preserves a project and Catalog job across verified v3→v4→v8 upgrades', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-chain-'))
   const path = join(folder, 'pokeguru.sqlite')
   try {
@@ -223,6 +223,41 @@ it('backs up v6 before installing rotation tables and preserves the Catalog run 
     expect(upgradedCatalog.jobStatus().runId).toBe(runId)
     expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
     upgradedEvents.close(); upgradedCatalog.close(); upgradedProjects.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('backs up v7 before daily sync and seeds the last Catalog success', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-daily-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const catalog = new CatalogStore(path)
+    catalog.startJob('new')
+    const runId = catalog.jobStatus().runId
+    catalog.close()
+    const completedAt = '2026-10-25T08:00:00.000Z'
+    const legacy = new DatabaseSync(path)
+    legacy.prepare("UPDATE catalog_job SET state='done', updated_at=? WHERE id=1").run(completedAt)
+    legacy.exec('PRAGMA user_version = 7')
+    legacy.close()
+
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 7, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const backup = new DatabaseSync(preparation.backupPath!, { readOnly: true })
+    expect(backup.prepare("SELECT name FROM sqlite_master WHERE name='daily_sync'").get())
+      .toBeUndefined()
+    backup.close()
+
+    const daily = new DailySyncStore(path)
+    expect(daily.read('catalog').lastSuccessAt).toBe(completedAt)
+    expect(daily.due('catalog', new Date('2026-10-25T09:00:00.000Z'))).toBe(false)
+    daily.close()
+    completeDatabaseMigration(path, preparation)
+    expect(schemaVersion(path)).toBe(8)
+    const reopened = new CatalogStore(path)
+    expect(reopened.jobStatus().runId).toBe(runId)
+    reopened.close()
     verifyDatabase(path)
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 })

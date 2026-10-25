@@ -215,7 +215,7 @@ try {
   const missingReads = await application.evaluate(() => globalThis.catalogAutoReads)
   assert.equal(missingReads.length, 16)
   assert.ok(missingReads.includes('sv05-014'))
-  await page.getByText(/1 dettaglio TCGdex non disponibile/).waitFor()
+  await page.locator('.diagnostics').filter({ hasText: /1 dettaglio TCGdex non disponibile/ }).waitFor()
   await page.locator('.catalog-sync-status').getByRole('button', { name: 'Riprendi scansione', exact: true }).click()
   await waitFor(page, 'done')
   const recoveredReads = await application.evaluate(() => globalThis.catalogAutoReads)

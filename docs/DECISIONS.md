@@ -321,6 +321,8 @@ I payload Evento fuori rotazione escono dall'archivio globale. Solo gli ID di sn
 
 Il processo principale valuta una sola volta all'avvio Catalogo, Limitless Play e Regional in modo indipendente. «Un giorno» significa almeno 24 ore effettivamente trascorse dall'ultimo completamento riuscito, senza dipendere da mezzanotte, fuso o cambio dell'ora. Il registro SQLite conserva ultimo tentativo, successo, esito, origine manuale/automatica e prossimo tentativo; il tentativo viene scritto prima di programmare la rete. La modalità automatica usa solo «nuovi» e le code esistenti. Un errore di rete o 429 conclude il tentativo silente: il successivo avvio può riprovare dopo almeno sei ore e, per 429, non prima di `Retry-After`. I comandi manuali mantengono scansione completa, ripresa e controllo della pausa; una pausa esplicita inibisce l'avvio silente finché l'utente non riprende. Il timestamp di completamento del Catalogo precedente viene conservato; per Eventi legacy non è deducibile dal solo cursore.
 
+Play legge l'[API](https://docs.limitlesstcg.com/developer/tournaments) su `play.limitlesstcg.com`, Regional le pagine su `limitlesstcg.com`: i limitatori esistenti sono per fonte. La quota F-27 è stata osservata solo sull'API Play e non attesta una quota cumulativa fra i due host. Le scansioni restano indipendenti per evitare che una coda lunga impedisca l'aggiornamento dell'altra; ogni 429 ferma il proprio tentativo silente e persiste `Retry-After`. Dopo un crash, un esito `running` salvato viene mostrato come interrotto quando lo stato di sessione del job non è `active`.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

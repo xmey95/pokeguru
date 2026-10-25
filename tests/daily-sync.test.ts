@@ -2,8 +2,11 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it } from 'vitest'
 import { DailySyncStore } from '../src/main/daily-sync'
+import { DailySyncNotice } from '../src/renderer/src/DailySyncNotice'
 
 const folders: string[] = []
 function fixture() {
@@ -36,6 +39,10 @@ describe('daily background acquisition', () => {
     expect(reopened.claim('catalog', day2)).toBe(false)
     expect(reopened.read('catalog')).toMatchObject({ trigger: 'automatic', outcome: 'running',
       lastSuccessAt: day1.toISOString(), lastAttemptAt: day2.toISOString() })
+    const interrupted = renderToStaticMarkup(createElement(DailySyncNotice,
+      { state: reopened.read('catalog'), active: false }))
+    expect(interrupted).toContain('Ultimo tentativo interrotto alla chiusura.')
+    expect(interrupted).not.toContain('in background in corso')
     reopened.close()
   })
 
