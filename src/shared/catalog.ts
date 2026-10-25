@@ -13,6 +13,7 @@ export interface CatalogSyncStatus {
   acquired: number
   error: string | null
   cooldownUntil: string | null
+  rotationCleanup?: { ruleVersion: string; removedPrints: number; retainedReferences: number; completedAt: string }
 }
 export const CATALOG_SET_IDS = ['sv01', 'sv02', 'sv04.5', 'me01', 'me02.5'] as const
 export interface PromoStatus {
@@ -70,6 +71,8 @@ export interface CatalogPrint {
   energyType?: string | null
   rarity: string | null
   regulationMark?: string | null
+  /** Official code retained with a cited historical print after its set leaves the active Catalog. */
+  historicalSetCode?: string | null
   isPromo?: boolean
   promoStatus?: PromoStatus | null
   variants: Record<string, boolean> | null

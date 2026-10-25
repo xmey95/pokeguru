@@ -312,6 +312,12 @@ Il Catalogo conserva il testo TCGdex immutato. Un pacchetto regole di release pu
 
 Le corse Catalogo ed Eventi ricevono un ID persistente quando inizia una nuova acquisizione; pausa, attesa e ripresa conservano lo stesso ID. La nuova colonna Catalogo porta lo schema SQLite a v6, con backup verificato pre-upgrade. Gli avvisi usano l'ID del job AI già persistito. La shell del renderer legge gli stati ogni cinque secondi e salva soltanto ID e ultimo stato in `localStorage`: il primo controllo per fonte stabilisce una baseline, poi solo il passaggio a successo, errore o annullamento crea un avviso. Per Codex, successo significa `applied`, cioè risultato già salvato; `ready` non basta. Errori temporanei con ripresa automatica e pause manuali restano stati di lavoro. Questo contratto copre anche gli avvii automatici previsti da APP-120 se usano le medesime API di stato. Nessun testo del job o credenziale entra nel registro locale. L'interfaccia mostra tre avvisi recenti e consente di aprire quelli precedenti senza scartarli.
 
+### T-123 — Rotazione, riferimenti storici e pulizia (APP-123)
+
+Il periodo è determinato dal pacchetto Standard occidentale verificato e incluso nella release, mai dall'indice TCGdex o Limitless. Il Catalogo elimina una stampa solo se il marchio salvato è certamente precedente al primo ammesso, dopo il completamento dei dettagli; una stampa corrente assente dal manifest resta acquisita. Le vecchie stampe non vengono scaricate di nuovo. Solo schede con identità verificata e citate da liste, candidate, vincoli o evidenze salvate, incluse le query AI di APP-115, possono restare fuori dalla ricerca per riconoscere una stampa storica esatta. Liste e guide non vengono riscritte.
+
+I payload Evento fuori rotazione escono dall'archivio globale. Solo gli ID di snapshot citati da Thread o query AI delle guide conservano metadati minimi; le evidenze già incorporate restano nei rispettivi progetti. Nuove analisi leggono solo eventi correnti. Una pagina indice iniziale illeggibile rinvia il passaggio, mentre un job tardivo non può reintrodurre eventi precedenti. Schema v7 dopo la migrazione v6 degli ID job APP-121, transazioni e backup SQLite verificati proteggono le rimozioni e il recupero.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

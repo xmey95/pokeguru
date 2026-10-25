@@ -234,6 +234,7 @@ describe('main Limitless tournament archive', () => {
         coverage: { returnedParticipants: 20, listedDecks: 20, fetchedLists,
           complete60Lists: fetchedLists, noListLink: 0 } })
       store.saveMain(snapshot('intermediate-a', 0))
+      store.saveMain(snapshot('query-a', 0))
       store.saveMain(snapshot('cited-b', 1))
       store.saveMain(snapshot('final-c', 2), true)
       const projects = new ProjectStore(path)
@@ -243,11 +244,13 @@ describe('main Limitless tournament archive', () => {
         db.prepare(`INSERT INTO deck_thread_messages
           (id, thread_id, author, text, created_at, evidence_json)
           VALUES ('citation', ?, 'assistant', 'Evidence', '2026-10-24', ?)`)
-          .run(thread.id, JSON.stringify({ schemaVersion: 1, events: [{ snapshotId: 'cited-b' }] }))
-        expect(projects.referencedTournamentSnapshotIds()).toEqual(new Set(['cited-b']))
+          .run(thread.id, JSON.stringify({ schemaVersion: 1, events: [{ snapshotId: 'cited-b' }],
+            aiQueries: { requests: [{ query: { operation: 'events.search' },
+              data: { lists: [{ snapshotId: 'query-a' }] } }] } }))
+        expect(projects.referencedTournamentSnapshotIds()).toEqual(new Set(['cited-b', 'query-a']))
         expect(store.pruneMainIntermediates(projects.referencedTournamentSnapshotIds())).toBe(1)
         expect(db.prepare('SELECT id FROM main_tournament_snapshots ORDER BY rowid').all())
-          .toMatchObject([{ id: 'cited-b' }, { id: 'final-c' }])
+          .toMatchObject([{ id: 'query-a' }, { id: 'cited-b' }, { id: 'final-c' }])
         expect(store.getMain('582')?.id).toBe('final-c')
       } finally { projects.close() }
     } finally { db.close(); store.close(); rmSync(folder, { recursive: true, force: true }) }

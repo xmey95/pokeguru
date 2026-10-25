@@ -43,7 +43,7 @@ export function TournamentSection() {
             if (!result.ok) throw new Error(result.error)
             setSnapshot(result.value); setSelectedEventId(first.eventId)
           }
-        }
+        } else { setSnapshot(null); setSelectedEventId(null); setSelectedId(null) }
       }).catch(() => { if (active) setError('Archivio tornei non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [busy, progress?.saved, progress?.status])
@@ -73,6 +73,7 @@ export function TournamentSection() {
       setEvents(listed.value)
       const next = listed.value.find((item) => item.eventId === selectedEventId) ?? listed.value[0]
       if (next) await selectEvent(next.eventId)
+      else { setSnapshot(null); setSelectedEventId(null); setSelectedId(null) }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Aggiornamento evento non riuscito.')
     } finally { setBusy(false) }
@@ -104,7 +105,7 @@ export function TournamentSection() {
     startedAt={startedAt} progressError={progressError} progressDetail={progress ? `${progress.saved} eventi archiviati · ${progress.inspected} controllati` : undefined}
     onRefresh={refresh} onPause={pause} management={<>
       {progress && progress.status !== 'idle' && <p className="content-note">{progress.inspected} eventi controllati · {progress.saved} archiviati · {progress.skipped} fuori perimetro · prossima pagina {progress.page}.</p>}
-      <p className="content-note">La scansione avanza da sola in blocchi di tre eventi, con intervallo proporzionale alle richieste effettuate per rispettare la quota osservata della fonte. Cerca nuovi tornei dall’ultima scansione; al primo avvio, negli ultimi 90 giorni. La scansione completa percorre anche le pagine precedenti.</p>
+      <p className="content-note">La scansione avanza da sola in blocchi di tre eventi, con intervallo proporzionale alle richieste effettuate per rispettare la quota osservata della fonte. Cerca nuovi tornei dalla rotazione Standard occidentale verificata; la scansione completa ricontrolla il periodo corrente.</p>
     </>}>
     {events.length > 0 && <div className="catalog-filters event-filters"><label>Evento archiviato
         <select value={selectedEventId ?? ''} onChange={(event) => nav.visit({ 'events.play.event': event.target.value, 'events.play.player': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Play'}`)}>

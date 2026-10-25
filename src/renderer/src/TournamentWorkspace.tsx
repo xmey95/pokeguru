@@ -3,7 +3,7 @@ import type { TournamentSyncProgress } from '../../shared/tournament'
 import { useNavigation, useViewState } from './Navigation'
 import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 
-type Progress = Pick<TournamentSyncProgress, 'status' | 'mode' | 'cooldownUntil' | 'lastError' | 'active' | 'stopping'>
+type Progress = Pick<TournamentSyncProgress, 'status' | 'mode' | 'cooldownUntil' | 'lastError' | 'active' | 'stopping' | 'rotationCleanup'>
 export const eventDateTime = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 
 export function TournamentWorkspace({ source, loading, count, busy, progress, error, startedAt, progressDetail, progressError, onRefresh, onPause, management, children }: {
@@ -64,6 +64,9 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
     </ActivityStatus>}
     {progressError && <p className="warning-banner" role="status">{progressError}</p>}
     {progress?.lastError && progress.lastError !== error && <p className="diagnostics" role="status">{progress.lastError}</p>}
+    {progress?.rotationCleanup && <p className="content-note" role="status">
+      Nuova rotazione: {progress.rotationCleanup.removedPlay} snapshot Play e {progress.rotationCleanup.removedMain} Regional eliminati dall’archivio globale; le evidenze già salvate in Thread e guide restano storiche.
+    </p>}
     {error && <div className="error-banner" role="alert">{error}</div>}
     <section id={id} className="catalog-management" aria-labelledby={`${id}-heading`} hidden={!open}
       onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() } }}>

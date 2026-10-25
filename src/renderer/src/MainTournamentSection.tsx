@@ -41,7 +41,7 @@ export function MainTournamentSection() {
             if (!result.ok) throw new Error(result.error)
             setSnapshot(result.value); setSelectedEventId(chosen.eventId)
           }
-        }
+        } else { setSnapshot(null); setSelectedEventId(null); setSelectedPlace(null) }
       }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Archivio Regional non leggibile.') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [busy, progress?.inspectedEvents, Math.floor((progress?.fetchedLists ?? 0) / 8), progress?.status])
@@ -70,6 +70,7 @@ export function MainTournamentSection() {
       setEvents(listed.value)
       const chosen = listed.value.find((item) => item.eventId === selectedEventId) ?? listed.value[0]
       if (chosen) await choose(chosen.eventId)
+      else { setSnapshot(null); setSelectedEventId(null); setSelectedPlace(null) }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Aggiornamento Regional non riuscito.') }
     finally { setBusy(false) }
   }
