@@ -95,9 +95,19 @@ try {
   })
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await assistant.getByRole('button', { name: 'Carta · Catalogo' }).focus()
-  await page.keyboard.press('Enter')
-  await page.locator('.catalog-section').waitFor()
+  await assistant.getByRole('button', { name: 'Carta · Catalogo' }).press('Enter')
+  try {
+    await page.waitForFunction(() => document.querySelector('button[aria-label="Catalogo"]')?.getAttribute('aria-current') === 'page',
+      null, { timeout: 10000 })
+  } catch (error) {
+    console.error('Thread Markdown local link state:', await page.evaluate(() => ({
+      active: document.activeElement?.outerHTML.slice(0, 250),
+      catalogCurrent: document.querySelector('button[aria-label="Catalogo"]')?.getAttribute('aria-current'),
+      localLink: document.querySelector('.thread-markdown button')?.outerHTML.slice(0, 250),
+      alert: document.querySelector('[role="alert"]')?.textContent?.slice(0, 250)
+    })))
+    throw error
+  }
   assert.deepEqual(await application.evaluate(() => globalThis.markdownOpenedLinks), ['https://example.org/path'])
   console.log('Thread Markdown Electron: struttura, link esterni, sanitizzazione, 1280/640 px e testo storico invariato: passed')
 } finally {
