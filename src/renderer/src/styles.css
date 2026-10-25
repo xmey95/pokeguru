@@ -626,6 +626,7 @@ button > .loading-spinner { width: 14px; height: 14px; flex-basis: 14px; margin-
 .activity-status[data-state="complete"] .activity-heading { color: var(--success); }
 .activity-symbol { width: 16px; flex: 0 0 16px; text-align: center; font-weight: 700; }
 .activity-status .text-button { margin-top: 8px; }
+.catalog-sync-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .discussion-pending > .activity-status { margin: 0; width: 100%; }
 .thread-ai-activity { margin-bottom: 0; }
 @keyframes loading-spin { to { transform: rotate(360deg); } }

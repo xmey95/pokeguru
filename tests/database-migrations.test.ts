@@ -75,6 +75,80 @@ it('backs up a live WAL archive before legacy migration and restores its evidenc
   } finally { projects?.close(); rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 }, 30_000)
 
+it('backs up schema 4 before adding the Catalog retry clock', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-catalog-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const old = new DatabaseSync(path)
+    old.exec(`CREATE TABLE catalog_job (
+      id INTEGER PRIMARY KEY CHECK (id = 1), mode TEXT NOT NULL,
+      state TEXT NOT NULL, phase TEXT NOT NULL, expected INTEGER NOT NULL,
+      error TEXT, updated_at TEXT NOT NULL
+    ) STRICT`)
+    old.prepare('INSERT INTO catalog_job VALUES (1, ?, ?, ?, 0, NULL, ?)')
+      .run('new', 'running', 'Lettura inventario TCGdex', '2026-10-25T00:00:00.000Z')
+    old.exec('PRAGMA user_version = 4')
+    old.close()
+
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 4, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const catalog = new CatalogStore(path)
+    expect(catalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
+    catalog.close()
+    completeDatabaseMigration(path, preparation)
+    expect(schemaVersion(path)).toBe(5)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('preserves a project and Catalog job across verified v3→v4→v5 upgrades', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-chain-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const original = new ProjectStore(path)
+    const project = original.create({ name: 'Continuità', format: 'STANDARD' })
+    original.close()
+    const initialCatalog = new CatalogStore(path)
+    initialCatalog.startJob('new')
+    initialCatalog.close()
+    const legacy = new DatabaseSync(path)
+    legacy.exec('ALTER TABLE projects DROP COLUMN archived_at; ALTER TABLE catalog_job DROP COLUMN retry_at; PRAGMA user_version = 3')
+    legacy.close()
+
+    const v3 = await prepareDatabaseMigration(path)
+    expect(v3).toMatchObject({ fromVersion: 3, needsMigration: true })
+    expect(existsSync(`${v3.backupPath}.verified`)).toBe(true)
+    const archived = new ProjectStore(path)
+    expect(archived.get(project.id)?.archivedAt).toBeNull()
+    archived.close()
+    verifyDatabase(path)
+    const v4Marker = new DatabaseSync(path)
+    v4Marker.exec('PRAGMA user_version = 4') // The APP-106 release completed before APP-104.
+    v4Marker.close()
+
+    const v4 = await prepareDatabaseMigration(path)
+    expect(v4).toMatchObject({ fromVersion: 4, needsMigration: true })
+    expect(v4.backupPath).not.toBe(v3.backupPath)
+    expect(existsSync(`${v4.backupPath}.verified`)).toBe(true)
+    const backup = new DatabaseSync(v4.backupPath!, { readOnly: true })
+    try {
+      const columns = (table: string) => (backup.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[])
+        .map((column) => column.name)
+      expect(columns('projects')).toContain('archived_at')
+      expect(columns('catalog_job')).not.toContain('retry_at')
+    } finally { backup.close() }
+    const completedCatalog = new CatalogStore(path)
+    expect(completedCatalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
+    completedCatalog.close()
+    completeDatabaseMigration(path, v4)
+    expect(schemaVersion(path)).toBe(5)
+    const reopened = new ProjectStore(path)
+    expect(reopened.get(project.id)?.name).toBe('Continuità')
+    reopened.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+}, 30_000)
+
 it('refuses a newer archive schema before opening stores', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-future-'))
   const path = join(folder, 'future.sqlite')

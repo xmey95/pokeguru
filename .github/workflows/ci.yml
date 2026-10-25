@@ -55,6 +55,18 @@ jobs:
       - name: Exercise catalog set coverage on Windows
         if: runner.os == 'Windows'
         run: node tests/catalog-ui-live.mjs
+      - name: Exercise recoverable catalog sync on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/catalog-auto-sync-electron-live.mjs
+      - name: Exercise recoverable catalog sync on Windows
+        if: runner.os == 'Windows'
+        run: node tests/catalog-auto-sync-electron-live.mjs
+      - name: Check cached Catalog images on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/catalog-card-ui-live.mjs
+      - name: Check cached Catalog images on Windows
+        if: runner.os == 'Windows'
+        run: node tests/catalog-card-ui-live.mjs
       - name: Exercise long catalog navigation on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/catalog-large-ui-live.mjs
