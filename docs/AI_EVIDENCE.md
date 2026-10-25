@@ -29,9 +29,10 @@ Ogni turno distingue:
 ## Interrogazione automatica del motore
 
 Ogni turno Matchup o Thread può richiedere al motore locale operazioni di sola
-lettura con argomenti strutturati: ricerca carte per stampa, identità o testo;
-lettura della scheda esatta e delle varianti; controllo Standard per data;
-ricerca nelle liste ed eventi già acquisiti. L'app valida nome dell'operazione,
+lettura con argomenti strutturati: ricerca carte per stampa, identità o testo,
+con scheda e varianti nella risposta; ricerca nelle liste ed eventi già acquisiti.
+Il controllo Standard deterministico della lista resta nel contesto iniziale
+quando disponibile. L'app valida nome dell'operazione,
 argomenti, progetto, periodo e dimensione della risposta. Il modello può
 chiedere altre query dopo aver visto i primi risultati, entro un budget fissato
 di turni e risultati; se il limite si esaurisce, la risposta dichiara la lacuna.
