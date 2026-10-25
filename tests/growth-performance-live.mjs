@@ -204,7 +204,6 @@ try {
 
   const databasePath = join(profile, 'data', 'pokeguru.sqlite')
   const dataset = seed(databasePath, projectId, cardCount)
-  const snapshotReads = measureSnapshotReads(databasePath)
   const start = performance.now()
   application = await launch()
   page = await application.firstWindow()
@@ -379,6 +378,9 @@ try {
   const longTasks = await page.evaluate(() => window.__growthLongTasks ?? [])
   const processes = await application.evaluate(({ app }) => app.getAppMetrics().map((entry) => ({
     type: entry.type, privateKiB: entry.memory?.privateBytes ?? null })))
+  await application.close()
+  application = undefined
+  const snapshotReads = measureSnapshotReads(databasePath)
   console.log(JSON.stringify({ kind: 'Populated Electron fixture, offline and warm cache', platform: process.platform,
     profiled: profileRenderer, rendererProfiles,
     dataset: { ...dataset, viewportWidth: viewportWidth ?? 'default', expectAllMessages },
