@@ -26,10 +26,28 @@ try {
     await page.screenshot({ path: join(workspace, 'node_modules', `content-ai-${width}.png`) })
   }
   assert.match(await page.getByText('Codex non disponibile').textContent(), /Codex non disponibile/)
+  await page.getByRole('button', { name: 'Installa Codex', exact: true }).waitFor()
   assert.equal(await page.getByLabel('Modello', { exact: true }).inputValue(), '')
   assert.equal(await page.getByRole('button', { name: 'Esegui prova AI' }).isDisabled(), true)
   assert.deepEqual(await page.evaluate(() => window.projectsApi.getAiPreferences()),
     { ok: true, value: { model: null, reasoningEffort: null } })
+  await application.evaluate(({ ipcMain }) => {
+    let installed = false
+    for (const name of ['ai:setup-status', 'ai:install-codex', 'ai:get-connection']) ipcMain.removeHandler(name)
+    ipcMain.handle('ai:setup-status', () => ({ ok: true, value: {
+      cliAvailable: installed, version: installed ? 'codex-cli 0.164.0' : null,
+      nodeAvailable: true, npmAvailable: true } }))
+    ipcMain.handle('ai:install-codex', () => {
+      installed = true
+      return { ok: true, value: { cliAvailable: true, version: 'codex-cli 0.164.0',
+        nodeAvailable: true, npmAvailable: true } }
+    })
+    ipcMain.handle('ai:get-connection', () => ({ ok: true, value: { account: null, plan: null, models: [] } }))
+  })
+  await page.getByRole('button', { name: 'Aggiorna stato' }).click()
+  await page.getByRole('button', { name: 'Installa Codex', exact: true }).click()
+  await page.getByText('CLI verificata: codex-cli 0.164.0').waitFor()
+  await page.getByRole('button', { name: 'Accedi con ChatGPT' }).waitFor()
   console.log('E2E Impostazioni AI offline OK: CLI assente, stato e preferenze locali.')
 } finally {
   if (application) await application.close()
