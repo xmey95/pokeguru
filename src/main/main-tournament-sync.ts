@@ -1,17 +1,18 @@
 import type { MainTournamentParticipant, MainTournamentSyncProgress } from '../shared/main-tournament'
 import { completeMainTournament, fetchMainDecklist, fetchMainTournament,
-  fetchMainTournamentIndexPage, MainLimitlessRateLimitError } from './limitless-main-tournament'
+  fetchMainTournamentIndexPage, MainLimitlessRateLimitError,
+  MainLimitlessUnavailableError } from './limitless-main-tournament'
 import type { TournamentStore } from './tournament-store'
+import { westernRotationRule } from '../shared/standard-rotation'
 
 const REQUESTS_PER_BLOCK = 7
 const LISTS_PER_EVENT = 16
-const FIRST_SYNC_DAYS = 90
-
-function initial(mode: 'new' | 'full', old: MainTournamentSyncProgress, now: Date): MainTournamentSyncProgress {
+function initial(mode: 'new' | 'full', old: MainTournamentSyncProgress, rotationStart: string): MainTournamentSyncProgress {
   return { mode, status: 'running', page: 1, maxPages: null, pendingEvents: [], pendingLists: [],
-    inspectedEvents: 0, fetchedLists: 0, watermark: old.watermark,
-    previousWatermark: mode === 'new' ? old.watermark ??
-      new Date(now.getTime() - FIRST_SYNC_DAYS * 86_400_000).toISOString() : null,
+    inspectedEvents: 0, fetchedLists: 0, rotationStart, scannedPages: 0, indexedRows: 0,
+    eligibleEvents: 0, ineligibleEvents: 0, unavailableIndexRows: 0, outsideRotationEvents: 0,
+    alreadyAcquiredEvents: 0, unavailableEvents: [], unavailableLists: [], watermark: old.watermark,
+    previousWatermark: rotationStart,
     newestSeen: null, stopAfterPage: false, cooldownUntil: null, lastError: null }
 }
 
@@ -36,9 +37,17 @@ function selectedLists(participants: MainTournamentParticipant[]): string[] {
 /** Stores result rows first, then retrieves a bounded set of representative decklists over resumable blocks. */
 export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new' | 'full',
   fetcher: typeof fetch = fetch, now = new Date()): Promise<MainTournamentSyncProgress> {
+  const rotation = westernRotationRule(now.toISOString().slice(0, 10))
+  if (!rotation) throw new Error('Nessuna rotazione Standard occidentale inclusa per la data corrente.')
   let progress = store.mainProgress()
-  if (progress.mode !== mode || progress.status === 'idle' || progress.status === 'complete') {
-    progress = initial(mode, progress, now)
+  if (progress.mode !== mode || progress.status === 'idle' || progress.status === 'complete' ||
+    progress.rotationStart !== rotation.effectiveFrom) {
+    const next = initial(mode, progress, rotation.effectiveFrom)
+    // An upgrade must finish an already queued event/list before backfilling the rotation.
+    progress = progress.mode === mode && (progress.status === 'running' || progress.status === 'rate-limited')
+      ? { ...next, status: progress.status, cooldownUntil: progress.cooldownUntil,
+        pendingEvents: progress.pendingEvents, pendingLists: progress.pendingLists }
+      : next
     store.saveMainProgress(progress)
   }
   if (progress.cooldownUntil && Date.parse(progress.cooldownUntil) > now.getTime()) return progress
@@ -55,7 +64,7 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
         if (!event) throw new Error('Evento Regional in coda non trovato.')
         const list = await fetchMainDecklist(pending.listId, fetcher)
         const participants = event.participants.map((item) => item.listId === pending.listId
-          ? { ...item, cards: list.cards, cardTotal: list.total } : item)
+          ? { ...item, cards: list.cards, cardTotal: list.total, listUnavailable: false } : item)
         const remaining = progress.pendingLists.slice(1)
         store.saveMain(completeMainTournament({ ...event, fetchedAt: new Date().toISOString(),
           participants, cached: false }), remaining.length === 0)
@@ -69,7 +78,8 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
           .map((item) => [item.listId!, { cards: item.cards, total: item.cardTotal }]) ?? [])
         const participants = fresh.participants.map((item) => ({ ...item,
           cards: item.listId ? cardsById.get(item.listId)?.cards ?? null : null,
-          cardTotal: item.listId ? cardsById.get(item.listId)?.total ?? null : null }))
+          cardTotal: item.listId ? cardsById.get(item.listId)?.total ?? null : null,
+          listUnavailable: false }))
         const pendingLists = selectedLists(participants).map((listId) => ({ eventId: entry.eventId, listId }))
         store.saveMain(completeMainTournament({ ...fresh, participants }), pendingLists.length === 0)
         progress = { ...progress, pendingEvents: progress.pendingEvents.slice(1),
@@ -81,11 +91,20 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
         return progress
       } else {
         const index = await fetchMainTournamentIndexPage(progress.page, fetcher)
-        const cutoff = progress.previousWatermark
+        const cutoff = progress.rotationStart!
+        const inRotation = index.entries.filter((entry) => entry.date.slice(0, 10) >= cutoff)
+        const already = mode === 'new' ? inRotation.filter((entry) => store.getMain(entry.eventId)) : []
         progress = { ...progress, page: progress.page + 1, maxPages: index.maxPages,
+          scannedPages: progress.scannedPages + 1,
+          indexedRows: progress.indexedRows + index.indexedRows,
+          eligibleEvents: progress.eligibleEvents + inRotation.length,
+          ineligibleEvents: progress.ineligibleEvents + index.ineligibleRows,
+          unavailableIndexRows: progress.unavailableIndexRows + index.unavailableRows,
+          outsideRotationEvents: progress.outsideRotationEvents + index.entries.length - inRotation.length,
+          alreadyAcquiredEvents: progress.alreadyAcquiredEvents + already.length,
           newestSeen: progress.newestSeen ?? index.entries[0]?.date ?? null,
-          stopAfterPage: Boolean(cutoff && index.entries.some((entry) => entry.date < cutoff)),
-          pendingEvents: index.entries.filter((entry) => (!cutoff || entry.date >= cutoff) &&
+          stopAfterPage: Boolean(index.oldestDate && index.oldestDate.slice(0, 10) < cutoff),
+          pendingEvents: inRotation.filter((entry) =>
             (mode === 'full' || !store.getMain(entry.eventId))) }
       }
       requests++
@@ -95,6 +114,28 @@ export async function syncMainTournamentBlock(store: TournamentStore, mode: 'new
         progress = { ...progress, status: 'rate-limited', cooldownUntil: error.retryAt }
         store.saveMainProgress(progress)
         return progress
+      }
+      if (error instanceof MainLimitlessUnavailableError && progress.pendingLists.length) {
+        const pending = progress.pendingLists[0]
+        const event = store.getMain(pending.eventId)
+        if (!event) throw new Error('Evento Regional in coda non trovato.')
+        const remaining = progress.pendingLists.slice(1)
+        const participants = event.participants.map((item) => item.listId === pending.listId
+          ? { ...item, listUnavailable: true } : item)
+        store.saveMain(completeMainTournament({ ...event, fetchedAt: new Date().toISOString(),
+          participants, cached: false }), remaining.length === 0)
+        progress = { ...progress, pendingLists: remaining,
+          unavailableLists: [...progress.unavailableLists, pending] }
+        requests++
+        store.saveMainProgress(progress)
+        continue
+      }
+      if (error instanceof MainLimitlessUnavailableError && progress.pendingEvents.length) {
+        progress = { ...progress, pendingEvents: progress.pendingEvents.slice(1),
+          unavailableEvents: [...progress.unavailableEvents, progress.pendingEvents[0]] }
+        requests++
+        store.saveMainProgress(progress)
+        continue
       }
       progress = { ...progress, lastError: error instanceof Error ? error.message : 'Fonte Regional non leggibile.' }
       store.saveMainProgress(progress)

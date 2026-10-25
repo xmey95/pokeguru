@@ -25,8 +25,21 @@ try {
   const session = await page.context().newCDPSession(page)
   for (const section of ['Lista', 'Thread', 'Matchup', 'Catalogo', 'Eventi', 'Impostazioni AI']) {
     const nav = page.locator('.sidebar').getByRole('button', { name: section, exact: true })
-    await nav.press('Enter')
-    await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
+    // The previous route restores focus over two animation frames; let it finish before keyboard input.
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    await nav.focus()
+    await page.keyboard.press('Enter')
+    try {
+      await page.waitForFunction((name) => [...document.querySelectorAll('.sidebar button')]
+        .some((element) => element.getAttribute('aria-label') === name &&
+          element.classList.contains('active')) && !document.querySelector('[data-nav-loading="true"]'), section,
+      { timeout: 10_000 })
+    } catch (error) {
+      const state = await page.evaluate(() => ({ active: document.querySelector('.sidebar button.active')?.getAttribute('aria-label'),
+        focus: document.activeElement?.getAttribute('aria-label'),
+        loading: [...document.querySelectorAll('[data-nav-loading="true"]')].map((item) => item.className) }))
+      throw new Error(`${section}: navigazione non completata: ${JSON.stringify(state)}`, { cause: error })
+    }
     assert.ok(await nav.evaluate((element) => element.classList.contains('active')),
       `${section}: Invio non ha selezionato la sezione`)
     const geometry = await page.evaluate(() => ({ width: document.documentElement.scrollWidth,

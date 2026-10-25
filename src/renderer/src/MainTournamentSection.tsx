@@ -21,6 +21,8 @@ export function MainTournamentSection() {
   const startedAt = useBusyStartedAt('events.main.sync')
   const [error, setError] = useDraftState<string | null>('events.main.error', null)
   const progressError = useProgressPoll(busy, window.projectsApi.getMainTournamentSync, setProgress)
+  const unavailableEvents = progress?.unavailableEvents ?? []
+  const unavailableLists = progress?.unavailableLists ?? []
 
   useEffect(() => {
     let active = true
@@ -78,15 +80,28 @@ export function MainTournamentSection() {
   }
 
   const sorted = useMemo(() => [...(snapshot?.participants ?? [])].sort((a, b) => a.placing - b.placing), [snapshot])
+  const distinctLists = useMemo(() => new Set(snapshot?.participants.filter((item) =>
+    item.cards && item.listId).map((item) => item.listId) ?? []).size, [snapshot])
   const filtered = sorted.filter((item) => `${item.playerName} ${item.deckName ?? ''}`.toLowerCase().includes(query.toLowerCase()))
   const selected = filtered.find((item) => item.placing === selectedPlace && selectedPlace !== null) ??
     filtered.find((item) => item.cards && item.cardTotal === 60) ?? filtered[0]
 
   return <TournamentWorkspace source="main" count={events.length} loading={loading} busy={busy} progress={progress} error={error}
-    startedAt={startedAt} progressError={progressError} progressDetail={progress ? `${progress.inspectedEvents} eventi controllati · ${progress.fetchedLists} liste scaricate` : undefined}
+    startedAt={startedAt} progressError={progressError} progressDetail={progress ?
+      `${progress.scannedPages ?? 0}/${progress.maxPages ?? '…'} pagine · ${progress.inspectedEvents} tornei acquisiti · ${progress.fetchedLists} liste scaricate` : undefined}
     onRefresh={sync} management={<>
-      {progress && progress.status !== 'idle' && <p className="content-note">{progress.inspectedEvents} eventi controllati · {progress.fetchedLists} liste scaricate · {progress.pendingLists.length} liste e {progress.pendingEvents.length} eventi in coda.</p>}
-      <p className="content-note">Ogni blocco acquisisce fino a 7 pagine, con massimo 16 liste rappresentative per evento. L’aggiornamento cerca nuovi tornei; la scansione completa ricontrolla anche quelli precedenti.</p>
+      {progress && progress.status !== 'idle' && <div className="content-note" role="status">
+        <p>Rotazione Standard occidentale dal {progress.rotationStart ? date(progress.rotationStart) : 'periodo non noto'} · indice {progress.scannedPages ?? 0}/{progress.maxPages ?? '…'} pagine lette.</p>
+        <p>Righe esaminate: {progress.indexedRows ?? 0} · Tornei eleggibili nel periodo: {progress.eligibleEvents ?? 0} · Non eleggibili: {progress.ineligibleEvents ?? 0} · Fuori rotazione: {progress.outsideRotationEvents ?? 0} · Righe non leggibili: {progress.unavailableIndexRows ?? 0}.</p>
+        <p>Tornei acquisiti: {progress.inspectedEvents} · Già archiviati: {progress.alreadyAcquiredEvents ?? 0} · Tornei non disponibili: {unavailableEvents.length} · In coda: {progress.pendingEvents.length} tornei e {progress.pendingLists.length} liste · Liste non disponibili: {unavailableLists.length}.</p>
+        {unavailableEvents.length > 0 && <details><summary>Tornei non disponibili ({unavailableEvents.length})</summary><ul>
+          {unavailableEvents.map((item) => <li key={item.eventId}>{item.name} · {date(item.date)} · <button type="button" className="text-button" onClick={() => void openSource(item.url)}>Apri fonte ↗</button></li>)}
+        </ul></details>}
+        {progress.status === 'complete' && <p>{unavailableEvents.length || unavailableLists.length || progress.unavailableIndexRows
+          ? 'Scansione terminata con lacune: Aggiorna nuovi ritenta i tornei, Scansione completa ritenta anche le liste.'
+          : 'Scansione del periodo completata per l’indice consultato.'}</p>}
+      </div>}
+      <p className="content-note">Ogni blocco effettua fino a 7 richieste, con almeno 1,2 secondi fra richieste reali e massimo 16 liste rappresentative per torneo. Continua i blocchi fino alla fine dell’indice nella rotazione corrente; Scansione completa ricontrolla anche i tornei già archiviati.</p>
     </>}>
     {events.length > 0 && <div className="catalog-filters event-filters"><label>Evento archiviato
         <select value={selectedEventId ?? ''} onChange={(event) => nav.visit({ 'events.main.event': event.target.value, 'events.main.place': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Regional'}`)}>
@@ -101,7 +116,7 @@ export function MainTournamentSection() {
           <span>{date(snapshot.date)} · {snapshot.country} · Standard occidentale</span>
           <span>Acquisito {eventDateTime(snapshot.fetchedAt)} · Limitless tournament database</span>
           <button type="button" className="text-button" onClick={() => void openSource(snapshot.url)}>Apri evento ↗</button></div>
-        <p className="content-note">{snapshot.coverage.returnedParticipants}/{snapshot.players} partecipanti dichiarati appaiono nella pagina risultati; {snapshot.coverage.listedDecks} archetipi indicati, {snapshot.coverage.fetchedLists} liste acquisite, {snapshot.coverage.noListLink} righe senza collegamento lista. I link delle altre liste restano disponibili nella fonte.</p>
+        <p className="content-note">{snapshot.coverage.returnedParticipants}/{snapshot.players} partecipanti dichiarati appaiono nella pagina risultati; {snapshot.coverage.listedDecks} righe con un mazzo, {distinctLists} liste distinte acquisite per {snapshot.coverage.fetchedLists} partecipazioni, {snapshot.coverage.noListLink} righe senza collegamento lista. I link delle altre liste restano disponibili nella fonte.</p>
         <p className="content-note">La pagina non fornisce abbinamenti. I piazzamenti non misurano la percentuale di vittoria di un matchup.</p>
       </TournamentCoverage>
       <div className="tournament-layout">
@@ -109,12 +124,12 @@ export function MainTournamentSection() {
       <div className="tournament-players" aria-label="Piazzamenti Regional">
         {filtered.map((item) => <button type="button" key={`${item.placing}:${item.playerName}`}
           className={selected === item ? 'active' : ''} aria-pressed={selected === item} onClick={() => nav.visit({ 'events.main.place': item.placing }, `Eventi · ${snapshot.name} · ${item.playerName}`)}>
-          <strong>{item.placing}° · {item.playerName}</strong><span>{item.deckName ?? 'Archetipo non indicato'} · {item.cards ? `${item.cardTotal} carte${item.cardTotal !== 60 ? ' · incompleta' : ''}` : item.listUrl ? 'Lista da acquisire' : 'Nessuna lista'}</span>
+          <strong>{item.placing}° · {item.playerName}</strong><span>{item.deckName ?? 'Archetipo non indicato'} · {item.cards ? `${item.cardTotal} carte${item.cardTotal !== 60 ? ' · incompleta' : ''}${item.listUnavailable ? ' · fonte non disponibile' : ''}` : item.listUnavailable ? 'Lista non disponibile' : item.listUrl ? 'Lista da acquisire' : 'Nessuna lista'}</span>
         </button>)}
       </div><div className="tournament-detail">{selected ? <>
         <h2>{selected.playerName}</h2><p className="content-note">{selected.placing}° · {selected.deckName ?? 'Archetipo non indicato'}</p>
         {selected.listUrl && <button type="button" className="text-button" onClick={() => void openSource(selected.listUrl!)}>Apri lista originale ↗</button>}
-        {selected.cards ? <TournamentDeck cards={selected.cards} /> : <p className="content-note">{selected.listUrl ? 'Lista da acquisire. Puoi consultare la lista originale online.' : 'Lista non pubblicata dalla fonte.'}</p>}
+        {selected.cards ? <>{selected.listUnavailable && <p className="content-note">Lista conservata in cache; la fonte non era disponibile all’ultima scansione.</p>}<TournamentDeck cards={selected.cards} /></> : <p className="content-note">{selected.listUnavailable ? 'Lista non disponibile alla scansione. Puoi riprovare con Scansione completa o consultare la fonte.' : selected.listUrl ? 'Lista da acquisire. Puoi consultare la lista originale online.' : 'Lista non pubblicata dalla fonte.'}</p>}
       </> : null}</div></>}
       </div>
     </>}

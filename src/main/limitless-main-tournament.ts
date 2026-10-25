@@ -15,6 +15,10 @@ export class MainLimitlessRateLimitError extends Error {
   constructor(readonly retryAt: string) { super('Limitless ha limitato le richieste ai tornei principali.') }
 }
 
+export class MainLimitlessUnavailableError extends Error {
+  constructor(readonly status: number) { super(`Pagina torneo Limitless non disponibile (HTTP ${status}).`) }
+}
+
 async function getHtml(path: string, fetcher: typeof fetch = fetch): Promise<string> {
   if (!/^\/(tournaments(?:\/\d+)?|decks\/list\/\d+)(?:\?.*)?$/.test(path))
     throw new Error('Percorso Limitless non valido.')
@@ -30,6 +34,8 @@ async function getHtml(path: string, fetcher: typeof fetch = fetch): Promise<str
     const seconds = Number(response.headers.get('retry-after')) || 300
     throw new MainLimitlessRateLimitError(new Date(Date.now() + Math.max(1, Math.min(seconds, 3600)) * 1000).toISOString())
   }
+  if (response.status === 404 || response.status === 410)
+    throw new MainLimitlessUnavailableError(response.status)
   if (!response.ok) throw new Error(`Limitless principale: HTTP ${response.status}.`)
   const html = await readLimitedText(response, 1_500_000, 'Pagina torneo Limitless troppo grande.')
   return html
@@ -43,29 +49,54 @@ function parseDate(value: string): string | null {
   return date.getUTCDate() === Number(match[1]) ? date.toISOString() : null
 }
 
-export function parseMainTournamentIndex(html: string): MainTournamentEntry[] {
+export function inspectMainTournamentIndex(html: string): {
+  entries: MainTournamentEntry[]; indexedRows: number; ineligibleRows: number;
+  unavailableRows: number; oldestDate: string | null
+} {
   const $ = load(html)
   if (!$('[data-selection] [data-key="format"][data-value="standard"]').length)
     throw new Error('Il filtro Standard dei tornei Limitless non è confermato.')
   if (!$('table').first().find('tr').length) throw new Error('Indice Regional Limitless non leggibile.')
   const entries: MainTournamentEntry[] = []
+  let indexedRows = 0
+  let ineligibleRows = 0
+  let unavailableRows = 0
+  let oldestDate: string | null = null
+  let previousDate: string | null = null
   $('table').first().find('tr').each((_, row) => {
     const cells = $(row).find('td')
-    if (cells.length < 5 || cells.eq(3).find('img[alt="standard"]').length === 0) return
+    if (cells.length < 5) return
+    indexedRows++
+    const rowDate = parseDate(cells.eq(0).text())
+    if (rowDate && previousDate && rowDate > previousDate)
+      throw new Error('Ordine temporale dell’indice Regional non confermato.')
+    if (rowDate) previousDate = rowDate
+    if (rowDate && (!oldestDate || rowDate < oldestDate)) oldestDate = rowDate
+    const format = cells.eq(3).find('img[alt]').first().attr('alt')
+    if (!format) { unavailableRows++; return }
+    if (format !== 'standard') { ineligibleRows++; return }
     const link = cells.eq(2).find('a[href^="/tournaments/"]').first()
     const path = link.attr('href') ?? ''
-    const date = parseDate(cells.eq(0).text())
+    const date = rowDate
     const country = cells.eq(1).find('img.flag').attr('alt') ?? ''
     const name = link.text().replace(/\s+/g, ' ').trim()
-    const players = Number(cells.eq(4).text().trim().replace(/,/g, ''))
-    if (!/^\/tournaments\/\d+$/.test(path) || !date || !COUNTRY.has(country) ||
-      !EVENT_NAME.test(name) || !Number.isInteger(players) || players < 8) return
+    const playerText = cells.eq(4).text().trim().replace(/,/g, '')
+    const players = Number(playerText)
+    if (!/^\/tournaments\/\d+$/.test(path) || !date || !country || !name ||
+      !playerText || !Number.isInteger(players)) { unavailableRows++; return }
+    if (!COUNTRY.has(country) || !EVENT_NAME.test(name) || players < 8) {
+      ineligibleRows++; return
+    }
     entries.push({ eventId: path.slice('/tournaments/'.length), name, date, country, players,
       url: `${ROOT}${path}` })
   })
   if (new Set(entries.map((entry) => entry.eventId)).size !== entries.length)
     throw new Error('Indice Regional Limitless non leggibile.')
-  return entries
+  return { entries, indexedRows, ineligibleRows, unavailableRows, oldestDate }
+}
+
+export function parseMainTournamentIndex(html: string): MainTournamentEntry[] {
+  return inspectMainTournamentIndex(html).entries
 }
 
 export function parseMainTournament(html: string, entry: MainTournamentEntry,
@@ -143,18 +174,20 @@ export function completeMainTournament(snapshot: MainTournamentSnapshot): MainTo
 }
 
 export async function fetchMainTournamentIndex(page = 1, fetcher: typeof fetch = fetch): Promise<MainTournamentEntry[]> {
-  if (!Number.isInteger(page) || page < 1 || page > 100) throw new Error('Pagina Regional non valida.')
+  if (!Number.isInteger(page) || page < 1 || page > 1_000) throw new Error('Pagina Regional non valida.')
   return (await fetchMainTournamentIndexPage(page, fetcher)).entries
 }
 
 export async function fetchMainTournamentIndexPage(page = 1, fetcher: typeof fetch = fetch): Promise<{
-  entries: MainTournamentEntry[]; maxPages: number
+  entries: MainTournamentEntry[]; maxPages: number; indexedRows: number; ineligibleRows: number;
+  unavailableRows: number; oldestDate: string | null
 }> {
-  if (!Number.isInteger(page) || page < 1 || page > 100) throw new Error('Pagina Regional non valida.')
+  if (!Number.isInteger(page) || page < 1 || page > 1_000) throw new Error('Pagina Regional non valida.')
   const html = await getHtml(`/tournaments?format=standard&time=all&page=${page}`, fetcher)
   const pages = Number(load(html)('.pagination[data-max]').first().attr('data-max') ?? '1')
-  if (!Number.isInteger(pages) || pages < 1 || pages > 100) throw new Error('Paginazione Regional non leggibile.')
-  return { entries: parseMainTournamentIndex(html), maxPages: pages }
+  if (!Number.isInteger(pages) || pages < 1 || pages > 1_000 || page > pages)
+    throw new Error('Paginazione Regional non leggibile.')
+  return { ...inspectMainTournamentIndex(html), maxPages: pages }
 }
 
 export async function fetchMainTournament(entry: MainTournamentEntry, fetcher: typeof fetch = fetch): Promise<MainTournamentSnapshot> {
