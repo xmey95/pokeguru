@@ -120,8 +120,6 @@ export interface ProjectsApi {
   saveAiPreferences(value: AiPreferences): Promise<OperationResult<AiPreferences>>
   getAiConnection(): Promise<OperationResult<AiConnection>>
   getCodexSetupStatus(): Promise<OperationResult<CodexSetupStatus>>
-  installCodex(): Promise<OperationResult<CodexSetupStatus>>
-  openNodeDownload(): Promise<OperationResult<boolean>>
   startAiLogin(mode: 'browser' | 'device'): Promise<OperationResult<AiLoginStart>>
   getAiLoginProgress(): Promise<OperationResult<AiLoginProgress>>
   cancelAiLogin(): Promise<OperationResult<boolean>>

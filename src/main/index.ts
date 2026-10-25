@@ -744,18 +744,6 @@ function registerProjectHandlers(): void {
     catch (error) { return { ok: false, error: aiError(error) } }
   })
 
-  ipcMain.handle('ai:install-codex', async (event): Promise<OperationResult<CodexSetupStatus>> => {
-    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    try { return { ok: true, value: await codexSetup.install() } }
-    catch (error) { return { ok: false, error: aiError(error) } }
-  })
-
-  ipcMain.handle('ai:open-node-download', async (event): Promise<OperationResult<boolean>> => {
-    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    try { await shell.openExternal('https://nodejs.org/en/download'); return { ok: true, value: true } }
-    catch (error) { return { ok: false, error: aiError(error) } }
-  })
-
   ipcMain.handle('ai:save-preferences', async (event, value: unknown): Promise<OperationResult<AiPreferences>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!aiPreferencesStore) return { ok: false, error: unavailableMessage() }

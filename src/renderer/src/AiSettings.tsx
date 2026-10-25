@@ -4,7 +4,7 @@ import { useNavigation, useDraftState, useBusyState, useBusyStartedAt } from './
 import { ActivityStatus, Spinner } from './Loading'
 
 const automatic: AiPreferences = { model: null, reasoningEffort: null }
-type Action = 'save' | 'test' | 'login' | 'logout' | 'install'
+type Action = 'save' | 'test' | 'login' | 'logout'
 
 export function AiSettings() {
   const nav = useNavigation()
@@ -104,7 +104,7 @@ export function AiSettings() {
   function edit(value: AiPreferences) { setDraft(value); setNotice(null); setError(null) }
   function start(value: Action) {
     setAction(value); setBusy(true); setError(null); setNotice(null)
-    setErrorScope(value === 'login' || value === 'logout' || value === 'install' ? 'connection' : 'preferences')
+    setErrorScope(value === 'login' || value === 'logout' ? 'connection' : 'preferences')
   }
   function finish() {
     // Completion belongs to the operation, including after its view was unmounted.
@@ -133,17 +133,6 @@ export function AiSettings() {
       setDeviceLogin(result.value.mode === 'device' ? result.value : null)
       setLoginPending(true)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Accesso non avviato.') }
-    finally { finish() }
-  }
-
-  async function install(): Promise<void> {
-    start('install')
-    try {
-      const result = await window.projectsApi.installCodex()
-      if (!result.ok) throw new Error(result.error)
-      setSetup(result.value)
-      setNotice(`Codex installato: ${result.value.version}. Ora puoi accedere.`)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Installazione Codex non riuscita.') }
     finally { finish() }
   }
 
@@ -201,15 +190,10 @@ export function AiSettings() {
       {connectionError && <p className="error-banner" role="alert">{connectionError}</p>}
       {error && errorScope === 'connection' && <p className="error-banner" role="alert">{error}</p>}
       {!connected && setup && !setup.cliAvailable && <div className="ai-setup-guide">
-        <h3>Installa Codex</h3>
-        <p className="content-note">Pokéguru installa la CLI ufficiale nel tuo profilo, senza permessi di amministratore. Richiede Node.js e npm; non esegue script del pacchetto.</p>
-        {setup.nodeAvailable && setup.npmAvailable
-          ? <button type="button" className="primary-button" onClick={() => void install()} disabled={busy}>{action === 'install' ? 'Installazione in corso…' : 'Installa Codex'}</button>
-          : <div><p className="warning-banner" role="status">Node.js con npm non disponibile. Installa Node.js LTS, riavvia Pokéguru e premi Aggiorna stato.</p>
-            <button type="button" className="text-button" onClick={() => void window.projectsApi.openNodeDownload()}>Apri download Node.js</button></div>}
+        <h3>Codex non disponibile</h3>
+        <p className="warning-banner" role="status">La CLI ufficiale non si avvia. Verifica l’installazione di Pokéguru e riprova.</p>
       </div>}
-      {setup?.cliAvailable && <p className="content-note">CLI verificata: {setup.version}</p>}
-      {notice?.startsWith('Codex installato') && <p className="ai-feedback" role="status">{notice}</p>}
+      {setup?.cliAvailable && <p className="content-note">{setup.bundled ? 'Codex incluso in Pokéguru' : 'CLI Codex disponibile'}: {setup.version}</p>}
       {connection && !connection.account && <button type="button" className="text-button" onClick={() => void login('device')} disabled={busy || loginPending}>Accedi con codice dispositivo</button>}
       {loginPending && <div>
         <ActivityStatus state="paused" title={deviceLogin ? 'Completa l’accesso con il codice' : 'Completa l’accesso nel browser'} detail="Lo stato si aggiorna automaticamente." />

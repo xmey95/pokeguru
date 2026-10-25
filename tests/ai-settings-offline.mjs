@@ -18,35 +18,27 @@ try {
   const page = await application.firstWindow()
   await page.getByRole('button', { name: 'Impostazioni AI' }).click()
   await page.getByRole('heading', { name: 'Impostazioni AI' }).waitFor()
-  await page.getByRole('alert').getByText('Codex CLI non trovato.', { exact: false }).waitFor()
+  await page.getByRole('alert').getByText('Codex non disponibile.', { exact: false }).waitFor()
   for (const [width, height] of [[1440, 900], [1280, 720]]) {
     await page.setViewportSize({ width, height })
     assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
     await auditDesignSystem(page, 'Design system '+width)
     await page.screenshot({ path: join(workspace, 'node_modules', `content-ai-${width}.png`) })
   }
-  assert.match(await page.getByText('Codex non disponibile').textContent(), /Codex non disponibile/)
-  await page.getByRole('button', { name: 'Installa Codex', exact: true }).waitFor()
+  assert.match(await page.getByRole('heading', { name: 'Codex non disponibile' }).textContent(), /Codex non disponibile/)
+  await page.getByText('La CLI ufficiale non si avvia.', { exact: false }).waitFor()
   assert.equal(await page.getByLabel('Modello', { exact: true }).inputValue(), '')
   assert.equal(await page.getByRole('button', { name: 'Esegui prova AI' }).isDisabled(), true)
   assert.deepEqual(await page.evaluate(() => window.projectsApi.getAiPreferences()),
     { ok: true, value: { model: null, reasoningEffort: null } })
   await application.evaluate(({ ipcMain }) => {
-    let installed = false
-    for (const name of ['ai:setup-status', 'ai:install-codex', 'ai:get-connection']) ipcMain.removeHandler(name)
+    for (const name of ['ai:setup-status', 'ai:get-connection']) ipcMain.removeHandler(name)
     ipcMain.handle('ai:setup-status', () => ({ ok: true, value: {
-      cliAvailable: installed, version: installed ? 'codex-cli 0.164.0' : null,
-      nodeAvailable: true, npmAvailable: true } }))
-    ipcMain.handle('ai:install-codex', () => {
-      installed = true
-      return { ok: true, value: { cliAvailable: true, version: 'codex-cli 0.164.0',
-        nodeAvailable: true, npmAvailable: true } }
-    })
+      cliAvailable: true, version: 'codex-cli 0.164.0', bundled: true } }))
     ipcMain.handle('ai:get-connection', () => ({ ok: true, value: { account: null, plan: null, models: [] } }))
   })
   await page.getByRole('button', { name: 'Aggiorna stato' }).click()
-  await page.getByRole('button', { name: 'Installa Codex', exact: true }).click()
-  await page.getByText('CLI verificata: codex-cli 0.164.0').waitFor()
+  await page.getByText('Codex incluso in Pokéguru: codex-cli 0.164.0').waitFor()
   await page.getByRole('button', { name: 'Accedi con ChatGPT' }).waitFor()
   console.log('E2E Impostazioni AI offline OK: CLI assente, stato e preferenze locali.')
 } finally {

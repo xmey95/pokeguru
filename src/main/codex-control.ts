@@ -46,7 +46,7 @@ export class CodexControl {
       child.stderr.resume()
       child.on('error', (error) => {
         if (this.child === child) this.fail(new Error(error.message.includes('ENOENT')
-          ? 'Codex CLI non trovato. Installa Codex o rendilo disponibile nel PATH.'
+          ? 'Codex non disponibile. Verifica l’installazione di Pokéguru.'
           : 'Impossibile avviare Codex App Server.'))
       })
       child.on('close', () => {
@@ -257,7 +257,7 @@ export class CodexControl {
           options.signal?.removeEventListener('abort', abort)
           if (captureError) return reject(new Error('Impossibile conservare la sessione Codex.'))
           reject(new Error(error.message.includes('ENOENT')
-            ? 'Codex CLI non trovato. Installa Codex o rendilo disponibile nel PATH.'
+            ? 'Codex non disponibile. Verifica l’installazione di Pokéguru.'
             : 'Impossibile avviare Codex.'))
         })
         child.on('close', (code) => {

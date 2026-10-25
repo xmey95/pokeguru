@@ -182,12 +182,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Installed app smoke failed' }
           $uninstall = Start-Process -FilePath (Join-Path $target 'Uninstall Pokeguru.exe') -ArgumentList '/S' -WindowStyle Hidden -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited $($uninstall.ExitCode)" }
-      - name: Install Codex CLI for isolated Linux protocol check
-        if: runner.os == 'Linux'
-        run: npm install --prefix "$RUNNER_TEMP/pokeguru-codex" --no-audit --no-fund @openai/codex@0.164.0
-      - name: Check Codex login protocol with an isolated profile on Linux
-        if: runner.os == 'Linux'
+      - name: Check included Codex login protocol with an isolated profile
         env:
           POKEGURU_CODEX_LOGIN_LIVE: '1'
-          POKEGURU_CODEX_BIN: ${{ runner.temp }}/pokeguru-codex/node_modules/.bin/codex
         run: npx vitest run tests/codex-login-live.test.ts

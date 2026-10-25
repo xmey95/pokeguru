@@ -20,8 +20,7 @@ export interface AiConnection {
 export interface CodexSetupStatus {
   cliAvailable: boolean
   version: string | null
-  nodeAvailable: boolean
-  npmAvailable: boolean
+  bundled: boolean
 }
 
 export type AiLoginStart = { mode: 'browser' } | { mode: 'device'; verificationUrl: string; userCode: string }
