@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { AiConnection, AiModel, AiRunConfig } from '../shared/ai'
+import { readAiTokenUsage, type AiTokenUsage } from '../shared/ai-evidence'
 import { CODEX_ISOLATION_ARGS } from './codex-isolation'
 
 type RpcResponse = { id?: number; result?: unknown; error?: { message?: string } }
@@ -164,7 +165,7 @@ export class CodexControl {
 
   async jsonTurn(sessionId: string | null, cwd: string, prompt: string, config: AiRunConfig,
     outputSchema: Record<string, unknown>, options: { jobId?: string; jobDirectory?: string;
-      signal?: AbortSignal; onSessionStarted?: (sessionId: string) => void } = {}): Promise<{ sessionId: string; turnId: string; value: unknown }> {
+      signal?: AbortSignal; onSessionStarted?: (sessionId: string) => void } = {}): Promise<{ sessionId: string; turnId: string; value: unknown; usage: AiTokenUsage | null }> {
     const key = options.jobId ?? sessionId ?? `new:${randomUUID()}`
     if (this.cliTurns.has(key)) throw new Error('Questo thread Codex è già in elaborazione.')
     if (options.signal?.aborted) throw new Error('Operazione Codex annullata.')
@@ -182,12 +183,13 @@ export class CodexControl {
         ...(config.reasoningEffort ? ['--config', `model_reasoning_effort=${JSON.stringify(config.reasoningEffort)}`] : []),
         '--output-schema', schemaPath, '--output-last-message', resultPath,
         ...(sessionId ? [sessionId] : []), '-']
-      const done = await new Promise<{ sessionId: string; text: string }>((resolve, reject) => {
+      const done = await new Promise<{ sessionId: string; text: string; usage: AiTokenUsage | null }>((resolve, reject) => {
         const child = spawn(command, args, { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
         this.cliTurns.set(key, child)
         const abort = () => child.kill()
         options.signal?.addEventListener('abort', abort, { once: true })
         let observedSessionId: string | null = null
+        let usage: AiTokenUsage | null = null
         let stdout = ''
         let stderr = ''
         let timedOut = false
@@ -199,7 +201,8 @@ export class CodexControl {
           stdout = lines.pop() ?? ''
           for (const line of lines) {
             try {
-              const event = JSON.parse(line) as { type?: string; thread_id?: string }
+              const event = JSON.parse(line) as { type?: string; thread_id?: string; usage?: unknown }
+              if (event.type === 'turn.completed') usage = readAiTokenUsage(event.usage)
               if (event.type === 'thread.started') {
                 observedSessionId = event.thread_id ?? null
                 if (observedSessionId) {
@@ -239,13 +242,13 @@ export class CodexControl {
             return reject(new Error('Codex non ha restituito l’identificativo atteso della sessione.'))
           }
           try { resolve({ sessionId: observedSessionId ?? sessionId!,
-            text: readFileSync(resultPath, 'utf8') }) }
+            text: readFileSync(resultPath, 'utf8'), usage }) }
           catch { reject(new Error('Codex non ha restituito una risposta completa.')) }
         })
       })
       if (done.text.length > 100_000) throw new Error('Risposta Codex troppo lunga.')
       const turnId = await this.latestTurnId(done.sessionId)
-      try { return { sessionId: done.sessionId, turnId,
+      try { return { sessionId: done.sessionId, turnId, usage: done.usage,
         value: JSON.parse(done.text) as unknown } }
       catch { throw new Error('Codex ha restituito una risposta JSON non valida.') }
     } finally {

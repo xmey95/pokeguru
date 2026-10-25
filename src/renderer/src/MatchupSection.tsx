@@ -15,6 +15,8 @@ import { MatchupDataPreview, type MatchupAction } from './MatchupDataPreview'
 import { GuideText } from './GuideText'
 import { useCardPreview } from './CardPreview'
 import { ExpandablePreviewDeck } from './PreviewDeckLines'
+import { AiQueryTraceView } from './AiQueryTraceView'
+import { AiPromptAuditView } from './AiPromptAuditView'
 import { catalogCardTargets, reportGuideReferences, type GuideReference } from './guide-links'
 import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
 import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
@@ -399,6 +401,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                   {report.metaSourceUrl && <button type="button" className="text-button"
                     onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}</div>
               <details className="matchup-report-meta"><summary>Versione, modello e dati usati</summary><p>Analisi Codex generata il {date(report.generatedAt)} · Standard occidentale · lista {report.deckHash.slice(0, 12)} · snapshot Meta {report.metaId.slice(0, 12)}{report.metaPeriod ? ` · ${report.metaPeriod}` : ''}{report.metaFetchedAt ? ` · acquisito ${date(report.metaFetchedAt)}` : ''}. {report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p></details>
+              {report.aiQueries && <AiQueryTraceView trace={report.aiQueries} />}
+              {report.promptAudit && <AiPromptAuditView audit={report.promptAudit} />}
               {report.tournamentEvidence && <section className="rotation-panel" aria-label="Evidenze torneo del matchup">
                 <strong>{report.tournamentEvidence.schemaVersion === 2 ? 'Tornei e liste osservate' : 'Liste osservate in un evento online'}</strong>
                 <div>{body(report.tournamentEvidence.schemaVersion === 2 ? report.tournamentEvidence.detail

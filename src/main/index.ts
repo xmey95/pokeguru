@@ -12,6 +12,7 @@ import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 import type { OperationResult, Project } from '../shared/projects'
 import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
 import type { AiConnection, AiPreferences, AiRunConfig } from '../shared/ai'
+import type { AiEvidenceQueryTrace } from '../shared/ai-evidence'
 import { fetchMeta, fetchOpponentSample } from './limitless-meta'
 import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
@@ -20,6 +21,10 @@ import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
   readDeckDiscussionSourceIds,
   deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from './deck-ai'
 import { buildThreadEvidence } from './thread-evidence'
+import { createAiEvidenceEngine } from './ai-evidence-engine'
+import { makeAiPromptAudit, runAiEvidenceQueries,
+  threadEvidenceWithQueries } from './ai-evidence-queries'
+import { planEvidenceQueriesWithCodex } from './codex-evidence-plan'
 import type { ThreadEvidencePacket } from '../shared/thread-evidence'
 import { CatalogStore, enrichCatalogPrints, fetchCatalogSample, syncStandardCatalog } from './catalog'
 import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
@@ -36,6 +41,7 @@ import { SET_ADMISSION_OLDER_RULE_SOURCE, SET_ADMISSION_RULE_SOURCE } from '../s
 import { ACE_SPEC_SOURCE, DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../shared/western-rule-package'
 import { gameplaySummary } from '../shared/card-gameplay'
+import { effectiveCardGameplay } from '../shared/card-errata'
 import { OFFICIAL_SET_CODES } from '../shared/set-codes'
 import { evaluateStandardDeck } from '../shared/standard-deck'
 import { localCalendarDate } from '../shared/calendar-date'
@@ -230,6 +236,30 @@ function currentMatchupDeckContext(projectId: string, baseline: DeckBaseline): s
   return matchupDeckContext(baseline, projectStore!.getReconciliation(projectId), catalog, standard)
 }
 
+function currentAiEventWindow(catalog: CatalogView, recentDays?: number):
+  { from: string; to: string } {
+  const to = localCalendarDate()
+  const rotation = catalog.rulePackage?.rotations.find((period) =>
+    period.effectiveFrom <= to && period.effectiveUntil >= to)
+  const recent = recentDays ? new Date(Date.parse(`${to}T00:00:00Z`) -
+    recentDays * 86_400_000).toISOString().slice(0, 10) : null
+  return { from: recent && rotation ? (recent > rotation.effectiveFrom ? recent
+    : rotation.effectiveFrom) : recent ?? rotation?.effectiveFrom ?? to, to }
+}
+
+async function matchupAiQueries(request: string, deckContext: string,
+  sample: { url: string | null; cards: string[]; mechanics?: unknown },
+  evidence: MatchupTournamentEvidence, config: AiRunConfig,
+  signal: AbortSignal, history?: string) {
+  if (!catalogStore) throw new Error('Catalogo non disponibile per le query AI.')
+  const catalog = catalogStore.view()
+  const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
+    tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog, 31))
+  return runAiEvidenceQueries(request, { deckContext, sample, evidence,
+    history: history?.slice(0, 8000) }, engine,
+    (prompt) => planEvidenceQueriesWithCodex(prompt, config, signal))
+}
+
 async function enrichMatchupDeck(projectId: string, baseline: DeckBaseline): Promise<void> {
   if (!catalogStore || !projectStore || catalogSyncing) return
   const reconciliation = projectStore.getReconciliation(projectId)
@@ -251,7 +281,8 @@ function matchupJobBase(jobId: string, projectId: string, deckHash: string,
   snapshot: MetaSnapshot, opponent: MetaDeck,
   sample: { url: string | null; cards: string[];
     mechanics?: { name: string; text: string; sourceUrl: string }[] },
-  config: AiRunConfig, evidence: MatchupTournamentEvidence):
+  config: AiRunConfig, evidence: MatchupTournamentEvidence,
+  aiQueries?: AiEvidenceQueryTrace):
   Omit<MatchupReport, 'strengths' | 'weaknesses' | 'ourKeyCards' | 'theirKeyCards' |
     'strategy' | 'limitations'> {
   return { jobId, projectId, deckHash, metaId: snapshot.id, opponentId: opponent.id,
@@ -259,7 +290,7 @@ function matchupJobBase(jobId: string, projectId: string, deckHash: string,
     sampleDeckCards: sample.cards, sampleDeckMechanics: sample.mechanics ?? [], ai: config,
     metaSourceUrl: snapshot.sourceUrl, metaPeriod: snapshot.period,
     metaFetchedAt: snapshot.fetchedAt, opponentSourceUrl: opponent.url,
-    tournamentEvidence: evidence }
+    tournamentEvidence: evidence, aiQueries }
 }
 
 async function enrichOpponentCards(snapshot: MetaSnapshot, opponent: MetaDeck): Promise<void> {
@@ -301,13 +332,17 @@ async function opponentSampleWithMechanics(sample: { url: string | null; cards: 
   })
   try { await enrichCatalogPrints(catalogStore, ids) }
   catch { /* The prompt receives only the mechanics actually present after this attempt. */ }
-  const prints = catalogStore.view().prints
+  const catalog = catalogStore.view()
+  const prints = catalog.prints
   const mechanics = names.flatMap((name) => {
     const observed = evidence.observedCards.find((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())
     if (observed?.gameplay && observed.cardSourceUrl) return [{ name,
       text: observed.gameplay, sourceUrl: observed.cardSourceUrl }]
     const comparable = prints.filter((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase() && item.gameplay)
-    const summaries = new Set(comparable.map((item) => gameplaySummary(item.gameplay!, item)))
+    const summaries = new Set(comparable.map((item) => {
+      const effective = effectiveCardGameplay(item, localCalendarDate(), catalog.rulePackage)
+      return effective.effective ? gameplaySummary(effective.effective, item) : ''
+    }))
     return summaries.size === 1 && comparable[0]
       ? [{ name, text: [...summaries][0], sourceUrl: comparable[0].sourceUrl }] : []
   })
@@ -845,19 +880,28 @@ function registerProjectHandlers(): void {
       const base = thread.baseVersionId
         ? projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null
         : null
-      const evidence = buildThreadEvidence(thread, base, message.trim(),
-        projectStore.listConstraints(projectId), catalogStore.view(),
+      const catalog = catalogStore.view()
+      const initialEvidence = buildThreadEvidence(thread, base, message.trim(),
+        projectStore.listConstraints(projectId), catalog,
         tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
-      aiJobStore.prepare(job.id, { message: message.trim(), config, evidence, existingUserMessageId })
+      const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
+        tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog))
+      const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
+        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal))
+      const evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
       const prompt = deckDiscussionPrompt(thread, base, message.trim(), evidence)
+      evidence.promptAudit = makeAiPromptAudit(prompt)
+      aiJobStore.prepare(job.id, { message: message.trim(), config, evidence, existingUserMessageId })
+      const answerStarted = Date.now()
       const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, prompt, config,
         DECK_DISCUSSION_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal, onSessionStarted: (id) => {
             if (!thread.aiSessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
           } })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      evidence.promptAudit = makeAiPromptAudit(prompt, Date.now() - answerStarted, result.usage)
       aiJobStore.ready(job.id, result)
       const sessionId = result.sessionId
       if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
@@ -905,14 +949,22 @@ function registerProjectHandlers(): void {
       mkdirSync(cwd, { recursive: true })
       const catalog = catalogStore.view()
       const constraints = projectStore.listConstraints(projectId)
-      const evidence = buildThreadEvidence(thread, base, request.trim(), constraints, catalog,
+      const initialEvidence = buildThreadEvidence(thread, base, request.trim(), constraints, catalog,
         tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
+      const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
+        tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog))
+      const queryTrace = await runAiEvidenceQueries(request.trim(), initialEvidence,
+        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal))
+      const evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
       const context = deckProposalPrompt(thread, base, request.trim(), constraints, catalog, evidence)
+      evidence.promptAudit = makeAiPromptAudit(context.prompt)
       aiJobStore.prepare(job.id, { message: request.trim(), config, evidence, sources: context.sources })
+      const answerStarted = Date.now()
       const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, context.prompt, config,
         DECK_PROPOSAL_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      evidence.promptAudit = makeAiPromptAudit(context.prompt, Date.now() - answerStarted, result.usage)
       aiJobStore.ready(job.id, result)
       const sessionId = result.sessionId
       if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
@@ -1132,11 +1184,15 @@ function registerProjectHandlers(): void {
       const evidence = currentMatchupEvidence(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
       const deckContext = currentMatchupDeckContext(projectId, baseline)
-      const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config, evidence)
-      aiJobStore.prepare(job.id, { base })
+      const aiQueries = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
+        deckContext, sample, evidence, config, controller.signal)
+      const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config,
+        evidence, aiQueries)
       const generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
         sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal })
+          signal: controller.signal, aiQueries,
+          onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            { base: { ...base, promptAudit: audit } }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
       const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt }
       aiJobStore.ready(job.id, { report })
@@ -1192,12 +1248,16 @@ function registerProjectHandlers(): void {
       const deckContext = currentMatchupDeckContext(discussion.projectId, baseline)
       const evidence = previousReport?.tournamentEvidence ??
         currentMatchupEvidence(snapshot, opponent)
+      const aiQueries = await matchupAiQueries(target.feedback, deckContext,
+        sample, evidence, config, controller.signal, matchupHistoryContext(context))
       const base = matchupJobBase(job.id, discussion.projectId, discussion.deckHash,
-        snapshot, opponent, sample, config, evidence)
-      aiJobStore.prepare(job.id, { base, discussionId: discussion.id, turnId: target.id })
+        snapshot, opponent, sample, config, evidence, aiQueries)
       const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot,
         opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal })
+          signal: controller.signal, aiQueries,
+          onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            { base: { ...base, promptAudit: audit },
+              discussionId: discussion.id, turnId: target.id }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
       const report = { ...revised.report, jobId: job.id, generatedAt: base.generatedAt }
       aiJobStore.ready(job.id, { report, changeSummary: revised.changeSummary })
@@ -1258,12 +1318,16 @@ function registerProjectHandlers(): void {
       const evidence = currentMatchupEvidence(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
       const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
+      const aiQueries = await matchupAiQueries(`Continua l'analisi di ${opponent.name} sulla nuova lista e sul nuovo metagame`,
+        deckContext, sample, evidence, config, controller.signal,
+        matchupHistoryContext(context))
       const base = matchupJobBase(job.id, parent.projectId, hash,
-        snapshot, opponent, sample, config, evidence)
-      aiJobStore.prepare(job.id, { base, parentId: parent.id })
+        snapshot, opponent, sample, config, evidence, aiQueries)
       const generated = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
         config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal })
+          signal: controller.signal, aiQueries,
+          onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            { base: { ...base, promptAudit: audit }, parentId: parent.id }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
       const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt }
       aiJobStore.ready(job.id, { report })

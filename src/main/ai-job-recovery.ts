@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AiRunConfig } from '../shared/ai'
+import { readAiTokenUsage } from '../shared/ai-evidence'
 import type { DeckCandidate } from '../shared/deck-threads'
 import type { ThreadEvidencePacket } from '../shared/thread-evidence'
 import type { MatchupReport } from '../shared/meta-matchups'
@@ -9,6 +10,7 @@ import { CodexControl } from './codex-control'
 import { readDeckDiscussionReply, readDeckDiscussionSourceIds, validateDeckProposal } from './deck-ai'
 import { ProjectStore } from './project-store'
 import { AiJobStore, type AiJob } from './ai-job-store'
+import { makeAiPromptAudit } from './ai-evidence-queries'
 
 interface ThreadRequest {
   message: string
@@ -22,6 +24,7 @@ interface ThreadResult {
   sessionId: string
   turnId: string
   value: unknown
+  usage?: unknown
 }
 
 function readResult(path: string): unknown {
@@ -74,6 +77,9 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
       note: checked.rationale, sources: checked.sources, checks: checked.checks }
   }
   if (!thread.aiSessionRef) projects.assignDeckAiSession(job.projectId, job.resourceId, result.sessionId)
+  if (request.evidence.promptAudit) request.evidence.promptAudit = makeAiPromptAudit(
+    request.evidence.promptAudit.text, request.evidence.promptAudit.durationMs,
+    readAiTokenUsage(result.usage))
   projects.saveDeckAiExchange(job.projectId, job.resourceId, result.sessionId,
     request.message, response!, result.turnId, request.config, proposal, request.evidence, sources,
     request.existingUserMessageId)

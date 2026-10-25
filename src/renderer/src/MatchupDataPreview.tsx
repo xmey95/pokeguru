@@ -71,6 +71,7 @@ export function MatchupDataPreview({ action, total, deckContext, opponent, snaps
       {revising && <><h4>Osservazione</h4><p>{feedback.trim() || 'Nessuna osservazione scritta.'}</p></>}
       {action !== 'generate' && <p>Il contesto comprende la guida precedente e i turni recenti. Gli scambi più vecchi possono essere riassunti.</p>}
       <p className="content-note">Le schede possono essere aggiornate all’invio. Nessun dato di altri progetti.</p>
+      <p className="content-note">Durante l'analisi l'AI può scegliere automaticamente query di sola lettura al Catalogo e alle liste Eventi locali. Questa scelta richiede un turno Codex aggiuntivo, con tempi e token propri; richieste e risultati effettivi saranno salvati nella guida.</p>
     </details>
   </div>
 }
