@@ -133,6 +133,7 @@ describe('Catalogo occidentale', () => {
     store.close()
     const reopened = new CatalogStore(database)
     const view = reopened.view()
+    expect(reopened.setAbbreviations()).toMatchObject({ 'sv04.5': 'PAF', 'me02.5': 'ASC' })
     expect(view.prints.filter((print) => print.name === 'Rare Candy')).toHaveLength(3)
     expect(view.prints.find((print) => print.id === 'sv02-185')?.thumbnail).toMatch(/^data:image\/webp;base64,/)
     expect(view.prints.find((print) => print.id === 'sv02-185')?.regulationMark).toBe('G')

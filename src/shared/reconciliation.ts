@@ -1,6 +1,6 @@
 import type { CatalogPrint, CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
-import { OFFICIAL_SET_CODES } from './set-codes'
+import { knownPrintCodes } from './set-codes'
 import { gameplaySummary } from './card-gameplay'
 import { effectiveCardGameplay } from './card-errata'
 import { localCalendarDate } from './calendar-date'
@@ -97,11 +97,11 @@ function normalizedNumber(value: string): string {
   return value.toUpperCase().replace(/^0+(?=\d)/, '')
 }
 
-function sameCode(line: DeckLine, print: CatalogPrint): boolean {
+function sameCode(line: DeckLine, print: CatalogPrint, catalog: CatalogView): boolean {
   if (!line.setCode || !line.cardNumber || /ALT/i.test(line.setCode)) return false
   const code = line.setCode.toUpperCase()
-  return (code === print.setId.toUpperCase() || code === OFFICIAL_SET_CODES[print.setId] ||
-    code === print.historicalSetCode) &&
+  return (knownPrintCodes(print.setId, catalog.sets.find((set) => set.id === print.setId)?.abbreviation)
+    .includes(code) || code === print.historicalSetCode) &&
     normalizedNumber(line.cardNumber) === normalizedNumber(print.localId)
 }
 
@@ -118,10 +118,10 @@ function suggestionIndex(catalog: CatalogView): SuggestIndex {
   const cached = suggestionIndexes.get(catalog)
   if (cached) return cached
   const index: SuggestIndex = { byName: new Map(), byEnergyType: new Map(), byCode: new Map() }
+  const setCodes = new Map(catalog.sets.map((set) => [set.id, set.abbreviation]))
   const addCode = (print: CatalogPrint): void => {
     const number = normalizedNumber(print.localId)
-    for (const code of new Set([print.setId.toUpperCase(), OFFICIAL_SET_CODES[print.setId],
-      print.historicalSetCode])) {
+    for (const code of new Set([...knownPrintCodes(print.setId, setCodes.get(print.setId)), print.historicalSetCode])) {
       if (!code) continue
       const key = `${code}\0${number}`
       const group = index.byCode.get(key) ?? []
@@ -179,12 +179,12 @@ export function suggestPrints(line: DeckLine, catalog: CatalogView, search = '')
     }
     return sortedCandidates(candidates)
   }
-  const referencePrints = (catalog.referencePrints ?? []).filter((print) => sameCode(line, print))
+  const referencePrints = (catalog.referencePrints ?? []).filter((print) => sameCode(line, print, catalog))
   const candidates = [...catalog.prints, ...referencePrints]
     .filter((print) => print.detailAt !== null && print.identityId !== null)
     .map((print): PrintCandidate | null => {
       if (term && !`${print.name} ${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase().includes(term)) return null
-      const printCode = sameCode(line, print)
+      const printCode = sameCode(line, print, catalog)
       const name = printNameMatches(line.name!, print)
       if (printCode && name) return { print, reason: 'same-print' }
       if (printCode) return { print, reason: 'code-conflict' }
@@ -219,9 +219,10 @@ export function buildDeckCards(baseline: DeckBaseline, catalog: CatalogView | nu
   const byId = new Map<string, CatalogPrint>()
   const printOrder = new Map<CatalogPrint, number>()
   const printSet = new Set(prints)
+  const setCodes = new Map(catalog?.sets.map((set) => [set.id, set.abbreviation]) ?? [])
   const addCode = (print: CatalogPrint): void => {
     const number = normalizedNumber(print.localId)
-    const codes = new Set([print.setId.toUpperCase(), OFFICIAL_SET_CODES[print.setId]])
+    const codes = knownPrintCodes(print.setId, setCodes.get(print.setId))
     for (const code of codes) {
       if (!code) continue
       const key = `${code}\0${number}`

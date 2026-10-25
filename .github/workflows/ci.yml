@@ -49,6 +49,12 @@ jobs:
       - name: Install Linux display tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
+      - name: Exercise TCG Live deck export on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/export-live.mjs
+      - name: Exercise TCG Live deck export on Windows
+        if: runner.os == 'Windows'
+        run: node tests/export-live.mjs
       - name: Check Electron menu and development shortcuts on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/electron-menu-live.mjs
