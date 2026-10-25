@@ -67,7 +67,13 @@ try {
     if (!result.ok) throw new Error(result.error)
     return result.value[0]
   })
-  if (!offline) seedCatalog()
+  if (!offline) {
+    seedCatalog()
+    // External fixture writes bypass CatalogStore's snapshot cache; reopen the app.
+    await application.close()
+    application = await launch()
+    page = await application.firstWindow()
+  }
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await openDeckImport(page)
   await page.getByLabel('Testo lista').fill(baseText)

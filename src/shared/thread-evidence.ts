@@ -1,4 +1,5 @@
 import type { CardGameplay } from './catalog'
+import type { AiEvidenceQueryTrace, AiPromptAudit } from './ai-evidence'
 
 export interface ThreadEvidenceSource {
   id: string
@@ -53,4 +54,6 @@ export interface ThreadEvidencePacket {
   events: ThreadEventEvidence[]
   sources: ThreadEvidenceSource[]
   change: { updated: string[]; added: string[]; removed: string[] }
+  aiQueries?: AiEvidenceQueryTrace
+  promptAudit?: AiPromptAudit
 }

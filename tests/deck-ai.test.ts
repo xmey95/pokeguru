@@ -6,6 +6,9 @@ import { afterEach, expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { deckDiscussionPrompt, deckProposalPrompt, readDeckDiscussionReply, validateDeckProposal } from '../src/main/deck-ai'
 import { buildThreadEvidence } from '../src/main/thread-evidence'
+import { createAiEvidenceEngine } from '../src/main/ai-evidence-engine'
+import { makeAiPromptAudit, runAiEvidenceQueries,
+  threadEvidenceWithQueries } from '../src/main/ai-evidence-queries'
 import type { AiRunConfig } from '../src/shared/ai'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import type { DeckConstraint } from '../src/shared/constraints'
@@ -78,6 +81,47 @@ it('invia la lista di partenza e il pacchetto aggiornato a ogni turno', () => {
   expect(readDeckDiscussionReply({ reply: ' Sì. ' })).toBe('Sì.')
   expect(() => readDeckDiscussionReply({ reply: '' })).toThrow()
   store.close()
+})
+
+it('conserva le query automatiche e le fonti nel solo thread che le ha ricevute', async () => {
+  const { store, path } = openStore()
+  const project = store.create({ name: 'Query', format: 'STANDARD' })
+  const other = store.create({ name: 'Altro', format: 'STANDARD' })
+  const thread = store.createDeckThread({ projectId: project.id, title: 'Carta' })
+  const catalog: CatalogView = { circuit: 'WESTERN', source: 'TCGdex REST v2/en',
+    sourceLanguage: 'en', scope: { kind: 'standard-marks', setIds: ['me01'], names: [] },
+    syncedAt: '2026-10-25T00:00:00Z', sets: [], prints: [{ id: 'me01-001',
+      setId: 'me01', setName: 'Mega Evolution', localId: '001', name: 'Rare Candy',
+      category: 'Trainer', rarity: null, regulationMark: 'I', variants: null,
+      identityId: 'rare-candy', identityBasis: 'trainer-text',
+      gameplay: { hp: null, types: [], evolveFrom: null, attacks: [], abilities: [],
+        effect: 'Search your deck.', trainerType: 'Item', weaknesses: [], resistances: [], retreat: null },
+      imageBase: null, thumbnail: null, highImageAvailable: null, sourceUpdated: null,
+      sourceUrl: 'https://api.tcgdex.net/v2/en/cards/me01-001',
+      detailAt: '2026-10-25T00:00:00Z', error: null }] }
+  const initial = buildThreadEvidence(thread, null, 'Spiegami Rare Candy', [], catalog, [], [])
+  const engine = createAiEvidenceEngine(catalog, [], [],
+    { from: '2026-10-01', to: '2026-10-25' })
+  const trace = await runAiEvidenceQueries('Spiegami Rare Candy', initial, engine,
+    async () => ({ continueAfterResults: false,
+      queries: [{ operation: 'catalog.search', printIds: ['me01-001'] }] }))
+  const evidence = threadEvidenceWithQueries(initial, trace)
+  const prompt = deckDiscussionPrompt(thread, null, 'Spiegami Rare Candy', evidence)
+  expect(prompt).toContain('Search your deck.')
+  evidence.promptAudit = makeAiPromptAudit(prompt, 2300,
+    { inputTokens: 123, cachedInputTokens: 10, outputTokens: 45 })
+  store.assignDeckAiSession(project.id, thread.id, 'session-query')
+  store.saveDeckAiExchange(project.id, thread.id, 'session-query', 'Spiegami Rare Candy',
+    'Permette la ricerca.', 'turn-query', config, undefined, evidence, ['card:me01-001'])
+  store.close()
+  const reopened = new ProjectStore(path)
+  const saved = reopened.getDeckThread(project.id, thread.id)!.messages[1]
+  expect(saved.citedSourceIds).toEqual(['card:me01-001'])
+  expect(saved.evidence?.aiQueries?.requests[0].sourceIds).toEqual(['card:me01-001'])
+  expect(saved.evidence?.promptAudit?.text).toBe(prompt)
+  expect(saved.evidence?.promptAudit?.usage?.outputTokens).toBe(45)
+  expect(reopened.listDeckThreads(other.id)).toEqual([])
+  reopened.close()
 })
 
 it('migra i messaggi esistenti senza perdere le osservazioni manuali', () => {

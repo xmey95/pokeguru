@@ -3,6 +3,8 @@ import type { TournamentSnapshot } from './tournament'
 import type { MainTournamentSnapshot } from './main-tournament'
 import type { CatalogView } from './catalog'
 import { gameplaySummary } from './card-gameplay'
+import { effectiveCardGameplay } from './card-errata'
+import { localCalendarDate } from './calendar-date'
 import { OFFICIAL_SET_CODES } from './set-codes'
 
 function slug(value: string): string {
@@ -201,13 +203,23 @@ export function multiMatchupEvidence(meta: MetaSnapshot, opponent: MetaDeck,
         exactIdentities.size === 1
       const identities = new Set(prints.map((print) => print.identityId).filter(Boolean))
       const chosen = exactPrints.find((print) => print?.gameplay) ?? prints.find((print) => print.gameplay)
+      const asOf = localCalendarDate()
+      const described = (print: NonNullable<typeof chosen>): string | null => {
+        const effective = effectiveCardGameplay(print, asOf, catalog?.rulePackage)
+        return effective.effective ? gameplaySummary(effective.effective, print) +
+          (effective.status === 'applied' || effective.status === 'source-already-corrected'
+            ? `; errata ${effective.errataSourceUrl}` : effective.status === 'source-mismatch'
+              ? '; errata non applicata: testo fonte non corrispondente' : '') : null
+      }
       const exactWithGameplay = [...new Map(exactPrints.flatMap((print) =>
         print?.gameplay ? [[print.id, print] as const] : [])).values()]
       const mechanics = exactWithGameplay.length
         ? exactWithGameplay.map((print) =>
-          `${setCodes.get(print.setId) ?? OFFICIAL_SET_CODES[print.setId] ?? print.setId.toUpperCase()} ${print.localId}: ${gameplaySummary(print.gameplay!, print)}; fonte ${print.sourceUrl}`).join(' | ')
-        : chosen?.gameplay ? gameplaySummary(chosen.gameplay, chosen) : null
+          `${setCodes.get(print.setId) ?? OFFICIAL_SET_CODES[print.setId] ?? print.setId.toUpperCase()} ${print.localId}: ${described(print)}; fonte ${print.sourceUrl}`).join(' | ')
+        : chosen?.gameplay ? described(chosen) : null
       const recognized = !!chosen?.identityId && !!chosen.gameplay &&
+        !prints.some((print) => ['applied', 'source-mismatch'].includes(
+          effectiveCardGameplay(print, asOf, catalog?.rulePackage).status)) &&
         (exactComparable || (identities.size === 1 && prints.every((print) => !!print.gameplay)))
       return { name, lists, catalogIdentityId: recognized ? chosen!.identityId : null,
         catalogStatus: recognized ? 'recognized' as const : prints.length ? 'ambiguous' as const

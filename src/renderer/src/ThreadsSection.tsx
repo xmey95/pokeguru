@@ -21,6 +21,8 @@ import { ActivityStatus, InlineLoading, LoadingSkeleton, Spinner } from './Loadi
 import { catalogCardTargets, guideSourceTarget, tcgdexCardPrintId } from './guide-links'
 import { useCardPreview } from './CardPreview'
 import { ExpandablePreviewDeck } from './PreviewDeckLines'
+import { AiQueryTraceView } from './AiQueryTraceView'
+import { AiPromptAuditView } from './AiPromptAuditView'
 
 interface Props {
   projectId: string
@@ -88,6 +90,8 @@ function ThreadMessageEvidence({ message, cardTargets, onOpenCatalogCard }: {
     {packet.change.added.length > 0 && <p>Nuove fonti selezionate: {packet.change.added.join('; ')}.</p>}
     {packet.change.removed.length > 0 && <p>Fonti non selezionate in questo turno: {packet.change.removed.join('; ')}.</p>}
     {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte oltre il limite del contesto; la loro meccanica non è stata inviata.</p>}
+    {packet.aiQueries && <AiQueryTraceView trace={packet.aiQueries} />}
+    {packet.promptAudit && <AiPromptAuditView audit={packet.promptAudit} />}
     <p>Fonti fornite a Codex; «citata» indica una fonte dichiarata nella risposta, non una verifica automatica della conclusione.</p>
     {packet.sources.length === 0 ? <p>Nessuna scheda o lista pertinente disponibile nell'archivio locale.</p> :
       <ul>{packet.sources.map((source) => <li key={source.id}>{cited.has(source.id) ? <strong>Citata · </strong> : null}
@@ -114,6 +118,7 @@ function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
       </details>)}
     </details>
     <p>Il pacchetto viene ricalcolato al momento dell'invio, così include eventuali aggiornamenti locali nel frattempo.</p>
+    <p>Durante l'invio l'AI può scegliere automaticamente query di sola lettura al Catalogo e alle liste Eventi locali. Questa scelta richiede un turno Codex aggiuntivo, con tempi e token propri; query e risposte effettive saranno visibili nei dati della risposta.</p>
   </div>
 }
 

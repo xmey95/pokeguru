@@ -33,7 +33,7 @@ export function deckDiscussionPrompt(thread: DeckThread, base: DeckVersion | nul
   return [
     'Sei un assistente per discutere un mazzo Pokémon TCG Standard occidentale.',
     'Rispondi in italiano alla domanda. Usa soltanto i dati forniti e la cronologia di questa sessione.',
-    'Non chiamare strumenti, non leggere file, non accedere alla rete. Distingui osservazioni, ipotesi e dati mancanti.',
+    'Le query automatiche al motore Pokéguru sono riportate nelle evidenze. Non chiamare altri strumenti, leggere file o accedere alla rete. Distingui osservazioni, ipotesi e dati mancanti.',
     'Le schede carte descrivono regole; le liste torneo sono osservazioni, non prove di vittoria del mazzo utente. Se le evidenze sono cambiate, rivaluta le conclusioni pertinenti.',
     'Un printId con detailAt identifica una stampa acquisita nel Catalogo; identityStatus=unverified segnala il confronto competitivo fra ristampe o testo di gioco mancante, non l’assenza della stampa.',
     'Se una scheda ha mentionedAs, quel nome usato dall’utente corrisponde alla scheda inglese con printId e testo di gioco nel pacchetto; non dichiarare mancante quel testo.',
@@ -93,7 +93,7 @@ export function deckProposalPrompt(thread: DeckThread, base: DeckVersion, questi
   }
   return { sources, prompt: [
     'Proponi una modifica alla lista completa del mazzo Pokémon TCG Standard occidentale.',
-    'Usa solo i dati del JSON e la cronologia di questa sessione. Non chiamare strumenti, leggere file o accedere alla rete.',
+    'Usa solo i dati del JSON e la cronologia di questa sessione, incluse le query automatiche già eseguite dal motore Pokéguru. Non chiamare altri strumenti, leggere file o accedere alla rete.',
     'Se hai elementi sufficienti, restituisci outcome=candidate e rawText con tutte le 60 carte, una riga per carta con quantità, nome, codice set maiuscolo e numero di stampa. Per i set del catalogo usa il campo set in maiuscolo (anche se contiene un punto). Mantieni una stampa verificabile nel catalogo per ogni riga.',
     'Se non puoi costruire 60 carte riconoscibili o non ritieni giustificata una modifica, restituisci outcome=no_change e rawText vuoto. Spiega il motivo in rationale.',
     'sourceIds può contenere solo gli ID esplicitamente presenti in allowedSourceIds e utilizzati nel ragionamento. Non inventare fonti, dati di tornei o percentuali di vittoria.',

@@ -5,6 +5,8 @@ import { parseDeck } from '../shared/deck-import'
 import type { DeckThread, DeckVersion } from '../shared/deck-threads'
 import type { MainTournamentSnapshot } from '../shared/main-tournament'
 import { gameplaySummary } from '../shared/card-gameplay'
+import { effectiveCardGameplay } from '../shared/card-errata'
+import { localCalendarDate } from '../shared/calendar-date'
 import { suggestPrints } from '../shared/reconciliation'
 import type { ThreadCardEvidence, ThreadEvidencePacket, ThreadEvidenceSource,
   ThreadEventEvidence } from '../shared/thread-evidence'
@@ -197,17 +199,22 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
     b.count - a.count || a.name.localeCompare(b.name)))
     names.push({ name: item.name, quantity: 0, line: null })
   const selected = names.slice(0, MAX_CARDS)
+  const asOf = localCalendarDate()
   const cards: ThreadCardEvidence[] = selected.map((item) => {
     const explicit = explicitPrints.get(normal(item.name)) ?? []
     const chosen = choosePrint(item.name, item.line, catalog, explicit.length === 1 ? explicit[0] : null)
     const print = chosen.print
+    const effective = print ? effectiveCardGameplay(print, asOf, catalog.rulePackage) : null
     return { name: item.name, ...(matchedAliases.has(normal(item.name))
       ? { mentionedAs: matchedAliases.get(normal(item.name)) } : {}),
       quantity: item.quantity, printId: print?.id ?? null,
       setId: print?.setId ?? null, localId: print?.localId ?? null,
       category: print?.category ?? null, regulationMark: print?.regulationMark ?? null,
-      identityStatus: chosen.status, gameplay: print?.gameplay ?? null,
-      gameplayText: print?.gameplay ? gameplaySummary(print.gameplay, print) : null,
+      identityStatus: chosen.status, gameplay: effective?.effective ?? null,
+      gameplayText: print && effective?.effective ? gameplaySummary(effective.effective, print) +
+        (effective.status === 'applied' || effective.status === 'source-already-corrected'
+          ? `; errata ${effective.errataSourceUrl}` : effective.status === 'source-mismatch'
+            ? '; errata non applicata: testo fonte non corrispondente' : '') : null,
       sourceId: print ? `card:${print.id}` : null, detailAt: print?.detailAt ?? null }
   })
   const eventMap = new Map<string, ThreadEventEvidence>()
@@ -219,7 +226,8 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
     const print = catalog.prints.find((item) => item.id === card.printId)
     if (print && card.sourceId) sources.push(source(card.sourceId,
       `${print.name} · ${print.setName} ${print.localId}`, print.sourceUrl,
-      { gameplay: print.gameplay, identityId: print.identityId, category: print.category,
+      { gameplay: card.gameplay, printedGameplay: print.gameplay,
+        identityId: print.identityId, category: print.category,
         mark: print.regulationMark, updated: print.sourceUpdated }))
   }
   for (const row of chosenRows) {
