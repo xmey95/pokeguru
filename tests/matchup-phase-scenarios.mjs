@@ -21,6 +21,15 @@ export async function phaseScenarios(page, application, workspace, profile) {
     }
     await input.fill('Bozza conservata fra le fasi.')
     const opening = plan.getByRole('tab', { name: 'Apertura', exact: true })
+    assert.deepEqual(await plan.getByRole('tabpanel').locator('.matchup-plan-part h4').allTextContents(),
+      ['Piano', 'Fatti', 'Ipotesi'])
+    const labeledParts = plan.getByRole('tabpanel').locator('.matchup-plan-part')
+    assert.equal(await labeledParts.count(), 3)
+    assert.match(await labeledParts.nth(0).innerText(), /Piano di prova contro Gardevoir ex/)
+    assert.match(await labeledParts.nth(1).innerText(), /Mega Absol ex è nella nostra lista/)
+    assert.match(await labeledParts.nth(2).innerText(), /conserva una carta di ricerca/)
+    const positions = await labeledParts.evaluateAll((parts) => parts.map((part) => part.getBoundingClientRect().top))
+    assert.ok(positions[0] < positions[1] && positions[1] < positions[2], 'Le sezioni del piano non vanno a capo')
     await opening.press('ArrowRight')
     await page.waitForFunction(() => document.activeElement?.textContent === 'Sviluppo')
     assert.equal(await plan.getByRole('tabpanel').count(), 1)
@@ -54,6 +63,8 @@ export async function phaseScenarios(page, application, workspace, profile) {
     await historical.locator(':scope > summary').click()
     assert.equal(await historical.getByRole('tab').count(), 0)
     assert.match(await historical.locator('.legacy-plan').innerText(), /Piano di prova contro Gardevoir ex/)
+    assert.deepEqual(await historical.locator('.legacy-plan .matchup-plan-part h4').allTextContents(),
+      ['Piano', 'Fatti', 'Ipotesi'])
     assert.equal(await historical.locator('.guide-list').count(), 4)
     assert.equal(await historical.locator('.guide-list').first().getByRole('listitem').count(), 3)
     await page.locator('.discussion-history > summary').click()
@@ -72,7 +83,7 @@ export async function phaseScenarios(page, application, workspace, profile) {
           separated: innerWidth > 1240 ? bounds.right <= deck.left : bounds.bottom <= deck.top }
       })
       assert.deepEqual(geometry, { overflow: false, separated: true })
-      const paragraph = await plan.getByRole('tabpanel').locator('p').boundingBox()
+      const paragraph = await plan.getByRole('tabpanel').locator('p').first().boundingBox()
       const panel = await plan.getByRole('tabpanel').boundingBox()
       assert.ok(Math.abs(paragraph.width - panel.width) < 1, 'Il testo lascia spazio inutilizzato a destra')
       await page.screenshot({ path: join(workspace, 'node_modules', `matchup-phases-${width}-${height}.png`) })
