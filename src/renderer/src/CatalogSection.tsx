@@ -21,8 +21,7 @@ function legalDate(value: string): string {
     .format(new Date(`${value}T00:00:00Z`))
 }
 
-export function CatalogSection({ canConstrain = false, focusIdentityId }: {
-  canConstrain?: boolean
+export function CatalogSection({ focusIdentityId }: {
   focusIdentityId?: string | null
 }) {
   const preview = useCardPreview()
@@ -392,8 +391,7 @@ export function CatalogSection({ canConstrain = false, focusIdentityId }: {
           </div>}
         </div>
         <div className="catalog-detail">
-          {selected && (selectedPrints.length ? <CatalogCardDetail key={selected.key} name={selected.name} basis={selected.basis} prints={selectedPrints}
-            constraintIdentityId={canConstrain && selected.canConstrain ? selected.key : undefined} />
+          {selected && (selectedPrints.length ? <CatalogCardDetail key={selected.key} name={selected.name} basis={selected.basis} prints={selectedPrints} />
             : detailKeyLoaded === selected.key ? <p className="diagnostics" role="status">Dettaglio carta non disponibile.</p>
               : <LoadingSkeleton label="Caricamento dettaglio carta…" />)}
         </div></>}

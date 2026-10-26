@@ -195,7 +195,8 @@ it('salva una candidata AI atomica solo con 60 carte, stampe e fonti verificabil
     'Valuta una lista', [constraint], catalog, [], [])
   const prompt = deckThreadPrompt(thread, store.listDeckVersions(project.id)[0],
     'Valuta una lista', [constraint], catalog, evidence).prompt
-  expect(prompt).toContain('un solo pensiero oppure una proposta')
+  expect(prompt).toContain('nello stesso turno')
+  expect(prompt).toContain('senza chiedere un cambiamento del mazzo')
   expect(prompt).toContain('60 carte')
   const turnSources = evidence.sources.map(({ id, label, url }) => ({ id, label, url }))
   const fullTurn = readDeckThreadTurn({ kind: 'list', reply: 'Mantieni la carta Base.',

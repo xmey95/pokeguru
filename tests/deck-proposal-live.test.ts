@@ -6,6 +6,9 @@ import { CodexControl } from '../src/main/codex-control'
 import { ProjectStore } from '../src/main/project-store'
 import { deckThreadPrompt, DECK_THREAD_SCHEMA, readDeckThreadTurn } from '../src/main/deck-ai'
 import { buildThreadEvidence } from '../src/main/thread-evidence'
+import { createAiEvidenceEngine } from '../src/main/ai-evidence-engine'
+import { runAiEvidenceQueries, threadEvidenceWithQueries } from '../src/main/ai-evidence-queries'
+import { planEvidenceQueriesWithCodex } from '../src/main/codex-evidence-plan'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import type { AiRunConfig } from '../src/shared/ai'
 
@@ -14,12 +17,15 @@ const config: AiRunConfig = { provider: 'codex', source: 'global', model: null, 
 
 function print(id: string, name: string, category: string, stage: string | null = null): CatalogPrint {
   const [setId, localId] = id.split('-')
+  const gameplay = name === "Boss's Orders" ? { hp: null, types: [], evolveFrom: null,
+    attacks: [], abilities: [], effect: "Switch one of your opponent's Benched Pokémon with their Active Pokémon.",
+    trainerType: 'Supporter', weaknesses: [], resistances: [], retreat: null } : null
   return { id, setId, localId, name, setName: setId, category, stage,
     energyType: category === 'Energy' ? 'Normal' : null,
     rarity: null, regulationMark: 'I', variants: null, identityId: name,
     identityBasis: 'unverified', imageBase: null, thumbnail: null, highImageAvailable: null,
     sourceUpdated: null, sourceUrl: `https://api.tcgdex.net/v2/en/cards/${id}`,
-    detailAt: '2026-10-23T00:00:00.000Z', error: null }
+    detailAt: '2026-10-23T00:00:00.000Z', gameplay, error: null }
 }
 
 live('produce due candidate complete in sessioni Codex isolate', async () => {
@@ -54,15 +60,22 @@ live('produce due candidate complete in sessioni Codex isolate', async () => {
     const answers = await Promise.all([first, second].map(async (thread, index) => {
       const current = store.getDeckThread(project.id, thread.id)!
       const count = index + 1
-      const question = `Prepara una candidata di prova: aggiungi esattamente ${count} Boss's Orders ME01 114, togli ${count} Psychic Energy SVE 005 e conserva Mega Absol ex. Restituisci l'intera lista di 60 carte usando i codici del catalogo; è una prova strutturale, non una raccomandazione competitiva.`
-      const evidence = buildThreadEvidence(current, base, question, [], catalog, [], [])
+      const question = index === 0
+        ? `Vorrei provare ${count} Boss's Orders ME01 114 al posto di ${count} Psychic Energy SVE 005, lasciando Mega Absol ex. Come cambieresti il mio mazzo? È una prova strutturale, non una raccomandazione competitiva.`
+        : `Vorrei che il mazzo potesse scegliere più spesso un bersaglio avversario, con due copie della carta adatta. Con le carte disponibili, come lo miglioreresti mantenendo Mega Absol ex? È una prova strutturale, non una raccomandazione competitiva.`
+      const initialEvidence = buildThreadEvidence(current, base, question, [], catalog, [], [])
+      const today = new Date().toISOString().slice(0, 10)
+      const trace = await runAiEvidenceQueries(question, initialEvidence,
+        createAiEvidenceEngine(catalog, [], [], { from: today, to: today }),
+        (prompt) => planEvidenceQueriesWithCodex(prompt, config))
+      const evidence = threadEvidenceWithQueries(initialEvidence, trace)
       const context = deckThreadPrompt(current, base, question, [], catalog, evidence)
       const answer = await control.jsonTurn(current.aiSessionRef, directory, context.prompt, config, DECK_THREAD_SCHEMA)
       const sessionId = answer.sessionId
       if (!current.aiSessionRef) store.assignDeckAiSession(project.id, thread.id, sessionId)
       const turn = readDeckThreadTurn(answer.value, project.id, base, catalog, [], evidence,
         context.sources)
-      expect(turn.proposal).toBeDefined()
+      expect(turn.proposal, JSON.stringify({ question, response: answer.value, interpreted: turn.answer })).toBeDefined()
       const saved = store.saveDeckAiExchange(project.id, thread.id, sessionId,
         question, turn.answer, answer.turnId, config, turn.proposal, evidence, turn.citedSourceIds)
       expect(saved.candidates).toHaveLength(1)

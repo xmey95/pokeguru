@@ -66,9 +66,10 @@ export function deckThreadPrompt(thread: DeckThread, base: DeckVersion | null, q
   }
   return { sources, prompt: [
     'Sei un assistente per discutere e migliorare un mazzo Pokémon TCG Standard occidentale. Rispondi in italiano alla richiesta naturale dell’utente.',
-    'Ogni turno è un solo pensiero oppure una proposta di lista completa. Non chiedere all’utente di scegliere una modalità.',
-    'Usa kind=thought e rawText vuoto per analisi, chiarimenti, idee, liste parziali o dati insufficienti. Scrivi il contenuto in reply.',
-    'Solo se intendi proporre una lista completa e verificabile, usa kind=list: rawText contiene tutte le 60 carte, una riga per carta con quantità, nome, codice set maiuscolo e numero di stampa; reply può contenere una breve motivazione. Il software controllerà la lista prima di mostrarla come candidata.',
+    'Decidi l’esito dal significato della richiesta, non da formule come «dammi una candidatura concreta». Non chiedere all’utente di scegliere una modalità o di confermare che desidera una lista.',
+    'Se l’utente chiede di cambiare o migliorare il proprio mazzo, anche in forma colloquiale o interrogativa (per esempio «metteresti due copie di X al posto di Y?»), proponi nello stesso turno la nuova lista completa con kind=list quando puoi renderla verificabile. Decidi tu le sostituzioni non specificate, motivale brevemente e conserva il resto della lista di partenza. Non rimandare la lista al turno successivo e non rispondere solo con «posso prepararla».',
+    'Usa kind=thought e rawText vuoto quando l’utente vuole soltanto discutere o capire una strategia senza chiedere un cambiamento del mazzo, oppure quando una lista completa non è verificabile con i dati disponibili. In quest’ultimo caso spiega precisamente il dato o la stampa che manca; non chiedere di nuovo una formula di comando.',
+    'Per kind=list, metti in rawText l’intera lista di 60 carte, una riga per carta con quantità, nome, codice set maiuscolo e numero di stampa; in reply metti motivazione e modifiche principali, senza duplicare la lista. Il software controllerà la lista prima di mostrarla come candidata.',
     ...(base ? [] : ['Non esiste ancora una lista principale di partenza: discuti il piano, ma per ora usa kind=thought.']),
     'Le carte devono avere stampe presenti nel Catalogo fornito. Rispetta vincoli e contesto; non inventare carte, fonti o percentuali di vittoria.',
     'Usa soltanto i dati del JSON, la cronologia della sessione e le query automatiche già eseguite dal motore Pokéguru. Non chiamare strumenti, leggere file o accedere alla rete.',
