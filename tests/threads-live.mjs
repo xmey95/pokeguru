@@ -35,15 +35,14 @@ try {
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  assert.match(await page.locator('.thread-detail').textContent(), /Base superata/)
+  assert.match(await page.locator('.thread-detail').textContent(), /lista precedente/i)
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano A')
   await page.getByLabel('Primo messaggio a Codex').fill('Più pescata')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
-  await page.getByLabel('Proponi una lista').check()
   await page.getByLabel('Scrivi nel thread').fill('Rendi la lista più consistente')
-  assert.equal(await page.getByRole('button', { name: 'Genera proposta Codex' }).isEnabled(), true)
+  assert.equal(await page.getByRole('button', { name: 'Invia a Codex', exact: true }).isEnabled(), true)
   await seedStoredCandidate(page, '60 Carta B MEG 2', 'Cambio completo')
   await page.locator('.thread-candidate.featured .candidate-brief').waitFor()
   assert.match(await page.locator('#thread-switcher-trigger').innerText(), /Proposta nuova/)
@@ -62,8 +61,8 @@ try {
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  assert.match(await page.locator('.thread-detail').textContent(), /Base superata/)
-  assert.match(await page.locator('#thread-switcher-trigger').innerText(), /Base superata/)
+  assert.match(await page.locator('.thread-detail').textContent(), /lista precedente/i)
+  assert.match(await page.locator('#thread-switcher-trigger').innerText(), /lista precedente/i)
   await application.close()
   application = undefined
 
@@ -73,7 +72,7 @@ try {
   await switchThread(page, /Piano A/)
   assert.match(await page.locator('.thread-detail').textContent(), /Più pescata/)
   assert.match(await page.locator('.thread-candidate').textContent(), /Carta B/)
-  assert.match(await page.locator('.thread-detail').textContent(), /Base superata/)
+  assert.match(await page.locator('.thread-detail').textContent(), /lista precedente/i)
   assert.equal(await page.locator('.thread-versions > details').count(), 2)
   for (const [text, label] of [
     ['60 Carta D MEG 4', 'Nessuna variazione'],

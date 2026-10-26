@@ -594,6 +594,11 @@ details[open] > summary { margin-bottom: 8px; }
 .matchup-fields > .strategy-field { grid-column: 1 / -1; }
 .matchup-fields .strategy-field h3 { color: var(--ink); font-size: var(--text-md); }
 .matchup-fields .strategy-field p { max-width: 88ch; font-size: 15px; }
+.matchup-phase-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+.matchup-phase-tabs [role=tab] { flex: 1; padding: 10px 8px; background: transparent; color: var(--ink-secondary); border: 0; border-bottom: 2px solid transparent; border-radius: 0; }
+.matchup-phase-tabs [aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 650; }
+.matchup-plan [role=tabpanel] { padding: 2px 0; }
+.ai-diagnostics { margin-top: 16px; }
 .matchup-fields > .matchup-trust { grid-column: 1 / -1; border-left: 3px solid var(--warning-line); background: var(--warning-soft); }
 .matchup-fields .matchup-trust h3, .matchup-fields .matchup-trust .guide-body { color: var(--warning); font-size: var(--text-sm); }
 .matchup-assessment, .guide-sources { margin: 16px 0; }

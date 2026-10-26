@@ -63,7 +63,7 @@ try {
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await switchThread(page, /Fonte locale/)
   const message = page.locator('.thread-message').filter({ hasText: 'Scheda citata nella risposta di prova.' })
-  await message.getByText('Dati usati', { exact: false }).click()
+  await message.getByText('Fonti e dettagli', { exact: false }).click()
   await message.getByRole('button', { name: 'Mega Absol ex · ME01 086 · Catalogo' }).click()
   await page.locator('.catalog-detail').getByRole('heading', { name: 'Mega Absol ex', exact: true }).waitFor({ timeout: 30000 })
   assert.deepEqual(await application.evaluate(() => globalThis.openedSources), [])

@@ -48,7 +48,7 @@ try {
   for (let index = 0; index < 100 && !existsSync(sessionPath); index++)
     await new Promise((resolve) => setTimeout(resolve, 100))
   assert.ok(existsSync(sessionPath), 'Il processo Codex non ha avviato la sessione prima della cancellazione')
-  await page.getByRole('button', { name: 'Annulla job' }).click()
+  await page.getByRole('button', { name: 'Annulla', exact: true }).click()
   await page.waitForFunction(async ({ projectId, threadId }) => {
     const result = await window.projectsApi.getAiJobStatus(projectId, threadId)
     return result.ok && result.value?.status === 'cancelled'
@@ -67,7 +67,7 @@ try {
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await switchThread(page, /Prova cancellazione/)
-  try { await page.getByText('Job Codex annullato.').waitFor({ timeout: 10000 }) }
+  try { await page.getByText('Risposta annullata.').waitFor({ timeout: 10000 }) }
   catch (error) {
     console.error('Stato dopo riapertura:', await page.evaluate(async ({ projectId, threadId }) =>
       window.projectsApi.getAiJobStatus(projectId, threadId),

@@ -3,7 +3,7 @@ import type { DeckThreadSummary, DeckVersion } from '../../shared/deck-threads'
 import { Icon } from './Icon'
 
 function threadStatus(thread: DeckThreadSummary, versions: DeckVersion[]): string {
-  if (thread.stale) return 'Base superata'
+  if (thread.stale) return 'Lista precedente'
   if (thread.baseVersionNumber === null) return 'Senza lista iniziale'
   if (!thread.latestCandidateId) return 'Nessuna proposta'
   return versions.some((version) => version.adoption?.candidateId === thread.latestCandidateId) ? 'Proposta adottata' : 'Proposta nuova'

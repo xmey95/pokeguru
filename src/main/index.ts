@@ -1257,7 +1257,7 @@ function registerProjectHandlers(): void {
         sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal, aiQueries,
           onPrompt: (audit) => aiJobStore!.prepare(job.id,
-            { base: { ...base, promptAudit: audit } }) })
+            { analysisVersion: 2, base: { ...base, promptAudit: audit } }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
       const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
         deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
@@ -1326,7 +1326,7 @@ function registerProjectHandlers(): void {
         opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal, aiQueries,
           onPrompt: (audit) => aiJobStore!.prepare(job.id,
-            { base: { ...base, promptAudit: audit },
+            { analysisVersion: 2, base: { ...base, promptAudit: audit },
               discussionId: discussion.id, turnId: target.id }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
       const report = { ...revised.report, jobId: job.id, generatedAt: base.generatedAt,
@@ -1404,7 +1404,7 @@ function registerProjectHandlers(): void {
         config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal, aiQueries,
           onPrompt: (audit) => aiJobStore!.prepare(job.id,
-            { base: { ...base, promptAudit: audit }, parentId: parent.id }) })
+            { analysisVersion: 2, base: { ...base, promptAudit: audit }, parentId: parent.id }) })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
       const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
         deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
