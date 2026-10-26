@@ -772,7 +772,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               detail="Una lista completa e verificata comparirà nel Thread come candidata. Puoi consultare la lista o cambiare sezione durante l’attesa." />}
             <form className="thread-form thread-composer" onSubmit={(event) => void ask(event)}>
               <label htmlFor="thread-message">Scrivi nel thread</label>
-              <textarea id="thread-message" value={message} maxLength={5000} disabled={working} aria-describedby="thread-composer-help"
+              <textarea id="thread-message" value={message} maxLength={5000} disabled={working} aria-describedby="thread-composer-help" aria-keyshortcuts="Enter"
                 onCompositionStart={() => { composerComposing.current = true }}
                 onCompositionEnd={() => { composerComposing.current = false }} onKeyDown={onComposerKeyDown}
                 onChange={(event) => { setMessage(event.target.value); invalidatePreview(); setComposerError(null) }} />

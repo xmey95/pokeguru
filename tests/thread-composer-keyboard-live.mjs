@@ -28,6 +28,7 @@ try {
   const input = page.getByLabel('Scrivi nel thread')
   await input.waitFor()
   assert.match(await page.locator('#thread-composer-help').innerText(), /Enter.*Shift\+Enter/)
+  assert.equal(await input.getAttribute('aria-keyshortcuts'), 'Enter')
 
   await application.evaluate(({ ipcMain }) => {
     globalThis.keyboardFixture = { calls: [], pending: [] }
