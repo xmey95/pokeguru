@@ -124,7 +124,6 @@ export type CatalogBrowseGroup = {
   category: string | null
   basis: CatalogPrint['identityBasis']
   printCount: number
-  canConstrain: boolean
 }
 
 export type CatalogBrowseOverview = Omit<CatalogView, 'prints' | 'referencePrints'> & {

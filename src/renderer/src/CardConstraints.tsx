@@ -3,7 +3,9 @@ import { ConstraintForm, constraintLabel, ConstraintStatus, focusConstraintContr
 import { useDeckConstraints } from './DeckConstraintsContext'
 import { useViewState } from './Navigation'
 
-export function CardConstraints({ identityId, name }: { identityId: string; name: string }) {
+export function CardConstraints({ identityId, name, allowCreate = true }: {
+  identityId: string; name: string; allowCreate?: boolean
+}) {
   const { evaluation, loading, saving, error, remove } = useDeckConstraints()
   const [creating, setCreating] = useViewState(`constraint.card.${identityId}`, false)
   const [editingId, setEditingId] = useViewState<string | null>(`constraint.card.edit.${identityId}`, null)
@@ -17,6 +19,10 @@ export function CardConstraints({ identityId, name }: { identityId: string; name
   useEffect(() => {
     if (editingId && !results.some((result) => result.constraint.id === editingId)) setEditingId(null)
   }, [editingId, results])
+
+  useEffect(() => {
+    if (!allowCreate && creating) setCreating(false)
+  }, [allowCreate, creating, setCreating])
 
   function closeCreate(): void {
     setCreating(false)
@@ -68,9 +74,9 @@ export function CardConstraints({ identityId, name }: { identityId: string; name
       })}</ul> : <p className="content-note">Nessun vincolo su questa carta.</p>}
       {results.some((result) => result.status === 'conflict') && evaluation?.conflicts.map((message) =>
         <p className="constraint-conflict" role="alert" key={message}>{message}</p>)}
-      {!creating && <button ref={trigger} type="button" className="secondary-button" aria-label="Aggiungi vincolo su questa carta"
+      {allowCreate && !creating && <button ref={trigger} type="button" className="secondary-button" aria-label="Aggiungi vincolo su questa carta"
         aria-expanded={false} disabled={saving} onClick={() => { setCreating(true); setEditingId(null); setNotice('') }}>Aggiungi vincolo</button>}
-      {creating && <ConstraintForm id={formId} fixedIdentity={{ id: identityId, name }}
+      {allowCreate && creating && <ConstraintForm id={formId} fixedIdentity={{ id: identityId, name }}
         onSaved={() => { setNotice('Vincolo aggiunto.'); closeCreate() }} onCancel={closeCreate} />}
     </>}
   </section>
