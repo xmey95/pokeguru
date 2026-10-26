@@ -23,6 +23,10 @@ const pokemon = { ...empty, hp: 280, types: ['Darkness'], retreat: 0,
 function seed() {
   const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
   try {
+    // Keep this fixed catalog fixture stable while exercising its detail UI.
+    db.prepare(`INSERT INTO daily_sync (source, last_attempt_at, last_success_at, trigger, outcome, next_attempt_at, error)
+      VALUES ('catalog', ?, ?, NULL, 'success', NULL, NULL)
+      ON CONFLICT(source) DO UPDATE SET last_success_at=excluded.last_success_at, outcome='success', next_attempt_at=NULL`).run(now, now)
     for (const [id, name] of [['me01', 'Set A · fixture'], ['me02.5', 'Set B · fixture'], ['mee', 'Mega Energy · fixture']]) db.prepare(
       'INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at) VALUES (?, ?, 10, 5, ?)').run(id, name, now)
     for (const [id, name, category, gameplay, image, basis, extra] of [
@@ -140,13 +144,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 })
   const select = async (name) => {
     await search.fill(name)
-    try {
-      await page.locator('.catalog-list').getByRole('button', { name: new RegExp(name) }).click({ timeout: 15000 })
-    } catch (error) {
-      console.log('Catalog selection failed', { name, query: await search.inputValue(), filter: await page.getByLabel('Espansione').inputValue(),
-        layout: await page.locator('.catalog-layout').innerText() })
-      throw error
-    }
+    await page.locator('.catalog-list').getByRole('button', { name: new RegExp(name) }).click()
     await ready()
     await detail.getByRole('heading', { name, exact: true }).waitFor()
   }
