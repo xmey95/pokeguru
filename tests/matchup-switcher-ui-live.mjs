@@ -116,6 +116,7 @@ function seed() {
         report.weaknesses = 'Partenza dipendente dalla ricerca. La perdita del primo attaccante può rallentare il piano.'
         report.ourKeyCards = 'Mega Absol ex: prima linea. Mega Audino ex: secondo attaccante. Night Stretcher: recupero.'
         report.theirKeyCards = 'Gardevoir ex: attaccante. Ralts: preparazione della linea evolutiva.'
+        report.strategy = `Piano: ${report.strategy}\nFatti: Mega Absol ex è nella nostra lista. Ipotesi: conserva una carta di ricerca per il turno seguente.`
         report.strategyPhases = { opening: report.strategy, development: 'Sviluppo di prova: conserva una risorsa per il turno successivo.', closing: 'Chiusura di prova: valuta gli ultimi Premi.' }
         report.promptAudit = { text: 'Prompt di prova APP-135', sha256: hash('Prompt di prova APP-135'), utf8Bytes: 24, durationMs: 1000, usage: null }
       }
