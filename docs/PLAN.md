@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 26 ottobre 2026. **Fase corrente:** I3 completato e v0.1.0 pubblicata; APP-139 estende la distribuzione a macOS Intel/Apple Silicon e prepara v0.2.0 prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 26 ottobre 2026. **Fase corrente:** I3 completato e v0.2.0 pubblicata per Linux, Windows, macOS Intel e Apple Silicon; APP-139 concluso prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -109,7 +109,7 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
-- **APP-139 in corso:** due DMG macOS nativi con Codex incluso, CI dedicata, provenance/attestazioni estese e pubblicazione v0.2.0 da `main` richiesta dall'utente. Mancano credenziali Apple di firma e notarizzazione: indicare chiaramente che i DMG sono non firmati. Verificare entrambi i runner Mac e i quattro pacchetti prima del merge di release.
+- **APP-139 completato:** la [release v0.2.0](https://github.com/xmey95/pokeguru/releases/tag/v0.2.0) su `main` (`8569b5c`) include due DMG macOS nativi Intel e Apple Silicon, AppImage Linux e installer Windows, con Codex incluso, checksum e file di provenienza. Il [workflow Release](https://github.com/xmey95/pokeguru/actions/runs/40377049865) ha superato package, smoke e attestazioni su quattro runner. I DMG sono privi di firma e notarizzazione Apple; serve prova d'installazione dell'utente sui due tipi di Mac. Riprendere dal feedback su v0.2.0 prima di autorizzare I4.
 
 - **APP-138 integrato in `dev` — [PR #51](https://github.com/xmey95/pokeguru/pull/51), merge `fa580b9`:** la modalità Immagini delle liste Play e Regional apre la scheda locale completa della stampa con `CardFace` e metadati, senza download al clic. Scheda assente o ambigua esplicita. Build/typecheck, test di risoluzione e smoke Electron Eventi completo con profilo temporaneo passati a 1440/1280/640 px usando `POKEGURU_AUTO_SYNC=0`, come nella CI. Quattro check Ubuntu/Windows verdi, inclusi i pacchetti; checkout `dev` aggiornato e app avviata per la prova utente. Nessun `main` o release.
 
