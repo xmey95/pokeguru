@@ -38,7 +38,7 @@ try {
     return result.value[0]
   }, project.id)
   await page.getByLabel('Scrivi nel thread').fill('Rispondi in italiano con un piano generale di prova in più passaggi. Non usare strumenti.')
-  await page.getByRole('button', { name: 'Chiedi a Codex' }).click()
+  await page.getByRole('button', { name: 'Invia a Codex' }).click()
   const active = await page.waitForFunction(async ({ projectId, threadId }) => {
     const result = await window.projectsApi.getAiJobStatus(projectId, threadId)
     return result.ok && result.value?.status === 'running' ? result.value : false

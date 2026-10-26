@@ -7,12 +7,14 @@ import type { ThreadEvidencePacket } from '../shared/thread-evidence'
 import type { MatchupReport } from '../shared/meta-matchups'
 import { CatalogStore } from './catalog'
 import { CodexControl } from './codex-control'
-import { readDeckDiscussionReply, readDeckDiscussionSourceIds, validateDeckProposal } from './deck-ai'
+import { readDeckDiscussionReply, readDeckDiscussionSourceIds, readDeckThreadTurn,
+  validateDeckProposal } from './deck-ai'
 import { ProjectStore } from './project-store'
 import { AiJobStore, type AiJob } from './ai-job-store'
 import { makeAiPromptAudit } from './ai-evidence-queries'
 
 interface ThreadRequest {
+  schemaVersion?: number
   message: string
   existingUserMessageId?: string
   config: AiRunConfig
@@ -64,10 +66,16 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
     jobs.transition(job.id, 'applied')
     return 'applied'
   }
-  const answer = job.kind === 'thread-ask'
-    ? readDeckDiscussionReply(result.value) : null
-  const sources = readDeckDiscussionSourceIds(result.value, request.evidence)
-  let proposal: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] } | undefined
+  const newTurn = job.kind === 'thread-ask' && request.schemaVersion === 2
+    ? readDeckThreadTurn(result.value, job.projectId,
+      thread.baseVersionId ? projects.listDeckVersions(job.projectId)
+        .find((version) => version.id === thread.baseVersionId) ?? null : null,
+      catalog.view(), projects.listConstraints(job.projectId), request.evidence,
+      request.sources ?? []) : null
+  const answer = newTurn?.answer ?? (job.kind === 'thread-ask'
+    ? readDeckDiscussionReply(result.value) : null)
+  const sources = newTurn?.citedSourceIds ?? readDeckDiscussionSourceIds(result.value, request.evidence)
+  let proposal: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] } | undefined = newTurn?.proposal
   let response = answer
   if (job.kind === 'thread-propose') {
     const checked = validateDeckProposal(result.value, job.projectId, catalog.view(),

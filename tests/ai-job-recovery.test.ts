@@ -56,6 +56,29 @@ it('recovers a completed CLI file after interruption and never duplicates the tu
   } finally { jobs.close(); catalog.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
 })
 
+it('recovers a unified Thread thought with its sources and does not invent a candidate', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-unified-recovery-'))
+  const path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path)
+  const catalog = new CatalogStore(path)
+  const jobs = new AiJobStore(path)
+  try {
+    const project = projects.create({ name: 'Unified', format: 'STANDARD' })
+    const thread = projects.createDeckThread({ projectId: project.id, title: 'Turn' })
+    const started = jobs.start('thread-ask', project.id, thread.id)
+    jobs.prepare(started.id, { schemaVersion: 2, message: 'Valuta un piano', config,
+      evidence, sources: [] })
+    jobs.ready(started.id, { sessionId: 'unified-session', turnId: 'unified-turn',
+      value: { kind: 'thought', reply: 'Servono altri dati.', rawText: '', sourceIds: [] } })
+    expect(await recoverThreadJob(jobs.get(started.id)!, jobs, projects, catalog,
+      { latestTurnId: async () => 'unified-turn' }, folder)).toBe('applied')
+    const saved = projects.getDeckThread(project.id, thread.id)!
+    expect(saved.messages.map((message) => message.text)).toEqual(['Valuta un piano', 'Servono altri dati.'])
+    expect(saved.candidates).toHaveLength(0)
+    expect(saved.messages[1].citedSourceIds).toEqual([])
+  } finally { jobs.close(); catalog.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+})
+
 it('reuses the persisted opening message when its Codex result is recovered', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-opening-recovery-'))
   const path = join(folder, 'data.sqlite')

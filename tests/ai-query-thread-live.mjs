@@ -54,7 +54,7 @@ try {
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
   await page.getByLabel('Scrivi nel thread').fill('Consulta la stampa me01-114 nel catalogo locale e descrivi il suo effetto esatto.')
-  await page.getByRole('button', { name: 'Chiedi a Codex' }).click()
+  await page.getByRole('button', { name: 'Invia a Codex' }).click()
   await Promise.race([
     page.locator('.thread-message').filter({ has: page.locator('small', { hasText: 'Codex' }) })
       .waitFor({ timeout: 180000 }),

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { buildThreadEvidence } from '../src/main/thread-evidence'
-import { deckDiscussionPrompt, readDeckDiscussionSourceIds } from '../src/main/deck-ai'
+import { deckThreadPrompt, readDeckDiscussionSourceIds } from '../src/main/deck-ai'
 import type { CatalogPrint, CatalogView, CardGameplay } from '../src/shared/catalog'
 import type { TournamentSnapshot } from '../src/shared/tournament'
 import type { MainTournamentSnapshot } from '../src/shared/main-tournament'
@@ -82,7 +82,7 @@ it('seleziona schede e liste pertinenti da più eventi, conserva i dati del turn
     expect(first.events.flatMap((event) => event.lists)).toHaveLength(3)
     expect(first.sources.some((source) => source.url === 'https://limitlesstcg.com/decks/list/999')).toBe(true)
     expect(first.events.some((event) => event.name.includes('69'))).toBe(false)
-    expect(deckDiscussionPrompt(created, base, 'Hydrapple', first)).toContain('Assalto')
+    expect(deckThreadPrompt(created, base, 'Hydrapple', [], catalog(), first).prompt).toContain('Assalto')
     const explicitCatalog = catalog()
     explicitCatalog.prints.push({ ...print('me01-114', "Boss's Orders", gameplay),
       category: 'Trainer', gameplay: undefined, identityBasis: 'unverified' })
@@ -146,7 +146,7 @@ it('recupera dal contesto del thread le schede italiane e stampe con la stessa r
       mentionedAs: 'Compassione di Lino', printId: 'me01-132', gameplay: expect.any(Object) })
     expect(packet.cards.some((card) => card.name === 'Lucario ex' || card.name === 'Lucario')).toBe(false)
     expect(packet.events.flatMap((event) => event.lists)).toHaveLength(1)
-    expect(deckDiscussionPrompt(thread, base, 'Come posso arginare questa cosa?', packet))
+    expect(deckThreadPrompt(thread, base, 'Come posso arginare questa cosa?', [], example, packet).prompt)
       .toContain('Compassione di Lino')
 
     const different = { ...example, prints: [...example.prints,

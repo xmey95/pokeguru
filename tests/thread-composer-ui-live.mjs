@@ -57,12 +57,10 @@ try {
   })
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   const input = page.getByLabel('Scrivi nel thread')
-  const discuss = page.getByRole('radio', { name: 'Discuti', exact: true })
-  const propose = page.getByRole('radio', { name: 'Proponi una lista', exact: true })
   await input.fill('Osservazione senza lista')
-  await propose.check()
-  assert.ok(await page.getByRole('button', { name: 'Genera proposta Codex' }).isDisabled())
-  assert.match(await page.locator('#thread-composer-help').innerText(), /serve una lista iniziale/)
+  assert.ok(await page.getByRole('button', { name: 'Invia a Codex' }).isEnabled())
+  assert.equal(await page.locator('.thread-composer').getByRole('radio').count(), 0)
+  assert.match(await page.locator('#thread-composer-help').innerText(), /importa prima una lista principale/)
   await page.getByRole('button', { name: 'Salva osservazione' }).click()
   await page.waitForFunction(() => document.querySelector('#thread-message').value === '')
   assert.match(await page.locator('.thread-message').innerText(), /Osservazione senza lista/)
@@ -86,19 +84,10 @@ try {
   assert.equal(await page.locator('.thread-composer textarea').count(), 1)
   assert.equal(await page.locator('#thread-proposal-request').count(), 0)
   await input.fill('Conservare una ricerca per il finale.')
-  await discuss.focus()
-  await page.keyboard.press('ArrowRight')
-  assert.ok(await propose.isChecked())
   assert.equal(await input.inputValue(), 'Conservare una ricerca per il finale.')
-  await page.keyboard.press('ArrowLeft')
-  assert.ok(await discuss.isChecked())
   await page.getByRole('button', { name: 'Vedi dati inviati a Codex' }).click()
   await page.getByText('Anteprima dei dati locali', { exact: true }).waitFor()
-  await propose.check()
-  assert.equal(await page.getByText('Anteprima dei dati locali', { exact: true }).count(), 0)
-  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) await inspect(page, width, height, 'proposta')
-  await discuss.check()
-  await inspect(page, 1280, 720, 'discussione')
+  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) await inspect(page, width, height, 'unico')
 
   database((db) => db.exec("CREATE TRIGGER fixture_message_failure BEFORE INSERT ON deck_thread_messages BEGIN SELECT RAISE(ABORT, 'Osservazione non salvata di prova'); END"))
   await page.getByRole('button', { name: 'Salva osservazione' }).click()
@@ -117,7 +106,7 @@ try {
   // Delays and AI results below are declared UI fixtures; real AI is covered separately.
   await application.evaluate(({ ipcMain }) => {
     globalThis.composerFixture = { pending: [], calls: [] }
-    for (const channel of ['deck:preview-evidence', 'deck:ask-thread', 'deck:propose-thread']) {
+    for (const channel of ['deck:preview-evidence', 'deck:ask-thread']) {
       ipcMain.removeHandler(channel)
       ipcMain.handle(channel, (_event, projectId, threadId, text) => {
         globalThis.composerFixture.calls.push({ channel, projectId, threadId, text })
@@ -129,11 +118,10 @@ try {
     await application.evaluate((_electron, response) => globalThis.composerFixture.pending.shift()(response), result)
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   }
-  for (const change of ['mode', 'text', 'thread']) {
+  for (const change of ['text', 'thread']) {
     await input.fill(`Anteprima ${change}`)
     await page.getByRole('button', { name: 'Vedi dati inviati a Codex' }).click()
     await page.getByRole('button', { name: 'Preparo i dati…' }).waitFor()
-    if (change === 'mode') await propose.check()
     if (change === 'text') await input.fill('Richiesta modificata durante anteprima')
     if (change === 'thread') await switchThread(page, /Piano B/)
     await finish(change === 'thread' ? { ok: false, error: 'Errore tardivo da ignorare' } : packet)
@@ -141,12 +129,9 @@ try {
     assert.equal(await page.locator('.thread-composer').getByRole('alert').count(), 0)
   }
   assert.equal(await input.inputValue(), '')
-  assert.ok(await discuss.isChecked())
   await switchThread(page, /Piano A/)
-  assert.ok(await propose.isChecked(), 'La modalità del thread deve essere conservata durante la navigazione')
-  await discuss.check()
   await input.fill('Richiesta discussione fixture')
-  await page.getByRole('button', { name: 'Chiedi a Codex' }).click()
+  await page.getByRole('button', { name: 'Invia a Codex' }).click()
   await page.getByRole('button', { name: 'Risposta in corso…' }).waitFor()
   await auditLoading(page, workspace, 'thread')
   const before = await page.locator('.activity-elapsed').textContent()
@@ -155,21 +140,18 @@ try {
   await page.getByRole('status').filter({ hasText: 'Codex sta rispondendo…' }).waitFor()
   assert.ok(await page.locator('.activity-elapsed').textContent() >= before, 'Timer non deve ripartire al ritorno')
   assert.ok(await input.isDisabled())
-  assert.ok(await discuss.isDisabled())
-  assert.ok(await propose.isDisabled())
   assert.ok(await page.getByRole('button', { name: 'Salva osservazione' }).isDisabled())
   await finish({ ok: true, value: persisted.value.find(t => t.id === threads[0].id) })
   await page.waitForFunction(() => document.querySelector('#thread-message').value === '')
-  await propose.check()
   await input.fill('Richiesta proposta fixture')
-  await page.getByRole('button', { name: 'Genera proposta Codex' }).click()
-  await page.getByRole('button', { name: 'Proposta in corso…' }).waitFor()
+  await page.getByRole('button', { name: 'Invia a Codex' }).click()
+  await page.getByRole('button', { name: 'Risposta in corso…' }).waitFor()
   await finish({ ok: false, error: 'Proposta non disponibile · errore di prova UI' })
   await page.locator('.thread-composer').getByRole('alert').waitFor()
   assert.equal(await input.inputValue(), 'Richiesta proposta fixture')
   const calls = await application.evaluate(() => globalThis.composerFixture.calls)
   assert.deepEqual(calls.slice(-2).map(({ channel, text }) => [channel, text]), [
-    ['deck:ask-thread', 'Richiesta discussione fixture'], ['deck:propose-thread', 'Richiesta proposta fixture']
+    ['deck:ask-thread', 'Richiesta discussione fixture'], ['deck:ask-thread', 'Richiesta proposta fixture']
   ])
   const errorBox = await page.locator('.thread-composer').getByRole('alert').boundingBox()
   const mainBox = await page.locator('.main-content').boundingBox()
@@ -179,7 +161,7 @@ try {
   await page.waitForFunction(() => document.querySelector('#thread-message').value === '')
   assert.equal((await application.evaluate(() => globalThis.composerFixture.calls)).length, calls.length)
   assert.match(await page.locator('.thread-timeline').innerText(), /Richiesta proposta fixture/)
-  console.log('APP-069 OK: campo unico, modalità/tastiera, osservazioni persistite e rollback, instradamento UI, errori, anteprime tardive e layout 1440/1280/640. Risposte AI simulate, nessuna integrazione AI certificata.')
+  console.log('APP-129 OK: compositore unico, osservazioni persistite e rollback, instradamento UI, errori, anteprime tardive e layout 1440/1280/640. Risposte AI simulate, nessuna integrazione AI certificata.')
   await threadAiPresentationScenarios(page, application, workspace)
 } finally {
   if (application) await application.close()

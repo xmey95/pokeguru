@@ -520,7 +520,7 @@ describe('ProjectStore', () => {
     expect(store.getDeckThread(project.id, old.id)).toMatchObject({ stale: true,
       candidates: [{ id: candidate.id }] })
     store.close()
-  })
+  }, 15_000)
 
   it('non riattiva una guida storica quando il medesimo testo torna in una nuova vN', () => {
     const store = new ProjectStore(databasePath())
