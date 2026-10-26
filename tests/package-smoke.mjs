@@ -44,10 +44,17 @@ try {
     { ok: true, value: { account: null, plan: null, models: [] } },
     'App Server deve avviarsi con un profilo Codex isolato e senza Node/npm esterni')
   assert.equal(page.url(), 'pokeguru://bundle/index.html', 'Il pacchetto deve ignorare l’URL renderer nell’ambiente')
-  assert.deepEqual(await application.evaluate(({ BrowserWindow, Menu }) => {
+  const windowState = await application.evaluate(({ BrowserWindow, Menu }) => {
     const window = BrowserWindow.getAllWindows()[0]
-    return [Menu.getApplicationMenu(), window.isMenuBarVisible(), window.isMaximizable(), window.isMinimizable()]
-  }), [null, false, true, true], 'Il pacchetto conserva il frame senza menu Electron')
+    return [Boolean(Menu.getApplicationMenu()), window.isMenuBarVisible(),
+      window.isMaximizable(), window.isMinimizable()]
+  })
+  if (process.platform === 'darwin') {
+    assert.deepEqual(windowState.slice(2), [true, true], 'La finestra macOS conserva i controlli nativi')
+  } else {
+    assert.deepEqual(windowState, [false, false, true, true],
+      'Il pacchetto conserva il frame senza menu Electron')
+  }
   await application.evaluate(({ BrowserWindow }) => {
     const window = BrowserWindow.getAllWindows()[0]
     window.focus()
@@ -60,15 +67,22 @@ try {
   assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.isDevToolsOpened()), false)
   await application.evaluate(({ BrowserWindow }) => {
     const window = BrowserWindow.getAllWindows()[0]
-    const input = { keyCode: 'I', modifiers: ['control', 'shift'] }
+    const input = process.platform === 'darwin'
+      ? { keyCode: 'I', modifiers: ['meta', 'alt'] }
+      : { keyCode: 'I', modifiers: ['control', 'shift'] }
     window.webContents.sendInputEvent({ type: 'keyDown', ...input })
     window.webContents.sendInputEvent({ type: 'keyUp', ...input })
   })
   await page.waitForTimeout(200)
-  assert.deepEqual(await application.evaluate(({ BrowserWindow }) => {
+  const menuAndTools = await application.evaluate(({ BrowserWindow }) => {
     const window = BrowserWindow.getAllWindows()[0]
     return [window.isMenuBarVisible(), window.webContents.isDevToolsOpened()]
-  }), [false, false], 'Alt non riapre il menu e DevTools resta disabilitato')
+  })
+  if (process.platform === 'darwin') {
+    assert.equal(menuAndTools[1], false, 'DevTools resta disabilitato nel pacchetto macOS')
+  } else {
+    assert.deepEqual(menuAndTools, [false, false], 'Alt non riapre il menu e DevTools resta disabilitato')
+  }
   const documentResponse = page.waitForResponse((response) => response.url() === page.url())
   await page.reload()
   assert.match(await (await documentResponse).headerValue('content-security-policy'), /script-src 'self'/)

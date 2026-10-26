@@ -145,6 +145,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-136** | Piano Matchup a tutta larghezza ed elenchi leggibili | UI/UX | R-10, R-13 / feedback pre-I4 | P1 / S | APP-135 integrato | Done |
 | **APP-137** | Limitare la sincronizzazione Play a 90 giorni e almeno 50 partecipanti | Dati/affidabilità | R-06, R-10 / feedback utente pre-I4 | P1 / S | APP-055/114/120/123; rotazione verificata | Done |
 | **APP-138** | Mostrare il dettaglio completo delle carte nelle liste Eventi in modalità Immagini | UI/UX | R-02, R-06 / feedback utente pre-I4 | P1 / S | APP-124/131; Catalogo locale | Done |
+| **APP-139** | Pacchetti macOS Intel/Apple Silicon e nuova release GitHub | Distribuzione | R-01, R-12 / richiesta utente | P0 / M | APP-025/122, runner macOS e v0.2.0 | In progress |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1282,6 +1283,13 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Verifica prevista:** typecheck/build, test di risoluzione stampa esatta e ambigua, smoke Electron offline su Play e Regional con scheda completa e mancante, controllo di overflow a 640 px. Confrontare eventuali errori dello smoke generale con `dev` prima di attribuirli alla modifica.
 - **Risultato e verifiche locali:** la griglia continua a richiedere solo le anteprime delle righe visibili; l'ID della stampa risolta permette una lettura IPC singola del dettaglio al clic. Play e Regional usano `CardFace`, già impiegato dalla Lista corrente, più rarità, marchio e varianti della stampa. Se l'ID non è univoco o la scheda è assente, compare una spiegazione senza dati inventati; nessuna richiesta esterna al clic. Build/typecheck, test di stampa esatta e ambigua e smoke Electron Eventi completo passati con `POKEGURU_AUTO_SYNC=0` come nella CI: Play/Regional, scorrimento del dettaglio a 640 px, tastiera e storico, aggiornamenti simulati e contrasto minimo 5,16. Il test usa una scheda di gioco fixture, non valida testi acquisiti da TCGdex. Un primo smoke locale con la sincronizzazione giornaliera attiva ha spostato la prima carta sotto la piega a 1280×720; si riproduceva anche su `dev`. Ripetuto nell'ambiente CI previsto, lo smoke completo passa.
 - **Integrazione:** [PR #51](https://github.com/xmey95/pokeguru/pull/51) integrata in `dev` con merge `fa580b9`; quattro check CI Ubuntu/Windows verdi, inclusi pacchetti e smoke dell'app installata. Build locale sul checkout `dev` passata e finestra Pokéguru avviata. `main` e release non modificati.
+
+### APP-139 — Release macOS Intel e Apple Silicon
+
+- **Autorizzazione e ambito:** richiesta esplicita del 26-10-2026 di aggiungere entrambe le architetture Mac e pubblicare una nuova versione in `main`. Ramo isolato `task/app-139-macos-release` da `dev`; versione proposta `0.2.0`, che include le modifiche accumulate dopo v0.1.0.
+- **Accettazione:** DMG separati x64 e arm64, Codex nativo incluso e funzionante senza Node/npm esterni, icona e persistenza; CI e workflow Release su runner nativi di entrambe le architetture, smoke del DMG montato, manifest SHA-256 e attestazioni per tutti e quattro i pacchetti. Merge del task in `dev`, PR `dev`→`main` con check verdi, release v0.2.0 e asset verificati. La mancanza di credenziali Apple di firma/notarizzazione va esplicitata nelle note della release; non presentare il DMG come firmato.
+- **Avanzamento locale:** configurati DMG x64/arm64, staging della variante Codex ufficiale installata da `npm ci`, runner nativi Mac nella CI e nella release, smoke del DMG montato, manifest e attestazioni per quattro piattaforme. Versione `0.2.0` in `package.json` e lockfile. Nessuna credenziale Apple presente nel repository; DMG esplicitamente non firmati né notarizzati.
+- **Verifiche locali Windows:** typecheck e build passati con Node 24; sei test del launcher Codex e test dei quattro manifest passati. Suite completa: 233 passati, 28 live esclusi, con `TEMP`/`TMP` sotto il workspace. Il primo run nel Temp della sandbox aveva due errori di scrittura delle immagini, già osservati in APP-137; ripetuto nel percorso scrivibile passa. YAML CI, Release e builder validati con `js-yaml`; `git diff --check` da ripetere dopo il commit. I DMG richiedono i runner macOS e non sono producibili su questo host Windows.
 
 ## Regola per i blocchi
 
