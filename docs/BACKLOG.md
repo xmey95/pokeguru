@@ -134,6 +134,15 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-126** | Correggere l'export copiato per il formato testuale Pokémon TCG Live | Correzione | R-04 / feedback utente pre-I4 | P0 / M | APP-008/088, mapping TCGdex e fonte del client chiariti | Done |
 | **APP-127** | Manutenzione delle date Standard occidentali e preparazione della prossima rotazione | Dati/affidabilità | R-02, R-06 / manutenzione pre-I4 | P1 / M | APP-018/043/044/049/120/123; fonti ufficiali verificate | Done |
 | **APP-125** | Versionamento strutturato delle liste, ripristino e collegamenti Thread/Matchup | Persistenza/UX | R-03, R-08, R-13 / checkpoint pre-I4 | P1 / M | APP-019/011/026, schema v8 | Done |
+| **APP-128** | Rimuovere l'inserimento manuale delle candidate dal Thread | UI/UX | R-07, R-08 / feedback utente pre-I4 | P1 / S | APP-125, candidate storiche conservate | In progress |
+| **APP-129** | Riunire la conversazione Thread in un percorso unico | UI/UX | R-07, R-08 / feedback utente pre-I4 | P1 / da definire | APP-128; criteri da concordare | Backlog |
+
+### APP-128 — Candidate generate nel Thread
+
+- **Autorizzazione e ambito:** richiesta esplicita dell'utente del 26-10-2026: incollare una candidatura completa nel Thread non ha senso. Ramo isolato `task/app-128-thread-candidates` da `dev`; PR e merge in `dev` autorizzati. Nessuna modifica a `main`, release o profilo personale. APP-129 segue in una conversazione successiva.
+- **Accettazione:** il Thread non offre più il modulo di inserimento manuale; il percorso Codex per proporre una lista resta utilizzabile. Candidate manuali già salvate restano nello storico, nel confronto e nell'adozione con gli stessi controlli. Un Thread collegato da base superata mostra la candidata di partenza in sola lettura e la conserva nel contesto Codex; il testo non diventa automaticamente una nuova candidata. Le fixture dei test possono usare l'API legacy per rappresentare dati storici.
+- **Verifica prevista:** build/typecheck e test pertinenti; smoke Electron con archivio temporaneo per assenza del modulo, candidata storica, confronto/adozione e Thread collegato; CI Ubuntu/Windows della PR verso `dev`. Il percorso Codex reale non è provato da fixture offline.
+- **Risultato e verifiche locali Windows:** rimosso il form con lista e nota manuale, mantenuti i dati storici e la proposta Codex. Il Thread collegato espone lo snapshot di partenza in sola lettura; test esistente conferma che discussione, proposta ed evidenze AI lo ricevono. Node 24: typecheck/build, 223 test passati e 27 live esclusi, `git diff --check` pulito. Smoke Electron con profili temporanei: Thread paralleli e percorso proposta disponibile, storico e ripristino APP-125, confronto/adozione APP-047, richiamo candidata desktop/dock APP-112 e workspace a 1440–640 px passati. Le candidate usate dagli smoke sono fixture salvate tramite API legacy, non proposte Codex reali. Una prima suite nella Temp della sandbox ha fallito due test di scrittura immagini; ripetuta con Temp scrivibile nel worktree è interamente passata. CI e integrazione ancora da verificare.
 
 ### APP-126 — Export Pokémon TCG Live
 

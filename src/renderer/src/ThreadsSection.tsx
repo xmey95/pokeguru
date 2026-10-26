@@ -295,8 +295,6 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const previewRequest = useRef(0)
   const [preview, setPreview] = useState<{ kind: 'ask' | 'proposal'; prompt: string; packet: ThreadEvidencePacket } | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
-  const [candidateDraft, setCandidateText] = useDraftState<string | null>(`thread.candidate:${projectId}:${selectedId}`, null)
-  const [candidateNote, setCandidateNote] = useDraftState(`thread.candidateNote:${projectId}:${selectedId}`, '')
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useBusyState(`thread:${projectId}:${selectedId}`)
   const [asking, setAsking] = useBusyState(`thread.ask:${projectId}:${selectedId}`)
@@ -339,8 +337,6 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const openingAiMessage = selected?.openingAiMessage ?? (selected?.openingAiMessageId
     ? selected.messages.find((entry) => entry.id === selected.openingAiMessageId) : null)
   const openingAiPending = selected?.openingAiPending ?? (!!openingAiMessage && !selected?.messages.some((entry) => entry.author === 'assistant'))
-  const candidateText = candidateDraft ?? selected?.candidates.at(-1)?.rawText ??
-    selected?.seedCandidateText ?? versions.find((item) => item.id === selected?.baseVersionId)?.rawText ?? ''
   useEffect(() => { if (selected) nav.entry.label = `Thread · ${selected.title}` }, [selected?.id])
   const featuredCandidate = selected?.candidates.at(-1) ?? null
   const returnPoint = candidateReturn?.threadId === selectedId && candidateReturn.candidateId === featuredCandidate?.id ? candidateReturn : null
@@ -650,24 +646,6 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     finally { setWorking(false); setAsking(false) }
   }
 
-  async function saveCandidate(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault()
-    if (!selected || working) return
-    setWorking(true)
-    setError(null)
-    try {
-      const result = await window.projectsApi.saveDeckCandidate({
-        projectId, threadId: selected.id, rawText: candidateText, note: candidateNote
-      })
-      if (!result.ok) throw new Error(result.error)
-      showDetail(result.value)
-      await refreshSummaries()
-      setCandidateNote('')
-      invalidatePreview()
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Candidata non salvata.') }
-    finally { setWorking(false) }
-  }
-
   async function propose(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     if (!selected || working || aiBusy || openingAiPending || !selected.baseVersionId || !message.trim()) return
@@ -681,7 +659,6 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
       if (!result.ok) throw new Error(result.error)
       showDetail(result.value)
       await refreshSummaries()
-      setCandidateText(result.value.candidates.at(-1)?.rawText ?? candidateText)
       setMessage('')
       setPreview(null)
     } catch (cause) {
@@ -765,7 +742,9 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
                 ? 'Job Codex annullato.' : 'Il job Codex precedente non è stato completato. Puoi inviare di nuovo la richiesta.'}
                 {currentAiJob.error ? ` ${currentAiJob.error}` : ''}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
-            {selected.parentThreadId && <p className="content-note">Thread collegato a un percorso precedente. La candidata scelta è disponibile nel modulo manuale come testo modificabile; il thread originale resta nello storico.</p>}
+            {selected.parentThreadId && <div className="content-note">Thread collegato a un percorso precedente. La candidata scelta è conservata come contesto per Codex; descrivi nella conversazione le modifiche che vuoi valutare. Il thread originale resta nello storico.
+              {selected.seedCandidateText && <details className="seed-candidate"><summary>Mostra la candidata di partenza</summary><pre>{selected.seedCandidateText}</pre></details>}
+            </div>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
               catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)}
               onReturn={returnPoint ? returnToConversation : undefined} />
@@ -834,15 +813,6 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               {!aiModelsLoading && !aiModelsError && selectedOverride?.model && (!selectedModel || (selectedOverride.reasoningEffort && !selectedModel.reasoningEfforts.some((effort) => effort.id === selectedOverride.reasoningEffort))) && <p className="warning-banner" role="status">Disponibilità della scelta personalizzata da verificare.</p>}
               <button type="button" className="text-button" disabled={working || aiModelsLoading} onClick={() => void refreshAiModels()}>Ricarica modelli</button>
             </div></details>
-            <details className="manual-candidate"><summary>Incolla manualmente una candidata completa</summary><form className="thread-form candidate-form" onSubmit={(event) => void saveCandidate(event)}>
-              <h4>Nuova candidata</h4>
-              <p className="content-note">Incolla l'intera lista. Puoi salvare anche una bozza incompleta.</p>
-              <label htmlFor="candidate-text">Lista completa proposta</label>
-              <textarea id="candidate-text" value={candidateText} onChange={(event) => setCandidateText(event.target.value)} spellCheck={false} />
-              <label htmlFor="candidate-note">Motivo o appunti (facoltativo)</label>
-              <textarea id="candidate-note" value={candidateNote} maxLength={5000} onChange={(event) => setCandidateNote(event.target.value)} />
-              <button className="primary-button" disabled={working || !candidateText.trim()}>Salva candidata nel thread</button>
-            </form></details>
           </> : !creating && <p className="content-note">Crea un thread per esplorare una variante del mazzo.</p>}
         </div>
       </div>

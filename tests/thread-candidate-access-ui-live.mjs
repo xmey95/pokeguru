@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart, openDeckImport, switchThread } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport, seedStoredCandidate, switchThread } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -65,9 +65,7 @@ try {
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
   assert.equal(await page.locator('.candidate-access').count(), 0)
-  await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill('1 Mega Absol ex MEG 86\n58 Basic Psychic Energy\n1 Mega Audino ex ME02.5 172')
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await seedStoredCandidate(page, '1 Mega Absol ex MEG 86\n58 Basic Psychic Energy\n1 Mega Audino ex ME02.5 172')
   await page.locator('.candidate-access').waitFor()
   const threadId = await page.evaluate(async () => {
     const projects = await window.projectsApi.list()
@@ -93,11 +91,11 @@ try {
   await checkAccess(page, 1440)
   await checkAccess(page, 640)
   assert.equal(await page.locator('.thread-candidate').count(), 1, 'Candidata duplicata nella cronologia')
-  if (!(await page.locator('.manual-candidate').getAttribute('open'))) await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill('1 Mega Absol ex MEG 86\n57 Basic Psychic Energy\n2 Mega Audino ex ME02.5 172')
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await seedStoredCandidate(page, '1 Mega Absol ex MEG 86\n57 Basic Psychic Energy\n2 Mega Audino ex ME02.5 172')
   await page.getByText('Candidata 2', { exact: true }).first().waitFor()
-  await page.getByRole('button', { name: /Mostra .* precedenti/ }).click()
+  for (let i = 0; i < 3 && !await page.locator('.thread-candidate:not(.featured)').count(); i++) {
+    await page.getByRole('button', { name: /Mostra .* precedenti/ }).click()
+  }
   await page.locator('.thread-candidate:not(.featured)').waitFor()
   assert.equal(await page.locator('.thread-candidate').count(), 2)
   assert.match(await page.locator('.candidate-access').innerText(), /Candidata 2/)
