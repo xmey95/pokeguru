@@ -3,7 +3,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { GuideText } from '../src/renderer/src/GuideText'
 import { catalogCardTargets, externalGuideTarget, guideSegments, reportGuideReferences, type GuideReference } from '../src/renderer/src/guide-links'
-import { guideBlocks } from '../src/renderer/src/guide-markdown'
+import { guideBlocks, guideListBlocks } from '../src/renderer/src/guide-markdown'
 import type { MatchupReport } from '../src/shared/meta-matchups'
 import type { CatalogView } from '../src/shared/catalog'
 
@@ -13,6 +13,25 @@ const cardTargets = catalogCardTargets({ prints: [{ id: 'sv01-086', sourceUrl: u
 const reference: GuideReference = { label: 'Gardevoir ex', target: { kind: 'catalog', identityId: 'pokemon:1' } }
 
 describe('guide references', () => {
+  it('shows saved prose as list items without changing names, numbers, emphasis or references', () => {
+    const items = ['Mr. Mime: prima linea con 2.5 risorse, dato di prova.',
+      `**Gardevoir ex**: consulta [la scheda](${url}).`,
+      'Fonte https://limitlesstcg.com/decks/list/12345.']
+    const source = items.join(' ')
+    expect(guideListBlocks(source)).toEqual([{ kind: 'unordered', items }])
+    const html = renderToStaticMarkup(createElement(GuideText, { text: source, list: true,
+      references: [reference], cardTargets, onOpenCatalogCard: () => undefined }))
+    expect(html.match(/<li>/g)).toHaveLength(3)
+    expect(html).toContain('Mr. Mime')
+    expect(html).toContain('<strong>')
+    expect(html.match(/href="#catalog-card-pokemon%3A1"/g)).toHaveLength(2)
+    expect(html).toContain('href="https://limitlesstcg.com/decks/list/12345"')
+  })
+  it('preserves existing lists, connected sentences and headings in list sections', () => {
+    const source = '## Risorse\n- Ricerca iniziale. Conserva una carta per dopo.\n- Secondo attaccante.\n\n1. Osserva.\n2. Decidi.'
+    expect(guideListBlocks(source)).toEqual(guideBlocks(source))
+    expect(guideListBlocks('Non determinabile.')).toEqual([{ kind: 'unordered', items: ['Non determinabile.'] }])
+  })
   it('uses existing supported source routes and rejects executable or misleading URLs', () => {
     expect(externalGuideTarget(url)).toBeUndefined()
     expect(externalGuideTarget('https://limitlesstcg.com/decks?format=standard')?.kind).toBe('limitless')

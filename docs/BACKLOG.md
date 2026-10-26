@@ -142,6 +142,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-132** | Riordinare il fondo della Lista: storico, testo e regole | UI/UX | R-02, R-03, R-08 / feedback utente 26-10-2026 | P1 / S | APP-125, APP-130/131 integrati | Done |
 | **APP-134** | Studio UI e rifinitura mirata dei Matchup | Design/prototipo | R-03, R-08, R-10, R-13 / scelta pre-I4 | P1 / M | Feedback utente del 26-10-2026 | Done |
 | **APP-135** | Applicare fasi Matchup e rifinitura di testi, stati e dettagli | UI/qualità | R-03, R-07, R-08, R-10, R-11, R-13 / rifinitura pre-I4 | P1 / M | Direzione APP-134 e obiettivo attivo richiesto dall'utente | Done |
+| **APP-136** | Piano Matchup a tutta larghezza ed elenchi leggibili | UI/UX | R-10, R-13 / feedback pre-I4 | P1 / S | APP-135 integrato | Done |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1269,3 +1270,9 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 
 Quando un task entra in `Blocked`, aggiungere sotto il task: causa osservata, effetto sul risultato, azione o persona necessaria per sbloccare e verifiche ancora possibili. Non usare `Blocked` per semplice difficoltà. APP-018, APP-024 e APP-025 sono chiusi dopo C-16/C-17 e la prima release. APP-023 conserva verifiche residue annotate. Le questioni Q-03/Q-04 e i rischi sono tracciati in `PRODUCT.md` e `DECISIONS.md`.
 
+### APP-136 — Piano Matchup a tutta larghezza ed elenchi leggibili
+
+- **Ready e autorizzazione:** feedback con screenshot del 26-10-2026; dipendenza APP-135 completata. Rimuovere il limite di larghezza del piano e presentare punti forti, rischi/debolezze e carte chiave come elenchi, nelle guide correnti e storiche.
+- **Accettazione:** il piano occupa la larghezza del pannello; le quattro sezioni usano elenchi semantici anche per i vecchi paragrafi continui; contenuti, ordine, link e dati salvati restano integri. Generazione e revisione ricevono istruzioni di formato coerenti. Prova con testi lunghi a 1920/1440/1280/640 px, link locali ed esterni e tab.
+- **Avvio:** ramo `task/app-136-matchup-readability` da `dev` ac8763e. Verifiche previste: build/typecheck, test mirati sui confini del testo e smoke Electron con profilo temporaneo. Nessuna migrazione dell'archivio o nuova analisi necessaria per leggere gli elenchi esistenti.
+- **Risultato e verifiche:** rimosso il limite 88ch del piano; quattro sezioni a elenco con spazio fra le voci, anche nello storico. Fallback sulle frasi dei vecchi paragrafi con testo e riferimenti preservati; liste Markdown già presenti mantenute. Build/typecheck e 11 test mirati passati; smoke Electron fasi/recupero e link passati su Windows con profili temporanei, geometria 1920/1440/1280/640 px e screenshot ispezionati. Payload salvati identici dopo la lettura; link locali/storici ed esterni verificati con shell intercettata. Nessuna nuova generazione Codex: modificata solo la richiesta di formato nei prompt. Consegna tramite PR verso dev dopo i check CI, quindi pulizia del ramo.

@@ -593,7 +593,7 @@ details[open] > summary { margin-bottom: 8px; }
 .matchup-fields p { margin: 0; line-height: 1.55; overflow-wrap: anywhere; }
 .matchup-fields > .strategy-field { grid-column: 1 / -1; }
 .matchup-fields .strategy-field h3 { color: var(--ink); font-size: var(--text-md); }
-.matchup-fields .strategy-field p { max-width: 88ch; font-size: 15px; }
+.matchup-fields .strategy-field p { font-size: 15px; }
 .matchup-phase-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
 .matchup-phase-tabs [role=tab] { flex: 1; padding: 10px 8px; background: transparent; color: var(--ink-secondary); border: 0; border-bottom: 2px solid transparent; border-radius: 0; }
 .matchup-phase-tabs [aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 650; }
@@ -611,6 +611,7 @@ details[open] > summary { margin-bottom: 8px; }
 .guide-body h4 { margin: 12px 0 4px; color: var(--ink); font-size: var(--text-sm); }
 .guide-body ul, .guide-body ol { margin: 5px 0 10px; padding-left: 22px; line-height: 1.5; }
 .guide-body li + li { margin-top: 4px; }
+.guide-list li + li { margin-top: 10px; }
 .guide-inline { overflow-wrap: anywhere; }
 .guide-link { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; border-radius: 2px; }
 .guide-link:hover { text-decoration-thickness: 2px; }
