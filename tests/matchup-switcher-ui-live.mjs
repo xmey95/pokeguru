@@ -111,6 +111,11 @@ function seed() {
         }
       }
       if (phases && opponent.id === opponents[0].id) {
+        report.strategy += ' Prepara un secondo attaccante e conserva una carta di ricerca per ricostruire la linea evolutiva. Prima di scegliere il bersaglio, controlla le risorse e i Premi rimasti. Se la mano non permette il piano principale, valuta una linea alternativa senza consumare tutti i recuperi. La scelta dipende dalle carte effettivamente osservate: questa è una fixture di lettura, non una raccomandazione competitiva. Mantieni disponibile una risposta per il turno seguente e rivaluta il piano quando cambia la situazione sul campo.'
+        report.strengths = 'Preparare due attaccanti. Conservare un recupero per ricostruire la linea.'
+        report.weaknesses = 'Partenza dipendente dalla ricerca. La perdita del primo attaccante può rallentare il piano.'
+        report.ourKeyCards = 'Mega Absol ex: prima linea. Mega Audino ex: secondo attaccante. Night Stretcher: recupero.'
+        report.theirKeyCards = 'Gardevoir ex: attaccante. Ralts: preparazione della linea evolutiva.'
         report.strategyPhases = { opening: report.strategy, development: 'Sviluppo di prova: conserva una risorsa per il turno successivo.', closing: 'Chiusura di prova: valuta gli ultimi Premi.' }
         report.promptAudit = { text: 'Prompt di prova APP-135', sha256: hash('Prompt di prova APP-135'), utf8Bytes: 24, durationMs: 1000, usage: null }
       }

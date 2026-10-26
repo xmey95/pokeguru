@@ -43,7 +43,7 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
   const latest = pending ?? optimistic ?? discussion.turns.at(-1)
   const previous = discussion.turns.filter((turn) => turn.id !== latest?.id)
   const latestIndex = optimistic ? discussion.turns.length : discussion.turns.findIndex((turn) => turn.id === latest?.id)
-  const text = (value: string, turn: MatchupTurn) => <GuideText key={`${turn.id}:${value}`} text={value}
+  const text = (value: string, turn: MatchupTurn, list = false) => <GuideText key={`${turn.id}:${value}`} text={value} list={list}
     references={turn.report ? reportGuideReferences(turn.report, cardTargets) : []} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
   const exchange = (turn: MatchupTurn) => <>
     {turn.feedback && <div className="discussion-observation"><h4>Tu</h4><p>{turn.feedback}</p></div>}
@@ -97,10 +97,10 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
             <div className="discussion-version-body">
               <h4>Piano di gioco</h4><MatchupPlan scope={`history-${turn.id}`} report={turn.report} renderText={(value) => text(value, turn)} />
               <div className="discussion-version-limits"><h4>Limiti dell’analisi</h4>{text(turn.report.limitations, turn)}<AiEvidenceLimit trace={turn.report.aiQueries} /></div>
-              <h4>Le nostre carte chiave</h4>{text(turn.report.ourKeyCards, turn)}
-              <h4>Le loro carte chiave</h4>{text(turn.report.theirKeyCards, turn)}
-              <h4>Punti forti</h4>{text(turn.report.strengths, turn)}
-              <h4>Debolezze</h4>{text(turn.report.weaknesses, turn)}
+              <h4>Le nostre carte chiave</h4>{text(turn.report.ourKeyCards, turn, true)}
+              <h4>Le loro carte chiave</h4>{text(turn.report.theirKeyCards, turn, true)}
+              <h4>Punti forti</h4>{text(turn.report.strengths, turn, true)}
+              <h4>Debolezze</h4>{text(turn.report.weaknesses, turn, true)}
               <details className="discussion-version-sources"><summary>Fonti e dettagli</summary>
                 {turn.report.sampleDeckUrl && text(`[Lista avversaria](${turn.report.sampleDeckUrl})`, turn)}
                 {turn.report.metaSourceUrl && text(`[Metagame](${turn.report.metaSourceUrl})`, turn)}

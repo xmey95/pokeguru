@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { guideSegments, type GuideReference, type GuideTarget } from './guide-links'
-import { guideBlocks } from './guide-markdown'
+import { guideBlocks, guideListBlocks } from './guide-markdown'
 
-export function GuideText({ text, references = [], cardTargets = new Map(), onOpenCatalogCard, inline = false }: {
+export function GuideText({ text, references = [], cardTargets = new Map(), onOpenCatalogCard, inline = false, list = false }: {
   text: string
   references?: GuideReference[]
   cardTargets?: ReadonlyMap<string, string>
   onOpenCatalogCard: (identityId: string) => void
   inline?: boolean
+  list?: boolean
 }) {
   const [error, setError] = useState<string | null>(null)
   async function open(target: GuideTarget) {
@@ -30,8 +31,8 @@ export function GuideText({ text, references = [], cardTargets = new Map(), onOp
     return strong ? <strong key={partIndex}>{nodes}</strong> : <span key={partIndex}>{nodes}</span>
   })
   if (inline) return <span className="guide-inline">{content(text)}{error && <span className="guide-link-error" role="alert">{error}</span>}</span>
-  return <div className="guide-body">
-    {guideBlocks(text).map((block, index) => block.kind === 'heading'
+  return <div className={`guide-body${list ? ' guide-list' : ''}`}>
+    {(list ? guideListBlocks(text) : guideBlocks(text)).map((block, index) => block.kind === 'heading'
       ? <h4 key={index}>{content(block.text)}</h4>
       : block.kind === 'paragraph' ? <p key={index}>{content(block.text)}</p>
         : block.kind === 'unordered' ? <ul key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{content(item)}</li>)}</ul>

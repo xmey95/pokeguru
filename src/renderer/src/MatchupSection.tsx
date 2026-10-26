@@ -349,6 +349,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     ...ourCatalogCards.map((card): GuideReference => ({ label: card.name, target: { kind: 'catalog', identityId: card.identityId! } }))
   ] : []
   const body = (text: string, references = guideReferences) => <GuideText key={`${selectedId}:${report?.metaId}:${report?.deckHash}:${report?.generatedAt}:${text}`} text={text} references={references} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
+  const list = (text: string) => <GuideText key={`${selectedId}:${report?.metaId}:${report?.deckHash}:${report?.generatedAt}:${text}`} text={text} list references={guideReferences} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
   const preview = (action: MatchupAction) => selected && snapshot && baseline ? <MatchupDataPreview
     action={action} total={baseline.interpretedTotal} deckContext={deckContext} opponent={selected} snapshot={snapshot}
     report={report} currentEvidence={previewEvidence} evidenceLoading={evidenceLoading} evidenceError={evidenceError}
@@ -404,10 +405,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
             {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p> : report ? <>
               <div className="matchup-fields" aria-label="Guida tattica">
                 <section className="strategy-field"><h3>Piano di gioco</h3><MatchupPlan key={`${report.projectId}:${report.opponentId}:${report.metaId}:${report.deckVersionId ?? report.deckHash}:${report.generatedAt}`} report={report} renderText={body} /></section>
-                <section><h3>Punti forti</h3>{body(report.strengths)}</section>
-                <section><h3>Rischi e punti deboli</h3>{body(report.weaknesses)}</section>
-                <section><h3>Le nostre carte chiave</h3>{body(report.ourKeyCards)}</section>
-                <section><h3>Le loro carte chiave</h3>{body(report.theirKeyCards)}</section>
+                <section><h3>Punti forti</h3>{list(report.strengths)}</section>
+                <section><h3>Rischi e punti deboli</h3>{list(report.weaknesses)}</section>
+                <section><h3>Le nostre carte chiave</h3>{list(report.ourKeyCards)}</section>
+                <section><h3>Le loro carte chiave</h3>{list(report.theirKeyCards)}</section>
                 <section className="matchup-trust"><h3>Incertezze e limiti</h3>{body(report.limitations)}<AiEvidenceLimit trace={report.aiQueries} /></section>
               </div>
               <details className="guide-sources"><summary>Fonti e dettagli</summary>

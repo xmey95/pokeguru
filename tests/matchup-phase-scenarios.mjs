@@ -11,6 +11,14 @@ export async function phaseScenarios(page, application, workspace, profile) {
   const turnCount = () => db.prepare('SELECT count(*) AS n FROM matchup_turns').get().n
   const before = turnCount()
   try {
+    const saved = db.prepare("SELECT payload FROM matchup_reports WHERE opponent_id = '900000'").get().payload
+    const fields = ['strengths', 'weaknesses', 'ourKeyCards', 'theirKeyCards']
+    const lists = page.locator('.matchup-fields .guide-list')
+    assert.equal(await lists.count(), 4)
+    for (const [index, field] of fields.entries()) {
+      assert.ok(await lists.nth(index).getByRole('listitem').count() >= 2)
+      assert.equal((await lists.nth(index).getByRole('listitem').allTextContents()).join(' '), JSON.parse(saved)[field])
+    }
     await input.fill('Bozza conservata fra le fasi.')
     const opening = plan.getByRole('tab', { name: 'Apertura', exact: true })
     await opening.press('ArrowRight')
@@ -46,8 +54,10 @@ export async function phaseScenarios(page, application, workspace, profile) {
     await historical.locator(':scope > summary').click()
     assert.equal(await historical.getByRole('tab').count(), 0)
     assert.match(await historical.locator('.legacy-plan').innerText(), /Piano di prova contro Gardevoir ex/)
+    assert.equal(await historical.locator('.guide-list').count(), 4)
+    assert.equal(await historical.locator('.guide-list').first().getByRole('listitem').count(), 3)
     await page.locator('.discussion-history > summary').click()
-    for (const [width, height] of [[1440, 900], [640, 720], [640, 580]]) {
+    for (const [width, height] of [[1920, 1080], [1440, 900], [1280, 720], [640, 720], [640, 580]]) {
       await page.setViewportSize({ width, height })
       await plan.evaluate((el) => {
         const main = document.querySelector('.main-content')
@@ -62,8 +72,13 @@ export async function phaseScenarios(page, application, workspace, profile) {
           separated: innerWidth > 1240 ? bounds.right <= deck.left : bounds.bottom <= deck.top }
       })
       assert.deepEqual(geometry, { overflow: false, separated: true })
+      const paragraph = await plan.getByRole('tabpanel').locator('p').boundingBox()
+      const panel = await plan.getByRole('tabpanel').boundingBox()
+      assert.ok(Math.abs(paragraph.width - panel.width) < 1, 'Il testo lascia spazio inutilizzato a destra')
       await page.screenshot({ path: join(workspace, 'node_modules', `matchup-phases-${width}-${height}.png`) })
     }
+    assert.equal(db.prepare("SELECT payload FROM matchup_reports WHERE opponent_id = '900000'").get().payload, saved,
+      'La presentazione a elenco ha modificato il report salvato')
     const row = db.prepare("SELECT payload FROM matchup_reports WHERE opponent_id = '900000'").get()
     const previous = JSON.parse(row.payload)
     const jobId = randomUUID()
@@ -85,6 +100,6 @@ export async function phaseScenarios(page, application, workspace, profile) {
     assert.equal(JSON.parse(db.prepare("SELECT payload FROM matchup_reports WHERE opponent_id = '900000'").get().payload)
       .strategyPhases.closing, report.strategyPhases.closing)
     await input.fill('')
-    console.log('MATCHUP PHASES OK: tastiera, focus, pannello unico, bozza, storico integrale, diagnostica, recupero persistito senza AI, 1440/640 px')
+    console.log('MATCHUP PHASES OK: tastiera, focus, pannello unico, bozza, storico, elenchi senza riscrittura, piano a tutta larghezza, diagnostica, recupero persistito senza AI, 1920/1440/1280/640 px')
   } finally { db.close() }
 }
