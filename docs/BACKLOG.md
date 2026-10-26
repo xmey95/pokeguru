@@ -141,7 +141,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-131** | Migliorare gerarchia, leggibilità e grafica del dettaglio carta nella Lista | UI/UX | R-02, R-03, R-05 / checkpoint pre-I4 | P1 / S | APP-064/124/130 | Done |
 | **APP-132** | Riordinare il fondo della Lista: storico, testo e regole | UI/UX | R-02, R-03, R-08 / feedback utente 26-10-2026 | P1 / S | APP-125, APP-130/131 integrati | Done |
 | **APP-134** | Studio UI e rifinitura mirata dei Matchup | Design/prototipo | R-03, R-08, R-10, R-13 / scelta pre-I4 | P1 / M | Feedback utente del 26-10-2026 | Done |
-| **APP-135** | Applicare fasi Matchup e rifinitura di testi, stati e dettagli | UI/qualità | R-03, R-07, R-08, R-10, R-11, R-13 / rifinitura pre-I4 | P1 / M | Direzione APP-134 e obiettivo attivo richiesto dall'utente | In progress |
+| **APP-135** | Applicare fasi Matchup e rifinitura di testi, stati e dettagli | UI/qualità | R-03, R-07, R-08, R-10, R-11, R-13 / rifinitura pre-I4 | P1 / M | Direzione APP-134 e obiettivo attivo richiesto dall'utente | Done |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1262,7 +1262,8 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 
 - **Risultato locale:** fasi validate e persistite per nuove guide, revisioni e recupero; storico integro; tab con frecce/Home/End e stato della singola guida. Fonti e dettagli / Diagnostica AI in guida, cronologia e risposte Thread; versione leggibile, stati e testi rivisti senza cambiamenti dei percorsi o dell’adozione.
 - **Verifiche Windows (26-10-2026):** build/typecheck e 226 test locali passati, 28 live esclusi dalla suite ordinaria. Una generazione e una revisione con Codex autenticato passano il nuovo contratto su contesto sintetico dichiarato: non è una prova competitiva o di acquisizione delle fonti. Prove Electron con archivio temporaneo: tab/focus/bozze, storico senza fasi, recupero persistito reale di un risultato fixture, navigazione, guida precedente durante attesa/errore/retry, impostazioni AI, adozione, tastiera Thread e workspace a 1440/1280/640 px (anche 640×580), senza overflow o sovrapposizioni. Screenshot del renderer ispezionati. Un primo run nel sandbox ha incontrato EPERM nei file temporanei dei test immagini; il run con accesso al profilo temporaneo passa integralmente.
-- **Ripresa:** preparare la PR verso dev, verificare CI Linux/Windows sul commit finale e completare merge/pulizia autorizzati. Studi APP-134 da conservare nella storia Git prima di eliminare il relativo ramo.
+- **CI e consegna:** la [PR #48](https://github.com/xmey95/pokeguru/pull/48) porta APP-134/135 in `dev`. Sul commit applicativo `94c276d` i quattro check Verify sono verdi nei run [push](https://github.com/xmey95/pokeguru/actions/runs/40334278634) e [PR](https://github.com/xmey95/pokeguru/actions/runs/40334381754), Ubuntu/Windows, inclusi smoke delle nuove fasi e recupero, pacchetti e avvio installato. Il commit conclusivo aggiorna solo documentazione; il merge è subordinato ai suoi check. Anche gli smoke locali Thread/riapertura e Catalogo sono passati; uno smoke ancora riferito al selettore pre-APP-129 è stato riallineato al compositore unico.
+- **Chiusura:** implementazione e verifiche concluse. Gli studi APP-134 sono conservati nella storia del ramo e i relativi artefatti sono inclusi. La consegna autorizzata comprende merge della PR #48, aggiornamento del checkout `dev`, eliminazione dei rami task APP-134/135 e dei relativi worktree, con stato Git pulito; operazioni da eseguire dopo i check finali, senza sviluppo ulteriore né release. Il prossimo incremento richiede una nuova richiesta dell’utente.
 
 ## Regola per i blocchi
 
