@@ -64,7 +64,7 @@ APP-067 riunisce i **Thread** in un selettore con ricerca, titolo e stato, accan
 
 APP-068 mostra la candidata corrente in un **riepilogo compatto**, con stato, copie cambiate e controlli essenziali. **Apri confronto** espande liste, differenze, fonti e adozione manuale; Escape o **Chiudi confronto** riportano al riepilogo. Il titolo del thread compare nel solo selettore e la conversazione precede i dettagli AI.
 
-APP-069 ha introdotto un campo unico; APP-129 lo usa per ogni richiesta, senza scegliere una modalità prima di scrivere. **Salva osservazione** registra il testo senza chiamare Codex; l'anteprima dei dati è unica. Errori contestuali conservano la richiesta e le anteprime tardive vengono ignorate dopo un cambio di contesto.
+APP-069 ha introdotto un campo unico; APP-129 lo usa per ogni richiesta, senza scegliere una modalità prima di scrivere. Nel compositore della conversazione, **Enter** invia a Codex e **Shift+Enter** inserisce una nuova riga. **Salva osservazione** registra il testo senza chiamare Codex; l'anteprima dei dati è unica. Errori contestuali conservano la richiesta e le anteprime tardive vengono ignorate dopo un cambio di contesto.
 
 APP-109 avvia Codex già con il **primo messaggio** inserito in **Nuovo thread**. Il messaggio è salvato prima dell'invio e resta nel Thread se Codex fallisce: **Riprova primo messaggio** lo riusa senza duplicarlo. La risposta conserva la sessione Codex e le evidenze locali usate. **Salva nota senza AI** crea invece il Thread senza chiamare Codex.
 
