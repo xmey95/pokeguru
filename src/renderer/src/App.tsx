@@ -405,11 +405,8 @@ export function App() {
               {!baselineLoading && <DeckConstraintIndex />}
               {baselineLoading ? <LoadingSkeleton label="Caricamento lista…" /> : baseline ? (
                 <div className="baseline-panel" data-testid="baseline-panel">
-                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} importOpen={importOpen} />
-                  <details className="project-meta-details"><summary>Origine della lista</summary><p className="content-note">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</p></details>
-                  {importProblems.length === 0 && baseline.diagnostics.length > 0 && <details className="project-meta-details"><summary>Note sul testo importato</summary><ul>{baseline.diagnostics.map((item, index) => <li key={index}>{item.message}</li>)}</ul></details>}
-                  <details className="original-text"><summary>Mostra testo originale e tutte le righe</summary><pre>{baseline.rawText}</pre></details>
-                  <DeckHistory projectId={selected.id} versions={deckVersions} onOpenChange={setHistoryOpen}
+                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} importOpen={importOpen} footer={<>
+                    <DeckHistory projectId={selected.id} versions={deckVersions} onOpenChange={setHistoryOpen}
                     onAnnotated={(version) => {
                       if (selectionVersion.current === activeSelectionVersion) setDeckVersions((items) =>
                         items.map((item) => item.id === version.id ? version : item))
@@ -428,6 +425,14 @@ export function App() {
                         if (result.ok && selectionVersion.current === restoreSelectionVersion) setDeckVersions(result.value)
                       })
                     }} />
+                    <details className="deck-import-details deck-reference-item">
+                      <summary><span className="deck-reference-label">Importazione e testo originale</span><span className="deck-reference-description">{baseline.source === 'file' ? `File: ${baseline.fileName}` : 'Testo incollato'} · {formatDate(baseline.importedAt)}</span></summary>
+                      <div className="deck-reference-content">
+                        {importProblems.length === 0 && baseline.diagnostics.length > 0 && <div className="deck-import-notes"><strong>Note sul testo importato</strong><ul>{baseline.diagnostics.map((item, index) => <li key={index}>{item.message}</li>)}</ul></div>}
+                        <div className="original-text"><strong>Testo originale · tutte le righe</strong><pre>{baseline.rawText}</pre></div>
+                      </div>
+                    </details>
+                  </>} />
                 </div>
               ) : null}
               </DeckConstraintsProvider> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainContextKey={baseline ? `${baseline.versionId}:${baseline.resolutionId}` : null}
