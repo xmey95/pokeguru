@@ -147,6 +147,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-138** | Mostrare il dettaglio completo delle carte nelle liste Eventi in modalità Immagini | UI/UX | R-02, R-06 / feedback utente pre-I4 | P1 / S | APP-124/131; Catalogo locale | Done |
 | **APP-139** | Pacchetti macOS Intel/Apple Silicon e nuova release GitHub | Distribuzione | R-01, R-12 / richiesta utente | P0 / M | APP-025/122, runner macOS e v0.2.0 | Done |
 | **APP-140** | Vincoli solo nella Lista del progetto e proposta concreta nel Thread | UI/AI | R-05, R-07, R-08 / feedback utente | P1 / M | APP-129/130 integrati; validatore candidato esistente | Done |
+| **APP-141** | Pubblicare v0.2.1 da `dev` in `main` | Distribuzione | R-01, R-12 / richiesta utente | P0 / S | APP-140 in `dev`, workflow Release v0.2.0 | In progress |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1304,6 +1305,12 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Risultato locale:** il Catalogo non monta più il contesto dei vincoli, né espone `canConstrain` o l'editor nel dettaglio. Il form dei vincoli richiede l'identità della carta aperta nella Lista; le carte storiche fuori lista consentono modifica ed eliminazione ma non nuovi vincoli. Il prompt del Thread interpreta richieste colloquiali di cambio o miglioramento come candidate nello stesso turno se esistono dati sufficienti; il planner cerca stampe pertinenti nel Catalogo locale. Risposte esplorative e casi non verificabili restano `thought`; validazione delle 60 carte e adozione esplicita non cambiano.
 - **Verifiche locali:** Node 24: build/typecheck e 233 test passati (28 live esclusi). Smoke Electron Catalogo a 1440/1280/640 px: nessun vincolo con progetto selezionato, dettaglio carte preservato. Smoke Lista: creazione, contatori, conflitti, errori di persistenza, modifica/eliminazione, isolamento fra progetti e vincoli storici fuori lista passati. Prova Codex autenticata con planner di query locale: due messaggi naturali, uno con sostituzione nominata e uno con obiettivo più generale, hanno generato due candidate distinte e complete da 60 carte in sessioni separate; la lista principale è rimasta invariata. La seconda prova senza planner aveva restituito `thought` perché la carta non era presente nel contesto iniziale: il planner è parte necessaria del percorso reale. I dati delle carte nella prova sono fixture strutturali; non dimostrano qualità competitiva del suggerimento.
 - **Integrazione:** [PR #59](https://github.com/xmey95/pokeguru/pull/59) integrata in `dev` come `9f71338` dopo i quattro check verdi su Ubuntu, Windows, Mac Intel e Apple Silicon nel [run CI 40388261527](https://github.com/xmey95/pokeguru/actions/runs/40388261527), compresi package e smoke delle piattaforme. Il checkout locale `dev` è stato aggiornato, compilato e Pokéguru è stata aperta con la finestra visibile per la prova utente. `main` e la release v0.2.0 restano invariati.
+
+### APP-141 — Pubblicazione v0.2.1
+
+- **Autorizzazione e ambito:** richiesta esplicita dell'utente del 26-10-2026 di pubblicare una nuova versione in `main`. La release include quanto già integrato in `dev`, in particolare APP-140, senza aprire I4. Versione `0.2.1` in `package.json` e lockfile. Il ramo isolato `task/app-141-release-0-2-1` incorpora l'ascendenza dell'attuale `main` per soddisfare la protezione strict.
+- **Accettazione:** build e test locali pertinenti, quattro check CI verdi nella PR verso `dev` e nella PR `dev` → `main`, workflow Release riuscito su Linux, Windows e Mac Intel/Apple Silicon, tag pubblico `v0.2.1` sul nuovo commit di `main`, quattro pacchetti, quattro manifest di provenienza e checksum scaricabili. I DMG restano esplicitamente senza firma e notarizzazione Apple.
+- **Stato:** In progress. Le verifiche e gli URL saranno registrati dopo l'esecuzione; non è ancora stata pubblicata alcuna nuova release.
 
 ## Regola per i blocchi
 
