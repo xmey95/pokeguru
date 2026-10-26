@@ -147,7 +147,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-138** | Mostrare il dettaglio completo delle carte nelle liste Eventi in modalità Immagini | UI/UX | R-02, R-06 / feedback utente pre-I4 | P1 / S | APP-124/131; Catalogo locale | Done |
 | **APP-139** | Pacchetti macOS Intel/Apple Silicon e nuova release GitHub | Distribuzione | R-01, R-12 / richiesta utente | P0 / M | APP-025/122, runner macOS e v0.2.0 | Done |
 | **APP-140** | Vincoli solo nella Lista del progetto e proposta concreta nel Thread | UI/AI | R-05, R-07, R-08 / feedback utente | P1 / M | APP-129/130 integrati; validatore candidato esistente | Done |
-| **APP-141** | Pubblicare v0.2.1 da `dev` in `main` | Distribuzione | R-01, R-12 / richiesta utente | P0 / S | APP-140 in `dev`, workflow Release v0.2.0 | In progress |
+| **APP-141** | Pubblicare v0.2.1 da `dev` in `main` | Distribuzione | R-01, R-12 / richiesta utente | P0 / S | APP-140 in `dev`, workflow Release v0.2.0 | Done |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1310,7 +1310,8 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 
 - **Autorizzazione e ambito:** richiesta esplicita dell'utente del 26-10-2026 di pubblicare una nuova versione in `main`. La release include quanto già integrato in `dev`, in particolare APP-140, senza aprire I4. Versione `0.2.1` in `package.json` e lockfile. Il ramo isolato `task/app-141-release-0-2-1` incorpora l'ascendenza dell'attuale `main` per soddisfare la protezione strict.
 - **Accettazione:** build e test locali pertinenti, quattro check CI verdi nella PR verso `dev` e nella PR `dev` → `main`, workflow Release riuscito su Linux, Windows e Mac Intel/Apple Silicon, tag pubblico `v0.2.1` sul nuovo commit di `main`, quattro pacchetti, quattro manifest di provenienza e checksum scaricabili. I DMG restano esplicitamente senza firma e notarizzazione Apple.
-- **Stato:** In progress. Le verifiche e gli URL saranno registrati dopo l'esecuzione; non è ancora stata pubblicata alcuna nuova release.
+- **Verifiche e integrazione:** Node 24, build/typecheck e 233 test locali passati (28 live esclusi), `git diff --check` passato. La [PR #61](https://github.com/xmey95/pokeguru/pull/61) ha integrato la preparazione in `dev` (`6913b53`) dopo quattro check CI verdi nel [run 40393733106](https://github.com/xmey95/pokeguru/actions/runs/40393733106). La [PR #62](https://github.com/xmey95/pokeguru/pull/62) ha integrato `dev` in `main` (`aab8d6f`) dopo quattro check verdi nel [run 40395187992](https://github.com/xmey95/pokeguru/actions/runs/40395187992).
+- **Risultato:** il [workflow Release 40396595362](https://github.com/xmey95/pokeguru/actions/runs/40396595362) è riuscito con package e smoke Linux, Windows, macOS Intel e Apple Silicon, attestazione e pubblicazione. La [release v0.2.1](https://github.com/xmey95/pokeguru/releases/tag/v0.2.1) è pubblica, non draft né prerelease. Il tag punta a `aab8d6f3f7199b8f996cede54acea4718b3cb34a` e sono presenti quattro pacchetti, quattro file di provenienza e `SHA256SUMS.txt`. I DMG sono senza firma e notarizzazione Apple; non è stata eseguita un'installazione su Mac dell'utente, soltanto lo smoke nativo in CI.
 
 ## Regola per i blocchi
 
