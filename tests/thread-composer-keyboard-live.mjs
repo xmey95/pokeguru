@@ -79,8 +79,10 @@ try {
   await page.waitForFunction(() => document.querySelector('#thread-message')?.disabled)
   await resolveCall({ ok: false, error: 'Errore di prova' })
   await page.locator('.thread-composer').getByRole('alert').waitFor()
+  await page.waitForFunction(() => document.activeElement?.classList.contains('error-banner'))
   assert.equal(await input.inputValue(), 'Errore da tastiera', 'Il testo resta disponibile dopo un errore')
   assert.equal((await calls()).length, 2)
+
   console.log('APP-133 OK: Enter, Shift+Enter, IME, vuoto, job pendente, focus e errore verificati in Electron con profilo temporaneo.')
 } finally {
   if (application) await application.close()

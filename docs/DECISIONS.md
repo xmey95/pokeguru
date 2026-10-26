@@ -358,6 +358,10 @@ Il compositore invia ogni richiesta allo stesso endpoint. Codex restituisce il t
 
 Le versioni sono l'azione consultiva più utile nel lavoro iterativo: confronto, annotazione e ripristino restano nello storico. L'origine e il testo letterale dell'import sono un'unica sezione, con le note non bloccanti accanto al testo; i problemi dell'import restano invece visibili sopra le carte. Le regole di rotazione, ammissione e costruzione restano accessibili come approfondimento unico; l'esito Standard, i problemi certi, la copertura e le fonti essenziali rimangono nell'intestazione della Lista. Le tre disclosure native mantengono Tab, Invio e Spazio e non cambiano dati né verdetti.
 
+### T-133 — Tastiera del compositore Thread (APP-133)
+
+Nel campo della conversazione, Enter usa la stessa azione del pulsante Invia e Shift+Enter inserisce una nuova riga. La scorciatoia è indicata accanto al campo e non agisce durante la composizione IME, su testo vuoto o mentre un turno dello stesso Thread è già in corso. Il guardiano sincrono evita un doppio invio prima dell'aggiornamento dello stato React. Dopo un invio riuscito da tastiera il focus torna al campo solo se l'utente non lo ha spostato; un errore mantiene la bozza e porta l'attenzione all'avviso. La decisione riguarda la sola conversazione Thread e si applica al compositore unico di APP-129.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |
