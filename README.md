@@ -12,6 +12,10 @@ Dal selettore dei progetti puoi **Archiviare** un mazzo, aprire **Archiviati** e
 
 Nelle liste **Eventi**, la modalità **Immagini** apre al clic la scheda locale della stampa: testo di gioco, abilità, attacchi e costi, statistiche e metadati disponibili. Vale per Play e Regional. Se la stampa è assente o ambigua nel Catalogo, il dettaglio lo segnala; il clic non scarica dati dalla rete.
 
+## Pacchetti desktop
+
+La release v0.2.0 aggiunge due DMG macOS separati: `macos-x64` per Intel e `macos-arm64` per Apple Silicon. I pacchetti Linux, Windows e Mac includono la CLI Codex nativa per la rispettiva architettura; non occorre installare Node.js per usarli. I DMG si aprono e l'app può essere trascinata in Applicazioni. I pacchetti macOS di questa release non sono firmati né notarizzati da Apple: Gatekeeper può chiedere un'autorizzazione manuale nelle impostazioni di sicurezza. SHA-256, provenienza del commit e attestazioni GitHub sono pubblicati insieme ai quattro pacchetti.
+
 Pokéguru è un'applicazione locale pianificata per costruire e migliorare mazzi Pokémon TCG: idea, catalogo delle carte, lista importata o creata da zero, confronto con tornei pertinenti al circuito competitivo, sezione Matchup con carte chiave e guide tattiche, thread AI paralleli con proposte motivate e adozione manuale dell'intera lista. Il primo MVP usa Codex; in una fase avanzata sarà possibile scegliere il motore AI. Le carte di gioco collegano le stampe pertinenti allo Standard, incluse promo e rarità, senza trattare ogni lingua come un diverso mazzo competitivo. Le vecchie stampe fuori formato non vengono scaricate in massa; una stampa Trainer storica già in cache e importata esattamente può essere verificata tramite una stampa corrente con testo identico e data ammessa. Deve supportare archetipi diversi; Mega Absol ex / Mega Audino ex è solo un esempio.
 
 Gli aggiornamenti lunghi di Catalogo ed Eventi e le analisi Codex mostrano un avviso nell'app quando terminano o falliscono, anche se nel frattempo hai aperto un'altra sezione. L'avviso apre l'area del risultato e può essere chiuso; attesa della fonte e pausa non sono presentate come completamento.

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { CodexSetupStatus } from '../shared/ai'
 
-// The official native package is copied into the Windows and Linux releases.
+// The official native package is copied into each desktop release.
 export const CODEX_PACKAGE = '@openai/codex@0.164.0'
 
 export interface CodexLauncher {
@@ -18,6 +18,12 @@ function nativeTarget(platform: NodeJS.Platform, arch: string): { packageName: s
   }
   if (platform === 'linux' && arch === 'x64') {
     return { packageName: 'codex-linux-x64', triple: 'x86_64-unknown-linux-musl', binary: 'codex' }
+  }
+  if (platform === 'darwin' && arch === 'x64') {
+    return { packageName: 'codex-darwin-x64', triple: 'x86_64-apple-darwin', binary: 'codex' }
+  }
+  if (platform === 'darwin' && arch === 'arm64') {
+    return { packageName: 'codex-darwin-arm64', triple: 'aarch64-apple-darwin', binary: 'codex' }
   }
   return null
 }

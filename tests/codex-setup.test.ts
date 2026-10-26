@@ -16,14 +16,17 @@ function touch(path: string): void {
 }
 afterEach(() => { for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true }) })
 
-it('prefers the packaged native CLI on Windows and Linux without Node or npm on PATH', () => {
+it('prefers the packaged native CLI on Windows, Linux and both macOS architectures without Node or npm on PATH', () => {
   const resources = temporary()
   const project = temporary()
   touch(join(resources, 'app.asar'))
-  for (const [platform, binaryName] of [['win32', 'codex.exe'], ['linux', 'codex']] as const) {
+  for (const [platform, arch, binaryName] of [
+    ['win32', 'x64', 'codex.exe'], ['linux', 'x64', 'codex'],
+    ['darwin', 'x64', 'codex'], ['darwin', 'arm64', 'codex']
+  ] as const) {
     const binary = join(resources, 'codex', 'bin', binaryName)
     touch(binary)
-    expect(codexLauncher(temporary(), { PATH: '' }, platform, 'x64', resources, project))
+    expect(codexLauncher(temporary(), { PATH: '' }, platform, arch, resources, project))
       .toEqual({ command: binary, prefix: [], source: 'included' })
   }
 })
@@ -38,6 +41,20 @@ it('uses the official optional native package in development and preserves an ex
   expect(codexLauncher(temporary(), { PATH: '', POKEGURU_CODEX_BIN: 'test-codex' },
     'win32', 'x64', '', project))
     .toEqual({ command: 'test-codex', prefix: [], source: 'override' })
+})
+
+it('selects the matching optional native Codex package on macOS', () => {
+  const project = temporary()
+  for (const [arch, packageName, triple] of [
+    ['x64', 'codex-darwin-x64', 'x86_64-apple-darwin'],
+    ['arm64', 'codex-darwin-arm64', 'aarch64-apple-darwin']
+  ] as const) {
+    const binary = join(project, 'node_modules', '@openai', packageName,
+      'vendor', triple, 'bin', 'codex')
+    touch(binary)
+    expect(codexLauncher(temporary(), { PATH: '' }, 'darwin', arch, '', project))
+      .toEqual({ command: binary, prefix: [], source: 'included' })
+  }
 })
 
 it('keeps a previous local native installation available when the package resource is missing', () => {

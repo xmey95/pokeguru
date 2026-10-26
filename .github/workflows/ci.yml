@@ -19,7 +19,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-2022]
+        include:
+          - os: ubuntu-24.04
+          - os: windows-2022
+          - os: macos-15-intel
+            macArch: x64
+          - os: macos-15
+            macArch: arm64
     steps:
       - uses: actions/checkout@v7
         with:
@@ -224,6 +230,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Installed app smoke failed' }
           $uninstall = Start-Process -FilePath (Join-Path $target 'Uninstall Pokeguru.exe') -ArgumentList '/S' -WindowStyle Hidden -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited $($uninstall.ExitCode)" }
+      - name: Package macOS DMG
+        if: runner.os == 'macOS'
+        run: npm run package:mac
+      - name: Verify and smoke mounted macOS DMG
+        if: runner.os == 'macOS'
+        shell: bash
+        run: bash scripts/smoke-mac-dmg.sh release/*.dmg "${{ matrix.macArch }}"
       - name: Check included Codex login protocol with an isolated profile
         env:
           POKEGURU_CODEX_LOGIN_LIVE: '1'

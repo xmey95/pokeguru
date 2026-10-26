@@ -28,6 +28,16 @@ jobs:
             binary: release/win-unpacked/Pokeguru.exe
             artifact: release/*-setup.exe
             name: windows
+          - os: macos-15-intel
+            command: package:mac
+            artifact: release/*.dmg
+            name: macos-x64
+            macArch: x64
+          - os: macos-15
+            command: package:mac
+            artifact: release/*.dmg
+            name: macos-arm64
+            macArch: arm64
     steps:
       - uses: actions/checkout@v7
         with:
@@ -50,6 +60,9 @@ jobs:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: npm run package:win
+      - name: Package macOS DMG
+        if: runner.os == 'macOS'
+        run: npm run package:mac
       - name: Verify Windows publisher signature when configured
         if: runner.os == 'Windows'
         shell: pwsh
@@ -89,6 +102,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Installed app smoke failed' }
           $uninstall = Start-Process -FilePath (Join-Path $target 'Uninstall Pokeguru.exe') -ArgumentList '/S' -WindowStyle Hidden -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited $($uninstall.ExitCode)" }
+      - name: Verify and smoke mounted macOS DMG
+        if: runner.os == 'macOS'
+        shell: bash
+        run: bash scripts/smoke-mac-dmg.sh release/*.dmg "${{ matrix.macArch }}"
       - name: Record package provenance
         run: node scripts/release-provenance.mjs create ${{ matrix.name }}
       - uses: actions/upload-artifact@v4
@@ -159,7 +176,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          for file in release/*.AppImage release/*-setup.exe release/provenance-*.json; do
+          for file in release/*.AppImage release/*-setup.exe release/*.dmg release/provenance-*.json; do
             gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" \
               --source-digest "$GITHUB_SHA" --source-ref refs/heads/main \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" >/dev/null
@@ -174,8 +191,9 @@ jobs:
           fi
           test "$(find release -maxdepth 1 -name '*.AppImage' | wc -l)" -eq 1
           test "$(find release -maxdepth 1 -name '*-setup.exe' | wc -l)" -eq 1
+          test "$(find release -maxdepth 1 -name '*-macos-*.dmg' | wc -l)" -eq 2
           echo "TAG=v$version" >> "$GITHUB_ENV"
-          (cd release && sha256sum ./*.AppImage ./*-setup.exe ./provenance-*.json > SHA256SUMS.txt)
+          (cd release && sha256sum ./*.AppImage ./*-setup.exe ./*.dmg ./provenance-*.json > SHA256SUMS.txt)
       - name: Create and publish verified release
         shell: bash
         env:
@@ -188,7 +206,7 @@ jobs:
             200) echo "Tag ${TAG} already exists; refusing to replace a release." >&2; exit 1 ;;
             *) echo "Cannot verify tag ${TAG} (HTTP ${status:-unknown})." >&2; exit 1 ;;
           esac
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Pokeguru $TAG" --draft --generate-notes
-          gh release upload "$TAG" release/*.AppImage release/*-setup.exe release/provenance-*.json release/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length' | grep -qx '5'
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Pokeguru $TAG" --draft --generate-notes --notes 'I pacchetti macOS Intel e Apple Silicon sono al momento privi di firma Apple e notarizzazione; macOS potrebbe richiedere di autorizzare manualmente l’apertura nelle impostazioni di sicurezza.'
+          gh release upload "$TAG" release/*.AppImage release/*-setup.exe release/*.dmg release/provenance-*.json release/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length' | grep -qx '9'
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false

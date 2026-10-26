@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 26 ottobre 2026. **Fase corrente:** I3 completato e v0.1.0 pubblicata; prova dell'utente prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 26 ottobre 2026. **Fase corrente:** I3 completato e v0.1.0 pubblicata; APP-139 estende la distribuzione a macOS Intel/Apple Silicon e prepara v0.2.0 prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-139 in corso:** due DMG macOS nativi con Codex incluso, CI dedicata, provenance/attestazioni estese e pubblicazione v0.2.0 da `main` richiesta dall'utente. Mancano credenziali Apple di firma e notarizzazione: indicare chiaramente che i DMG sono non firmati. Verificare entrambi i runner Mac e i quattro pacchetti prima del merge di release.
 
 - **APP-138 integrato in `dev` — [PR #51](https://github.com/xmey95/pokeguru/pull/51), merge `fa580b9`:** la modalità Immagini delle liste Play e Regional apre la scheda locale completa della stampa con `CardFace` e metadati, senza download al clic. Scheda assente o ambigua esplicita. Build/typecheck, test di risoluzione e smoke Electron Eventi completo con profilo temporaneo passati a 1440/1280/640 px usando `POKEGURU_AUTO_SYNC=0`, come nella CI. Quattro check Ubuntu/Windows verdi, inclusi i pacchetti; checkout `dev` aggiornato e app avviata per la prova utente. Nessun `main` o release.
 

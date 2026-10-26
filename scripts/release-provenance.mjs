@@ -3,11 +3,13 @@ import { createReadStream, readFileSync, readdirSync, statSync, writeFileSync } 
 import { basename, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-const platforms = ['linux', 'windows']
+const platforms = ['linux', 'windows', 'macos-x64', 'macos-arm64']
 
 function expectedName(platform, version) {
   if (platform === 'linux') return `Pokeguru-${version}-linux-x86_64.AppImage`
   if (platform === 'windows') return `Pokeguru-${version}-windows-x64-setup.exe`
+  if (platform === 'macos-x64') return `Pokeguru-${version}-macos-x64.dmg`
+  if (platform === 'macos-arm64') return `Pokeguru-${version}-macos-arm64.dmg`
   throw new Error(`Piattaforma non supportata: ${platform}`)
 }
 
@@ -41,7 +43,7 @@ export async function verifyAll(directory, version, sourceSha, runId) {
   const actual = readdirSync(directory, { withFileTypes: true })
   if (actual.length !== expected.size || actual.some((entry) =>
     !entry.isFile() || !expected.has(entry.name)))
-    throw new Error('I file di release non corrispondono ai due pacchetti e ai manifest attesi.')
+    throw new Error('I file di release non corrispondono ai quattro pacchetti e ai manifest attesi.')
   const manifests = []
   for (const platform of platforms) {
     const manifest = JSON.parse(readFileSync(join(directory, `provenance-${platform}.json`), 'utf8'))
@@ -70,7 +72,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     } else if (command === 'verify-all') {
       for (const manifest of await verifyAll(directory, version, sourceSha, runId))
         console.log(`${basename(manifest.artifact)}: sha256 ${manifest.sha256}`)
-    } else throw new Error('Uso: create <linux|windows> oppure verify-all')
+    } else throw new Error('Uso: create <linux|windows|macos-x64|macos-arm64> oppure verify-all')
   } catch (error) {
     console.error(error instanceof Error ? error.message : error)
     process.exitCode = 1

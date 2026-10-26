@@ -6,6 +6,18 @@ directories:
 files:
   - out/**/*
 asar: true
+mac:
+  extraResources:
+    - from: resources/icon.png
+      to: icon.png
+    - from: build/mac-codex
+      to: codex
+  icon: build/icons/1024x1024.png
+  identity: null
+  hardenedRuntime: false
+  category: public.app-category.games
+  target: dmg
+  artifactName: Pokeguru-${version}-macos-${arch}.${ext}
 linux:
   extraResources:
     - from: resources/icon.png
