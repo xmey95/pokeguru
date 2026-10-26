@@ -7,11 +7,19 @@ import { randomUUID } from 'node:crypto'
 
 const EVENTS_PER_BLOCK = 3
 const INDEX_PAGES_PER_BLOCK = 2
-function initial(mode: 'new' | 'full', previous: TournamentSyncProgress, rotationStart: string): TournamentSyncProgress {
+const PLAY_LOOKBACK_DAYS = 90
+const MIN_PLAY_PLAYERS = 50
+
+function windowStart(now: Date, rotationStart: string): string {
+  const recent = new Date(now.getTime() - PLAY_LOOKBACK_DAYS * 86_400_000).toISOString().slice(0, 10)
+  return recent > rotationStart ? recent : rotationStart
+}
+
+function initial(mode: 'new' | 'full', previous: TournamentSyncProgress,
+  rotationStart: string, now: Date): TournamentSyncProgress {
   return {
     mode, runId: randomUUID(), status: 'running', page: 1, pending: [], inspected: 0, saved: 0, skipped: 0,
-    watermark: previous.watermark, previousWatermark: mode === 'new'
-      ? previous.watermark && previous.watermark > rotationStart ? previous.watermark : rotationStart : rotationStart,
+    watermark: previous.watermark, previousWatermark: windowStart(now, rotationStart),
     newestSeen: null, stopAfterPage: false, cooldownUntil: null, lastError: null,
     rotationStart, rotationCleanup: previous.rotationCleanup
   }
@@ -45,8 +53,15 @@ export async function syncTournamentBlock(store: TournamentStore, mode: 'new' | 
   await store.ensureRotation(rotation)
   let progress = store.progress()
   if (progress.mode !== mode || progress.status === 'idle' || progress.status === 'complete') {
-    progress = initial(mode, progress, rotation.effectiveFrom)
+    progress = initial(mode, progress, rotation.effectiveFrom, now)
     store.saveProgress(progress)
+  } else {
+    const cutoff = windowStart(now, rotation.effectiveFrom)
+    if (!progress.previousWatermark || progress.previousWatermark < cutoff) {
+      progress = { ...progress, previousWatermark: cutoff,
+        pending: progress.pending.filter((entry) => entry.date >= cutoff) }
+      store.saveProgress(progress)
+    }
   }
   if (progress.cooldownUntil && Date.parse(progress.cooldownUntil) > now.getTime()) return progress
   if (progress.status === 'rate-limited') {
@@ -85,7 +100,7 @@ export async function syncTournamentBlock(store: TournamentStore, mode: 'new' | 
       const cutoff = progress.previousWatermark
       const completed = index.filter((entry) => Date.parse(entry.date) < now.getTime() - 18 * 3_600_000)
       const eligible = index.filter((entry) => Date.parse(entry.date) < now.getTime() - 18 * 3_600_000 &&
-        (!cutoff || entry.date >= cutoff) && entry.players >= 8 &&
+        (!cutoff || entry.date >= cutoff) && entry.players >= MIN_PLAY_PLAYERS &&
         (mode === 'full' || !store.hasEvent(entry.id)))
       progress = { ...progress, page: progress.page + 1,
         newestSeen: progress.newestSeen ?? completed[0]?.date ?? null,

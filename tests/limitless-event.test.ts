@@ -83,7 +83,8 @@ describe('Limitless Play event', () => {
         { id: event.id, game: 'PTCG', format: 'STANDARD', date: event.date, players: 109 }
       ])
       if (url.includes(later)) return Response.json({ ...event, id: later, isOnline: false })
-      return Response.json(url.endsWith('/details') ? event : url.endsWith('/pairings') ? [] : standings)
+      return Response.json(url.endsWith('/details') ? { ...event, players: 109 }
+        : url.endsWith('/pairings') ? [] : standings)
     }
     const selected = await fetchRecentWesternTournament(fetcher as typeof fetch, new Date('2026-10-24T23:00:00Z'))
     expect(selected.eventId).toBe(event.id)

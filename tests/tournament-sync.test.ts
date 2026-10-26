@@ -161,4 +161,95 @@ describe('global Limitless Play archive', () => {
       store.close()
     } finally { rmSync(folder, { recursive: true, force: true }) }
   })
+
+  it('limits both scan modes to 90 days and events with at least 50 players', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-sync-window-'))
+    try {
+      const store = new TournamentStore(join(folder, 'data.sqlite'))
+      const cutoff = new Date(new Date(now.getTime() - 90 * 86_400_000).toISOString().slice(0, 10))
+      const network = source()
+      const fetcher = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        if (String(input).includes('/tournaments?')) return Response.json([
+          { id: ids[0], game: 'PTCG', format: 'STANDARD', name: 'Too old',
+            date: new Date(cutoff.getTime() - 1000).toISOString(), players: 100 },
+          { id: ids[1], game: 'PTCG', format: 'STANDARD', name: 'Too small',
+            date: cutoff.toISOString(), players: 49 },
+          { id: ids[2], game: 'PTCG', format: 'STANDARD', name: 'At both limits',
+            date: cutoff.toISOString(), players: 50 },
+          { id: ids[3], game: 'PTCG', format: 'STANDARD', name: 'Recent',
+            date: '2026-10-22T12:00:00.000Z', players: 64 }
+        ])
+        return network.fetcher(input, init)
+      }
+      const fresh = await syncTournamentBlock(store, 'new', fetcher as typeof fetch, now)
+      expect(fresh).toMatchObject({ status: 'complete', saved: 2, previousWatermark: cutoff.toISOString().slice(0, 10) })
+      expect(store.summaries()).toHaveLength(2)
+      expect(network.calls.filter((url) => url.endsWith('/details'))).toHaveLength(2)
+      const full = await syncTournamentBlock(store, 'full', fetcher as typeof fetch, now)
+      expect(full).toMatchObject({ status: 'complete', saved: 2, previousWatermark: cutoff.toISOString().slice(0, 10) })
+      expect(network.calls.filter((url) => url.endsWith('/details'))).toHaveLength(4)
+      store.close()
+    } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('finds late-listed events within 90 days even before the previous watermark', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-sync-late-'))
+    try {
+      const store = new TournamentStore(join(folder, 'data.sqlite'))
+      const network = source()
+      let listed = ids[0]
+      const fetcher = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        if (String(input).includes('/tournaments?')) return Response.json([{
+          id: listed, game: 'PTCG', format: 'STANDARD', name: 'Late listing',
+          date: listed === ids[0] ? '2026-10-22T12:00:00.000Z' : '2026-10-20T12:00:00.000Z',
+          players: 64
+        }])
+        return network.fetcher(input, init)
+      }
+      expect(await syncTournamentBlock(store, 'new', fetcher as typeof fetch, now))
+        .toMatchObject({ status: 'complete', saved: 1, watermark: '2026-10-22T12:00:00.000Z' })
+      listed = ids[1]
+      expect(await syncTournamentBlock(store, 'new', fetcher as typeof fetch, now))
+        .toMatchObject({ status: 'complete', saved: 1 })
+      expect(store.summaries()).toHaveLength(2)
+      store.close()
+    } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('drops stale queued events when a paused older scan resumes', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-sync-resume-window-'))
+    try {
+      const store = new TournamentStore(join(folder, 'data.sqlite'))
+      store.saveProgress({ ...store.progress(), mode: 'new', status: 'running', page: 2,
+        previousWatermark: '2026-04-10', stopAfterPage: true,
+        pending: [{ id: ids[0], date: '2026-06-01T00:00:00.000Z' },
+          { id: ids[1], date: '2026-10-22T12:00:00.000Z' }] })
+      const network = source()
+      const result = await syncTournamentBlock(store, 'new', network.fetcher, now)
+      expect(result).toMatchObject({ status: 'complete', saved: 1, inspected: 1 })
+      expect(result.previousWatermark).toBe(new Date(now.getTime() - 90 * 86_400_000).toISOString().slice(0, 10))
+      expect(network.calls.some((url) => url.includes(`/tournaments/${ids[0]}/`))).toBe(false)
+      store.close()
+    } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
+
+  it('skips a queued event whose detail has fallen below 50 players before downloading standings', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pokeguru-sync-small-detail-'))
+    try {
+      const store = new TournamentStore(join(folder, 'data.sqlite'))
+      const network = source([ids[0]])
+      const fetcher = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        const url = String(input)
+        if (url.endsWith('/details')) {
+          const response = await network.fetcher(input, init)
+          return Response.json({ ...await response.json() as object, players: 49 })
+        }
+        return network.fetcher(input, init)
+      }
+      const result = await syncTournamentBlock(store, 'new', fetcher as typeof fetch, now)
+      expect(result).toMatchObject({ status: 'complete', skipped: 1, saved: 0 })
+      expect(network.calls.some((url) => url.endsWith('/standings'))).toBe(false)
+      store.close()
+    } finally { rmSync(folder, { recursive: true, force: true }) }
+  })
 })
