@@ -148,7 +148,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-139** | Pacchetti macOS Intel/Apple Silicon e nuova release GitHub | Distribuzione | R-01, R-12 / richiesta utente | P0 / M | APP-025/122, runner macOS e v0.2.0 | Done |
 | **APP-140** | Vincoli solo nella Lista del progetto e proposta concreta nel Thread | UI/AI | R-05, R-07, R-08 / feedback utente | P1 / M | APP-129/130 integrati; validatore candidato esistente | Done |
 | **APP-141** | Pubblicare v0.2.1 da `dev` in `main` | Distribuzione | R-01, R-12 / richiesta utente | P0 / S | APP-140 in `dev`, workflow Release v0.2.0 | Done |
-| **APP-142** | Separare Piano, Fatti e Ipotesi nella guida Matchup | UI/leggibilità | R-10, R-13 / feedback utente | P1 / S | APP-135/136 integrati in `dev` | In progress |
+| **APP-142** | Separare Piano, Fatti e Ipotesi nella guida Matchup | UI/leggibilità | R-10, R-13 / feedback utente | P1 / S | APP-135/136 integrati in `dev` | Done |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1320,7 +1320,7 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Accettazione:** un testo con etichette su righe diverse o nella stessa riga presenta sezioni separate con intestazioni e spaziatura; link a carte e fonti, tab Apertura/Sviluppo/Chiusura e guide prive di etichette restano funzionanti. Verificare contenuto lungo e larghezze desktop/compatte senza overflow.
 - **Risultato locale:** il piano separa le etichette Piano, Fatti e Ipotesi in sezioni con intestazioni, spaziatura e testo più leggibile, anche quando la risposta le aveva accostate sulla stessa riga. La trasformazione è solo di presentazione e viene usata anche per le guide storiche; senza etichette resta il rendering precedente.
 - **Verifiche locali:** Node 24, build/typecheck e quattro test mirati passati. Smoke Electron Matchup con fixture: sezioni separate, ordine verticale, fasi e tastiera, storico, report salvato invariato, layout 1920/1440/1280/640 px senza overflow e contrasto minimo 5,16:1. Il primo tentativo di smoke non ha avviato Electron nella sandbox; con il permesso di esecuzione passa. Un'asserzione di geometria pensata per un solo paragrafo è stata adattata ai tre blocchi. Nessuna nuova generazione Codex o modifica ai report salvati.
-- **Integrazione:** PR verso `dev` e relativi check CI da completare; `main` e release restano invariati.
+- **Integrazione:** la [PR #64](https://github.com/xmey95/pokeguru/pull/64) è integrata in `dev` come `27a40ef` dopo quattro check verdi su Ubuntu, Windows, Mac Intel e Apple Silicon nel [run CI 40403619275](https://github.com/xmey95/pokeguru/actions/runs/40403619275). Il checkout locale `dev` è aggiornato; `main` e la release v0.2.1 restano invariati. La prova UI usa fixture di testo, non una nuova generazione Codex o un giudizio competitivo.
 
 ## Regola per i blocchi
 
