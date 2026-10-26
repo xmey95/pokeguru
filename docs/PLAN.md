@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 26 ottobre 2026. **Fase corrente:** I3 completato e v0.2.0 pubblicata per Linux, Windows, macOS Intel e Apple Silicon; APP-139 concluso prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 26 ottobre 2026. **Fase corrente:** I3 completato e v0.2.0 pubblicata per Linux, Windows, macOS Intel e Apple Silicon; APP-141 prepara v0.2.1 con gli aggiornamenti già integrati in `dev`, prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-141 in corso:** la richiesta utente autorizza una nuova versione in `main`. Preparare v0.2.1 dal contenuto corrente di `dev`, includere l'ascendenza del merge di `main`, verificare le PR e pubblicare i quattro pacchetti tramite Release. Registrare tag, asset e limiti dopo la verifica; I4 resta fuori ambito.
 
 - **APP-140 completato per la prova utente su `dev` — [PR #59](https://github.com/xmey95/pokeguru/pull/59), merge `9f71338`:** i vincoli si creano soltanto dal dettaglio delle carte della Lista del progetto; il Catalogo globale non li mostra, e quelli storici fuori lista restano gestibili nella Lista. Il Thread punta a restituire la candidata nello stesso turno per una richiesta naturale di modifica verificabile. Build, 233 test, smoke Electron di Catalogo e Lista e prova Codex reale con planner e due candidate da messaggi naturali sono passati; anche i quattro [check CI](https://github.com/xmey95/pokeguru/actions/runs/40388261527) sono verdi. Pokéguru è stata aperta dal checkout `dev` per la prova; raccogliere feedback prima di ulteriori modifiche. `main` e v0.2.0 non cambiano. I limiti della prova sono in APP-140 del backlog.
 
