@@ -21,8 +21,7 @@ import { ActivityStatus, InlineLoading, LoadingSkeleton, Spinner } from './Loadi
 import { catalogCardTargets, guideSourceTarget, tcgdexCardPrintId } from './guide-links'
 import { useCardPreview } from './CardPreview'
 import { ExpandablePreviewDeck } from './PreviewDeckLines'
-import { AiQueryTraceView } from './AiQueryTraceView'
-import { AiPromptAuditView } from './AiPromptAuditView'
+import { AiDiagnostics, AiEvidenceLimit } from './AiDiagnostics'
 
 interface Props {
   projectId: string
@@ -84,20 +83,22 @@ function ThreadMessageEvidence({ message, cardTargets, onOpenCatalogCard }: {
   if (!packet) return null
   const cited = new Set(message.citedSourceIds ?? [])
   const changed = packet.change.updated.length + packet.change.added.length + packet.change.removed.length
-  return <details className="candidate-evidence"><summary>Dati usati · {packet.cardCoverage.withGameplay}/{packet.cardCoverage.selected} schede · {packet.events.length} eventi{changed ? ` · ${changed} cambi` : ''}</summary>
+  return <><AiEvidenceLimit trace={packet.aiQueries} />
+    {packet.cardCoverage.omitted > 0 && <p className="content-note">{packet.cardCoverage.omitted} carte non incluse nei dati inviati.</p>}
+    <details className="candidate-evidence"><summary>Fonti e dettagli</summary>
+    <p>Dati consultati: {packet.cardCoverage.withGameplay}/{packet.cardCoverage.selected} schede con testo di gioco · {packet.events.length} eventi{changed ? ` · ${changed} cambi nelle fonti` : ''}.</p>
     <p>Contesto del {new Date(packet.capturedAt).toLocaleString('it-IT')} · Catalogo: {packet.catalogSyncedAt ? new Date(packet.catalogSyncedAt).toLocaleString('it-IT') : 'non aggiornato'}. Le risposte precedenti mantengono questi dati.</p>
     {packet.change.updated.length > 0 && <p>Fonti aggiornate: {packet.change.updated.join('; ')}.</p>}
     {packet.change.added.length > 0 && <p>Nuove fonti selezionate: {packet.change.added.join('; ')}.</p>}
     {packet.change.removed.length > 0 && <p>Fonti non selezionate in questo turno: {packet.change.removed.join('; ')}.</p>}
     {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte oltre il limite del contesto; la loro meccanica non è stata inviata.</p>}
-    {packet.aiQueries && <AiQueryTraceView trace={packet.aiQueries} />}
-    {packet.promptAudit && <AiPromptAuditView audit={packet.promptAudit} />}
+    <AiDiagnostics trace={packet.aiQueries} audit={packet.promptAudit} />
     <p>Fonti fornite a Codex; «citata» indica una fonte dichiarata nella risposta, non una verifica automatica della conclusione.</p>
     {packet.sources.length === 0 ? <p>Nessuna scheda o lista pertinente disponibile nell'archivio locale.</p> :
       <ul>{packet.sources.map((source) => <li key={source.id}>{cited.has(source.id) ? <strong>Citata · </strong> : null}
         <ThreadSource source={source} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /></li>)}</ul>}
     {packet.events.length > 0 && <p>Eventi: {packet.events.map((event) => `${event.name} (${event.date}, ${event.lists.length} liste selezionate su ${event.completeLists} complete)`).join('; ')}. Piazzamenti e liste non sono winrate del tuo mazzo.</p>}
-  </details>
+  </details></>
 }
 
 function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
@@ -117,8 +118,8 @@ function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
           summary={`${list.deck} · posto ${list.placing ?? '?'}`} lines={list.cards} />)}
       </details>)}
     </details>
-    <p>Il pacchetto viene ricalcolato al momento dell'invio, così include eventuali aggiornamenti locali nel frattempo.</p>
-    <p>Durante l'invio l'AI può scegliere automaticamente query di sola lettura al Catalogo e alle liste Eventi locali. Questa scelta richiede un turno Codex aggiuntivo, con tempi e token propri; query e risposte effettive saranno visibili nei dati della risposta.</p>
+    <p>I dati si aggiornano all’invio. Codex può consultare altre carte e liste nell’archivio locale.</p>
+    <details><summary>Come vengono scelti i dati</summary><p>Le ricerche sono di sola lettura e possono richiedere un turno Codex aggiuntivo. Richieste, risultati e token saranno disponibili in Fonti e dettagli → Diagnostica AI della risposta.</p></details>
   </div>
 }
 
@@ -141,11 +142,11 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
   const added = diff?.byName.reduce((sum, item) => sum + Math.max(0, item.delta), 0) ?? 0
   const removed = diff?.byName.reduce((sum, item) => sum + Math.max(0, -item.delta), 0) ?? 0
   const blockers = adopted ? [] : [
-    ...(thread.stale ? ['Base superata: apri un nuovo thread dalla lista principale.'] : []),
+    ...(thread.stale ? ['Questa proposta usa una lista precedente.'] : []),
     ...(!current ? ['Manca una lista principale.'] : []),
     ...(!review ? ['Controlli non disponibili.'] : review.blockers)
   ]
-  const status = adopted ? `Adottata in v${adopted.sequence}` : thread.stale ? 'Base superata' : 'Proposta nuova'
+  const status = adopted ? `Adottata in v${adopted.sequence}` : thread.stale ? 'Lista precedente' : 'Proposta nuova'
   function closeComparison() {
     if (!comparison.current) return
     comparison.current.open = false
@@ -168,7 +169,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
       {reviewItems.length > 0 && <details><summary>Da verificare ({reviewItems.length})</summary><ul>{reviewItems.map((item, index) => <li key={index}>{item}</li>)}</ul></details>}
       <p>Legalità torneo da verificare.</p>
     </div>}
-    {thread.stale && <div className="diagnostics"><p>Base superata · adozione bloccata. Confronta la proposta con la lista principale.</p>
+    {thread.stale && <div className="diagnostics"><p>Questa proposta usa una lista precedente. Per aggiornarla, continua dalla lista attuale.</p>
       <button type="button" className="secondary-button" disabled={working} onClick={() => onContinue(candidate)}>
         Continua in un thread dalla lista attuale</button></div>}
     {thread.resolutionChanged && !thread.stale && <p className="content-note">Le correzioni d’identità della lista sono cambiate dopo la partenza del thread. Controlla la candidata con i dati attuali prima dell’adozione.</p>}
@@ -177,7 +178,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
         onClick={() => onAdopt(candidate)}>Adotta l'intera lista candidata</button></div>}
     <div className="comparison-lists"><ComparisonList title="Lista principale completa" parsed={current?.parsed ?? null} />
       <ComparisonList title="Lista proposta completa" parsed={comparisonDeck} /></div>
-    <details className="candidate-evidence"><summary>Motivi, fonti, dati tecnici e testo originale</summary>
+    <details className="candidate-evidence"><summary>Fonti e dettagli</summary>
       <p>Proposta {candidate.origin === 'ai' ? 'Codex' : 'manuale'} · {displayDate(candidate.createdAt)}</p>
       {candidate.aiConfig && <p className="content-note">AI: {candidate.aiConfig.model ?? 'Automatico'} / {candidate.aiConfig.reasoningEffort ?? 'predefinito'}</p>}
       {candidate.sources.length > 0 && <div className="content-note">Fonti: {candidate.sources.map((source) =>
@@ -208,7 +209,7 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
       </> : 'Nessuna lista principale da confrontare.'}</p>
       {blockers.length > 0 && <p className="candidate-blocked"><strong>Adozione bloccata.</strong> {blockers[0]}
         {blockers.length > 1 && <span> Altri {blockers.length - 1} blocchi nel confronto.</span>}</p>}
-      <p className="candidate-caution">{reviewItems.length > 0 && <span>{reviewItems.length} verifiche aperte · </span>}Legalità torneo da verificare.</p>
+      {reviewItems.length > 0 && <p className="candidate-caution">{reviewItems.length} verifiche aperte · cause nel confronto.</p>}
       <span className="candidate-origin">{candidate.origin === 'ai'
         ? `Codex · ${candidate.sources.length ? `${candidate.sources.length} fonti nel confronto` : 'nessuna fonte collegata'}` : 'Proposta manuale'}</span>
     </div>
@@ -740,15 +741,15 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
             </div>}
             {currentAiJob && (currentAiJob.status === 'running' || currentAiJob.status === 'ready') &&
               <div className="content-note" role="status">{currentAiJob.status === 'running'
-                ? 'Job Codex in corso per questo thread.' : 'Risultato Codex in attesa di recupero.'}
-                <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla job</button>
-                {currentAiJob.status === 'ready' && <button type="button" className="text-button" onClick={() => void recoverAi()}>Recupera risultato</button>}
+                ? (asking ? '' : 'Codex sta rispondendo…') : 'La risposta è pronta, ma non è stata salvata.'}
+                <button type="button" className="text-button" onClick={() => void cancelAi()}>{currentAiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
+                {currentAiJob.status === 'ready' && <button type="button" className="text-button" onClick={() => void recoverAi()}>Completa salvataggio</button>}
               </div>}
             {currentAiJob && (currentAiJob.status === 'interrupted' || currentAiJob.status === 'failed' || currentAiJob.status === 'cancelled') &&
               <p className="content-note" role="status">{currentAiJob.status === 'cancelled'
-                ? 'Job Codex annullato.' : 'Il job Codex precedente non è stato completato. Puoi inviare di nuovo la richiesta.'}
+                ? 'Risposta annullata.' : 'La risposta non è stata completata. Puoi inviare di nuovo la richiesta.'}
                 {currentAiJob.error ? ` ${currentAiJob.error}` : ''}</p>}
-            {!featuredCandidate && selected.stale && <p className="diagnostics">Base superata: apri un nuovo thread dalla lista principale.</p>}
+            {!featuredCandidate && selected.stale && <p className="diagnostics">Questo thread usa una lista precedente. Apri un nuovo thread dalla lista attuale.</p>}
             {selected.parentThreadId && <div className="content-note">Thread collegato a un percorso precedente. La candidata scelta è conservata come contesto per Codex; descrivi nella conversazione le modifiche che vuoi valutare. Il thread originale resta nello storico.
               {selected.seedCandidateText && <details className="seed-candidate"><summary>Mostra la candidata di partenza</summary><pre>{selected.seedCandidateText}</pre></details>}
             </div>}
@@ -767,7 +768,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)} />)}
             </div>
-            {asking && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
+            {asking && currentAiJob?.status !== 'ready' && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
               title="Codex sta rispondendo…"
               detail="Una lista completa e verificata comparirà nel Thread come candidata. Puoi consultare la lista o cambiare sezione durante l’attesa." />}
             <form className="thread-form thread-composer" onSubmit={(event) => void ask(event)}>

@@ -20,6 +20,19 @@ export interface MetaSnapshot {
   cached: boolean
 }
 
+export interface MatchupStrategyPhases {
+  opening: string
+  development: string
+  closing: string
+}
+
+export function hasStrategyPhases(value: unknown): value is MatchupStrategyPhases {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const phases = value as Record<string, unknown>
+  return ['opening', 'development', 'closing'].every((key) =>
+    typeof phases[key] === 'string' && phases[key].trim().length > 0 && phases[key].length <= 5000)
+}
+
 export interface MatchupReport {
   jobId?: string
   projectId: string
@@ -41,6 +54,8 @@ export interface MatchupReport {
   ourKeyCards: string
   theirKeyCards: string
   strategy: string
+  /** Explicit phases in new reports. Legacy strategy is never split or rewritten. */
+  strategyPhases?: MatchupStrategyPhases
   limitations: string
   ai?: AiRunConfig
   tournamentEvidence?: MatchupTournamentEvidence

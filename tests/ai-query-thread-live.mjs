@@ -72,7 +72,9 @@ try {
   assert.match(message.evidence.promptAudit?.text ?? '', /card:me01-114/)
   assert.equal(message.evidence.promptAudit?.utf8Bytes > 0, true)
   await page.locator('.thread-message').last().locator('.candidate-evidence > summary').click()
-  await page.locator('.ai-query-trace > summary').waitFor()
+  await page.locator('.thread-message[data-author=assistant] .candidate-evidence > summary').last().click()
+  await page.locator('.thread-message[data-author=assistant] .ai-diagnostics > summary').last().click()
+  await page.locator('.ai-query-trace > summary').last().waitFor()
   await application.close()
   application = undefined
   application = await launch()

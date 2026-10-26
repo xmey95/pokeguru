@@ -79,7 +79,7 @@ try {
   await page.getByText(/Copertura per set ·/).click()
   const table = page.getByRole('table', { name: 'Copertura Standard per set' })
   await table.waitFor()
-  assert.match(await page.locator('.catalog-set-coverage').first().textContent(), /Set ufficiali nel manifest: 2\/17; 15 mancanti/)
+  assert.match(await page.locator('.catalog-set-coverage').first().textContent(), /Espansioni presenti nel catalogo: 2\/17 previste dal calendario ufficiale verificato; 15 mancanti/)
   assert.match(await page.locator('.catalog-set-coverage').first().textContent(), /Delta Reign.*ID set verificato|Prodotti annunciati senza ID set verificato.*Delta Reign/s)
   assert.match(await page.getByRole('status').filter({ hasText: 'Set ufficiali non presenti nel manifest' }).textContent(), /Twilight Masquerade \(sv06\)/)
   assert.match(await table.textContent(), /Data set \(TCGdex\)/)

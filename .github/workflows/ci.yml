@@ -169,6 +169,12 @@ jobs:
       - name: Check Thread composer keyboard on Windows
         if: runner.os == 'Windows'
         run: node tests/thread-composer-keyboard-live.mjs
+      - name: Check Matchup phases and recovery on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/matchup-switcher-ui-live.mjs --phases
+      - name: Check Matchup phases and recovery on Windows
+        if: runner.os == 'Windows'
+        run: node tests/matchup-switcher-ui-live.mjs --phases
       - name: Exercise candidate adoption on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/deck-adoption-live.mjs

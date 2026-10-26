@@ -1,5 +1,7 @@
 # Pokéguru
 
+APP-135 rifinisce le schermate esistenti: le nuove guide e revisioni Matchup mostrano **Apertura, Sviluppo e Chiusura** come tab, utilizzabili anche con frecce/Home/End. Le guide precedenti restano intere. **Fonti e dettagli** raccoglie provenienza, versione e **Diagnostica AI**; limiti e blocchi rimangono visibili. Durante una revisione resta consultabile la guida salvata. **Completa salvataggio** recupera un risultato già pronto senza chiedere una nuova analisi. Verifiche e perimetro in [docs/UI_REFINEMENT.md](docs/UI_REFINEMENT.md).
+
 Per migrazioni dell'archivio locale, backup pre-upgrade e prova di recupero, vedi [docs/DATABASE.md](docs/DATABASE.md).
 
 Quando una nuova rotazione Standard occidentale è inclusa e verificata nella release, il successivo aggiornamento completato toglie dal Catalogo le stampe con marchio certamente ruotato. Un aggiornamento Eventi elimina i payload del periodo precedente dall'archivio globale prima di acquisire quelli nuovi. Le liste e le guide salvate restano storiche; gli esiti Standard vengono ricalcolati con il pacchetto locale corrente e non sono certificazioni di legalità torneo. Schede citate e metadati minimi degli snapshot citati da Thread o query delle guide restano recuperabili, con backup SQLite verificato prima della pulizia.

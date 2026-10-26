@@ -301,7 +301,7 @@ export function CatalogSection({ canConstrain = false, focusIdentityId }: {
 
       {standard && catalog.standardCoverage && <details className="catalog-set-coverage">
         <summary>Copertura per set · {catalog.standardCoverage.bySet.filter((set) => set.missing > 0).length} con dettagli mancanti</summary>
-        <p className="content-note">Set ufficiali nel manifest: {catalog.standardCoverage.officialSets.present}/{catalog.standardCoverage.officialSets.expected}; {catalog.standardCoverage.officialSets.missing} mancanti. Calendario controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}.</p>
+        <p className="content-note">Espansioni presenti nel catalogo: {catalog.standardCoverage.officialSets.present}/{catalog.standardCoverage.officialSets.expected} previste dal calendario ufficiale verificato; {catalog.standardCoverage.officialSets.missing} mancanti. Calendario controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}.</p>
         {catalog.standardCoverage.officialSets.missing > 0 && <div className="diagnostics" role="status"><strong>Set ufficiali non presenti nel manifest</strong><ul>{catalog.standardCoverage.officialSets.missingSets.map((set) => <li key={set.setId}>{set.product} ({set.setId})</li>)}</ul></div>}
         {!!catalog.standardCoverage.officialSets.unmappedProducts?.length && <div className="content-note" role="status"><strong>Prodotti annunciati senza ID set verificato</strong><ul>
           {catalog.standardCoverage.officialSets.unmappedProducts.map((item) => <li key={item.product}>{item.product} · uscita {legalDate(item.releaseDate)}. La data di ammissione e il mapping TCGdex restano da verificare.</li>)}

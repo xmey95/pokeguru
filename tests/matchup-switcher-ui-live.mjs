@@ -11,12 +11,14 @@ import { createProjectFromStart, switchProject } from './project-ui-helper.mjs'
 import { navigationScenarios } from './navigation-scenarios.mjs'
 import { discussionScenarios } from './matchup-discussion-scenarios.mjs'
 import { matchupAiScenarios } from './matchup-ai-scenarios.mjs'
+import { phaseScenarios } from './matchup-phase-scenarios.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
 const profile = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-switcher-'))
 const deck = readFileSync(join(workspace, 'examples/workspace-principale.txt'), 'utf8').trim()
 const reading = process.argv.includes('--reading')
+const phases = process.argv.includes('--phases')
 const guideLinks = reading || process.argv.includes('--guide-links') || process.argv.includes('--navigation') || process.argv.includes('--discussion') || process.argv.includes('--ai-options')
 const hash = (text) => createHash('sha256').update(text).digest('hex')
 const names = ['Gardevoir ex', 'Dragapult ex', 'Charizard ex / Pidgeot ex',
@@ -108,14 +110,18 @@ function seed() {
           report.limitations = 'Fixture UI lunga, non generata da Codex.\n- Una sola lista campione.\n- Le frequenze non provano un winrate.\n- Testo non affidabile: <img src=x onerror=alert(1)>.'
         }
       }
+      if (phases && opponent.id === opponents[0].id) {
+        report.strategyPhases = { opening: report.strategy, development: 'Sviluppo di prova: conserva una risorsa per il turno successivo.', closing: 'Chiusura di prova: valuta gli ultimi Premi.' }
+        report.promptAudit = { text: 'Prompt di prova APP-135', sha256: hash('Prompt di prova APP-135'), utf8Bytes: 24, durationMs: 1000, usage: null }
+      }
       db.prepare('INSERT INTO matchup_reports (project_id, meta_id, opponent_id, deck_hash, generated_at, payload) VALUES (?, ?, ?, ?, ?, ?)')
         .run(project.id, meta.id, opponent.id, deckHash, meta.fetchedAt, JSON.stringify(report))
       db.prepare('INSERT INTO matchup_discussions (id, project_id, meta_id, opponent_id, deck_hash, parent_id, created_at) VALUES (?, ?, ?, ?, ?, NULL, ?)')
         .run(opponent.id, project.id, meta.id, opponent.id, deckHash, meta.fetchedAt)
       db.prepare('INSERT INTO matchup_turns (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary) VALUES (?, ?, 0, NULL, ?, ?, NULL)')
         .run(opponent.id, opponent.id, meta.fetchedAt, JSON.stringify(guideLinks && opponent.id === opponents[0].id
-          ? { ...report, sampleDeckMechanics: [{ name: 'Gardevoir ex', text: 'Scheda precedente.', sourceUrl: 'https://api.tcgdex.net/v2/en/cards/sv01-086' }] } : report))
-      if (guideLinks && opponent.id === opponents[0].id) db.prepare('INSERT INTO matchup_turns (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary) VALUES (?, ?, 1, ?, ?, ?, ?)')
+          ? { ...report, sampleDeckMechanics: [{ name: 'Gardevoir ex', text: 'Scheda precedente.', sourceUrl: 'https://api.tcgdex.net/v2/en/cards/sv01-086' }] } : { ...report, strategyPhases: undefined }))
+      if ((guideLinks || phases) && opponent.id === opponents[0].id) db.prepare('INSERT INTO matchup_turns (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary) VALUES (?, ?, 1, ?, ?, ?, ?)')
         .run(opponent.id + '-revision', opponent.id, 'Rivedi le risorse finali.', now, JSON.stringify(report), 'Riferimento aggiornato per Gardevoir ex.')
     }
   } finally { db.close() }
@@ -209,9 +215,9 @@ try {
     await page.locator('.guide-sources > summary').click()
     await page.locator('.discussion-history > summary').click()
     const previous = page.locator('.discussion-version').first()
-    await previous.locator('summary').click()
+    await previous.locator(':scope > summary').click()
     assert.equal(await previous.getByRole('link', { name: 'Gardevoir ex', exact: true }).first().getAttribute('href'), '#catalog-card-fixture-gardevoir-historic')
-    await previous.locator('summary').click()
+    await previous.locator(':scope > summary').click()
     await page.locator('.discussion-history > summary').click()
     await plan.getByRole('link', { name: 'Mega Absol ex', exact: true }).click()
     await page.locator('.catalog-detail').getByRole('heading', { name: 'Mega Absol ex', exact: true }).waitFor()
@@ -222,6 +228,7 @@ try {
   if (process.argv.includes('--navigation')) await navigationScenarios(page, application, profile)
   if (process.argv.includes('--ai-options')) await matchupAiScenarios(page, application, workspace)
   if (process.argv.includes('--discussion')) await discussionScenarios(page, application, workspace, profile)
+  if (phases) await phaseScenarios(page, application, workspace, profile)
 
   for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
     await page.locator('.main-content').evaluate((el) => { el.scrollTop = 0 })
@@ -290,7 +297,7 @@ try {
   await search.fill('solo nello storico')
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
-  await page.getByText('Guida storica · base precedente', { exact: true }).waitFor()
+  await page.locator('.matchup-freshness.stale').filter({ hasText: 'Guida precedente' }).waitFor()
   await page.getByText('Avversario assente dal meta attuale. Guida consultabile.', { exact: true }).waitFor()
   assert.equal(await page.locator('#matchup-feedback').count(), 0)
   assert.match(await page.locator('.matchup-fields').first().innerText(), /Piano di prova contro Archetipo solo nello storico/)
@@ -299,7 +306,7 @@ try {
   await openPicker()
   await search.fill('Dragapult')
   await picker.getByRole('button', { name: /Dragapult/ }).click()
-  await page.getByText('Guida storica · base precedente', { exact: true }).waitFor()
+  await page.locator('.matchup-freshness.stale').filter({ hasText: 'Guida precedente' }).waitFor()
   await page.getByRole('button', { name: 'Continua sulla nuova base' }).waitFor()
 
   await switchProject(page, /Progetto separato/)

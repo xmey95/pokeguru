@@ -12,6 +12,8 @@ import { readDeckDiscussionReply, readDeckDiscussionSourceIds, readDeckThreadTur
 import { ProjectStore } from './project-store'
 import { AiJobStore, type AiJob } from './ai-job-store'
 import { makeAiPromptAudit } from './ai-evidence-queries'
+import { readMatchupAnalysis } from './matchup-analysis'
+import { hasStrategyPhases } from '../shared/meta-matchups'
 
 interface ThreadRequest {
   schemaVersion?: number
@@ -98,27 +100,23 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
 type MatchupBase = Omit<MatchupReport, 'strengths' | 'weaknesses' | 'ourKeyCards' |
   'theirKeyCards' | 'strategy' | 'limitations'>
 interface MatchupRequest {
+  analysisVersion?: 2
   base: MatchupBase
   discussionId?: string
   turnId?: string
   parentId?: string
 }
 interface MatchupResult { report: MatchupReport; changeSummary?: string }
-const matchupFields = ['strengths', 'weaknesses', 'ourKeyCards', 'theirKeyCards',
-  'strategy', 'limitations'] as const
 
 function matchupResult(job: AiJob, request: MatchupRequest, raw: unknown): MatchupResult {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Analisi Codex non valida.')
   const value = raw as Record<string, unknown>
-  for (const field of matchupFields) if (typeof value[field] !== 'string' || value[field].length > 5000)
-    throw new Error('Analisi Codex non valida.')
+  const analysis = readMatchupAnalysis(raw, request.analysisVersion ?? 1)
   if (job.kind === 'matchup-revise' &&
     (typeof value.changeSummary !== 'string' || value.changeSummary.length > 5000))
     throw new Error('Riepilogo della revisione non valido.')
   return { report: { ...request.base, jobId: job.id,
-    strengths: value.strengths as string, weaknesses: value.weaknesses as string,
-    ourKeyCards: value.ourKeyCards as string, theirKeyCards: value.theirKeyCards as string,
-    strategy: value.strategy as string, limitations: value.limitations as string },
+    ...analysis },
   ...(job.kind === 'matchup-revise' ? { changeSummary: value.changeSummary as string } : {}) }
 }
 
@@ -141,6 +139,8 @@ export function recoverMatchupJob(job: AiJob, jobs: AiJobStore, projects: Projec
   }
   if (!result?.report || result.report.jobId !== job.id)
     throw new Error('Risultato Matchup del job non leggibile.')
+  if (request.analysisVersion === 2 && !hasStrategyPhases(result.report.strategyPhases))
+    throw new Error('Il piano di gioco è incompleto. Riprova.')
   if (projects.hasMatchupJobResult(job.id)) {
     jobs.transition(job.id, 'applied')
     return 'applied'

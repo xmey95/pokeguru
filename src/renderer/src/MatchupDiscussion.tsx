@@ -3,6 +3,8 @@ import type { MatchupDiscussion as Discussion, MatchupTurn } from '../../shared/
 import { GuideText } from './GuideText'
 import { reportGuideReferences } from './guide-links'
 import { ActivityStatus } from './Loading'
+import { MatchupPlan } from './MatchupPlan'
+import { AiDiagnostics, AiEvidenceLimit } from './AiDiagnostics'
 
 export interface RevisionInFlight {
   discussionId: string
@@ -93,17 +95,19 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
           {turn.report && <details className="discussion-version" id={`discussion-version-${turn.id}`}>
             <summary>Leggi versione</summary>
             <div className="discussion-version-body">
-              <h4>Piano di gioco</h4>{text(turn.report.strategy, turn)}
-              <div className="discussion-version-limits"><h4>Limiti dell’analisi</h4>{text(turn.report.limitations, turn)}</div>
+              <h4>Piano di gioco</h4><MatchupPlan scope={`history-${turn.id}`} report={turn.report} renderText={(value) => text(value, turn)} />
+              <div className="discussion-version-limits"><h4>Limiti dell’analisi</h4>{text(turn.report.limitations, turn)}<AiEvidenceLimit trace={turn.report.aiQueries} /></div>
               <h4>Le nostre carte chiave</h4>{text(turn.report.ourKeyCards, turn)}
               <h4>Le loro carte chiave</h4>{text(turn.report.theirKeyCards, turn)}
               <h4>Punti forti</h4>{text(turn.report.strengths, turn)}
               <h4>Debolezze</h4>{text(turn.report.weaknesses, turn)}
-              {(turn.report.sampleDeckUrl || turn.report.metaSourceUrl) && <div className="discussion-version-sources">
-                <h4>Fonti della versione</h4>
+              <details className="discussion-version-sources"><summary>Fonti e dettagli</summary>
                 {turn.report.sampleDeckUrl && text(`[Lista avversaria](${turn.report.sampleDeckUrl})`, turn)}
                 {turn.report.metaSourceUrl && text(`[Metagame](${turn.report.metaSourceUrl})`, turn)}
-              </div>}
+                <AiDiagnostics trace={turn.report.aiQueries} audit={turn.report.promptAudit}>
+                  <p>Impronta lista: {turn.report.deckHash}<br />Snapshot Meta: {turn.report.metaId}</p>
+                </AiDiagnostics>
+              </details>
             </div>
           </details>}
         </article>)}
