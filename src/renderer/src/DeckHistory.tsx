@@ -59,8 +59,8 @@ export function DeckHistory({ projectId, versions, onOpenChange, onRestored, onA
     finally { setBusy(false) }
   }
 
-  return <><details className="deck-history" onToggle={(event) => onOpenChange(event.currentTarget.open)}>
-    <summary>Versioni della lista ({versions.length})</summary>
+  return <><details className="deck-history deck-reference-item" onToggle={(event) => onOpenChange(event.currentTarget.open)}>
+    <summary><span className="deck-reference-label">Versioni della lista ({versions.length})</span><span className="deck-reference-description">Confronta, annota o ripristina una versione</span></summary>
     {!current || !selected ? <p>Nessuna versione salvata.</p> : <div className="deck-history-body">
       <p className="content-note">La lista principale resta visibile nel pannello. Scegli una versione per leggerla e confrontarla.</p>
       <label htmlFor="deck-history-version">Versione da consultare</label>

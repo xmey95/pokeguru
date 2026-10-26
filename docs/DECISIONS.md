@@ -354,6 +354,9 @@ La nuova candidata nasce dalla risposta Codex del Thread; non si chiede all'uten
 ### T-129 — Un turno Codex, due esiti possibili nel Thread (APP-129)
 
 Il compositore invia ogni richiesta allo stesso endpoint. Codex restituisce il testo della risposta, le fonti e, quando intende proporre una lista, il testo integrale della lista. L'app classifica una lista effettivamente presente anche se il campo `kind` dichiarato dal modello è incoerente: il modello non decide da solo se salvare una candidata. Soltanto il validatore deterministico già usato per le proposte può creare una candidata completa sulla base corrente. Un fallimento di validazione conserva risposta e lista nella cronologia con la causa, senza scrivere una candidata parziale. Risposta e candidata valida sono salvate insieme, con lo stesso contesto ed evidenze; la lista principale cambia solo con l'adozione esplicita. Il recupero distingue il nuovo schema dei job dai job storici, che restano leggibili. Il percorso di generazione da progetto senza lista resta in I4.
+### T-132 — Gerarchia del fondo Lista (APP-132)
+
+Le versioni sono l'azione consultiva più utile nel lavoro iterativo: confronto, annotazione e ripristino restano nello storico. L'origine e il testo letterale dell'import sono un'unica sezione, con le note non bloccanti accanto al testo; i problemi dell'import restano invece visibili sopra le carte. Le regole di rotazione, ammissione e costruzione restano accessibili come approfondimento unico; l'esito Standard, i problemi certi, la copertura e le fonti essenziali rimangono nell'intestazione della Lista. Le tre disclosure native mantengono Tab, Invio e Spazio e non cambiano dati né verdetti.
 
 ## Registro delle fonti primarie
 

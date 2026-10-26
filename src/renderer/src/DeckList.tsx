@@ -1,6 +1,6 @@
 import { LoadingSkeleton } from './Loading'
 import { Icon } from './Icon'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useViewState } from './Navigation'
 import type { DeckBaseline } from '../../shared/deck-import'
 import type { CatalogView } from '../../shared/catalog'
@@ -37,8 +37,8 @@ function cardStatus(status: 'recognized' | 'unverified' | 'ambiguous' | 'outside
     catalog.scope.kind === 'sample' ? 'Nessuna corrispondenza nel campione' : 'Nessuna corrispondenza locale'
 }
 
-export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importOpen }: {
-  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void; importOpen: boolean
+export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importOpen, footer }: {
+  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void; importOpen: boolean; footer?: ReactNode
 }) {
   const preview = useCardPreview()
   const dismissPreview = useDismissCardPreview()
@@ -273,7 +273,13 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
       })}</div>}
       </section>)}
     </div>}
-    <details className="deck-technical"><summary>Rotazione, ammissione e costruzione del mazzo</summary>
+    <section className="deck-reference" aria-labelledby="deck-reference-title">
+      <div className="deck-reference-heading">
+        <h3 id="deck-reference-title">Dettagli della lista</h3>
+        <p>Versioni, testo importato e verifiche approfondite.</p>
+      </div>
+      {footer}
+    <details className="deck-technical deck-reference-item"><summary><span className="deck-reference-label">Regole del mazzo</span><span className="deck-reference-description">Rotazione, ammissione e costruzione</span></summary>
     <section className="rotation-panel" aria-label="Controllo della rotazione Standard occidentale">
       <strong>Rotazione Standard occidentale</strong>
       <label>Data di riferimento <input type="date" value={asOf} onChange={(event) => setReferenceDate(event.target.value || null)} /></label>
@@ -306,5 +312,6 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
       <p><button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('construction')}>Regole del mazzo ↗</button>{' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('ace-spec')}>Regola ACE SPEC ↗</button></p>
     </section>
     </details>
+    </section>
   </div>
 }
