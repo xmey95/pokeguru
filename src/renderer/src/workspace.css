@@ -70,6 +70,14 @@
 @container workspace (max-width: 700px) {
   .card-overview { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .card-artwork { justify-self: center; }
+  .deck-card-detail .card-overview { grid-template-columns: 152px minmax(0, 1fr); gap: 16px; padding: 16px; }
+  .deck-card-detail .card-artwork { justify-self: stretch; padding: 8px; }
+  .deck-card-detail .card-gameplay-meta { gap: 6px; margin-bottom: 10px; }
+  .deck-card-detail .card-gameplay-meta > span:not(.card-data-partial), .deck-card-detail .card-gameplay-meta > strong { min-height: 26px; padding: 3px 8px; }
+  .deck-card-detail .card-gameplay section { padding: 12px; }
+  .deck-card-detail > .card-constraints { padding: 16px; }
+  .deck-card-detail > details { padding-right: 16px; padding-left: 16px; }
+  .deck-card-detail > .diagnostics, .deck-card-detail > .content-note { margin-right: 16px; margin-left: 16px; }
   .baseline-panel, .import-panel, .constraints-panel, .thread-detail, .meta-analysis, .settings-panel { padding: 20px; }
   .comparison-lists, .catalog-layout, .tournament-layout { grid-template-columns: minmax(0, 1fr); }
   .catalog-list, .tournament-players { max-height: 250px; }

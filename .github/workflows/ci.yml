@@ -103,6 +103,12 @@ jobs:
       - name: Exercise Standard legality on Windows
         if: runner.os == 'Windows'
         run: node tests/standard-legality-live.mjs
+      - name: Check deck card detail on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/reconciliation-live.mjs
+      - name: Check deck card detail on Windows
+        if: runner.os == 'Windows'
+        run: node tests/reconciliation-live.mjs
       - name: Exercise saved tournament on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/tournament-ui-live.mjs --offline

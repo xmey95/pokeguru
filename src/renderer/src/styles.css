@@ -191,8 +191,9 @@ details[open] > summary { margin-bottom: 8px; }
 .deck-card-title small { color: var(--ink-muted); }
 .deck-card-constraint-count { flex: none; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--surface-hover); color: var(--ink-secondary); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .deck-card-chevron { flex: none; color: var(--ink-muted); }
-.deck-card-detail { border-top: 1px solid var(--line); padding: 16px; }
+.deck-card-detail { min-width: 0; border-top: 1px solid var(--line); background: var(--surface); }
 .deck-image-grid, .event-image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 112px)); justify-content: start; gap: 12px; }
+.deck-image-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
 .deck-image-entry, .event-image-entry { display: contents; }
 .card-image-tile { display: block; width: 100%; min-width: 0; padding: 4px; border: 2px solid transparent; border-radius: var(--radius-sm); background: transparent; text-align: left; }
 .card-image-tile:hover { background: var(--surface-subtle); border-color: var(--accent-line); }
@@ -204,7 +205,7 @@ details[open] > summary { margin-bottom: 8px; }
 .card-image-tile-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 .card-image-constraint-count { display: block; margin-top: 4px; color: var(--ink-secondary); font-size: var(--text-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
 .deck-image-detail, .event-image-detail { grid-column: 1 / -1; min-width: 0; border: 1px solid var(--accent-line); border-radius: var(--radius-sm); background: var(--surface); }
-.deck-image-detail .deck-card-detail { border: 0; }
+.deck-image-detail .deck-card-detail { border: 0; border-radius: var(--radius-sm); }
 .event-image-detail { display: grid; justify-items: start; gap: 8px; padding: 16px; }
 .event-image-detail > span { color: var(--ink-secondary); font-size: var(--text-sm); }
 .event-image-detail img { display: block; width: min(220px, 100%); height: auto; max-height: 310px; object-fit: contain; }
@@ -234,6 +235,40 @@ details[open] > summary { margin-bottom: 8px; }
 .card-gameplay-source { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 16px; color: var(--ink-muted); font-size: var(--text-xs); }
 .card-gameplay-source > span { overflow-wrap: anywhere; }
 .card-gameplay-missing p { margin-bottom: 8px; color: var(--ink-secondary); }
+.deck-card-detail .card-overview { grid-template-columns: 208px minmax(0, 1fr); align-items: start; gap: 28px; margin: 0; padding: 24px; border-bottom: 1px solid var(--line); background: linear-gradient(135deg, var(--accent-soft), var(--surface-subtle) 245px, var(--surface) 520px); }
+.deck-card-detail .card-artwork { width: 100%; margin: 0; padding: 12px; border: 1px solid var(--accent-line); border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 8px 24px #12273512; }
+.deck-card-detail .card-artwork > img, .deck-card-detail .card-artwork-empty { width: 100%; height: auto; aspect-ratio: 5 / 7; border-radius: 5px; }
+.deck-card-detail .card-artwork > img { box-shadow: 0 3px 12px #12273524; }
+.deck-card-detail .card-artwork figcaption { margin: 10px 0 0; text-align: center; color: var(--ink-secondary); line-height: 1.4; }
+.deck-card-detail .card-gameplay { max-width: 82ch; }
+.deck-card-detail .card-gameplay-meta { gap: 8px; margin: 0 0 16px; }
+.deck-card-detail .card-gameplay-meta > span:not(.card-data-partial), .deck-card-detail .card-gameplay-meta > strong { display: inline-flex; align-items: center; min-height: 30px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-secondary); line-height: 1.35; }
+.deck-card-detail .card-gameplay-meta > strong { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.deck-card-detail .card-gameplay section { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.deck-card-detail .card-gameplay section + section { margin-top: 10px; }
+.deck-card-detail .card-gameplay h4 { margin-bottom: 4px; font-size: var(--text-md); }
+.deck-card-detail .card-rule-label { color: var(--accent); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.deck-card-detail .card-gameplay .card-attack-cost { margin: 4px 0 10px; }
+.deck-card-detail .card-gameplay p { margin-bottom: 0; }
+.deck-card-detail .card-battle-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 12px 0 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); overflow: hidden; }
+.deck-card-detail .card-battle-stats > div { min-width: 0; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.deck-card-detail .card-battle-stats > div:nth-child(odd) { border-right: 1px solid var(--line); }
+.deck-card-detail .card-battle-stats > div:nth-child(n+3) { border-bottom: 0; }
+.deck-card-detail .card-battle-stats dt { color: var(--ink-secondary); }
+.deck-card-detail .card-battle-stats dd { color: var(--ink); font-weight: 600; }
+.deck-card-detail .card-evolves { margin-top: 12px; }
+.deck-card-detail .card-gameplay-source { margin-top: 12px; }
+.deck-card-detail > .card-constraints { margin: 20px 24px; padding: 16px 18px; }
+.deck-card-detail > .diagnostics, .deck-card-detail > .content-note { margin: 16px 24px; }
+.deck-card-detail > details { margin: 0; padding: 6px 24px; border-bottom: 1px solid var(--line); }
+.deck-card-detail > details:last-child { border-bottom: 0; }
+.deck-card-detail > details > summary { min-height: 44px; display: flex; align-items: center; }
+.deck-card-detail > details[open] { padding-bottom: 20px; }
+.deck-card-detail .deck-print-details .catalog-print-grid { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; margin-top: 8px; }
+.deck-card-detail .deck-print-details .catalog-print { gap: 12px; padding: 12px; background: var(--surface-subtle); }
+.deck-card-detail .deck-print-details .catalog-print img, .deck-card-detail .deck-print-details .catalog-no-image { width: 70px; height: 98px; }
+.deck-card-detail .imported-print { justify-self: start; padding: 3px 8px; border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent); }
+.deck-card-detail .deck-source-lines { margin-top: 4px; }
 .card-constraints { margin: 16px 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .card-constraint-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin-bottom: 12px; }
 .card-constraint-heading h3 { margin: 0; font-size: var(--text-md); }

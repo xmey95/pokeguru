@@ -143,6 +143,15 @@ try {
   assert.ok(await card.locator('.catalog-print-grid').isVisible())
   assert.match(await card.locator('.catalog-print-grid').textContent(), /Uncommon/)
   assert.match(await card.locator('.catalog-print-grid').textContent(), /Ultra Rare/)
+  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
+    await page.setViewportSize({ width, height })
+    assert.ok(await card.locator('.deck-print-details').evaluate((el) => {
+      const main = el.closest('.main-content')
+      const edge = el.getBoundingClientRect().right
+      return main.scrollWidth <= main.clientWidth + 1 && [...el.querySelectorAll('.catalog-print')]
+        .every((print) => print.getBoundingClientRect().right <= edge + 1)
+    }), `Stampe fuori dal dettaglio a ${width} px`)
+  }
   const candyCard = page.locator('.deck-card').filter({ has: page.locator('.deck-card-title strong', { hasText: /^Rare Candy$/ }) })
   await candyCard.locator('.deck-card-toggle').click()
   await candyCard.getByText('Immagine non disponibile').waitFor()
@@ -319,6 +328,27 @@ try {
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   const pokemon = page.locator('.deck-card').filter({ has: page.locator('.deck-card-title strong', { hasText: /^Mega Absol ex$/ }) })
   await pokemon.locator('.deck-card-toggle').click()
+  await page.getByTestId('card-preview').waitFor({ state: 'hidden' })
+  await page.mouse.move(0, 0)
+  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
+    await page.setViewportSize({ width, height })
+    await pokemon.evaluate((el) => {
+      const main = el.closest('.main-content')
+      main.scrollTop += el.getBoundingClientRect().top - main.getBoundingClientRect().top - 12
+    })
+    const layout = await pokemon.evaluate((el) => {
+      const main = el.closest('.main-content')
+      const art = el.querySelector('.card-artwork').getBoundingClientRect()
+      const game = el.querySelector('.card-gameplay').getBoundingClientRect()
+      return { overflow: main.scrollWidth > main.clientWidth + 1,
+        artworkInView: art.left >= 0 && art.right <= innerWidth,
+        textInView: game.left >= 0 && game.right <= innerWidth,
+        sideBySide: art.right < game.left }
+    })
+    assert.deepEqual(layout, { overflow: false, artworkInView: true, textInView: true, sideBySide: true }, `Dettaglio carta ${width}`)
+    await auditDesignSystem(page, 'Dettaglio carta ' + width)
+    await page.screenshot({ path: join(workspace, 'node_modules', 'card-detail-app131-' + width + '.png') })
+  }
   assert.ok(await pokemon.getByText('280 PS').isVisible())
   assert.ok(await pokemon.getByText('Scheda parziale').isVisible())
   assert.ok(await pokemon.getByText('UI fixture: readable ability effect.').isVisible())
@@ -329,6 +359,25 @@ try {
   await energy.locator('.deck-card-toggle').click()
   assert.ok(await energy.getByText('Nessun testo effetto riportato dal catalogo.').isVisible())
   assert.equal(await energy.getByText('Scheda parziale').count(), 0)
+  await page.getByRole('button', { name: 'Vista Immagini' }).click()
+  const absolTile = page.getByRole('button', { name: /Mega Absol ex.*copia 1 di 1/ })
+  await absolTile.focus()
+  await page.keyboard.press('Enter')
+  const imageDetail = page.getByRole('region', { name: 'Dettaglio Mega Absol ex' })
+  await imageDetail.getByText('Fixture ability').waitFor()
+  for (const [width, height] of [[1440, 900], [1280, 720], [640, 720]]) {
+    await page.setViewportSize({ width, height })
+    assert.ok(await imageDetail.evaluate((el) => {
+      const main = el.closest('.main-content')
+      const rect = el.getBoundingClientRect()
+      return main.scrollWidth <= main.clientWidth + 1 && rect.left >= 0 && rect.right <= innerWidth
+    }), `Dettaglio nella vista Immagini fuori finestra a ${width} px`)
+  }
+  await imageDetail.evaluate((el) => {
+    const main = el.closest('.main-content')
+    main.scrollTop += el.getBoundingClientRect().top - main.getBoundingClientRect().top - 12
+  })
+  await page.screenshot({ path: join(workspace, 'node_modules', 'card-detail-app131-images-640.png') })
   await application.close()
   application = undefined
   console.log('E2E APP-006/007/064/065 OK: dettaglio carta, vincoli contestuali, errore di storage, conflitti, tastiera/responsive, riconciliazione, riapertura e isolamento.')
