@@ -105,7 +105,7 @@ export function TournamentSection() {
     startedAt={startedAt} progressError={progressError} progressDetail={progress ? `${progress.saved} eventi archiviati · ${progress.inspected} controllati` : undefined}
     onRefresh={refresh} onPause={pause} management={<>
       {progress && progress.status !== 'idle' && <p className="content-note">{progress.inspected} eventi controllati · {progress.saved} archiviati · {progress.skipped} fuori perimetro · prossima pagina {progress.page}.</p>}
-      <p className="content-note">La scansione avanza da sola in blocchi di tre eventi, con intervallo proporzionale alle richieste effettuate per rispettare la quota osservata della fonte. Cerca nuovi tornei dalla rotazione Standard occidentale verificata; la scansione completa ricontrolla il periodo corrente.</p>
+      <p className="content-note">La scansione avanza da sola in blocchi di tre eventi, con intervallo proporzionale alle richieste effettuate per rispettare la quota osservata della fonte. Play cerca tornei Standard degli ultimi 90 giorni con almeno 50 partecipanti; la scansione completa ricontrolla lo stesso periodo.</p>
     </>}>
     {events.length > 0 && <div className="catalog-filters event-filters"><label>Evento archiviato
         <select value={selectedEventId ?? ''} onChange={(event) => nav.visit({ 'events.play.event': event.target.value, 'events.play.player': null }, `Eventi · ${events.find((item) => item.eventId === event.target.value)?.name ?? 'Play'}`)}>

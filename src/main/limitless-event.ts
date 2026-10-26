@@ -181,6 +181,8 @@ export async function fetchTournament(eventId: string, fetcher: typeof fetch = f
     detail.decklists !== true || (Array.isArray(detail.specialRules) && detail.specialRules.length > 0) ||
     (Array.isArray(detail.bannedCards) && detail.bannedCards.length > 0))
     throw new Error('Evento fuori perimetro o con regole personalizzate.')
+  if (whole(detail.players, 50) === null)
+    throw new Error('Evento fuori perimetro: meno di 50 partecipanti dichiarati.')
   if (shouldStop()) throw new LimitlessSyncPaused()
   const standings = await getJson(`/tournaments/${eventId}/standings`, fetcher)
   if (shouldStop()) throw new LimitlessSyncPaused()

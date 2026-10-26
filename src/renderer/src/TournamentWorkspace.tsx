@@ -75,7 +75,9 @@ export function TournamentWorkspace({ source, loading, count, busy, progress, er
       <div className="panel-heading"><h2 id={`${id}-heading`}>Gestione {source === 'play' ? 'Play online' : 'Regional'}</h2>
         <button type="button" className="text-button" onClick={close}>Chiudi gestione</button></div>
       <button type="button" className="secondary-button" onClick={() => void onRefresh('full')} disabled={loading || busy || active || pending}>Scansione completa</button>
-      <p className="content-note">{pending ? 'Completa la scansione in corso prima di avviarne un’altra.' : 'Ricontrolla anche gli eventi già acquisiti con avanzamento automatico.'}</p>
+      <p className="content-note">{pending ? 'Completa la scansione in corso prima di avviarne un’altra.' : source === 'play'
+        ? 'Ricontrolla anche gli eventi Play già acquisiti negli ultimi 90 giorni, con almeno 50 partecipanti.'
+        : 'Ricontrolla anche gli eventi già acquisiti con avanzamento automatico.'}</p>
       {management}
     </section>
     {loading ? <LoadingSkeleton label="Caricamento archivio…" /> : children}

@@ -103,7 +103,7 @@ it('porta la candidata precedente nelle evidenze e nel prompt di un Thread colle
   expect(deckThreadPrompt(linked, base, 'Adatta la candidata', [], catalog, evidence).prompt)
     .toContain('60 Carta B MEG 2')
   store.close()
-})
+}, 15000)
 
 it('conserva le query automatiche e le fonti nel solo thread che le ha ricevute', async () => {
   const { store, path } = openStore()

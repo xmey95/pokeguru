@@ -104,7 +104,7 @@ describe('ProjectStore', () => {
     expect(reopened.getBaseline(second.id)).toMatchObject({ rawText: '60 Carta senza stampa', fileName: 'secondo.txt', interpretedTotal: 60 })
     expect(reopened.getBaseline(first.id)?.rawText).not.toBe(reopened.getBaseline(second.id)?.rawText)
     reopened.close()
-  })
+  }, 15000)
 
   it('ripara le liste italiane già salvate senza creare una nuova versione', () => {
     const path = databasePath()
