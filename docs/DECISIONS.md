@@ -341,6 +341,10 @@ Le date dei set ottenute dalla regola delle due settimane includono uscita del p
 
 Il periodo incluso termina cautelativamente il 31-12-2026, senza dedurre la data della prossima rotazione. L'app lo segnala nei 90 giorni precedenti; dopo, il validatore resta indeterminato e i job dipendenti dalla rotazione non avviano la pulizia. La clausola ufficiale 2025 sui marchi futuri ora copre anche i marchi I/J già noti nel resto di quel periodo: il marchio supera solo il controllo di rotazione e non aggira l'ammissione del set o della promo. Una promo J osservata come disponibile soltanto in ottobre 2026 resta indeterminata alla data storica 09-04-2026. Le regole nuove continuano ad arrivare soltanto con una release verificata, secondo T-40. Un profilo TCG Live separato è fuori dal perimetro di APP-127.
 
+### T-128 — Candidate nel Thread (APP-128)
+
+La nuova candidata nasce dalla proposta Codex del Thread; non si chiede all'utente di incollare una lista completa in un modulo separato. Le candidate manuali già persistite rimangono leggibili e adottabili con la validazione esistente. Il Thread collegato conserva uno snapshot della candidata precedente come contesto AI e lo rende visibile in sola lettura, senza trasformarlo in una candidata della nuova base. L'API di salvataggio manuale resta per compatibilità dei dati e per preparare fixture di regressione, ma non è esposta da un controllo della UI. APP-129 potrà semplificare la conversazione senza cambiare questa semantica.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

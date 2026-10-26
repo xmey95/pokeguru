@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { seedStoredCandidate } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -222,9 +223,7 @@ try {
   await page.getByLabel('Primo messaggio a Codex').fill('Vorrei conservare più risorse per il finale. Osservazione di esempio UI.')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
-  await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill(candidateDeck)
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await seedStoredCandidate(page, candidateDeck)
   await page.locator('.thread-candidate.featured .candidate-brief').waitFor()
   assert.equal(await page.locator('.candidate-comparison').getAttribute('open'), null)
   assert.equal(await page.locator('.thread-heading').count(), 0, 'Titolo del thread ripetuto')

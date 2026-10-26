@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart, openDeckImport, switchThread } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport, seedStoredCandidate, switchThread } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -26,6 +26,7 @@ try {
   await page.getByLabel('Titolo').fill('Da zero')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
+  assert.equal(await page.locator('.manual-candidate').count(), 0)
   await page.getByText('Senza lista iniziale').first().waitFor()
   await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   await openDeckImport(page)
@@ -40,19 +41,17 @@ try {
   await page.getByLabel('Primo messaggio a Codex').fill('Più pescata')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
-  await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill('60 Carta B MEG 2')
-  await page.getByLabel('Motivo o appunti (facoltativo)').fill('Cambio completo')
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await page.getByLabel('Proponi una lista').check()
+  await page.getByLabel('Scrivi nel thread').fill('Rendi la lista più consistente')
+  assert.equal(await page.getByRole('button', { name: 'Genera proposta Codex' }).isEnabled(), true)
+  await seedStoredCandidate(page, '60 Carta B MEG 2', 'Cambio completo')
   await page.locator('.thread-candidate.featured .candidate-brief').waitFor()
   assert.match(await page.locator('#thread-switcher-trigger').innerText(), /Proposta nuova/)
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano B')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
-  await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill('60 Carta C MEG 3')
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await seedStoredCandidate(page, '60 Carta C MEG 3')
   await switchThread(page, /Piano A/)
   assert.match(await page.locator('.thread-candidate').textContent(), /Carta B/)
   assert.doesNotMatch(await page.locator('.thread-candidate').textContent(), /Carta C/)
@@ -76,14 +75,12 @@ try {
   assert.match(await page.locator('.thread-candidate').textContent(), /Carta B/)
   assert.match(await page.locator('.thread-detail').textContent(), /Base superata/)
   assert.equal(await page.locator('.thread-versions > details').count(), 2)
-  await page.locator('.manual-candidate > summary').click()
   for (const [text, label] of [
     ['60 Carta D MEG 4', 'Nessuna variazione'],
     ['60 Carta D MEG 5', 'Cambiano solo le stampe'],
     ['59 Carta D MEG 5', '+0 / −1 copie']
   ]) {
-    await page.getByLabel('Lista completa proposta').fill(text)
-    await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+    await seedStoredCandidate(page, text, '', 'Piano A')
     await page.locator('.candidate-change-summary').getByText(label, { exact: false }).waitFor()
     assert.equal(await page.locator('.candidate-comparison').getAttribute('open'), null)
     assert.match(await page.locator('.candidate-brief').innerText(), /Adozione bloccata/)

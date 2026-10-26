@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport, seedStoredCandidate } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -33,9 +33,7 @@ try {
   await page.getByLabel('Titolo').fill('Prima prova')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
-  await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill(second)
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await seedStoredCandidate(page, second)
   await page.locator('.thread-candidate.featured').waitFor()
 
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
@@ -61,8 +59,9 @@ try {
   await page.locator('.thread-candidate.featured').getByRole('button',
     { name: 'Continua in un thread dalla lista attuale' }).click()
   await page.getByText('Thread collegato a un percorso precedente.', { exact: false }).waitFor()
-  await page.locator('.manual-candidate > summary').click()
-  assert.equal(await page.getByLabel('Lista completa proposta').inputValue(), second)
+  await page.locator('.seed-candidate > summary').click()
+  assert.equal(await page.locator('.seed-candidate pre').textContent(), second)
+  assert.equal(await page.locator('.manual-candidate').count(), 0)
   await page.getByRole('button', { name: 'Lista', exact: true }).click()
   await page.locator('.deck-history > summary').click()
   await page.getByLabel('Versione da consultare').selectOption({ label: 'v1 · Apertura' })

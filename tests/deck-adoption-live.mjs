@@ -6,7 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
-import { createProjectFromStart, openDeckImport, switchThread } from './project-ui-helper.mjs'
+import { createProjectFromStart, openDeckImport, seedStoredCandidate, switchThread } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -59,16 +59,12 @@ try {
   await page.getByLabel('Titolo').fill('Piano A')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
-  await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill(firstCandidate)
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await seedStoredCandidate(page, firstCandidate)
   await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
   await page.getByLabel('Titolo').fill('Piano B')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
-  await page.locator('.manual-candidate > summary').click()
-  await page.getByLabel('Lista completa proposta').fill(secondCandidate)
-  await page.getByRole('button', { name: 'Salva candidata nel thread' }).click()
+  await seedStoredCandidate(page, secondCandidate)
   await switchThread(page, /Piano A/)
   const candidate = page.locator('.thread-candidate.featured')
   assert.equal(await candidate.locator('.candidate-comparison').getAttribute('open'), null)

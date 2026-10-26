@@ -417,7 +417,9 @@ details[open] > summary { margin-bottom: 8px; }
 .thread-composer .composer-preview { justify-self: start; padding-left: 0; }
 .composer-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .thread-ai-options, .candidate-evidence, .matchup-report-meta { margin: 16px 0; padding: 4px 12px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-sm); }
-.manual-candidate, .thread-versions { margin-top: 20px; padding-top: 8px; border-top: 1px solid var(--line); }
+.thread-versions { margin-top: 20px; padding-top: 8px; border-top: 1px solid var(--line); }
+.seed-candidate { margin-top: 8px; }
+.seed-candidate pre { overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .thread-versions > details { margin: 8px 0; padding: 8px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
 .thread-timeline { display: grid; gap: 16px; min-width: 0; margin: 24px 0; }
 .thread-timeline h4 { font-size: var(--text-sm); color: var(--ink-muted); margin: 0; }
