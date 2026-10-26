@@ -123,3 +123,7 @@ export function useCardPreview() {
     }
   })
 }
+
+export function useDismissCardPreview(): () => void {
+  return useContext(Context)?.dismiss ?? (() => {})
+}
