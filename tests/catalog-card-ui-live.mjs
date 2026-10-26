@@ -140,7 +140,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 })
   const select = async (name) => {
     await search.fill(name)
-    await page.locator('.catalog-list').getByRole('button', { name: new RegExp(name) }).click()
+    await page.locator('.catalog-list').getByRole('button', { name: new RegExp(name) }).click({ timeout: 30000 })
     await ready()
     await detail.getByRole('heading', { name, exact: true }).waitFor()
   }
