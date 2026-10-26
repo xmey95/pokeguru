@@ -2,6 +2,15 @@ import { useMemo } from 'react'
 import { buildDeckCards } from '../../shared/reconciliation'
 import { CardConstraints } from './CardConstraints'
 import { useDeckConstraints } from './DeckConstraintsContext'
+import { useViewState } from './Navigation'
+
+function OutsideCard({ identityId, name, count }: { identityId: string; name: string; count: number }) {
+  const [open, setOpen] = useViewState(`constraint.outside.${identityId}`, false)
+  return <details className="offdeck-card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <summary>{name} <span>{count} {count === 1 ? 'vincolo' : 'vincoli'}</span></summary>
+    <CardConstraints identityId={identityId} name={name} />
+  </details>
+}
 
 /** Keeps constraints on cards outside the current list reachable without a general editor. */
 export function DeckConstraintIndex() {
@@ -22,9 +31,6 @@ export function DeckConstraintIndex() {
   return <section className="offdeck-constraints" aria-label="Carte vincolate fuori lista">
     <h2>Carte vincolate fuori lista</h2>
     <p className="content-note">Questi vincoli restano nel progetto anche quando la carta non compare nella lista principale.</p>
-    {outside.map(([identityId, entry]) => <details key={identityId} className="offdeck-card">
-      <summary>{entry.name} <span>{entry.count} {entry.count === 1 ? 'vincolo' : 'vincoli'}</span></summary>
-      <CardConstraints identityId={identityId} name={entry.name} />
-    </details>)}
+    {outside.map(([identityId, entry]) => <OutsideCard key={identityId} identityId={identityId} name={entry.name} count={entry.count} />)}
   </section>
 }
