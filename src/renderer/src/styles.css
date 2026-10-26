@@ -122,7 +122,7 @@ details[open] > summary { margin-bottom: 8px; }
 .compact-create-panel h2, .compact-create-panel p { margin: 0; }
 .compact-create-panel .primary-button { justify-self: start; }
 .import-panel label:not(.file-picker) { display: block; margin: 20px 0 8px; }
-.import-panel textarea, .candidate-form #candidate-text { min-height: 200px; font-family: var(--font-mono); font-size: var(--text-sm); }
+.import-panel textarea { min-height: 200px; font-family: var(--font-mono); font-size: var(--text-sm); }
 .import-panel textarea { height: clamp(200px, 30vh, 320px); }
 .import-notice { margin: 16px 0 0; color: var(--ink-secondary); font-size: var(--text-sm); }
 .import-actions, .settings-actions, .constraint-form-actions, .matchup-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
@@ -419,15 +419,6 @@ details[open] > summary { margin-bottom: 8px; }
 .thread-form .content-note { margin-bottom: 0; }
 .thread-ai-choice { color: var(--accent); }
 .thread-form-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
-.composer-mode { display: inline-flex; flex-wrap: wrap; justify-self: start; gap: 4px; margin: 0 0 4px; padding: 4px; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-subtle); }
-.composer-mode label { position: relative; cursor: pointer; }
-.composer-mode input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
-.composer-mode span { display: flex; align-items: center; min-height: 40px; padding: 8px 14px; border: 1px solid transparent; border-radius: 4px; font-size: var(--text-sm); font-weight: 650; }
-.composer-mode input:checked + span { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
-.composer-mode input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
-.composer-mode label:hover span { background: var(--surface-hover); }
-.composer-mode:disabled { opacity: .55; }
-.composer-mode:disabled label { cursor: not-allowed; }
 .thread-composer .composer-preview { justify-self: start; padding-left: 0; }
 .composer-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .thread-ai-options, .candidate-evidence, .matchup-report-meta { margin: 16px 0; padding: 4px 12px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-sm); }

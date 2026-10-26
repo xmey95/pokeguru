@@ -349,7 +349,11 @@ Il periodo incluso termina cautelativamente il 31-12-2026, senza dedurre la data
 
 ### T-128 — Candidate nel Thread (APP-128)
 
-La nuova candidata nasce dalla proposta Codex del Thread; non si chiede all'utente di incollare una lista completa in un modulo separato. Le candidate manuali già persistite rimangono leggibili e adottabili con la validazione esistente. Il Thread collegato conserva uno snapshot della candidata precedente come contesto AI e lo rende visibile in sola lettura, senza trasformarlo in una candidata della nuova base. L'API di salvataggio manuale resta per compatibilità dei dati e per preparare fixture di regressione, ma non è esposta da un controllo della UI. APP-129 potrà semplificare la conversazione senza cambiare questa semantica.
+La nuova candidata nasce dalla risposta Codex del Thread; non si chiede all'utente di incollare una lista completa in un modulo separato. Le candidate manuali già persistite rimangono leggibili e adottabili con la validazione esistente. Il Thread collegato conserva uno snapshot della candidata precedente come contesto AI e lo rende visibile in sola lettura, senza trasformarlo in una candidata della nuova base. L'API di salvataggio manuale resta per compatibilità dei dati e per preparare fixture di regressione, ma non è esposta da un controllo della UI.
+
+### T-129 — Un turno Codex, due esiti possibili nel Thread (APP-129)
+
+Il compositore invia ogni richiesta allo stesso endpoint. Codex restituisce il testo della risposta, le fonti e, quando intende proporre una lista, il testo integrale della lista. L'app classifica una lista effettivamente presente anche se il campo `kind` dichiarato dal modello è incoerente: il modello non decide da solo se salvare una candidata. Soltanto il validatore deterministico già usato per le proposte può creare una candidata completa sulla base corrente. Un fallimento di validazione conserva risposta e lista nella cronologia con la causa, senza scrivere una candidata parziale. Risposta e candidata valida sono salvate insieme, con lo stesso contesto ed evidenze; la lista principale cambia solo con l'adozione esplicita. Il recupero distingue il nuovo schema dei job dai job storici, che restano leggibili. Il percorso di generazione da progetto senza lista resta in I4.
 
 ## Registro delle fonti primarie
 
