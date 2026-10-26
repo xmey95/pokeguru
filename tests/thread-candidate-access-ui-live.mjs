@@ -93,7 +93,13 @@ try {
   assert.equal(await page.locator('.thread-candidate').count(), 1, 'Candidata duplicata nella cronologia')
   await seedStoredCandidate(page, '1 Mega Absol ex MEG 86\n57 Basic Psychic Energy\n2 Mega Audino ex ME02.5 172')
   await page.getByText('Candidata 2', { exact: true }).first().waitFor()
-  for (let i = 0; i < 3 && !await page.locator('.thread-candidate:not(.featured)').count(); i++) {
+  for (let i = 0; i < 4; i++) {
+    const next = await page.waitForFunction(() => {
+      if (document.querySelector('.thread-candidate:not(.featured)')) return 'visible'
+      const button = document.querySelector('.thread-timeline > button')
+      return button?.getAttribute('aria-busy') === 'false' ? 'more' : false
+    })
+    if (await next.jsonValue() === 'visible') break
     await page.getByRole('button', { name: /Mostra .* precedenti/ }).click()
   }
   await page.locator('.thread-candidate:not(.featured)').waitFor()
