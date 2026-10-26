@@ -47,7 +47,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci
-      - run: npm test
+      - run: npm test -- --maxWorkers=2
       - name: Install Linux display tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
@@ -151,7 +151,7 @@ jobs:
     name: Publish GitHub release
     needs: [package, attest]
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: write
       attestations: read
