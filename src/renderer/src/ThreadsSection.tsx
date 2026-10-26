@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import type { DeckThread, DeckThreadMessage, DeckThreadSummary, DeckVersion } from '../../shared/deck-threads'
 import type { DeckCandidate } from '../../shared/deck-threads'
 import type { AiModel, AiPreferences } from '../../shared/ai'
@@ -291,6 +291,11 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const [message, setMessage] = useDraftState(`thread.message:${projectId}:${selectedId}`, '')
   const [composerError, setComposerError] = useDraftState<string | null>(`thread.error:${projectId}:${selectedId}`, null)
   const composerErrorElement = useRef<HTMLDivElement>(null)
+  const composerComposing = useRef(false)
+  const composerSubmitting = useRef(new Set<string>())
+  const keyboardSubmissionFocus = useRef<{ input: HTMLTextAreaElement; threadId: string } | null>(null)
+  const activeComposerThreadId = useRef(selectedId)
+  activeComposerThreadId.current = selectedId
   const previewRequest = useRef(0)
   const [preview, setPreview] = useState<{ prompt: string; packet: ThreadEvidencePacket } | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -616,11 +621,14 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
 
   async function ask(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working || aiBusy || openingAiPending || !message.trim()) return
+    if (!selected || working || composerSubmitting.current.has(selected.id) || aiBusy || openingAiPending || !message.trim()) return
+    const threadId = selected.id
+    composerSubmitting.current.add(threadId)
     setWorking(true)
     setAsking(true)
     setComposerError(null)
     invalidatePreview()
+    let succeeded = false
     try {
       const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
         selectedOverride?.model ? selectedOverride : null)
@@ -629,13 +637,44 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
       await refreshSummaries()
       setMessage('')
       setPreview(null)
+      succeeded = true
     } catch (cause) {
       setComposerError(cause instanceof Error ? cause.message : 'Risposta Codex non completata.')
       const current = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
       if (current.ok) showDetail(current.value)
       await refreshSummaries()
     }
-    finally { setWorking(false); setAsking(false) }
+    finally {
+      composerSubmitting.current.delete(threadId)
+      setWorking(false)
+      setAsking(false)
+      if (succeeded) restoreComposerFocus(threadId)
+      else if (keyboardSubmissionFocus.current?.threadId === threadId) keyboardSubmissionFocus.current = null
+    }
+  }
+
+  function restoreComposerFocus(threadId: string): void {
+    const pending = keyboardSubmissionFocus.current
+    if (pending?.threadId !== threadId) return
+    keyboardSubmissionFocus.current = null
+    requestAnimationFrame(() => {
+      if (activeComposerThreadId.current === pending.threadId && pending.input.isConnected &&
+        !pending.input.disabled && document.activeElement === document.body) {
+        pending.input.focus({ preventScroll: true })
+      }
+    })
+  }
+
+  function onComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey ||
+      event.nativeEvent.isComposing || composerComposing.current || event.keyCode === 229) return
+    event.preventDefault()
+    if (event.repeat || !selected || composerSubmitting.current.has(selected.id) || working || aiBusy || openingAiPending || !message.trim()) return
+    const form = event.currentTarget.form
+    const submit = form?.querySelector<HTMLButtonElement>('button[type="submit"]')
+    if (!form || submit?.disabled) return
+    keyboardSubmissionFocus.current = { input: event.currentTarget, threadId: selected.id }
+    form.requestSubmit()
   }
 
   async function adopt(candidate: DeckCandidate): Promise<void> {
@@ -734,13 +773,15 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
             <form className="thread-form thread-composer" onSubmit={(event) => void ask(event)}>
               <label htmlFor="thread-message">Scrivi nel thread</label>
               <textarea id="thread-message" value={message} maxLength={5000} disabled={working} aria-describedby="thread-composer-help"
+                onCompositionStart={() => { composerComposing.current = true }}
+                onCompositionEnd={() => { composerComposing.current = false }} onKeyDown={onComposerKeyDown}
                 onChange={(event) => { setMessage(event.target.value); invalidatePreview(); setComposerError(null) }} />
-              <p id="thread-composer-help" className="content-note">{selected.baseVersionId
+              <p id="thread-composer-help" className="content-note">Invio: Enter · Nuova riga: Shift+Enter. {selected.baseVersionId
                 ? 'Scrivi una domanda, un’idea o chiedi una lista. Una proposta completa e verificata apparirà qui come candidata da confrontare e adottare esplicitamente.'
                 : 'Puoi discutere un’idea con Codex. Per salvare una lista candidata, importa prima una lista principale.'}</p>
               {composerError && <div ref={composerErrorElement} className="error-banner" role="alert" tabIndex={-1}>{composerError}</div>}
               <div className="composer-actions"><div className="thread-form-actions">
-                <button className="primary-button" disabled={working || aiBusy || openingAiPending || !message.trim()}>
+                <button type="submit" className="primary-button" disabled={working || aiBusy || openingAiPending || !message.trim()}>
                   {asking && <Spinner />}{asking ? 'Risposta in corso…' : 'Invia a Codex'}
                 </button>
                 <button type="button" className="secondary-button" disabled={working || !message.trim()}
