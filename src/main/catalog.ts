@@ -1125,7 +1125,7 @@ export class CatalogStore {
   /** A single local lookup for a visible row; never fetch artwork from the network on hover. */
   cardPreview(lookup: CardPreviewLookup): CardPreviewData {
     const missing = (reason: CardPreviewData['reason']): CardPreviewData => ({
-      name: lookup.name, printLabel: null, image: null, reason, sample: false
+      name: lookup.name, printId: null, printLabel: null, image: null, reason, sample: false
     })
     let prints: CatalogPrint[] = []
     let sample = false
@@ -1163,7 +1163,7 @@ export class CatalogStore {
     const image = print.thumbnail && (print.thumbnail.startsWith('pokeguru://cards/') ||
       print.thumbnail.startsWith('data:image/')) ? print.thumbnail : null
     return {
-      name: print.name, printLabel: `${print.setName} · ${print.localId}`,
+      name: print.name, printId: print.id, printLabel: `${print.setName} · ${print.localId}`,
       image, reason: image ? 'available'
         : print.imageBase ? 'not-cached' : 'source-missing', sample
     }

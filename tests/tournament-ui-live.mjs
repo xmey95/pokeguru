@@ -37,10 +37,15 @@ try {
     writeFileSync(join(profile, 'data', 'catalog-images', 'me01-086.webp'), Buffer.from(sampleImage, 'base64'))
     const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
     const print = { id: 'me01-086', setId: 'me01', setName: 'Mega Evolution · fixture', localId: '086',
-      name: 'Mega Absol ex', category: 'Pokemon', rarity: null, variants: null, identityId: 'mega-absol-fixture',
+      name: 'Mega Absol ex', category: 'Pokemon', stage: 'Basic', rarity: 'Rare · fixture',
+      regulationMark: 'I', variants: { holo: true }, identityId: 'mega-absol-fixture',
       identityBasis: 'pokemon-text', imageBase: 'https://assets.tcgdex.net/en/me01/086',
       thumbnail: 'pokeguru://cards/me01-086.webp', highImageAvailable: null, sourceUpdated: null,
-      sourceUrl: 'https://api.tcgdex.net/v2/en/cards/me01-086', detailAt: '2026-10-23T20:00:00.000Z', error: null }
+      sourceUrl: 'https://api.tcgdex.net/v2/en/cards/me01-086', detailAt: '2026-10-23T20:00:00.000Z', error: null,
+      gameplay: { hp: 210, types: ['Darkness'], evolveFrom: null,
+        attacks: [{ name: 'Attacco fixture', cost: ['Darkness', 'Colorless'], damage: '120', effect: 'Effetto fixture.' }],
+        abilities: [{ name: 'Abilità fixture', effect: 'Testo fixture.', type: null }], effect: null,
+        trainerType: null, weaknesses: [{ type: 'Grass', value: '×2' }], resistances: [], retreat: 2 } }
     db.prepare('INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at) VALUES (?, ?, 1, 1, ?)')
       .run('me01', print.setName, print.detailAt)
     db.prepare('INSERT INTO catalog_prints VALUES (?, ?, ?)').run(print.id, print.setId, JSON.stringify(print))
@@ -133,8 +138,21 @@ try {
     assert.equal(await page.locator('.event-image-grid img').count(), 3, 'Play: tre copie della scansione locale')
     await page.waitForFunction(() => [...document.querySelectorAll('.event-image-grid img')].every((image) => image.naturalWidth > 0))
     await page.locator('.event-image-grid .card-image-tile').first().click()
-    assert.ok(await page.getByRole('region', { name: /Dettaglio Mega Absol ex/ }).isVisible())
+    const playDetail = page.getByRole('region', { name: /Dettaglio Mega Absol ex/ })
+    await playDetail.getByRole('heading', { name: 'Attacco fixture' }).waitFor()
+    assert.match(await playDetail.innerText(), /Abilità fixture/)
+    assert.match(await playDetail.innerText(), /Costo: 1 Darkness · 1 Colorless/)
+    assert.match(await playDetail.innerText(), /210 PS/)
+    assert.match(await playDetail.innerText(), /Rare · fixture/)
     await page.setViewportSize({ width: 640, height: 580 })
+    assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
+    await playDetail.getByRole('heading', { name: 'Attacco fixture' }).scrollIntoViewIfNeeded()
+    assert.ok(await playDetail.getByRole('heading', { name: 'Attacco fixture' }).isVisible())
+    await playDetail.getByText('Rare · fixture').scrollIntoViewIfNeeded()
+    assert.ok(await playDetail.getByText('Rare · fixture').isVisible())
+    await page.locator('.event-image-grid .card-image-tile').filter({ hasText: 'Mega Audino ex' }).first().click()
+    assert.match(await page.getByRole('region', { name: /Dettaglio Mega Audino ex/ }).innerText(),
+      /Scheda non trovata nel Catalogo locale/)
     assert.equal(await page.locator('.main-content').evaluate((element) => element.scrollWidth > element.clientWidth + 1), false)
     await page.screenshot({ path: join(workspace, 'node_modules', 'content-eventi-images-640.png') })
     await page.getByRole('group', { name: 'Vista lista del torneo' }).getByRole('button', { name: 'Lista' }).click()
@@ -161,6 +179,8 @@ try {
     await page.getByRole('group', { name: 'Vista lista del torneo' }).getByRole('button', { name: 'Immagini' }).click()
     await page.getByText('Cerco immagini nel Catalogo locale…').waitFor({ state: 'hidden' })
     assert.equal(await page.locator('.event-image-grid .card-image-tile').count(), 60, 'Regional: una tessera per copia')
+    await page.locator('.event-image-grid .card-image-tile').first().click()
+    await page.getByRole('region', { name: /Dettaglio Mega Absol ex/ }).getByRole('heading', { name: 'Attacco fixture' }).waitFor()
     await page.getByRole('group', { name: 'Vista lista del torneo' }).getByRole('button', { name: 'Lista' }).click()
     await page.getByLabel('Evento archiviato').selectOption('999998')
     await ready()

@@ -6,6 +6,7 @@ const api: ProjectsApi = {
   getCatalogBrowseOverview: () => ipcRenderer.invoke('catalog:browse-overview'),
   searchCatalog: (query, setId, offset) => ipcRenderer.invoke('catalog:search', query, setId, offset),
   getCatalogGroup: (key) => ipcRenderer.invoke('catalog:group', key),
+  getCatalogPrint: (id) => ipcRenderer.invoke('catalog:print', id),
   getCardPreview: (lookup) => ipcRenderer.invoke('catalog:card-preview', lookup),
   getCardPreviews: (lookups) => ipcRenderer.invoke('catalog:card-previews', lookups),
   syncCatalog: () => ipcRenderer.invoke('catalog:sync'),

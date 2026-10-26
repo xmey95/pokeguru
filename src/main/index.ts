@@ -596,6 +596,15 @@ function registerProjectHandlers(): void {
     catch { return { ok: false, error: 'Dettaglio carta non disponibile.' } }
   })
 
+  ipcMain.handle('catalog:print', (event, id: unknown): OperationResult<CatalogPrint | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (typeof id !== 'string' || !/^[a-zA-Z0-9.-]{1,100}$/.test(id))
+      return { ok: false, error: 'Stampa non valida.' }
+    try { return { ok: true, value: catalogStore.getPrint(id) } }
+    catch { return { ok: false, error: 'Dettaglio stampa non disponibile.' } }
+  })
+
   function validCardPreviewLookup(value: unknown): value is CardPreviewLookup {
     const input = value as Partial<CardPreviewLookup> | null
     return !!input && typeof input.name === 'string' && input.name.length >= 1 && input.name.length <= 150 &&
