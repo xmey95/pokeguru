@@ -1,5 +1,7 @@
 # Tre alternative UX per Pokéguru
 
+**Studio archiviato:** il feedback successivo mantiene l'organizzazione attuale e riprende solo le fasi del piano Matchup. La proposta corrente è in [refinement](../refinement/index.html) e [UI_REFINEMENT](../../docs/UI_REFINEMENT.md).
+
 Aprire `index.html` nel browser. La barra in alto cambia l'architettura, non il tema. `?concept=a`, `b` o `c` apre direttamente la direzione; `capture=1` nasconde la barra dello studio nelle schermate.
 
 - **A, Banco del mazzo:** selezionare una carta, scrivere una domanda e chiedere una variante; aprire confronto e conferma.

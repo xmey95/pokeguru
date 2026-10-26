@@ -1,5 +1,7 @@
 # Ripensare i percorsi di Pokéguru
 
+**Studio superato dal feedback successivo del 26 ottobre:** l'utente apprezza l'organizzazione attuale e giudica eccessive queste modifiche. Si conservano solo le tab Apertura, Sviluppo e Chiusura nei Matchup; la direzione corrente è [UI_REFINEMENT.md](UI_REFINEMENT.md). Le proposte qui sotto restano come storico, non come interventi approvati.
+
 26 ottobre 2026 · studio APP-134 · revisione dei primi mockup
 
 Pokéguru ha già strumenti per importare, discutere, confrontare e preparare un mazzo. La proposta è organizzarli attorno al lavoro del giocatore: partire da una carta o da un problema, sviluppare una variante, decidere e ritrovare la preparazione coerente con la lista scelta. La prima serie di mockup conservava la struttura esistente e variava soprattutto lo stile; non affrontava questo problema.

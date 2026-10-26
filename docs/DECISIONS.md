@@ -422,6 +422,8 @@ Nel campo della conversazione, Enter usa la stessa azione del pulsante Invia e S
 
 ### T-134 — Studio delle alternative UX prima dell'applicazione
 
+**Feedback successivo, prevalente:** l'utente giudica eccessive le alternative strutturali e conferma di apprezzare l'organizzazione attuale. Si mantengono navigazione, Thread e lista persistente. La scelta apprezzata è il piano Matchup in tab Apertura, Sviluppo e Chiusura. Il resto della direzione riguarda maturità di microcopy, stati e gerarchia informativa, con diagnostica tecnica in secondo livello. [UI_REFINEMENT.md](UI_REFINEMENT.md) governa la proposta corrente. Questo feedback non autorizza l'applicazione delle architetture A/B/C né rimuove controlli o provenienza dei dati.
+
 Il feedback del 26-10-2026 riapre APP-134: tre varianti di stile con lo stesso layout non rispondono alla richiesta di ripensare le scelte UX. Lo studio in `prototypes/ux-directions/` mantiene palette e fixture comuni e varia ingresso, navigazione e spazio del lavoro: carta e domanda, variante e decisione, avversario e piano. [UX_DIRECTIONS.md](UX_DIRECTIONS.md) distingue comportamenti osservati e ipotesi da provare. La proposta di sostituire il pannello sempre aperto con accesso contestuale è ancora da scegliere; PRODUCT e DESIGN_SYSTEM descrivono il contratto attuale. L'adozione intera ed esplicita, le basi immutabili, le guide storiche e le incertezze restano vincoli del dominio. Nessuna scelta di architettura è attribuita all'utente senza una sua risposta.
 
 ## Questioni ancora da decidere
