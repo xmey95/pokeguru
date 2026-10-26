@@ -8,7 +8,7 @@ function OutsideCard({ identityId, name, count }: { identityId: string; name: st
   const [open, setOpen] = useViewState(`constraint.outside.${identityId}`, false)
   return <details className="offdeck-card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>{name} <span>{count} {count === 1 ? 'vincolo' : 'vincoli'}</span></summary>
-    <CardConstraints identityId={identityId} name={name} />
+    <CardConstraints identityId={identityId} name={name} allowCreate={false} />
   </details>
 }
 
@@ -30,7 +30,7 @@ export function DeckConstraintIndex() {
   if (loading || error || outside.length === 0) return null
   return <section className="offdeck-constraints" aria-label="Carte vincolate fuori lista">
     <h2>Carte vincolate fuori lista</h2>
-    <p className="content-note">Questi vincoli restano nel progetto anche quando la carta non compare nella lista principale.</p>
+    <p className="content-note">Questi vincoli storici restano nel progetto anche quando la carta non compare nella lista principale. Puoi modificarli o eliminarli; nuovi vincoli si aggiungono dalle carte della lista.</p>
     {outside.map(([identityId, entry]) => <OutsideCard key={identityId} identityId={identityId} name={entry.name} count={entry.count} />)}
   </section>
 }

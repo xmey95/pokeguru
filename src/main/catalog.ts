@@ -1057,10 +1057,9 @@ export class CatalogStore {
       if (print.detailAt && print.imageBase && !print.thumbnail) imageCacheMissing++
       const key = print.identityId ?? `pending-${print.id}`
       const group = groups.get(key) ?? { key, name: print.name, category: print.category,
-        basis: print.identityBasis, printCount: 0, canConstrain: false,
+        basis: print.identityBasis, printCount: 0,
         ids: [], search: print.name.toLocaleLowerCase(), setIds: new Set<string>() }
       group.printCount++
-      group.canConstrain ||= !!(print.detailAt && print.identityId)
       group.ids.push(print.id)
       group.setIds.add(print.setId)
       group.search += ` ${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase()

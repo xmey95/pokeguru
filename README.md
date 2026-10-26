@@ -1,5 +1,9 @@
 # Pokéguru
 
+**Release corrente:** [v0.2.0](https://github.com/xmey95/pokeguru/releases/tag/v0.2.0), con pacchetti per Linux, Windows, macOS Intel e Apple Silicon. I due DMG macOS non sono firmati né notarizzati da Apple.
+
+**Su `dev` dopo v0.2.0:** i vincoli si creano nelle carte della Lista del progetto; il Catalogo globale non li mostra. I Thread puntano a produrre nello stesso turno una candidata completa per le richieste di modifica, se Catalogo e controlli permettono di verificarla. La candidata resta separata dalla lista principale finché non viene adottata manualmente.
+
 APP-136 amplia il testo del piano Matchup all'intera scheda e mostra punti forti, rischi e carte chiave come elenchi. Anche le guide già salvate e lo storico ricevono questa presentazione, senza rigenerazione o modifica dei testi nell'archivio.
 
 APP-135 rifinisce le schermate esistenti: le nuove guide e revisioni Matchup mostrano **Apertura, Sviluppo e Chiusura** come tab, utilizzabili anche con frecce/Home/End. Le guide precedenti restano intere. **Fonti e dettagli** raccoglie provenienza, versione e **Diagnostica AI**; limiti e blocchi rimangono visibili. Durante una revisione resta consultabile la guida salvata. **Completa salvataggio** recupera un risultato già pronto senza chiedere una nuova analisi. Verifiche e perimetro in [docs/UI_REFINEMENT.md](docs/UI_REFINEMENT.md).

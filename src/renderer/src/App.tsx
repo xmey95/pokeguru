@@ -360,11 +360,8 @@ export function App() {
             <button type="submit" className="primary-button" disabled={saving || loading || !name.trim()}>{saving ? 'Salvataggio…' : 'Crea progetto'}</button>
           </form>}
           {error && <div className="error-banner" role="alert">{error}</div>}
-          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? selected && !baselineLoading
-            ? <DeckConstraintsProvider key={selected.id} projectId={selected.id} baseline={baseline}>
-                <CatalogSection focusIdentityId={catalogFocusIdentityId} canConstrain />
-              </DeckConstraintsProvider>
-            : <CatalogSection focusIdentityId={catalogFocusIdentityId} /> : view === 'tournament' ? <TournamentSection /> : loading ? <LoadingSkeleton label="Apertura progetti…" rows={3} /> : selected ? (
+          {view === 'ai' ? <AiSettings /> : view === 'catalog'
+            ? <CatalogSection focusIdentityId={catalogFocusIdentityId} /> : view === 'tournament' ? <TournamentSection /> : loading ? <LoadingSkeleton label="Apertura progetti…" rows={3} /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-headline">
                 <div>

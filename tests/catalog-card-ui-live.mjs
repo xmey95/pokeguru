@@ -209,12 +209,8 @@ try {
   await select('Allenatore di prova')
   assert.ok(await detail.getByText('UI fixture: search your deck for a Pokémon.\nThen shuffle your deck.', { exact: true }).isVisible())
   assert.equal(await detail.locator('.card-battle-stats').count(), 0)
-  await detail.getByRole('button', { name: 'Aggiungi vincolo su questa carta' }).click()
-  await detail.locator('.constraint-form').waitFor()
-  assert.equal(await detail.locator('.constraint-form').getByLabel('Carta di gioco').count(), 0)
-  await page.keyboard.press('Escape')
-  await detail.locator('.constraint-form').waitFor({ state: 'detached' })
-  await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Aggiungi vincolo su questa carta')
+  assert.equal(await detail.locator('.card-constraints, .constraint-form').count(), 0,
+    'Il Catalogo globale non gestisce vincoli di progetto')
   await select('Energia Base di prova')
   assert.ok(await detail.getByText('Nessun testo effetto riportato dal catalogo.', { exact: true }).isVisible())
   assert.equal(await detail.locator('.card-gameplay-missing').count(), 0)
@@ -228,7 +224,7 @@ try {
   assert.ok(await detail.locator('.catalog-card-notice').filter({ hasText: 'Promo non elencata · ammissione da verificare' }).isVisible())
   assert.ok(await detail.getByText('Fixture: scheda non acquisita.', { exact: true }).first().isVisible())
   assert.equal(await detail.locator('.catalog-card-prints').evaluate((el) => el.open), false)
-  console.log('CATALOG CARD OK: single-print gameplay, variants/filter/provenance without JSON links, missing/broken image, partial/promo, trainer/energy, keyboard/history/constraint; 1440/1280/640; minimum contrast ' + minimumContrast.toFixed(2))
+  console.log('CATALOG CARD OK: single-print gameplay, variants/filter/provenance without JSON links or project constraints, missing/broken image, partial/promo, trainer/energy, keyboard/history; 1440/1280/640; minimum contrast ' + minimumContrast.toFixed(2))
 } finally {
   await application?.close()
   rmSync(profile, { recursive: true, force: true })
