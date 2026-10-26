@@ -18,7 +18,7 @@ try {
   application = await launch()
   let page = await application.firstWindow()
   await page.getByRole('button', { name: 'Impostazioni AI' }).click()
-  await page.getByRole('heading', { name: 'AI per Pokéguru' }).waitFor()
+  await page.getByRole('heading', { name: 'Impostazioni AI' }).waitFor()
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
   assert.ok(connection.value.account === 'chatgpt' || connection.value.account === 'apiKey', 'Accesso Codex necessario per la prova live')
@@ -27,7 +27,7 @@ try {
   assert.equal(preference.ok, true)
   if (process.env.POKEGURU_SKIP_AI_TEST !== '1') {
     await page.getByRole('button', { name: 'Esegui prova AI' }).click()
-    await page.getByText('Prova riuscita: Codex ha completato').waitFor({ timeout: 180000 })
+    await page.getByText('Prova AI riuscita').waitFor({ timeout: 180000 })
   }
   const chosen = connection.value.models.find((model) => model.isDefault) ?? connection.value.models[0]
   const chosenEffort = chosen.reasoningEfforts.find((effort) => effort.id !== chosen.defaultReasoningEffort)
@@ -37,7 +37,7 @@ try {
   await page.getByText('Preferenze salvate.').waitFor()
   if (process.env.POKEGURU_SKIP_AI_TEST !== '1') {
     await page.getByRole('button', { name: 'Esegui prova AI' }).click()
-    await page.getByText('Prova riuscita: Codex ha completato').waitFor({ timeout: 180000 })
+    await page.getByText('Prova AI riuscita').waitFor({ timeout: 180000 })
   }
   await page.screenshot({ path: join(workspace, 'out', 'ai-settings.png'), fullPage: true })
   await application.close()
@@ -51,7 +51,7 @@ try {
   application = await launch({ POKEGURU_CODEX_BIN: join(workspace, 'codex-non-presente.exe') })
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Impostazioni AI' }).click()
-  await page.getByRole('alert').getByText('Codex CLI non trovato.', { exact: false }).waitFor()
+  await page.getByRole('alert').getByText('Codex non disponibile.', { exact: false }).waitFor()
   await application.close()
   const isolatedCodexHome = join(directory, 'codex-home')
   mkdirSync(isolatedCodexHome)

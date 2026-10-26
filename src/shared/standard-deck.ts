@@ -30,9 +30,13 @@ export function evaluateStandardDeck(baseline: DeckBaseline, catalog: CatalogVie
   const toReview: string[] = []
   const passed: string[] = []
   const rules = catalog?.rulePackage ?? BUNDLED_WESTERN_RULE_PACKAGE
+  const lineLabel = (lineNumber: number): string => {
+    const line = baseline.lines.find((item) => item.lineNumber === lineNumber)
+    return `Riga ${lineNumber}${line?.kind === 'card' ? ` — ${line.raw}` : ''}`
+  }
   if (catalog?.rulePackageError) toReview.push(catalog.rulePackageError)
-  if (audit && (audit.status === 'changed' ||
-    audit.packageVersion !== (catalog?.rulePackage?.version ?? STANDARD_RULE_PACKAGE_VERSION)))
+  if (audit?.status === 'changed' &&
+    audit.packageVersion === (catalog?.rulePackage?.version ?? STANDARD_RULE_PACKAGE_VERSION))
     toReview.push('Le fonti ufficiali non confermano il pacchetto di regole locale: ricontrollare nel Catalogo.')
   if (asOf < rules.standardBans.checkedAt) {
     toReview.push(`Elenco delle carte vietate verificato solo dal ${rules.standardBans.checkedAt}: data storica da verificare.`)
@@ -43,7 +47,7 @@ export function evaluateStandardDeck(baseline: DeckBaseline, catalog: CatalogVie
     for (const line of baseline.lines.filter((item) => item.kind === 'card')) {
       if (banned.has((line.name ?? '').normalize('NFKC').trim().toLocaleLowerCase())) {
         bannedHits += 1
-        problems.push(`Riga ${line.lineNumber} — ${line.name}: carta vietata nel pacchetto Standard ${rules.version}.`)
+        problems.push(`${lineLabel(line.lineNumber)}: carta vietata nel pacchetto Standard ${rules.version}.`)
       }
     }
     if (bannedHits === 0) passed.push(`Nessuna carta vietata nello snapshot ${rules.standardBans.checkedAt}`)
@@ -65,15 +69,15 @@ export function evaluateStandardDeck(baseline: DeckBaseline, catalog: CatalogVie
 
   const promoByLine = new Map(promoAdmission.lines.map((line) => [line.lineNumber, line]))
   for (const line of rotation.lines) {
-    if (line.status !== 'mark-accepted') toReview.push(`Riga ${line.lineNumber} — rotazione: ${line.message}`)
+    if (line.status !== 'mark-accepted') toReview.push(`${lineLabel(line.lineNumber)} — rotazione: ${line.message}`)
   }
   if (rotation.lines.length > 0 && rotation.lines.every((line) => line.status === 'mark-accepted')) {
     passed.push(`Marchi coperti dalla rotazione ${rotation.rule?.version ?? ''}`.trim())
   }
   for (const line of setAdmission.lines) {
     const result = promoByLine.get(line.lineNumber) ?? line
-    if (result.status === 'waiting') problems.push(`Riga ${line.lineNumber} — ammissione: ${result.message}`)
-    else if (result.status === 'indeterminate') toReview.push(`Riga ${line.lineNumber} — ammissione: ${result.message}`)
+    if (result.status === 'waiting') problems.push(`${lineLabel(line.lineNumber)} — ammissione: ${result.message}`)
+    else if (result.status === 'indeterminate') toReview.push(`${lineLabel(line.lineNumber)} — ammissione: ${result.message}`)
   }
   if (setAdmission.lines.length > 0 && setAdmission.lines.every((line) =>
     (promoByLine.get(line.lineNumber) ?? line).status === 'admitted')) {

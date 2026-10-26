@@ -1,22 +1,33 @@
-import { createHash } from 'node:crypto'
-import { mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { createHash, randomUUID } from 'node:crypto'
+import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { isDeepStrictEqual } from 'node:util'
+import { load } from 'cheerio'
 import {
-  CATALOG_NAMES, CATALOG_SET_IDS, CATALOG_SOURCE,
-  type CatalogPrint, type CatalogSet, type CatalogView, type PromoAudit,
+  CATALOG_GAMEPLAY_SCHEMA_VERSION, CATALOG_NAMES, CATALOG_SET_IDS, CATALOG_SOURCE,
+  type CardGameplay, type CatalogPrint, type CatalogSet, type CatalogView,
+  type CatalogBrowseGroup, type CatalogBrowseOverview, type CatalogBrowsePage, type PromoAudit,
   type CatalogSyncMode, type CatalogSyncStatus
 } from '../shared/catalog'
+import { extractCardGameplay, hasComparableGameplay } from '../shared/card-gameplay'
 import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
 import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
-  OFFICIAL_SET_RELEASE_VERSION, officialSetRelease, officialSetReleases } from './official-set-releases'
+  OFFICIAL_SET_RELEASE_VERSION, officialSetRelease, officialSetReleases,
+  officialUnmappedProducts } from './official-set-releases'
 import { BUNDLED_WESTERN_RULE_PACKAGE,
   type WesternRulePackage } from '../shared/western-rule-package'
+import { localCalendarDate } from '../shared/calendar-date'
+import { westernRotationRule, type RotationRule } from '../shared/standard-rotation'
+import { backupBeforeRotation } from './rotation-backup'
+import { readLimitedBytes, readLimitedText } from './bounded-response'
+import { OFFICIAL_SET_CODES, knownPrintCodes } from '../shared/set-codes'
+import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
 
 type SetResponse = {
   id: string; name: string; cardCount: { total: number }; releaseDate?: string
+  abbreviation?: { official?: string }
   cards: CardBrief[]
 }
 type CardBrief = { id: string; localId: string; name: string; image?: string }
@@ -27,39 +38,138 @@ type CardResponse = {
   stage?: string; energyType?: string
   trainerType?: string; effect?: string; image?: string; updated?: string
   variants?: Record<string, boolean>
+  hp?: number; types?: string[]; evolveFrom?: string; retreat?: number
+  attacks?: { name?: string; cost?: string[]; damage?: number | string; effect?: string }[]
+  abilities?: { name?: string; effect?: string; type?: string }[]
+  weaknesses?: { type?: string; value?: string }[]
+  resistances?: { type?: string; value?: string }[]
 }
 
 const apiOrigin = 'https://api.tcgdex.net/v2/en'
 const assetOrigin = 'https://assets.tcgdex.net'
+const limitlessOrigin = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com'
+const limitlessSets = new Set(['mee', 'mep', 'sve', 'svp'])
 const selectedNames = new Set<string>(CATALOG_NAMES)
 const candidateMarks = Array.from({ length: 'Z'.charCodeAt(0) - 'H'.charCodeAt(0) + 1 },
   (_, index) => String.fromCharCode('H'.charCodeAt(0) + index))
+const CATALOG_RETRY_MS = 60_000
+
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(signal.reason); return }
+    const onAbort = () => { clearTimeout(timer); reject(signal?.reason) }
+    const timer = setTimeout(() => { signal?.removeEventListener('abort', onAbort); resolve() }, ms)
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+function retryAt(error: string): string {
+  const date = /riprova dopo (\d{4}-\d\d-\d\dT[\d:.]+Z)/.exec(error)?.[1]
+  const parsed = date ? Date.parse(date) : NaN
+  return new Date(Math.max(Date.now() + CATALOG_RETRY_MS,
+    Number.isFinite(parsed) ? parsed : 0)).toISOString()
+}
 
 type StandardManifest = { sets: CatalogSet[]; prints: CatalogPrint[]; fetchedAt: string; promoAudit: PromoAudit }
 
-async function request(url: string, method: 'GET' | 'HEAD' = 'GET'): Promise<Response> {
+let nextLimitlessRequestAt = 0
+let limitlessRequestQueue: Promise<unknown> = Promise.resolve()
+let limitlessBlockedUntil = 0
+let limitlessBlockedStatus = 429
+
+function limitlessImageUrl(value: string, setId: string, localId: string): boolean {
+  if (!/^\d{1,3}$/.test(localId)) return false
+  try {
+    const url = new URL(value)
+    return url.origin === limitlessOrigin && !url.username && !url.password && !url.search && !url.hash &&
+      url.pathname === `/tpci/${setId.toUpperCase()}/${setId.toUpperCase()}_${localId.padStart(3, '0')}_R_EN_SM.png`
+  } catch { return false }
+}
+
+async function requestLimitless(url: string, signal?: AbortSignal): Promise<Response> {
+  const task = limitlessRequestQueue.then(async () => {
+    signal?.throwIfAborted()
+    if (Date.now() < limitlessBlockedUntil) {
+      throw new Error(`Limitless: HTTP ${limitlessBlockedStatus}; riprova dopo ${new Date(limitlessBlockedUntil).toISOString()}`)
+    }
+    const delay = Math.max(0, nextLimitlessRequestAt - Date.now())
+    if (delay) await wait(delay, signal)
+    signal?.throwIfAborted()
+    nextLimitlessRequestAt = Date.now() + 1_200
+    const response = await fetch(url, { redirect: 'error',
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000) })
+    if (response.status === 429 || response.status === 503) {
+      const retry = response.headers.get('retry-after')
+      const seconds = retry && /^\d+$/.test(retry) ? Number(retry) * 1000 : 0
+      const date = retry && !seconds ? Date.parse(retry) - Date.now() : 0
+      nextLimitlessRequestAt = Math.max(nextLimitlessRequestAt, Date.now() + CATALOG_RETRY_MS,
+        Date.now() + Math.max(seconds, date || 0))
+      limitlessBlockedUntil = nextLimitlessRequestAt
+      limitlessBlockedStatus = response.status
+      throw new Error(`Limitless: HTTP ${response.status} per ${new URL(url).pathname}; riprova dopo ${new Date(nextLimitlessRequestAt).toISOString()}`)
+    }
+    return response
+  })
+  limitlessRequestQueue = task.then(() => undefined, () => undefined)
+  return task
+}
+
+/** Only exact set/number listings can supply a missing TCGdex image. */
+export async function fetchLimitlessImageIndex(prints: readonly CatalogPrint[], signal?: AbortSignal): Promise<Map<string, string>> {
+  const missing = new Map<string, Set<string>>()
+  for (const print of prints) {
+    if (print.imageBase || !limitlessSets.has(print.setId) || !/^\d{1,3}$/.test(print.localId)) continue
+    const set = missing.get(print.setId) ?? new Set<string>()
+    set.add(print.localId)
+    missing.set(print.setId, set)
+  }
+  const images = new Map<string, string>()
+  for (const [setId, numbers] of missing) {
+    try {
+      const response = await requestLimitless(`https://limitlesstcg.com/cards/${setId.toUpperCase()}`, signal)
+      if (!response.ok) continue
+      const html = await readLimitedText(response, 500_000, 'Indice immagini Limitless troppo grande.')
+      const $ = load(html)
+      $('.card-search-grid > a[href] > img[src]').each((_, image) => {
+        const href = $(image).parent('a').attr('href') ?? ''
+        const match = new RegExp(`^/cards/${setId.toUpperCase()}/([1-9][0-9]{0,2})$`).exec(href)
+        if (!match) return
+        const localId = match[1].padStart(3, '0')
+        const src = $(image).attr('src') ?? ''
+        if (numbers.has(localId) && limitlessImageUrl(src, setId, localId)) images.set(`${setId}-${localId}`, src)
+      })
+    } catch (error) {
+      if (signal?.aborted || error instanceof Error && /HTTP 429|HTTP 503|fetch failed|network|timeout|timed out/i.test(error.message)) throw error
+      // Card details remain usable when the secondary image index is unavailable.
+    }
+  }
+  return images
+}
+
+async function request(url: string, method: 'GET' | 'HEAD' = 'GET', signal?: AbortSignal): Promise<Response> {
   const pauses = [500, 1_500, 4_000]
   for (let attempt = 0; attempt <= pauses.length; attempt += 1) {
-    const response = await fetch(url, { method, signal: AbortSignal.timeout(12_000) })
+    const response = await fetch(url, { method,
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000) })
     if (response.ok) return response
-    if (![429, 503].includes(response.status) || attempt === pauses.length) {
-      throw new Error(`TCGdex: HTTP ${response.status} per ${new URL(url).pathname}`)
-    }
     const retry = response.headers.get('retry-after')
     const seconds = retry && /^\d+$/.test(retry) ? Number(retry) * 1000 : 0
     const date = retry && !seconds ? Date.parse(retry) - Date.now() : 0
-    await new Promise((resolve) => setTimeout(resolve,
-      Math.min(30_000, Math.max(pauses[attempt], seconds || date || 0))))
+    if (![429, 503].includes(response.status) || attempt === pauses.length ||
+      Math.max(seconds, date) > 30_000) {
+      const after = [429, 503].includes(response.status)
+        ? `; riprova dopo ${new Date(Date.now() + Math.max(CATALOG_RETRY_MS,
+          seconds || date || 0)).toISOString()}` : ''
+      throw new Error(`TCGdex: HTTP ${response.status} per ${new URL(url).pathname}${after}`)
+    }
+    await wait(Math.max(pauses[attempt], seconds || date || 0), signal)
   }
   throw new Error('TCGdex non disponibile.')
 }
 
-async function json<T>(url: string): Promise<T> {
-  const response = await request(url)
-  const length = Number(response.headers.get('content-length') ?? 0)
-  if (length > 8_000_000) throw new Error('Risposta TCGdex troppo grande.')
-  const body = await response.text()
-  if (body.length > 8_000_000) throw new Error('Risposta TCGdex troppo grande.')
+async function json<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await request(url, 'GET', signal)
+  const body = await readLimitedText(response, 8_000_000, 'Risposta TCGdex troppo grande.')
   return JSON.parse(body) as T
 }
 
@@ -84,26 +194,79 @@ function setReleaseDate(value: unknown): string | null {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : null
 }
 
-function identity(card: CardResponse): Pick<CatalogPrint, 'identityId' | 'identityBasis'> {
-  // The shared identity is a provisional gameplay-text match, never a legality ruling.
-  // For Pokémon or absent rules text, keep every printing separate pending review.
+function setAbbreviation(value: SetResponse): string | null {
+  const code = value.abbreviation?.official
+  return typeof code === 'string' && /^[A-Z0-9]{2,8}$/.test(code) ? code : null
+}
+
+function identity(card: CardResponse, gameplay: CardGameplay | null): Pick<CatalogPrint, 'identityId' | 'identityBasis'> {
+  // Shared identity concerns gameplay only; Standard legality remains a separate, dated evaluation.
   if (card.category === 'Trainer' && card.name && card.trainerType && card.effect?.trim()) {
     const signature = [card.category, card.name.trim(), card.trainerType, card.effect.trim()].join('\u001f')
     return { identityId: `trainer-${createHash('sha256').update(signature).digest('hex').slice(0, 24)}`, identityBasis: 'trainer-text' }
   }
+  if (hasComparableGameplay(card.category ?? null, card.stage ?? null, card.energyType ?? null, gameplay)) {
+    const basis = card.category === 'Pokemon' ? 'pokemon-text' : 'energy-text'
+    const signature = JSON.stringify({ category: card.category, name: card.name.trim(),
+      stage: card.stage ?? null, energyType: card.energyType ?? null, gameplay })
+    return { identityId: `${basis}-${createHash('sha256').update(signature).digest('hex').slice(0, 24)}`,
+      identityBasis: basis }
+  }
   return { identityId: card.id, identityBasis: 'unverified' }
 }
 
-async function imageStatus(base: string | undefined): Promise<Pick<CatalogPrint, 'thumbnail' | 'highImageAvailable'>> {
-  if (!base || !base.startsWith(`${assetOrigin}/`)) return { thumbnail: null, highImageAvailable: null }
+export async function fetchCatalogImage(base: string | undefined, id?: string, cacheDir?: string,
+  signal?: AbortSignal): Promise<Pick<CatalogPrint, 'thumbnail' | 'highImageAvailable'>> {
+  if (!base) return { thumbnail: null, highImageAvailable: null }
+  const limitless = id && /^(mee|mep|sve|svp)-\d{3}$/.test(id) &&
+    limitlessImageUrl(base, id.split('-')[0], id.split('-')[1])
+  if (limitless) {
+    try {
+      const response = await requestLimitless(base, signal)
+      if (!response.ok || response.headers.get('content-type')?.split(';')[0] !== 'image/png') {
+        return { thumbnail: null, highImageAvailable: null }
+      }
+      const bytes = await readLimitedBytes(response, 1_000_000, 'Immagine Limitless troppo grande.')
+      if (bytes.length < 8 || !Buffer.from(bytes).subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+        return { thumbnail: null, highImageAvailable: null }
+      }
+      if (cacheDir && id) {
+        signal?.throwIfAborted()
+        mkdirSync(cacheDir, { recursive: true })
+        const target = join(cacheDir, `${id}.png`)
+        const temporary = `${target}.tmp`
+        writeFileSync(temporary, bytes)
+        renameSync(temporary, target)
+        return { thumbnail: `pokeguru://cards/${id}.png`, highImageAvailable: null }
+      }
+      return { thumbnail: `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`, highImageAvailable: null }
+    } catch (error) {
+      if (signal?.aborted || error instanceof Error && /HTTP 429|HTTP 503|fetch failed|network|timeout|timed out/i.test(error.message)) throw error
+      return { thumbnail: null, highImageAvailable: null }
+    }
+  }
+  if (!base.startsWith(`${assetOrigin}/`)) return { thumbnail: null, highImageAvailable: null }
   const [low, high] = await Promise.allSettled([
-    request(`${base}/low.webp`).then(async (response) => {
-      const bytes = new Uint8Array(await response.arrayBuffer())
-      if (bytes.length > 250_000 || response.headers.get('content-type')?.split(';')[0] !== 'image/webp') return null
+    request(`${base}/low.webp`, 'GET', signal).then(async (response) => {
+      const bytes = await readLimitedBytes(response, 1_000_000, 'Immagine TCGdex troppo grande.')
+      if (response.headers.get('content-type')?.split(';')[0] !== 'image/webp') return null
+      if (bytes.length < 12 || Buffer.from(bytes).toString('ascii', 0, 4) !== 'RIFF' ||
+        Buffer.from(bytes).toString('ascii', 8, 12) !== 'WEBP') return null
+      if (cacheDir && id && /^[a-zA-Z0-9.]+-[a-zA-Z0-9.]+$/.test(id)) {
+        mkdirSync(cacheDir, { recursive: true })
+        const target = join(cacheDir, `${id}.webp`)
+        const temporary = `${target}.tmp`
+        writeFileSync(temporary, bytes)
+        renameSync(temporary, target)
+        return `pokeguru://cards/${id}.webp`
+      }
       return `data:image/webp;base64,${Buffer.from(bytes).toString('base64')}`
     }),
-    request(`${base}/high.webp`, 'HEAD').then(() => true)
+    request(`${base}/high.webp`, 'HEAD', signal).then(() => true)
   ])
+  const pressure = [low, high].find((result) => result.status === 'rejected' &&
+    result.reason instanceof Error && /HTTP 429|HTTP 503|fetch failed|network|timeout|timed out/i.test(result.reason.message))
+  if (pressure?.status === 'rejected') throw pressure.reason
   return {
     thumbnail: low.status === 'fulfilled' ? low.value : null,
     highImageAvailable: high.status === 'fulfilled' ? high.value
@@ -124,20 +287,24 @@ function briefPrint(brief: CardBrief, set: Pick<SetResponse, 'id' | 'name'>): Ca
 }
 
 async function details(brief: CardBrief, set: Pick<SetResponse, 'id' | 'name'>,
-  fetchedAt: string, includeImages = true, manifestPrint?: CatalogPrint): Promise<CatalogPrint> {
+  fetchedAt: string, includeImages = true, manifestPrint?: CatalogPrint,
+  cacheDir?: string, signal?: AbortSignal): Promise<CatalogPrint> {
   const base = manifestPrint ?? briefPrint(brief, set)
   try {
-    const card = await json<CardResponse>(base.sourceUrl)
+    const card = await json<CardResponse>(base.sourceUrl, signal)
     if (card.id !== brief.id || card.name !== brief.name || card.localId !== brief.localId) {
       throw new Error('Dettaglio incoerente con l’indice.')
     }
-    const images = includeImages ? await imageStatus(card.image) : { thumbnail: null, highImageAvailable: null }
+    const gameplay = extractCardGameplay(card)
+    const images = includeImages ? await fetchCatalogImage(card.image ?? brief.image, brief.id, cacheDir, signal)
+      : { thumbnail: null, highImageAvailable: null }
     return {
       ...base, category: card.category ?? null, stage: card.stage ?? null,
       energyType: card.energyType ?? null, rarity: card.rarity ?? null,
       regulationMark: /^[A-Z]$/i.test(card.regulationMark ?? '') ? card.regulationMark!.toUpperCase() : null,
-      variants: card.variants ?? null, ...identity(card),
-      imageBase: card.image ?? null, ...images,
+      variants: card.variants ?? null, gameplay,
+      gameplaySchemaVersion: CATALOG_GAMEPLAY_SCHEMA_VERSION, ...identity(card, gameplay),
+      imageBase: card.image ?? brief.image ?? null, ...images,
       sourceUpdated: card.updated ?? null, detailAt: fetchedAt, error: null
     }
   } catch (error) {
@@ -165,7 +332,7 @@ export async function fetchCatalogSample(): Promise<{ sets: CatalogSet[]; prints
     return value
   }))
   const sets = responses.map((set) => ({
-    id: set.id, name: set.name, sourceTotal: set.cardCount.total,
+    id: set.id, name: set.name, abbreviation: setAbbreviation(set), sourceTotal: set.cardCount.total,
     sampleTotal: set.cards.filter((card) => selectedNames.has(card.name)).length,
     fetchedAt, releaseDate: setReleaseDate(set.releaseDate)
   }))
@@ -174,18 +341,19 @@ export async function fetchCatalogSample(): Promise<{ sets: CatalogSet[]; prints
   return { sets, prints, fetchedAt }
 }
 
-export async function fetchStandardManifest(): Promise<StandardManifest> {
+export async function fetchStandardManifest(signal?: AbortSignal, asOf = localCalendarDate()): Promise<StandardManifest> {
   const fetchedAt = new Date().toISOString()
-  // H is the first mark in the verified 2026 rotation. Future marks are inventory
-  // candidates only; the legality evaluator still requires verified rules.
-  const markFilter = candidateMarks.join('%7C')
+  const rotation = westernRotationRule(asOf)
+  if (!rotation) throw new Error('Nessuna rotazione Standard occidentale verificata per questa data.')
+  // Future marks remain inventory candidates; only the bundled rule establishes legality.
+  const markFilter = candidateMarks.filter((mark) => mark >= rotation.firstAllowedMark).join('%7C')
   const promoAttempt = loadPromoPackage()
   const [marked, lowerMarked, setIndex, scarletEnergy, megaEnergy, promoResult] = await Promise.all([
-    json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter}`),
-    json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter.toLowerCase()}`),
-    json<unknown>(`${apiOrigin}/sets`),
-    json<SetResponse>(`${apiOrigin}/sets/sve`),
-    json<SetResponse>(`${apiOrigin}/sets/mee`),
+    json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter}`, signal),
+    json<unknown>(`${apiOrigin}/cards?regulationMark=eq:${markFilter.toLowerCase()}`, signal),
+    json<unknown>(`${apiOrigin}/sets`, signal),
+    json<SetResponse>(`${apiOrigin}/sets/sve`, signal),
+    json<SetResponse>(`${apiOrigin}/sets/mee`, signal),
     promoAttempt
   ])
   if (!Array.isArray(marked) || !marked.every(validateBrief) ||
@@ -215,14 +383,14 @@ export async function fetchStandardManifest(): Promise<StandardManifest> {
   // set once so the date is available without inferring tournament legality.
   const detailedSets = new Map((await mapLimited([...groups.keys()], 4, async (id) => {
     const value = id === 'sve' ? scarletEnergy : id === 'mee' ? megaEnergy
-      : await json<SetResponse>(`${apiOrigin}/sets/${encodeURIComponent(id)}`)
+      : await json<SetResponse>(`${apiOrigin}/sets/${encodeURIComponent(id)}`, signal)
     validateSet(value, id)
     return value
   })).map((set) => [set.id, set]))
   const sets = [...groups].map(([id, group]) => {
     const set = detailedSets.get(id)!
     if (group.length > set.cardCount.total) throw new Error(`Indice TCGdex incoerente per ${id}.`)
-    return { id, name: set.name, sourceTotal: set.cardCount.total,
+    return { id, name: set.name, abbreviation: setAbbreviation(set), sourceTotal: set.cardCount.total,
       sampleTotal: group.length, fetchedAt, releaseDate: setReleaseDate(set.releaseDate) }
   }).sort((a, b) => a.id.localeCompare(b.id))
   const officialSeries = new Set(promoResult.registry?.series ?? [])
@@ -239,6 +407,10 @@ export async function fetchStandardManifest(): Promise<StandardManifest> {
       return { ...print, isPromo: true, promoStatus }
     })
   })
+  const fallbackImages = await fetchLimitlessImageIndex(prints, signal)
+  for (const print of prints) {
+    if (!print.imageBase) print.imageBase = fallbackImages.get(print.id) ?? null
+  }
   return { sets, prints, fetchedAt, promoAudit: {
     sourceUrl: PROMO_LEGALITY_SOURCE, checkedAt: promoResult.registry.checkedAt,
     error: promoResult.error, series: promoResult.registry.series,
@@ -248,59 +420,116 @@ export async function fetchStandardManifest(): Promise<StandardManifest> {
 
 export async function syncStandardCatalog(store: CatalogStore,
   progress?: (phase: string, expected: number, acquired: number) => void,
-  mode: CatalogSyncMode = 'new'): Promise<CatalogView> {
+  mode: CatalogSyncMode = 'new', signal?: AbortSignal): Promise<CatalogView> {
   try {
-    if (!store.resumeJob(mode)) {
-      store.startJob(mode)
+    const rotation = westernRotationRule(localCalendarDate())
+    if (!rotation) throw new Error('Nessuna rotazione Standard occidentale verificata per questa data.')
+    signal?.throwIfAborted()
+    if (!store.resumeJob(mode, rotation.version)) {
+      store.startJob(mode, rotation.version)
       progress?.('Lettura inventario TCGdex', 0, 0)
-      const manifest = await fetchStandardManifest()
-      store.save(manifest, 'standard-marks')
+      const manifest = await fetchStandardManifest(signal)
+      signal?.throwIfAborted()
+      store.save(manifest, 'standard-marks', rotation)
       store.queueJob(mode)
     }
     let status = store.jobStatus()
     progress?.(status.phase, status.expected, status.acquired)
+    let lastId = ''
     while (true) {
-      const batch = store.nextJobBatch(12)
+      signal?.throwIfAborted()
+      // Move past a failed card for this pass while keeping it in the durable queue.
+      const batch = store.nextJobBatch(12, lastId)
       if (batch.length === 0) break
-      const results = await mapLimited(batch, 2, async (print) =>
-        details({ id: print.id, localId: print.localId, name: print.name,
+      lastId = batch.at(-1)!.id
+      const results = await mapLimited(batch, 2, async (print) => {
+        signal?.throwIfAborted()
+        return details({ id: print.id, localId: print.localId, name: print.name,
           image: print.imageBase ?? undefined }, { id: print.setId, name: print.setName },
-        new Date().toISOString(), false, print))
+        new Date().toISOString(), true, print, join(store.dataDir, 'catalog-images'), signal)
+      })
+      signal?.throwIfAborted()
       store.commitJobBatch(results)
       status = store.jobStatus()
       progress?.(status.phase, status.expected, status.acquired)
       if (results.some((print) => /HTTP 429|HTTP 503/.test(print.error ?? ''))) {
-        throw new Error('TCGdex ha limitato temporaneamente le richieste. Il lavoro riprenderà senza perdere i dati acquisiti.')
+        const until = results.filter((print) => /HTTP 429|HTTP 503/.test(print.error ?? ''))
+          .map((print) => retryAt(print.error ?? '')).sort().at(-1)
+        const source = results.some((print) => /Limitless: HTTP 429|Limitless: HTTP 503/.test(print.error ?? ''))
+          ? 'Limitless' : 'TCGdex'
+        throw new Error(`${source} ha limitato temporaneamente le richieste; riprova dopo ${until}. Il lavoro riprenderà senza perdere i dati acquisiti.`)
       }
-      if (results.every((print) => print.detailAt === null)) {
-        throw new Error('Dettagli TCGdex non disponibili. Il lavoro riprenderà senza perdere i dati acquisiti.')
+      if (results.some((print) => /fetch failed|network|timeout|timed out/i.test(print.error ?? ''))) {
+        throw new Error('Rete TCGdex temporaneamente non disponibile. Il lavoro riprenderà senza perdere i dati acquisiti.')
       }
-      if (results.some((print) => print.error)) {
-        throw new Error('Alcuni dettagli TCGdex non sono disponibili. I lotti riusciti restano salvati; riprendi il lavoro più tardi.')
+      if (results.every((print) => print.error)) {
+        throw new Error('Tutti i dettagli del blocco TCGdex non sono disponibili. Il controllo si ferma per limitare le richieste; riprendi più tardi.')
       }
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await wait(400, signal)
     }
-    store.completeJob()
+    status = store.jobStatus()
+    if (status.acquired < status.expected) {
+      const missing = status.expected - status.acquired
+      throw new Error(`${missing} ${missing === 1 ? 'dettaglio TCGdex non disponibile' : 'dettagli TCGdex non disponibili'}. Le altre carte sono state controllate; riprendi più tardi.`)
+    }
+    if (westernRotationRule(localCalendarDate())?.version !== rotation.version)
+      throw new Error('La rotazione Standard è cambiata durante l’aggiornamento; riprendi con il nuovo inventario.')
+    await store.completeJob(rotation)
     return store.view()
   } catch (error) {
-    store.pauseJob(error instanceof Error ? error.message : 'Aggiornamento interrotto.')
+    const status = store.jobStatus()
+    if (status.state !== 'paused' && status.state !== 'cancelled' && status.state !== 'interrupted') {
+      const message = error instanceof Error ? error.message : 'Aggiornamento interrotto.'
+      if (/limitato temporaneamente|Rete TCGdex temporaneamente|fetch failed|network|timeout|timed out|HTTP 429|HTTP 503/i.test(message))
+        store.rateLimitJob(message, retryAt(message))
+      else store.pauseJob(message)
+    }
     throw error
   }
 }
 
+/** Upgrade only exact printings needed by an imminent analysis. The full catalog
+ * remains under the user's explicit global update action.
+ */
+export async function enrichCatalogPrints(store: CatalogStore, ids: readonly string[]): Promise<void> {
+  const pending = [...new Set(ids)].slice(0, 120).map((id) => store.getPrint(id))
+    .filter((print): print is CatalogPrint => !!print && !!print.detailAt &&
+      print.gameplaySchemaVersion !== CATALOG_GAMEPLAY_SCHEMA_VERSION)
+  const results = await mapLimited(pending, 2, async (print) =>
+    details({ id: print.id, localId: print.localId, name: print.name,
+      image: print.imageBase ?? undefined }, { id: print.setId, name: print.setName },
+    new Date().toISOString(), false, print))
+  if (results.length) store.savePrints(results)
+}
+
 export class CatalogStore {
   private readonly db: DatabaseSync
+  private readonly filePath: string
+  private viewCache: { date: string; value: CatalogView; thumbnails: Map<string, string | null> } | null = null
+  private browseCache: { date: string; overview: CatalogBrowseOverview; groups: Array<CatalogBrowseGroup & {
+    ids: string[]; search: string; setIds: Set<string>
+  }>; byKey: Map<string, string[]> } | null = null
   readonly dataDir: string
+
+  private availableImage(print: CatalogPrint): CatalogPrint {
+    if (!print.thumbnail?.startsWith('pokeguru://cards/')) return print
+    const extension = print.thumbnail === `pokeguru://cards/${print.id}.webp` ? 'webp'
+      : print.thumbnail === `pokeguru://cards/${print.id}.png` ? 'png' : null
+    return extension && existsSync(join(this.dataDir, 'catalog-images', `${print.id}.${extension}`))
+      ? print : { ...print, thumbnail: null }
+  }
 
   constructor(path: string) {
     mkdirSync(dirname(path), { recursive: true })
     this.dataDir = dirname(path)
+    this.filePath = path
     this.db = new DatabaseSync(path)
     this.db.exec('PRAGMA journal_mode = WAL')
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS catalog_sets (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, source_total INTEGER NOT NULL,
-        sample_total INTEGER NOT NULL, fetched_at TEXT NOT NULL, release_date TEXT
+        sample_total INTEGER NOT NULL, fetched_at TEXT NOT NULL, release_date TEXT,
+        abbreviation TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS catalog_prints (
         id TEXT PRIMARY KEY, set_id TEXT NOT NULL REFERENCES catalog_sets(id), payload TEXT NOT NULL
@@ -325,7 +554,7 @@ export class CatalogStore {
       CREATE TABLE IF NOT EXISTS catalog_job (
         id INTEGER PRIMARY KEY CHECK (id = 1), mode TEXT NOT NULL,
         state TEXT NOT NULL, phase TEXT NOT NULL, expected INTEGER NOT NULL,
-        error TEXT, updated_at TEXT NOT NULL
+        error TEXT, updated_at TEXT NOT NULL, retry_at TEXT, run_id TEXT, rule_version TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS catalog_job_targets (
         print_id TEXT PRIMARY KEY
@@ -334,40 +563,70 @@ export class CatalogStore {
         id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL,
         installed_at TEXT NOT NULL
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS catalog_retired_prints (
+        id TEXT PRIMARY KEY, payload TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS catalog_rotation_cleanup (
+        id INTEGER PRIMARY KEY CHECK (id = 1), rule_version TEXT NOT NULL,
+        removed_prints INTEGER NOT NULL, retained_references INTEGER NOT NULL,
+        completed_at TEXT NOT NULL
+      ) STRICT;
     `)
     const setColumns = this.db.prepare('PRAGMA table_info(catalog_sets)').all()
       .map((row) => (row as { name: string }).name)
     if (!setColumns.includes('release_date')) this.db.exec('ALTER TABLE catalog_sets ADD COLUMN release_date TEXT')
+    if (!setColumns.includes('abbreviation')) this.db.exec('ALTER TABLE catalog_sets ADD COLUMN abbreviation TEXT')
+    const jobColumns = this.db.prepare('PRAGMA table_info(catalog_job)').all()
+      .map((row) => (row as { name: string }).name)
+    if (!jobColumns.includes('retry_at')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN retry_at TEXT')
+    if (!jobColumns.includes('run_id')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN run_id TEXT')
+    if (!jobColumns.includes('rule_version')) this.db.exec('ALTER TABLE catalog_job ADD COLUMN rule_version TEXT')
     // A process killed during a batch leaves only committed targets completed.
-    this.db.prepare("UPDATE catalog_job SET state = 'paused', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
+    this.db.prepare("UPDATE catalog_job SET state = 'interrupted', phase = 'Interrotto alla chiusura' WHERE state = 'running'").run()
+    this.db.prepare("UPDATE catalog_job SET state = 'interrupted' WHERE state = 'paused' AND phase = 'Interrotto alla chiusura'").run()
   }
 
   jobStatus(): CatalogSyncStatus {
-    const row = this.db.prepare('SELECT mode, state, phase, expected, error FROM catalog_job WHERE id = 1')
-      .get() as { mode: CatalogSyncMode; state: CatalogSyncStatus['state']; phase: string; expected: number; error: string | null } | undefined
-    if (!row) return { running: false, mode: null, state: 'idle', phase: '', expected: 0, acquired: 0, error: null }
+    const cleanup = this.db.prepare('SELECT rule_version, removed_prints, retained_references, completed_at FROM catalog_rotation_cleanup WHERE id = 1')
+      .get() as { rule_version: string; removed_prints: number; retained_references: number; completed_at: string } | undefined
+    const rotationCleanup = cleanup ? { ruleVersion: cleanup.rule_version, removedPrints: cleanup.removed_prints,
+      retainedReferences: cleanup.retained_references, completedAt: cleanup.completed_at } : undefined
+    const row = this.db.prepare('SELECT mode, state, phase, expected, error, retry_at, run_id FROM catalog_job WHERE id = 1')
+      .get() as { mode: CatalogSyncMode; state: CatalogSyncStatus['state']; phase: string;
+        expected: number; error: string | null; retry_at: string | null; run_id: string | null } | undefined
+    if (!row) return { running: false, mode: null, state: 'idle', phase: '', expected: 0,
+      acquired: 0, error: null, cooldownUntil: null, runId: null, rotationCleanup }
     const pending = (this.db.prepare('SELECT COUNT(*) AS n FROM catalog_job_targets').get() as { n: number }).n
-    return { running: row.state === 'running', mode: row.mode, state: row.state,
-      phase: row.phase, expected: row.expected, acquired: row.expected - pending, error: row.error }
+    return { running: row.state === 'running' || row.state === 'rate-limited', mode: row.mode,
+      state: row.state, phase: row.phase, expected: row.expected,
+      acquired: row.expected - pending, error: row.error, cooldownUntil: row.retry_at,
+      runId: row.run_id, rotationCleanup }
   }
 
-  startJob(mode: CatalogSyncMode): void {
+  startJob(mode: CatalogSyncMode, ruleVersion: string | null = null): void {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       this.db.exec('DELETE FROM catalog_job_targets')
-      this.db.prepare(`INSERT INTO catalog_job VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?)
+      this.db.prepare(`INSERT INTO catalog_job (id, mode, state, phase, expected, error,
+        updated_at, retry_at, run_id, rule_version)
+        VALUES (1, ?, 'running', 'Lettura inventario TCGdex', 0, NULL, ?, NULL, ?, ?)
         ON CONFLICT(id) DO UPDATE SET mode=excluded.mode, state=excluded.state,
-        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at`)
-        .run(mode, new Date().toISOString())
+        phase=excluded.phase, expected=0, error=NULL, updated_at=excluded.updated_at, retry_at=NULL,
+        run_id=excluded.run_id, rule_version=excluded.rule_version`)
+        .run(mode, new Date().toISOString(), randomUUID(), ruleVersion)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
-  resumeJob(mode: CatalogSyncMode): boolean {
+  resumeJob(mode: CatalogSyncMode, ruleVersion: string | null = null): boolean {
     const status = this.jobStatus()
-    if (status.mode !== mode || status.state !== 'paused' || status.expected === 0 ||
+    const saved = this.db.prepare('SELECT rule_version FROM catalog_job WHERE id = 1')
+      .get() as { rule_version: string | null } | undefined
+    if (status.mode !== mode || !['paused', 'interrupted', 'rate-limited'].includes(status.state) ||
+      (ruleVersion !== null && saved?.rule_version !== ruleVersion) ||
+      status.expected === 0 ||
       status.acquired >= status.expected) return false
-    this.db.prepare("UPDATE catalog_job SET state='running', phase='Verifica dettagli', error=NULL, updated_at=? WHERE id=1")
+    this.db.prepare("UPDATE catalog_job SET state='running', phase='Verifica dettagli', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
       .run(new Date().toISOString())
     return true
   }
@@ -380,8 +639,10 @@ export class CatalogStore {
       this.db.exec('DELETE FROM catalog_job_targets')
       let expected = 0
       for (const row of targets) {
-        const print = JSON.parse((row as { payload: string }).payload) as CatalogPrint
-        if (mode === 'full' || !print.detailAt) {
+        const print = this.availableImage(JSON.parse((row as { payload: string }).payload) as CatalogPrint)
+        const cached = !!print.thumbnail
+        if (mode === 'full' || !print.detailAt || print.gameplaySchemaVersion !== CATALOG_GAMEPLAY_SCHEMA_VERSION ||
+          (!!print.imageBase && !cached)) {
           this.db.prepare('INSERT INTO catalog_job_targets VALUES (?)').run(print.id)
           expected++
         }
@@ -392,44 +653,176 @@ export class CatalogStore {
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
-  nextJobBatch(limit: number): CatalogPrint[] {
+  nextJobBatch(limit: number, afterId = ''): CatalogPrint[] {
     return this.db.prepare(`SELECT p.payload FROM catalog_job_targets j
-      JOIN catalog_prints p ON p.id=j.print_id ORDER BY j.print_id LIMIT ?`).all(limit)
+      JOIN catalog_prints p ON p.id=j.print_id WHERE j.print_id > ? ORDER BY j.print_id LIMIT ?`)
+      .all(afterId, limit)
       .map((row) => JSON.parse((row as { payload: string }).payload) as CatalogPrint)
   }
 
   commitJobBatch(prints: CatalogPrint[]): void {
+    const failed = prints.filter((print) => !!print.error)
+    const phase = `Ultimo blocco: ${prints.length - failed.length}/${prints.length} dettagli acquisiti`+
+      (failed.length ? `; ${failed.length} ${failed.length === 1 ? 'stampa da riprovare' : 'stampe da riprovare'}` : '')
+    const warning = failed.length ? `Blocco Catalogo: ${failed.slice(0, 3).map((print) => print.id).join(', ')}`+
+      (failed.length > 3 ? ` e altre ${failed.length - 3}` : '') +
+      ` ${failed.length === 1 ? 'non disponibile' : 'non disponibili'}; continuo con le altre.` : null
     this.db.exec('BEGIN IMMEDIATE')
     try {
       for (const print of prints) {
         this.upsertPrint(print)
         if (!print.error && print.detailAt) this.db.prepare('DELETE FROM catalog_job_targets WHERE print_id=?').run(print.id)
       }
-      this.db.prepare('UPDATE catalog_job SET updated_at=? WHERE id=1').run(new Date().toISOString())
+      this.db.prepare('UPDATE catalog_job SET phase=?, error=COALESCE(?, error), updated_at=? WHERE id=1')
+        .run(phase, warning, new Date().toISOString())
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
-  pauseJob(message: string): void {
-    this.db.prepare("UPDATE catalog_job SET state='paused', phase='In pausa', error=?, updated_at=? WHERE id=1")
-      .run(message, new Date().toISOString())
+  pauseJob(message: string | null, phase = 'In pausa'): void {
+    this.db.prepare("UPDATE catalog_job SET state='paused', phase=?, error=?, retry_at=NULL, updated_at=? WHERE id=1")
+      .run(phase, message, new Date().toISOString())
   }
 
-  completeJob(): void {
-    this.db.prepare("UPDATE catalog_job SET state='done', phase='Aggiornamento terminato', error=NULL, updated_at=? WHERE id=1")
+  cancelJob(): void {
+    this.db.prepare("UPDATE catalog_job SET state='cancelled', phase='Annullato', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
       .run(new Date().toISOString())
   }
 
+  interruptJob(): void {
+    this.db.prepare("UPDATE catalog_job SET state='interrupted', phase='Interrotto alla chiusura', error=NULL, retry_at=NULL, updated_at=? WHERE id=1 AND state='running'")
+      .run(new Date().toISOString())
+  }
+
+  rateLimitJob(message: string, retryAt: string): void {
+    const phase = message.includes('Limitless') ? 'Attesa Limitless' : 'Attesa TCGdex'
+    this.db.prepare("UPDATE catalog_job SET state='rate-limited', phase=?, error=?, retry_at=?, updated_at=? WHERE id=1")
+      .run(phase, message, retryAt, new Date().toISOString())
+  }
+
+  async completeJob(rotation: RotationRule): Promise<void> {
+    const row = this.db.prepare('SELECT COUNT(*) AS n FROM catalog_job_targets').get() as { n: number }
+    if (row.n) throw new Error('Dettagli ancora in coda: pulizia della rotazione non applicata.')
+    const candidates = this.db.prepare('SELECT id, payload FROM catalog_prints').all() as { id: string; payload: string }[]
+    const retired = candidates.filter((row) => {
+      const mark = (JSON.parse(row.payload) as CatalogPrint).regulationMark
+      return mark && /^[A-Z]$/.test(mark) && mark < rotation.firstAllowedMark
+    })
+    const historical = this.db.prepare('SELECT id, payload FROM catalog_retired_prints').all() as
+      { id: string; payload: string }[]
+    const referenced = this.referencedPrintIds([...retired, ...historical])
+    const staleHistorical = historical.filter((row) => !referenced.has(row.id))
+    if (retired.length || staleHistorical.length)
+      await backupBeforeRotation(this.db, this.filePath, 'catalog', rotation.effectiveFrom)
+    const completedAt = new Date().toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      for (const row of retired) {
+        const print = JSON.parse(row.payload) as CatalogPrint
+        if (referenced.has(row.id) && print.detailAt && print.identityId && print.identityBasis !== 'unverified') {
+          const set = this.db.prepare('SELECT abbreviation FROM catalog_sets WHERE id = ?')
+            .get(print.setId) as { abbreviation: string | null } | undefined
+          this.db.prepare('INSERT OR REPLACE INTO catalog_retired_prints VALUES (?, ?)')
+            .run(row.id, JSON.stringify({ ...print, historicalSetCode: set?.abbreviation ?? null }))
+        }
+        this.db.prepare('DELETE FROM catalog_targets WHERE print_id = ?').run(row.id)
+        this.db.prepare('DELETE FROM catalog_prints WHERE id = ?').run(row.id)
+      }
+      for (const row of staleHistorical)
+        this.db.prepare('DELETE FROM catalog_retired_prints WHERE id = ?').run(row.id)
+      this.db.exec('DELETE FROM catalog_sets WHERE id NOT IN (SELECT DISTINCT set_id FROM catalog_prints)')
+      const retained = (this.db.prepare('SELECT COUNT(*) AS n FROM catalog_retired_prints').get() as { n: number }).n
+      this.db.prepare(`INSERT INTO catalog_rotation_cleanup VALUES (1, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET rule_version=excluded.rule_version,
+        removed_prints=excluded.removed_prints, retained_references=excluded.retained_references,
+        completed_at=excluded.completed_at`).run(rotation.version, retired.length, retained, completedAt)
+      this.db.prepare("UPDATE catalog_job SET state='done', phase='Aggiornamento terminato', error=NULL, retry_at=NULL, updated_at=? WHERE id=1")
+        .run(completedAt)
+      this.db.exec('COMMIT')
+      this.viewCache = null
+      this.browseCache = null
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+  }
+
+  private referencedPrintIds(rows: { id: string; payload: string }[]): Set<string> {
+    const tables = new Set((this.db.prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all() as { name: string }[]).map((row) => row.name))
+    const referenced = new Set<string>()
+    if (tables.has('deck_line_mappings')) {
+      for (const row of this.db.prepare('SELECT print_snapshot FROM deck_line_mappings').all() as { print_snapshot: string }[]) {
+        const id = (JSON.parse(row.print_snapshot) as { id?: unknown }).id
+        if (typeof id === 'string') referenced.add(id)
+      }
+    }
+    if (tables.has('deck_constraints')) {
+      for (const row of this.db.prepare('SELECT print_id FROM deck_constraints WHERE print_id IS NOT NULL').all() as { print_id: string }[])
+        referenced.add(row.print_id)
+    }
+    if (tables.has('deck_thread_messages')) {
+      for (const row of this.db.prepare(`SELECT json_extract(card.value, '$.printId') AS id
+        FROM deck_thread_messages AS message,
+          json_each(CASE WHEN json_valid(message.evidence_json) THEN message.evidence_json ELSE '{}' END, '$.cards') AS card
+        WHERE json_type(card.value, '$.printId') = 'text'`).all() as { id: string }[])
+        referenced.add(row.id)
+    }
+    // APP-115 records additional cards returned by AI-selected local queries in Thread and Matchup evidence.
+    for (const [table, column] of [['deck_thread_messages', 'evidence_json'],
+      ['matchup_reports', 'payload'], ['matchup_turns', 'report_payload']] as const) {
+      if (!tables.has(table)) continue
+      for (const row of this.db.prepare(`SELECT DISTINCT json_extract(card.value, '$.printId') AS id
+        FROM ${table} AS evidence,
+          json_each(CASE WHEN json_valid(evidence.${column}) THEN evidence.${column} ELSE '{}' END,
+            '$.aiQueries.requests') AS request,
+          json_each(request.value, '$.data.matches') AS card
+        WHERE json_extract(request.value, '$.query.operation') = 'catalog.search'
+          AND json_type(card.value, '$.printId') = 'text'`).all() as { id: string }[])
+        referenced.add(row.id)
+    }
+    const keys = new Map<string, string[]>()
+    const officialCodes = new Map((this.db.prepare('SELECT id, abbreviation FROM catalog_sets').all() as
+      { id: string; abbreviation: string | null }[]).map((row) => [row.id, row.abbreviation]))
+    for (const row of rows) {
+      const print = JSON.parse(row.payload) as CatalogPrint
+      const number = print.localId.toUpperCase().replace(/^0+(?=\d)/, '')
+      for (const code of [...knownPrintCodes(print.setId), print.historicalSetCode,
+        officialCodes.get(print.setId)]) {
+        if (!code) continue
+        const key = `${code}\0${number}\0${print.name.normalize('NFKC').trim().toLocaleLowerCase()}`
+        keys.set(key, [...(keys.get(key) ?? []), row.id])
+      }
+    }
+    for (const table of ['deck_baselines', 'deck_versions', 'deck_thread_candidates', 'deck_ai_candidates']) {
+      if (!tables.has(table)) continue
+      for (const row of this.db.prepare(`SELECT parsed_json FROM ${table}`).all() as { parsed_json: string }[]) {
+        const lines = (JSON.parse(row.parsed_json) as { lines?: { setCode?: string; cardNumber?: string; name?: string }[] }).lines ?? []
+        for (const line of lines) {
+          if (!line.setCode || !line.cardNumber || !line.name || /ALT/i.test(line.setCode)) continue
+          const key = `${line.setCode.toUpperCase()}\0${line.cardNumber.toUpperCase().replace(/^0+(?=\d)/, '')}`+
+            `\0${line.name.normalize('NFKC').trim().toLocaleLowerCase()}`
+          for (const id of keys.get(key) ?? []) referenced.add(id)
+        }
+      }
+    }
+    return referenced
+  }
+
   private upsertPrint(print: CatalogPrint): void {
+    this.browseCache = null
+    this.viewCache = null
     const previous = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?').get(print.id) as { payload: string } | undefined
     // A failed refresh does not discard a previously acquired detail or cached image.
     const old = previous ? JSON.parse(previous.payload) as CatalogPrint : null
     const promoStatus = print.promoStatus === undefined ? old?.promoStatus : print.promoStatus
+    const changedManifestImage = !!old?.detailAt && !!print.imageBase && print.imageBase !== old.imageBase
     const value: CatalogPrint = print.detailAt === null && old?.detailAt
       ? { ...old, setName: print.setName, name: print.name, localId: print.localId,
-        isPromo: print.isPromo ?? old.isPromo, promoStatus, error: print.error }
+        isPromo: print.isPromo ?? old.isPromo, promoStatus, error: print.error,
+        imageBase: print.imageBase ?? old.imageBase,
+        thumbnail: changedManifestImage ? null : old.thumbnail,
+        highImageAvailable: changedManifestImage ? null : old.highImageAvailable }
       : { ...print, isPromo: print.isPromo ?? old?.isPromo, promoStatus,
-        thumbnail: print.thumbnail ?? (old?.imageBase === print.imageBase ? old.thumbnail : null),
+        thumbnail: print.thumbnail ?? (old?.imageBase === print.imageBase &&
+          !!this.availableImage(old).thumbnail ? old.thumbnail : null),
         highImageAvailable: print.highImageAvailable ??
           (old?.imageBase === print.imageBase ? old.highImageAvailable : null) }
     if (old?.detailAt && value.detailAt) {
@@ -446,20 +839,34 @@ export class CatalogStore {
   }
 
   save(sample: { sets: CatalogSet[]; prints: CatalogPrint[]; fetchedAt: string; promoAudit?: PromoAudit },
-    kind: 'sample' | 'standard-marks' = 'sample'): CatalogView {
+    kind: 'sample' | 'standard-marks' = 'sample', rotation?: RotationRule): CatalogView {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       for (const set of sample.sets) {
-        this.db.prepare(`INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date) VALUES (?, ?, ?, ?, ?, ?)
+        this.db.prepare(`INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at, release_date, abbreviation) VALUES (?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET name=excluded.name, source_total=excluded.source_total,
-          sample_total=excluded.sample_total, fetched_at=excluded.fetched_at, release_date=excluded.release_date`)
-          .run(set.id, set.name, set.sourceTotal, set.sampleTotal, set.fetchedAt, set.releaseDate ?? null)
+          sample_total=excluded.sample_total, fetched_at=excluded.fetched_at,
+          release_date=excluded.release_date, abbreviation=COALESCE(excluded.abbreviation, catalog_sets.abbreviation)`)
+          .run(set.id, set.name, set.sourceTotal, set.sampleTotal, set.fetchedAt,
+            set.releaseDate ?? null, set.abbreviation ?? null)
       }
       for (const print of sample.prints) this.upsertPrint(print)
       if (kind === 'standard-marks') {
+        const prior = this.db.prepare('SELECT print_id FROM catalog_targets').all() as { print_id: string }[]
+        const manifestIds = new Set(sample.prints.map((print) => print.id))
         this.db.exec('DELETE FROM catalog_targets')
         for (const print of sample.prints) {
           this.db.prepare('INSERT INTO catalog_targets VALUES (?)').run(print.id)
+        }
+        // An incomplete provider inventory cannot silently hide an already acquired current print.
+        for (const row of prior) {
+          if (manifestIds.has(row.print_id)) continue
+          const saved = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?')
+            .get(row.print_id) as { payload: string } | undefined
+          if (!saved) continue
+          const mark = (JSON.parse(saved.payload) as CatalogPrint).regulationMark
+          if (!rotation || !mark || !/^[A-Z]$/.test(mark) || mark >= rotation.firstAllowedMark)
+            this.db.prepare('INSERT INTO catalog_targets VALUES (?)').run(row.print_id)
         }
         if (sample.promoAudit) {
           if (sample.promoAudit.packageVersion !== undefined) {
@@ -483,6 +890,8 @@ export class CatalogStore {
       this.db.prepare(`INSERT INTO catalog_sync VALUES (1, ?)
         ON CONFLICT(id) DO UPDATE SET fetched_at=excluded.fetched_at`).run(sample.fetchedAt)
       this.db.exec('COMMIT')
+      this.browseCache = null
+      this.viewCache = null
     } catch (error) {
       this.db.exec('ROLLBACK')
       throw error
@@ -520,17 +929,20 @@ export class CatalogStore {
   }
 
   view(): CatalogView {
+    const today = localCalendarDate()
+    if (this.viewCache?.date === today) return this.viewCache.value
     const rules = this.rulePackage()
-    const sets = this.db.prepare('SELECT id, name, source_total, sample_total, fetched_at, release_date FROM catalog_sets ORDER BY id')
+    const sets = this.db.prepare('SELECT id, name, source_total, sample_total, fetched_at, release_date, abbreviation FROM catalog_sets ORDER BY id')
       .all().map((row) => {
-        const item = row as { id: string; name: string; source_total: number; sample_total: number; fetched_at: string; release_date: string | null }
+        const item = row as { id: string; name: string; source_total: number; sample_total: number;
+          fetched_at: string; release_date: string | null; abbreviation: string | null }
         return { id: item.id, name: item.name, sourceTotal: item.source_total, sampleTotal: item.sample_total,
-          fetchedAt: item.fetched_at, releaseDate: item.release_date }
+          fetchedAt: item.fetched_at, releaseDate: item.release_date, abbreviation: item.abbreviation }
       })
     const promoRegistry = loadPromoPackage().registry
     const prints = this.db.prepare('SELECT payload FROM catalog_prints ORDER BY id')
       .all().map((row) => {
-        const print = JSON.parse((row as { payload: string }).payload) as CatalogPrint
+        const print = this.availableImage(JSON.parse((row as { payload: string }).payload) as CatalogPrint)
         if (!print.isPromo) return print
         const entry = promoRegistry.entries.get(promoKey(print.setId, print.localId))
         return { ...print, promoStatus: {
@@ -539,16 +951,22 @@ export class CatalogStore {
         } } as CatalogPrint
       })
     const sync = this.db.prepare('SELECT fetched_at FROM catalog_sync WHERE id = 1').get() as { fetched_at: string } | undefined
+    const savedRule = this.db.prepare('SELECT rule_version FROM catalog_job WHERE id = 1')
+      .get() as { rule_version: string | null } | undefined
+    const inventoryRule = rules.value.rotations.find((rule) => rule.version === savedRule?.rule_version)
     const kind = this.scopeKind()
     const targetIds = kind === 'standard-marks' ? new Set(this.db.prepare('SELECT print_id FROM catalog_targets')
       .all().map((row) => (row as { print_id: string }).print_id)) : null
     const targetPrints = targetIds ? prints.filter((print) => targetIds.has(print.id)) : []
     const acquiredTargets = targetPrints.filter((print) => print.detailAt !== null).length
+    const hasGameplay = (print: CatalogPrint): boolean =>
+      print.gameplaySchemaVersion === CATALOG_GAMEPLAY_SCHEMA_VERSION &&
+      hasComparableGameplay(print.category, print.stage ?? null, print.energyType ?? null, print.gameplay ?? null)
+    const gameplayTargets = targetPrints.filter(hasGameplay).length
     const promoTargets = targetPrints.filter((print) => print.isPromo)
     const acquiredPromos = promoTargets.filter((print) => print.detailAt !== null).length
     const targetSetIds = [...new Set(targetPrints.map((print) => print.setId))].sort()
-    const officialReleased = officialSetReleases().filter((set) =>
-      set.releaseDate <= new Date().toISOString().slice(0, 10))
+    const officialReleased = officialSetReleases().filter((set) => set.releaseDate <= today)
     const officialMissing = officialReleased.filter((set) => !targetSetIds.includes(set.setId))
     const printsBySet = new Map<string, CatalogPrint[]>()
     for (const print of targetPrints) {
@@ -559,14 +977,16 @@ export class CatalogStore {
     const bySet = sets.filter((set) => printsBySet.has(set.id)).map((set) => {
       const group = printsBySet.get(set.id)!
       const acquired = group.filter((print) => print.detailAt !== null).length
+      const gameplayAcquired = group.filter(hasGameplay).length
       const promos = group.filter((print) => print.isPromo)
       return { setId: set.id, name: set.name, sourceTotal: set.sourceTotal, releaseDate: set.releaseDate,
         officialReleaseDate: officialSetRelease(set.id),
         expected: group.length, acquired, missing: group.length - acquired,
+        gameplayAcquired, gameplayMissing: group.length - gameplayAcquired,
         promo: promos.length > 0, promoVerified: promos.filter((print) => !!print.promoStatus).length,
         promoUnchecked: promos.filter((print) => !print.promoStatus).length }
     })
-    return {
+    const value: CatalogView = {
       circuit: 'WESTERN', source: CATALOG_SOURCE, sourceLanguage: 'en',
       rulePackage: rules.value, rulePackageError: rules.error,
       scope: kind === 'sample'
@@ -574,12 +994,16 @@ export class CatalogStore {
         : { setIds: targetSetIds, names: [], kind },
       standardCoverage: targetIds
         ? { expected: targetIds.size, acquired: acquiredTargets,
-          missing: targetIds.size - acquiredTargets, marks: candidateMarks, bySet,
+          missing: targetIds.size - acquiredTargets,
+          gameplayAcquired: gameplayTargets, gameplayMissing: targetIds.size - gameplayTargets,
+          marks: inventoryRule ? candidateMarks.filter((mark) => mark >= inventoryRule.firstAllowedMark)
+            : candidateMarks, bySet,
           releaseSource: { url: OFFICIAL_SET_RELEASE_SOURCE, version: OFFICIAL_SET_RELEASE_VERSION,
             checkedAt: OFFICIAL_SET_RELEASE_CHECKED_AT },
           officialSets: { expected: officialReleased.length,
             present: officialReleased.length - officialMissing.length, missing: officialMissing.length,
-            missingSets: officialMissing.map((set) => ({ setId: set.setId, product: set.product })) },
+            missingSets: officialMissing.map((set) => ({ setId: set.setId, product: set.product })),
+            unmappedProducts: officialUnmappedProducts() },
           promos: { expected: promoTargets.length, acquired: acquiredPromos,
             missing: promoTargets.length - acquiredPromos,
             series: new Set(promoTargets.map((print) => print.setId)).size,
@@ -593,14 +1017,163 @@ export class CatalogStore {
         packageVersion: promoRegistry.version, complete: promoRegistry.complete } : undefined,
       syncedAt: sync?.fetched_at ?? null,
       sets: targetIds ? sets.filter((set) => targetSetIds.includes(set.id)) : sets,
-      prints: targetIds ? targetPrints : prints
+      prints: targetIds ? targetPrints : prints,
+      referencePrints: targetIds ? [
+        ...prints.filter((print) => !targetIds.has(print.id) && print.detailAt !== null && print.identityId !== null),
+        ...this.db.prepare('SELECT payload FROM catalog_retired_prints ORDER BY id').all()
+          .map((row) => this.availableImage(JSON.parse((row as { payload: string }).payload) as CatalogPrint))
+      ] : []
     }
+    this.viewCache = { date: today, value,
+      thumbnails: new Map([...value.prints, ...(value.referencePrints ?? [])].map((print) => [print.id, print.thumbnail])) }
+    return value
+  }
+
+  private browseData(): NonNullable<CatalogStore['browseCache']> {
+    const today = localCalendarDate()
+    if (this.browseCache?.date === today) return this.browseCache
+    const { prints, referencePrints: _referencePrints, ...metadata } = this.view()
+    const groups = new Map<string, CatalogBrowseGroup & {
+      ids: string[]; search: string; setIds: Set<string>
+    }>()
+    let acquired = 0
+    let rarity = 0
+    let variants = 0
+    let thumbnails = 0
+    let highImages = 0
+    let imageSourceMissing = 0
+    let imageCacheMissing = 0
+    let limitlessThumbnails = 0
+    const missingPreview: CatalogBrowseOverview['stats']['missingPreview'] = []
+    for (const print of prints) {
+      if (print.detailAt) acquired++
+      else if (missingPreview.length < 12) missingPreview.push({ id: print.id, error: print.error })
+      if (print.detailAt && print.rarity !== null) rarity++
+      if (print.detailAt && print.variants !== null) variants++
+      if (print.detailAt && print.thumbnail !== null) thumbnails++
+      if (print.detailAt && print.thumbnail && print.imageBase?.startsWith(`${limitlessOrigin}/`)) limitlessThumbnails++
+      if (print.detailAt && print.highImageAvailable === true) highImages++
+      if (print.detailAt && !print.imageBase) imageSourceMissing++
+      if (print.detailAt && print.imageBase && !print.thumbnail) imageCacheMissing++
+      const key = print.identityId ?? `pending-${print.id}`
+      const group = groups.get(key) ?? { key, name: print.name, category: print.category,
+        basis: print.identityBasis, printCount: 0, canConstrain: false,
+        ids: [], search: print.name.toLocaleLowerCase(), setIds: new Set<string>() }
+      group.printCount++
+      group.canConstrain ||= !!(print.detailAt && print.identityId)
+      group.ids.push(print.id)
+      group.setIds.add(print.setId)
+      group.search += ` ${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase()
+      groups.set(key, group)
+    }
+    const ordered = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name) ||
+      a.key.localeCompare(b.key))
+    const overview: CatalogBrowseOverview = { ...metadata, stats: {
+      sampled: metadata.sets.reduce((sum, set) => sum + set.sampleTotal, 0),
+      acquired, missing: prints.length - acquired, missingPreview,
+      groups: ordered.length,
+      confirmedGroups: ordered.filter((group) => group.basis && group.basis !== 'unverified').length,
+      rarity, variants, thumbnails, highImages, imageSourceMissing, imageCacheMissing, limitlessThumbnails
+    } }
+    this.browseCache = { date: today, overview, groups: ordered,
+      byKey: new Map(ordered.map((group) => [group.key, group.ids])) }
+    return this.browseCache
+  }
+
+  browseOverview(): CatalogBrowseOverview { return this.browseData().overview }
+
+  browseSearch(query: string, setId: string, offset: number, limit = 100): CatalogBrowsePage {
+    const text = query.trim().toLocaleLowerCase()
+    const matched = this.browseData().groups.filter((group) =>
+      (!text || group.search.includes(text)) && (setId === 'all' || group.setIds.has(setId)))
+    const start = Math.min(Math.max(0, offset),
+      Math.max(0, Math.ceil(matched.length / limit) - 1) * limit)
+    return { total: matched.length, offset: start, groups: matched.slice(start, start + limit).map(
+      ({ ids: _ids, search: _search, setIds: _setIds, ...summary }) => summary) }
+  }
+
+  browseGroup(key: string): { group: CatalogBrowseGroup; prints: CatalogPrint[] } | null {
+    const data = this.browseData()
+    const ids = data.byKey.get(key)
+    if (!ids) return null
+    const indexed = data.groups.find((group) => group.key === key)!
+    const { ids: _ids, search: _search, setIds: _setIds, ...group } = indexed
+    const registry = loadPromoPackage().registry
+    const prints = ids.map((id) => this.getPrint(id)).filter((print): print is CatalogPrint => !!print)
+      .map((print) => print.isPromo ? { ...print, promoStatus: {
+        state: registry.entries.get(promoKey(print.setId, print.localId))?.state ?? 'unlisted',
+        legalDate: registry.entries.get(promoKey(print.setId, print.localId))?.legalDate ?? null,
+        dateNote: registry.entries.get(promoKey(print.setId, print.localId))?.dateNote ?? null,
+        checkedAt: registry.checkedAt
+      } } as CatalogPrint : print)
+    return { group, prints }
   }
 
   getPrint(id: string): CatalogPrint | null {
     if (typeof id !== 'string' || id.length > 100) return null
     const row = this.db.prepare('SELECT payload FROM catalog_prints WHERE id = ?').get(id) as { payload: string } | undefined
-    return row ? JSON.parse(row.payload) as CatalogPrint : null
+    if (!row) return null
+    const print = this.availableImage(JSON.parse(row.payload) as CatalogPrint)
+    const cachedThumbnail = this.viewCache?.thumbnails.get(id)
+    if (cachedThumbnail !== undefined && cachedThumbnail !== print.thumbnail) {
+      this.viewCache = null
+      this.browseCache = null
+    }
+    return print
+  }
+
+  /** A single local lookup for a visible row; never fetch artwork from the network on hover. */
+  cardPreview(lookup: CardPreviewLookup): CardPreviewData {
+    const missing = (reason: CardPreviewData['reason']): CardPreviewData => ({
+      name: lookup.name, printId: null, printLabel: null, image: null, reason, sample: false
+    })
+    let prints: CatalogPrint[] = []
+    let sample = false
+    if (lookup.printId) {
+      const print = this.getPrint(lookup.printId)
+      if (print) prints = [print]
+    } else if (lookup.setCode && lookup.cardNumber) {
+      const code = lookup.setCode.toUpperCase()
+      const sets = this.db.prepare('SELECT id, abbreviation FROM catalog_sets').all() as
+        { id: string; abbreviation: string | null }[]
+      const ids = sets.filter((set) => knownPrintCodes(set.id).includes(code) ||
+        set.abbreviation?.toUpperCase() === code).map((set) => set.id)
+      const raw = lookup.cardNumber
+      const numbers = new Set([raw, raw.replace(/^0+(?=\d)/, ''),
+        ...( /^\d+$/.test(raw) ? [raw.padStart(2, '0'), raw.padStart(3, '0'), raw.padStart(4, '0')] : [] )])
+      for (const setId of ids) for (const number of numbers) {
+        const print = this.getPrint(`${setId}-${number}`)
+        if (print) prints.push(print)
+      }
+      if (new Set(prints.map((print) => print.id)).size > 1) return missing('ambiguous')
+    } else if (lookup.identityId) {
+      prints = this.browseGroup(lookup.identityId)?.prints ?? []
+      sample = true
+    } else {
+      const rows = this.db.prepare(`SELECT payload FROM catalog_prints
+        WHERE json_extract(payload, '$.name') = ? COLLATE NOCASE LIMIT 51`).all(lookup.name) as { payload: string }[]
+      prints = rows.map((row) => this.availableImage(JSON.parse(row.payload) as CatalogPrint))
+      sample = true
+      if (rows.length === 51 || new Set(prints.map((print) => print.identityId ?? print.id)).size > 1)
+        return missing('ambiguous')
+    }
+    if (!prints.length) return missing('not-in-catalog')
+    const print = prints.find((item) => item.thumbnail?.startsWith('pokeguru://cards/'))
+      ?? prints.find((item) => item.thumbnail) ?? prints[0]
+    const image = print.thumbnail && (print.thumbnail.startsWith('pokeguru://cards/') ||
+      print.thumbnail.startsWith('data:image/')) ? print.thumbnail : null
+    return {
+      name: print.name, printId: print.id, printLabel: `${print.setName} · ${print.localId}`,
+      image, reason: image ? 'available'
+        : print.imageBase ? 'not-cached' : 'source-missing', sample
+    }
+  }
+
+  /** Small read for export; avoids loading every catalog print on each click. */
+  setAbbreviations(): Record<string, string> {
+    const rows = this.db.prepare('SELECT id, abbreviation FROM catalog_sets WHERE abbreviation IS NOT NULL')
+      .all() as { id: string; abbreviation: string }[]
+    return Object.fromEntries(rows.map((row) => [row.id.toLowerCase(), row.abbreviation]))
   }
 
   close(): void { this.db.close() }

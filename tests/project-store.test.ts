@@ -5,6 +5,8 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { parseDeck } from '../src/shared/deck-import'
+import { hydrappleItalianDeck } from './fixtures/hydrapple-italian'
+import type { MatchupReport } from '../src/shared/meta-matchups'
 
 const tempDirectories: string[] = []
 
@@ -21,6 +23,46 @@ afterEach(() => {
 })
 
 describe('ProjectStore', () => {
+  it('legge la cronologia del thread a pagine senza perdere messaggi con data identica', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Cronologia lunga', format: 'STANDARD' })
+    const other = store.create({ name: 'Altro progetto', format: 'STANDARD' })
+    const thread = store.createDeckThread({ projectId: project.id, title: 'Prova',
+      openingNote: 'Messaggio iniziale', startWithAi: true })
+    const db = new DatabaseSync(path)
+    const insert = db.prepare(`INSERT INTO deck_thread_messages
+      (id, thread_id, author, text, created_at, evidence_json)
+      VALUES (?, ?, 'assistant', ?, ?, ?)`)
+    db.exec('BEGIN IMMEDIATE')
+    for (let index = 1; index <= 120; index++) insert.run(`message-${index}`, thread.id,
+      `Risposta ${index}`, '2099-10-25T00:00:00.000Z', JSON.stringify({ index }))
+    db.exec('COMMIT')
+    db.close()
+
+    const recent = store.getDeckThreadWindow(project.id, thread.id)!
+    expect(recent.messageCount).toBe(121)
+    expect(recent.messages).toHaveLength(50)
+    expect(recent.messages[0].id).toBe('message-71')
+    expect(recent.openingAiMessage?.text).toBe('Messaggio iniziale')
+    expect(recent.openingAiPending).toBe(false)
+    const second = store.getDeckThreadMessagesBefore(project.id, thread.id, recent.oldestMessageCursor!)
+    expect(second.messages).toHaveLength(50)
+    expect(second.messages[0].id).toBe('message-21')
+    const first = store.getDeckThreadMessagesBefore(project.id, thread.id, second.oldestCursor!)
+    expect(first.messages.map((item) => item.id)).toEqual([
+      thread.messages[0].id, ...Array.from({ length: 20 }, (_, index) => `message-${index + 1}`)
+    ])
+    expect(first.messages[1].evidence).toEqual({ index: 1 })
+    expect(store.getDeckThread(project.id, thread.id)?.messages).toHaveLength(121)
+    expect(store.hasDeckThread(project.id, thread.id)).toBe(true)
+    expect(store.hasDeckThread(other.id, thread.id)).toBe(false)
+    expect(store.getDeckThreadWindow(other.id, thread.id)).toBeNull()
+    expect(() => store.getDeckThreadMessagesBefore(other.id, thread.id, recent.oldestMessageCursor!))
+      .toThrow('Thread non trovato')
+    store.close()
+  })
+
   it('mantiene due progetti distinti dopo la riapertura del database', () => {
     const path = databasePath()
     const firstSession = new ProjectStore(path)
@@ -61,6 +103,38 @@ describe('ProjectStore', () => {
     expect(reopened.getBaseline(first.id)?.diagnostics.map(({ code }) => code)).toEqual(['UNPARSED', 'TOTAL_MISMATCH'])
     expect(reopened.getBaseline(second.id)).toMatchObject({ rawText: '60 Carta senza stampa', fileName: 'secondo.txt', interpretedTotal: 60 })
     expect(reopened.getBaseline(first.id)?.rawText).not.toBe(reopened.getBaseline(second.id)?.rawText)
+    reopened.close()
+  }, 15000)
+
+  it('ripara le liste italiane già salvate senza creare una nuova versione', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Hydrapple', format: 'STANDARD' })
+    const baseline = store.importDeck({ projectId: project.id, rawText: hydrappleItalianDeck, source: 'paste' })
+    const version = store.listDeckVersions(project.id)[0]
+    store.close()
+
+    const stale = parseDeck(hydrappleItalianDeck)
+    for (const header of ['Carte Allenatore: 11', 'Energia: 1']) {
+      const line = stale.lines.find((item) => item.raw === header)!
+      line.kind = 'unparsed'
+      stale.diagnostics.push({ lineNumber: line.lineNumber, code: 'UNPARSED', message: 'Riga non interpretata' })
+    }
+    const db = new DatabaseSync(path)
+    db.prepare('UPDATE deck_baselines SET parsed_json = ?, problem_count = 2 WHERE project_id = ?')
+      .run(JSON.stringify(stale), project.id)
+    db.prepare('UPDATE deck_versions SET parsed_json = ? WHERE project_id = ?')
+      .run(JSON.stringify(stale), project.id)
+    db.close()
+
+    const reopened = new ProjectStore(path)
+    expect(reopened.get(project.id)?.status).toBe('PRONTA_PER_CONTROLLO')
+    expect(reopened.getBaseline(project.id)).toMatchObject({ rawText: hydrappleItalianDeck,
+      importedAt: baseline.importedAt, interpretedTotal: 60, diagnostics: [] })
+    expect(reopened.getBaseline(project.id)?.lines.find((line) => line.raw === 'Carte Allenatore: 11')?.kind).toBe('section')
+    expect(reopened.listDeckVersions(project.id)).toMatchObject([{
+      id: version.id, createdAt: version.createdAt, parsed: { diagnostics: [] }
+    }])
     reopened.close()
   })
 
@@ -122,6 +196,13 @@ describe('ProjectStore', () => {
     store.addDeckThreadMessage(first.id, a.id, 'Teniamo il motore iniziale.')
     store.saveDeckCandidate({ projectId: first.id, threadId: a.id, rawText: '60 Carta B MEG 2', note: 'Più veloce' })
     store.saveDeckCandidate({ projectId: first.id, threadId: b.id, rawText: '60 Carta C MEG 3' })
+    expect(store.listDeckThreadSummaries(first.id).find((item) => item.id === a.id)).toMatchObject({
+      title: 'Piano A', baseVersionId: initial.id,
+      latestCandidateId: store.getDeckThread(first.id, a.id)?.candidates[0].id
+    })
+    expect(store.listDeckThreadSummaries(first.id).find((item) => item.id === a.id)).not.toHaveProperty('messages')
+    expect(store.getDeckThread(other.id, a.id)).toBeNull()
+    expect(store.listDeckThreadSummaries(other.id)).toHaveLength(1)
     expect(store.getBaseline(first.id)?.rawText).toBe(original)
     expect(store.listDeckThreads(first.id).find((item) => item.id === a.id)).toMatchObject({
       messages: [{ text: 'Proviamo più pesca.' }, { text: 'Teniamo il motore iniziale.' }],
@@ -143,6 +224,7 @@ describe('ProjectStore', () => {
     expect(reopened.listDeckThreads(first.id).find((item) => item.id === a.id)).toMatchObject({
       baseVersionId: initial.id, stale: true, candidates: [{ rawText: '60 Carta B MEG 2' }]
     })
+    expect(reopened.listDeckThreadSummaries(first.id).find((item) => item.id === a.id)?.stale).toBe(true)
     expect(reopened.getBaseline(first.id)?.rawText).toBe('60 Carta D MEG 4')
     reopened.close()
   })
@@ -276,9 +358,15 @@ describe('ProjectStore', () => {
       decks: [{ id: '284', name: 'Dragapult ex', points: 100, share: 12, url: 'https://limitlesstcg.com/decks/284' }]
     }
     store.saveMetaSnapshot(snapshot)
-    const initial = {
+    const initial: MatchupReport = {
       projectId: project.id, metaId: snapshot.id, opponentId: '284', deckHash: store.getCurrentDeckHash(project.id)!,
       generatedAt: '2026-10-23T00:05:00.000Z', sampleDeckUrl: null,
+      sampleDeckCards: ['2 Dragapult ex TWM 130'],
+      tournamentEvidence: { schemaVersion: 2, evidenceHash: 'evidence-v2',
+        status: 'matched', detail: 'Due eventi', eventId: '582', eventName: 'Nice',
+        eventDate: '2026-10-17', eventUrl: 'https://limitlesstcg.com/tournaments/582',
+        eventLists: 1, eventParticipants: 429, matchedDeckId: '284', matchedCompleteLists: 1,
+        observedCards: [], sampleLists: [], events: [] },
       strengths: 'Ipotesi A', weaknesses: 'Ipotesi B', ourKeyCards: 'Carta A', theirKeyCards: '',
       strategy: 'Piano iniziale', limitations: 'Nessun risultato di match'
     }
@@ -295,6 +383,8 @@ describe('ProjectStore', () => {
     const reopened = new ProjectStore(path)
     expect(reopened.listMatchupDiscussions(other.id, '284')).toEqual([])
     expect(reopened.getMatchupDiscussion(discussion.id)?.turns[1].feedback).toBe('Secondo me bisogna andare secondi.')
+    expect(reopened.getMatchupDiscussion(discussion.id)?.turns[0].report?.tournamentEvidence?.evidenceHash)
+      .toBe('evidence-v2')
     const revision = { ...initial, generatedAt: '2026-10-23T00:06:00.000Z', strategy: 'Piano rivisto' }
     const completed = reopened.completeMatchupFeedback(discussion.id, pending.turns[1].id, revision, 'Rivalutata l’ipotesi di andare secondi.')
     expect(completed.turns.map((turn) => turn.report?.strategy)).toEqual(['Piano iniziale', 'Piano rivisto'])
@@ -322,6 +412,9 @@ describe('ProjectStore', () => {
     expect(afterRestart.listMatchupDiscussions(project.id, '284')).toHaveLength(2)
     expect(afterRestart.getMatchupDiscussion(linked.id)?.parentId).toBe(discussion.id)
     expect(afterRestart.getMatchupDiscussion(discussion.id)?.contextSummary).toBe('Sintesi delle prime versioni')
+    expect(afterRestart.getMatchupDiscussion(discussion.id)?.turns[0].report?.sampleDeckCards)
+      .toEqual(['2 Dragapult ex TWM 130'])
+    expect(afterRestart.listMatchupDiscussions(other.id, '284')).toEqual([])
     afterRestart.close()
   })
 
@@ -349,5 +442,120 @@ describe('ProjectStore', () => {
     const again = new ProjectStore(path)
     expect(again.listMatchupDiscussions(project.id, '284')[0].turns).toHaveLength(1)
     again.close()
+  })
+
+  it('separa le correzioni dalle vN e ripristina testo, provenienza e correzioni senza perdere lo storico', () => {
+    const path = databasePath()
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Versioni', format: 'STANDARD' })
+    const other = store.create({ name: 'Altro', format: 'STANDARD' })
+    const a = store.importDeck({ projectId: project.id, rawText: '1 Carta A MEG 1', source: 'paste' })
+    const v1 = store.listDeckVersions(project.id)[0]
+    const thread = store.createDeckThread({ projectId: project.id, title: 'Prima interpretazione' })
+    const print = { id: 'meg-001', name: 'Carta A', category: 'Trainer', setId: 'meg',
+      setName: 'Mega', localId: '001', rarity: null, variants: null,
+      identityId: 'identity-a', identityBasis: 'trainer-text' as const,
+      sourceUrl: 'https://api.tcgdex.net/v2/en/cards/meg-001', sourceUpdated: null }
+    store.saveLineMapping({ projectId: project.id, importedAt: a.importedAt,
+      lineNumber: 1, rawLine: '1 Carta A MEG 1', printId: print.id }, print)
+    expect(store.listDeckVersions(project.id)).toHaveLength(1)
+    expect(store.getDeckThread(project.id, thread.id)).toMatchObject({
+      stale: false, resolutionChanged: true
+    })
+    const v1Resolved = store.listDeckVersions(project.id)[0]
+    expect(v1Resolved.resolutionId).not.toBe(v1.resolutionId)
+    store.annotateDeckVersion({ projectId: project.id, versionId: v1.id,
+      label: 'Apertura', note: 'Prima direzione' })
+    const b = store.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste',
+      expectedHeadId: v1.id })
+    const v2 = store.listDeckVersions(project.id)[0]
+    expect(() => store.restoreDeckVersion({ projectId: other.id, versionId: v1.id,
+      expectedHeadId: v2.id })).toThrow()
+    expect(() => store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: 'outdated' })).toThrow('lista principale è cambiata')
+    expect(() => store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: v2.id, expectedResolutionId: v1Resolved.resolutionId }))
+      .toThrow('correzioni della lista sono cambiate')
+    const restored = store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: v2.id, expectedResolutionId: b.resolutionId })
+    expect(restored.rawText).toBe(a.rawText)
+    expect(store.getReconciliation(project.id).mappings[0].print.identityId).toBe('identity-a')
+    expect(store.listDeckVersions(project.id)).toMatchObject([
+      { sequence: 3, restoredFrom: { id: v1.id, sequence: 1 } },
+      { id: v2.id, sequence: 2 }, { id: v1.id, label: 'Apertura', note: 'Prima direzione' }
+    ])
+    store.clearLineMapping({ projectId: project.id, importedAt: restored.importedAt,
+      lineNumber: 1, rawLine: '1 Carta A MEG 1' })
+    expect(store.listDeckVersions(project.id)).toHaveLength(3)
+    store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: restored.versionId! })
+    expect(store.listDeckVersions(project.id)).toHaveLength(3)
+    expect(store.getReconciliation(project.id).mappings[0].print.identityId).toBe('identity-a')
+    expect(() => store.importDeck({ projectId: project.id, rawText: b.rawText,
+      source: 'paste', expectedHeadId: v2.id })).toThrow('lista principale è cambiata')
+    store.close()
+    const reopened = new ProjectStore(path)
+    expect(reopened.getBaseline(project.id)?.rawText).toBe(a.rawText)
+    expect(reopened.listDeckVersions(project.id)[0].restoredFrom?.id).toBe(v1.id)
+    expect(reopened.getReconciliation(project.id).mappings[0].print.identityId).toBe('identity-a')
+    reopened.close()
+  })
+
+  it('continua una candidata su nuova base in un thread collegato senza modificare l’originale', () => {
+    const store = new ProjectStore(databasePath())
+    const project = store.create({ name: 'Due rami', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id, rawText: '1 Carta A MEG 1', source: 'paste' })
+    const old = store.createDeckThread({ projectId: project.id, title: 'Piano A' })
+    const candidate = store.saveDeckCandidate({ projectId: project.id, threadId: old.id,
+      rawText: '1 Carta C MEG 3' }).candidates[0]
+    store.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste' })
+    const next = store.continueDeckThread({ projectId: project.id, threadId: old.id,
+      candidateId: candidate.id, title: 'Piano A · nuova base' })
+    expect(next).toMatchObject({ parentThreadId: old.id, seedCandidateId: candidate.id,
+      seedCandidateText: candidate.rawText, stale: false, candidates: [] })
+    expect(next.baseVersionId).toBe(store.listDeckVersions(project.id)[0].id)
+    const descendant = store.saveDeckCandidate({ projectId: project.id, threadId: next.id,
+      rawText: candidate.rawText }).candidates[0]
+    expect(descendant.parentCandidateId).toBe(candidate.id)
+    expect(store.getDeckThread(project.id, old.id)).toMatchObject({ stale: true,
+      candidates: [{ id: candidate.id }] })
+    store.close()
+  }, 15_000)
+
+  it('non riattiva una guida storica quando il medesimo testo torna in una nuova vN', () => {
+    const store = new ProjectStore(databasePath())
+    const project = store.create({ name: 'Ritorno', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id, rawText: '1 Carta A MEG 1', source: 'paste' })
+    const v1 = store.listDeckVersions(project.id)[0]
+    const snapshot = { id: 'd'.repeat(64), fetchedAt: '2026-10-25T10:00:00.000Z',
+      sourceUrl: 'https://limitlesstcg.com/decks', period: 'Ultimo mese',
+      circuit: 'WESTERN' as const, format: 'STANDARD' as const, cached: false,
+      decks: [{ id: '284', name: 'Dragapult ex', points: 100, share: 12,
+        url: 'https://limitlesstcg.com/decks/284' }] }
+    store.saveMetaSnapshot(snapshot)
+    const firstContext = store.getCurrentDeckContext(project.id)!
+    const report: MatchupReport = { projectId: project.id, metaId: snapshot.id,
+      opponentId: '284', deckHash: store.getCurrentDeckHash(project.id)!,
+      deckVersionId: firstContext.versionId, deckResolutionId: firstContext.resolutionId,
+      generatedAt: '2026-10-25T10:01:00.000Z', sampleDeckUrl: null,
+      strengths: 'A', weaknesses: 'B', ourKeyCards: 'Carta A', theirKeyCards: '',
+      strategy: 'Piano iniziale', limitations: 'Campione' }
+    store.saveMatchupReport(report)
+    const old = store.listMatchupDiscussions(project.id, '284')[0]
+    store.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste' })
+    const v2 = store.listDeckVersions(project.id)[0]
+    store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: v2.id })
+    expect(store.getMatchupDiscussion(old.id)?.current).toBe(false)
+    expect(store.listMatchupReports(project.id, snapshot.id)).toEqual([])
+    const newContext = store.getCurrentDeckContext(project.id)!
+    const newReport = { ...report, deckVersionId: newContext.versionId,
+      deckResolutionId: newContext.resolutionId, generatedAt: '2026-10-25T10:02:00.000Z' }
+    store.saveContinuedMatchupReport(newReport, old.id)
+    const discussions = store.listMatchupDiscussions(project.id, '284')
+    expect(discussions).toHaveLength(2)
+    expect(discussions.find((item) => item.id !== old.id)?.current).toBe(true)
+    expect(store.getMatchupDiscussion(old.id)?.current).toBe(false)
+    store.close()
   })
 })

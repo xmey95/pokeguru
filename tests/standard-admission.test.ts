@@ -16,6 +16,8 @@ const catalog: CatalogView = {
   circuit: 'WESTERN', source: 'TCGdex REST v2/en', sourceLanguage: 'en',
   scope: { setIds: [], names: [] }, syncedAt: '2026-10-23T00:00:00.000Z', sets: [],
   prints: [print('me02.5-001', 'Ascended Hero'), print('me03-001', 'Perfect Order'),
+    print('sv06.5-040', 'Genesect'),
+    print('sv08.5-102', 'Bug Catching Set'),
     print('30th-001', 'Celebration'), print('mep-051', 'Promo', true),
     print('future-001', 'Unknown')]
 }
@@ -40,6 +42,26 @@ it('applica le due settimane ai set regolari coperti da calendario e regola', ()
   expect(evaluateSetAdmission(deck, catalog, '2026-04-09').counts.waiting).toBe(2)
   expect(evaluateSetAdmission(deck, catalog, '2026-04-10').lines[0]).toMatchObject({
     status: 'admitted', legalDate: '2026-04-10'
+  })
+})
+
+it('usa la data ufficiale dei Mondiali 2024 per Genesect SFA', () => {
+  const deck = baseline('1 Genesect SFA 40')
+  expect(evaluateSetAdmission(deck, catalog, '2024-08-15').lines[0]).toMatchObject({
+    status: 'waiting', legalDate: '2024-08-16', setId: 'sv06.5'
+  })
+  expect(evaluateSetAdmission(deck, catalog, '2026-10-24').lines[0]).toMatchObject({
+    status: 'admitted', legalDate: '2024-08-16', printId: 'sv06.5-040'
+  })
+})
+
+it('ammette Prismatic Evolutions due settimane dopo il prodotto ufficiale', () => {
+  const deck = baseline('4 Bug Catching Set PRE 102')
+  expect(evaluateSetAdmission(deck, catalog, '2025-01-30').lines[0]).toMatchObject({
+    status: 'waiting', legalDate: '2025-01-31'
+  })
+  expect(evaluateSetAdmission(deck, catalog, '2025-01-31').lines[0]).toMatchObject({
+    status: 'admitted', legalDate: '2025-01-31', setId: 'sv08.5'
   })
 })
 

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { load } from 'cheerio'
 import type { MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
+import { readLimitedText } from './bounded-response'
 
 // Exclude Asia and Other: the first release covers the Western circuit only.
 export const META_URL = 'https://limitlesstcg.com/decks?format=standard&time=1months&region=eu,na,la,oc&show=100'
@@ -9,11 +10,7 @@ const REGION_CODES = ['eu', 'na', 'la', 'oc']
 async function getHtml(url: string): Promise<string> {
   const response = await fetch(url, { signal: AbortSignal.timeout(15_000), headers: { 'User-Agent': 'Pokeguru/0.1 (metagame reader)' } })
   if (!response.ok) throw new Error(`Limitless non disponibile (HTTP ${response.status}).`)
-  const length = Number(response.headers.get('content-length') || 0)
-  if (length > 1_000_000) throw new Error('Risposta Limitless troppo grande.')
-  const body = await response.text()
-  if (body.length > 1_000_000) throw new Error('Risposta Limitless troppo grande.')
-  return body
+  return readLimitedText(response, 1_000_000, 'Risposta Limitless troppo grande.')
 }
 
 export function parseMeta(html: string, fetchedAt = new Date().toISOString()): MetaSnapshot {

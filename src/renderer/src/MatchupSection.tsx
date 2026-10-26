@@ -1,27 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { DeckBaseline } from '../../shared/deck-import'
+import type { DeckVersion } from '../../shared/deck-threads'
 import type { AiConnection, AiPreferences } from '../../shared/ai'
+import type { AiJobSummary } from '../../shared/ai-job'
 import type { CatalogView } from '../../shared/catalog'
-import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
-import type { TournamentSnapshot } from '../../shared/tournament'
-import { matchupTournamentEvidence } from '../../shared/matchup-evidence'
+import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
+import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
+import { evaluateStandardDeck } from '../../shared/standard-deck'
+import { localCalendarDate } from '../../shared/calendar-date'
 import { buildDeckCards, matchupDeckContext, type DeckReconciliation } from '../../shared/reconciliation'
+import { MatchupSwitcher } from './MatchupSwitcher'
+import { MatchupDiscussion as DiscussionView, type RevisionInFlight } from './MatchupDiscussion'
+import { MatchupAiControls } from './MatchupAiControls'
+import { MatchupDataPreview, type MatchupAction } from './MatchupDataPreview'
+import { GuideText } from './GuideText'
+import { useCardPreview } from './CardPreview'
+import { ExpandablePreviewDeck } from './PreviewDeckLines'
+import { AiDiagnostics, AiEvidenceLimit } from './AiDiagnostics'
+import { MatchupPlan } from './MatchupPlan'
+import { catalogCardTargets, reportGuideReferences, type GuideReference } from './guide-links'
+import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
+import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
-}
-
-function mentioned(name: string, analysis: string): boolean {
-  const source = analysis.toLocaleLowerCase()
-  const target = name.toLocaleLowerCase()
-  let index = source.indexOf(target)
-  while (index >= 0) {
-    const before = source[index - 1] ?? ' '
-    const after = source[index + target.length] ?? ' '
-    if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after)) return true
-    index = source.indexOf(target, index + target.length)
-  }
-  return false
 }
 
 export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCatalogCard }: {
@@ -30,39 +32,76 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   onOpenAiSettings(): void
   onOpenCatalogCard(identityId: string): void
 }) {
+  const cardPreview = useCardPreview()
+  const nav = useNavigation()
   const hasBaseline = baseline !== null
-  const baselineKey = baseline?.rawText ?? null
+  const baselineKey = baseline ? `${baseline.versionId ?? baseline.rawText}:${baseline.resolutionId ?? ''}` : null
   const [snapshot, setSnapshot] = useState<MetaSnapshot | null>(null)
   const [reports, setReports] = useState<MatchupReport[]>([])
+  const [versions, setVersions] = useState<{ projectId: string; items: DeckVersion[] } | null>(null)
   const [historicalOpponents, setHistoricalOpponents] = useState<MetaDeck[]>([])
+  const [historyKey, setHistoryKey] = useState<string | null>(null)
   const [discussions, setDiscussions] = useState<MatchupDiscussion[]>([])
   const [discussionsKey, setDiscussionsKey] = useState<string | null>(null)
-  const [activeDiscussionId, setActiveDiscussionId] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState('')
+  const [activeDiscussionId, setActiveDiscussionId] = useViewState<string | null>('matchup.discussion', null)
   const [reportsKey, setReportsKey] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useViewState<string | null>('matchup.selected', null)
+  const [feedback, setFeedback] = useDraftState(`matchup.feedback:${projectId}:${selectedId}:${activeDiscussionId}`, '')
   const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [generating, setGenerating] = useBusyState(`matchup:${projectId}:${selectedId}`)
+  const [aiJob, setAiJob] = useState<AiJobSummary | null>(null)
+  const aiBusy = aiJob?.status === 'running' || aiJob?.status === 'ready'
+  const startedAt = useBusyStartedAt(`matchup:${projectId}:${selectedId}`)
+  const revisionKey = `matchup.revision:${projectId}:${selectedId}`
+  const revisionErrorKey = `matchup.revision-error:${projectId}:${selectedId}:${activeDiscussionId}`
+  const [revisionInFlight, setRevisionInFlight] = useDraftState<RevisionInFlight | null>(revisionKey, null)
+  const [revisionError, setRevisionError] = useDraftState<string | null>(revisionErrorKey, null)
+  const [error, setError] = useDraftState<string | null>(`matchup.error:${projectId}:${selectedId}`, null)
   const [connection, setConnection] = useState<AiConnection | null>(null)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [connectionLoading, setConnectionLoading] = useState(true)
+  const [connectionRequest, setConnectionRequest] = useState(0)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
-  const [tournament, setTournament] = useState<TournamentSnapshot | null>(null)
-  const [overrideModel, setOverrideModel] = useState('')
-  const [overrideEffort, setOverrideEffort] = useState('')
+  const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
+  const [previewEvidence, setPreviewEvidence] = useState<MatchupTournamentEvidence | null>(null)
+  const [evidenceLoading, setEvidenceLoading] = useState(true)
+  const [evidenceError, setEvidenceError] = useState<string | null>(null)
+  const [overrideModel, setOverrideModel] = useDraftState(`matchup.model:${projectId}:${selectedId}`, '')
+  const [overrideEffort, setOverrideEffort] = useDraftState(`matchup.effort:${projectId}:${selectedId}`, '')
 
   useEffect(() => {
     let active = true
+    setConnectionLoading(true)
+    setConnectionError(null)
     void window.projectsApi.getAiConnection().then((result) => {
-      if (active && result.ok) setConnection(result.value)
-    })
+      if (!active) return
+      if (result.ok) setConnection(result.value)
+      else { setConnection(null); setConnectionError(result.error) }
+    }).catch(() => { if (active) { setConnection(null); setConnectionError('Impossibile leggere i modelli disponibili.') } })
+      .finally(() => { if (active) setConnectionLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [connectionRequest])
+
+  useEffect(() => {
+    if (!snapshot || !selectedId) { setPreviewEvidence(null); return }
+    let active = true
+    setPreviewEvidence(null)
+    setEvidenceLoading(true)
+    setEvidenceError(null)
+    void window.projectsApi.getMatchupEvidence(snapshot.id, selectedId).then((result) => {
+      if (!active) return
+      if (result.ok) setPreviewEvidence(result.value)
+      else setEvidenceError(result.error)
+    }).catch(() => { if (active) setEvidenceError('Impossibile leggere le evidenze torneo.') })
+      .finally(() => { if (active) setEvidenceLoading(false) })
+    return () => { active = false }
+  }, [snapshot?.id, selectedId, catalog])
 
   useEffect(() => {
     let active = true
-    void window.projectsApi.getTournament().then((result) => {
-      if (active && result.ok) setTournament(result.value)
+    void window.projectsApi.getStandardRuleAudit().then((result) => {
+      if (active && result.ok) setRuleAudit(result.value)
     }).catch(() => undefined)
     return () => { active = false }
   }, [projectId])
@@ -78,7 +117,20 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       if (catalogResult.ok) setCatalog(catalogResult.value)
     }).catch(() => { if (active) setError('Impossibile leggere le corrispondenze della lista.') })
     return () => { active = false }
-  }, [projectId, baseline?.importedAt])
+  }, [projectId, baselineKey])
+
+  useEffect(() => {
+    let active = true
+    void window.projectsApi.listDeckVersions(projectId).then((result) => {
+      if (active) setVersions({ projectId, items: result.ok ? result.value : [] })
+    }).catch(() => { if (active) setVersions(null) })
+    return () => { active = false }
+  }, [projectId, baselineKey])
+
+  const versionLabel = (id?: string | null) => {
+    const version = versions?.projectId === projectId ? versions.items.find((item) => item.id === id) : null
+    return version ? `Lista v${version.sequence}${version.label ? ` · ${version.label}` : ''}` : 'Versione della lista non disponibile'
+  }
 
   async function refresh(): Promise<void> {
     setLoading(true)
@@ -87,7 +139,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       const result = await window.projectsApi.getMeta()
       if (!result.ok) throw new Error(result.error)
       setSnapshot(result.value)
-      setSelectedId((id) => id && result.value.decks.some((deck) => deck.id === id) ? id : result.value.decks[0]?.id ?? null)
+      setSelectedId((id) => id ?? result.value.decks[0]?.id ?? null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Metagame non disponibile.')
     } finally {
@@ -99,8 +151,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   useEffect(() => {
     let active = true
     void window.projectsApi.listHistoricalMatchupOpponents(projectId).then((result) => {
-      if (active && result.ok) setHistoricalOpponents(result.value)
-    })
+      if (!active) return
+      if (result.ok) { setHistoricalOpponents(result.value); setHistoryKey(`${projectId}:${snapshot?.id}`) }
+      else setError(result.error)
+    }).catch(() => { if (active) setError('Impossibile leggere lo storico Matchup.') })
     return () => { active = false }
   }, [projectId, snapshot?.id])
   useEffect(() => {
@@ -113,7 +167,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       else setError(result.error)
     }).catch(() => { if (active) setError('Impossibile leggere le analisi salvate.') })
     return () => { active = false }
-  }, [projectId, snapshot?.id, baselineKey, hasBaseline])
+  }, [projectId, snapshot?.id, baselineKey, hasBaseline, generating])
 
   async function reloadDiscussions(opponentId: string): Promise<void> {
     const result = await window.projectsApi.listMatchupDiscussions(projectId, opponentId)
@@ -135,16 +189,56 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       if (result.ok) {
         setDiscussions(result.value)
         setDiscussionsKey(key)
-        setActiveDiscussionId(result.value.find((item) => item.current)?.id ?? result.value[0]?.id ?? null)
+        setActiveDiscussionId((old) => old ?? result.value.find((item) => item.current)?.id ?? result.value[0]?.id ?? null)
+        if (activeDiscussionId && !result.value.some((item) => item.id === activeDiscussionId)) setError('Questa discussione non è più disponibile. Scegli una base disponibile oppure torna indietro.')
       } else setError(result.error)
     }).catch(() => { if (active) setError('Impossibile leggere le discussioni Matchup.') })
     return () => { active = false }
-  }, [projectId, selectedId, snapshot?.id, baselineKey])
+  }, [projectId, selectedId, snapshot?.id, baselineKey, generating])
+
+  useEffect(() => {
+    let active = true
+    const resourceId = `matchup:${projectId}`
+    const refresh = async () => {
+      const result = await window.projectsApi.getAiJobStatus(projectId, resourceId)
+      if (active && result.ok) setAiJob(result.value)
+    }
+    void refresh()
+    const timer = window.setInterval(() => { void refresh() }, 1500)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [projectId, generating])
+
+  useEffect(() => {
+    if (aiJob?.status !== 'applied' || aiJob.projectId !== projectId || !snapshot) return
+    void window.projectsApi.listMatchupReports(projectId, snapshot.id).then((result) => {
+      if (result.ok) setReports(result.value)
+    })
+    if (selectedId) void reloadDiscussions(selectedId)
+  }, [aiJob?.id, aiJob?.status, projectId, snapshot?.id, selectedId])
+
+  async function cancelAi(): Promise<void> {
+    const result = await window.projectsApi.cancelAiJob(projectId, `matchup:${projectId}`)
+    if (!result.ok) setError(result.error)
+    else setAiJob((current) => current ? { ...current, status: 'cancelled' } : null)
+  }
+
+  async function recoverAi(): Promise<void> {
+    const result = await window.projectsApi.recoverAiJobs()
+    if (!result.ok) { setError(result.error); return }
+    const status = await window.projectsApi.getAiJobStatus(projectId, `matchup:${projectId}`)
+    if (status.ok) setAiJob(status.value)
+    if (snapshot) {
+      const reports = await window.projectsApi.listMatchupReports(projectId, snapshot.id)
+      if (reports.ok) setReports(reports.value)
+    }
+    if (selectedId) await reloadDiscussions(selectedId)
+  }
 
   async function generate(): Promise<void> {
-    if (!snapshot || !selectedId || !hasBaseline || !reconciliation || generating) return
+    if (!snapshot || !selectedId || !hasBaseline || !reconciliation || generating || aiBusy) return
     setGenerating(true)
     setError(null)
+    setRevisionError(null)
     try {
       const override: AiPreferences | null = overrideModel
         ? { model: overrideModel, reasoningEffort: overrideEffort || null } : null
@@ -153,6 +247,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       setReports((current) => [...current.filter((report) => report.opponentId !== selectedId), result.value])
       setReportsKey(`${projectId}:${snapshot.id}:${baselineKey}`)
       await reloadDiscussions(selectedId)
+      const updatedCatalog = await window.projectsApi.getCatalog()
+      if (updatedCatalog.ok) setCatalog(updatedCatalog.value)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Analisi non completata.')
     } finally {
@@ -165,9 +261,16 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   }
 
   async function submitFeedback(retryTurnId?: string): Promise<void> {
-    if (!discussion || !reconciliation || generating) return
+    if (!discussion || !reconciliation || generating || aiBusy) return
     setGenerating(true)
     setError(null)
+    setRevisionError(null)
+    const retry = discussion.turns.find((turn) => turn.id === retryTurnId)
+    const submission = { discussionId: discussion.id, feedback: retry?.feedback ?? feedback, createdAt: retry?.createdAt ?? new Date().toISOString() }
+    setRevisionInFlight(submission)
+    if (document.activeElement?.closest('.matchup-discussion')) requestAnimationFrame(() => {
+      if (nav.isCurrent()) document.getElementById('matchup-discussion-heading')?.focus({ preventScroll: true })
+    })
     try {
       const result = retryTurnId
         ? await window.projectsApi.retryMatchupTurn(discussion.id, retryTurnId, selectedOverride())
@@ -177,18 +280,32 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       setDiscussions((current) => current.map((item) => item.id === result.value.id ? result.value : item))
       const latest = [...result.value.turns].reverse().find((turn) => turn.report)?.report
       if (latest && snapshot) setReports((current) => [...current.filter((item) => item.opponentId !== latest.opponentId), latest])
+      requestAnimationFrame(() => {
+        if (nav.isCurrent() && (document.activeElement === document.body || document.activeElement?.id === 'matchup-discussion-heading')) {
+          document.getElementById('matchup-discussion-heading')?.focus({ preventScroll: true })
+        }
+      })
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Revisione non completata.')
+      // This request owns its session status even if navigation remounted the view.
+      if (nav.drafts.get(revisionKey) === submission) {
+        nav.drafts.set(revisionErrorKey, cause instanceof Error ? cause.message : 'Revisione non completata.')
+        nav.notify()
+      }
       if (selectedId) await reloadDiscussions(selectedId).catch(() => undefined)
     } finally {
+      if (nav.drafts.get(revisionKey) === submission) {
+        nav.drafts.set(revisionKey, null)
+        nav.notify()
+      }
       setGenerating(false)
     }
   }
 
   async function continueOnCurrentBase(): Promise<void> {
-    if (!discussion || !snapshot || !reconciliation || generating) return
+    if (!discussion || !snapshot || !reconciliation || generating || aiBusy) return
     setGenerating(true)
     setError(null)
+    setRevisionError(null)
     try {
       const result = await window.projectsApi.continueMatchup(discussion.id, snapshot.id, selectedOverride())
       if (!result.ok) throw new Error(result.error)
@@ -206,164 +323,163 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     }
   }
 
-  const otherOpponents = historicalOpponents.filter((deck) => !snapshot?.decks.some((current) => current.id === deck.id))
+  const historyLoaded = historyKey === `${projectId}:${snapshot?.id}`
+  const knownHistory = historyLoaded ? historicalOpponents : []
+  const otherOpponents = knownHistory.filter((deck) => !snapshot?.decks.some((current) => current.id === deck.id))
   const allOpponents = [...(snapshot?.decks ?? []), ...otherOpponents]
   const selected = allOpponents.find((deck) => deck.id === selectedId)
+  useEffect(() => { if (selected) nav.entry.label = `Matchup · ${selected.name}` }, [selected?.id])
   const selectedInCurrentMeta = !!snapshot?.decks.some((deck) => deck.id === selectedId)
   const currentReports = reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}` ? reports : []
+  const reportsLoaded = !hasBaseline || reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}`
   const visibleDiscussions = discussionsKey === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}` ? discussions : []
   const currentDiscussion = visibleDiscussions.find((item) => item.current)
   const discussion = visibleDiscussions.find((item) => item.id === activeDiscussionId) ?? currentDiscussion ?? visibleDiscussions[0]
   const report = discussion ? [...discussion.turns].reverse().find((turn) => turn.report)?.report :
     currentReports.find((item) => item.opponentId === selectedId)
   const pendingTurn = discussion?.turns.find((turn) => !turn.report)
-  const model = connection?.models.find((item) => item.id === overrideModel)
-  const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog) : null
-  const previewEvidence = snapshot && selected ? matchupTournamentEvidence(snapshot, selected, tournament, catalog) : null
+  const standard = baseline ? evaluateStandardDeck(baseline, catalog,
+    localCalendarDate(), ruleAudit) : null
+  const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog, standard) : null
   const ourCatalogCards = baseline && (!discussion || discussion.current) ? buildDeckCards(baseline, catalog, reconciliation)
-    .filter((card) => card.status === 'recognized' && card.identityId && report && mentioned(card.name, report.ourKeyCards)) : []
-  const theirCatalogCards = report?.tournamentEvidence?.observedCards.filter((card) =>
-    card.catalogIdentityId && mentioned(card.name, report.theirKeyCards)) ?? []
+    .filter((card) => card.status === 'recognized' && card.identityId) : []
+  const cardTargets = useMemo(() => catalogCardTargets(catalog), [catalog])
+  const guideReferences: GuideReference[] = report ? [
+    ...reportGuideReferences(report, cardTargets),
+    ...ourCatalogCards.map((card): GuideReference => ({ label: card.name, target: { kind: 'catalog', identityId: card.identityId! } }))
+  ] : []
+  const body = (text: string, references = guideReferences) => <GuideText key={`${selectedId}:${report?.metaId}:${report?.deckHash}:${report?.generatedAt}:${text}`} text={text} references={references} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
+  const list = (text: string) => <GuideText key={`${selectedId}:${report?.metaId}:${report?.deckHash}:${report?.generatedAt}:${text}`} text={text} list references={guideReferences} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
+  const preview = (action: MatchupAction) => selected && snapshot && baseline ? <MatchupDataPreview
+    action={action} total={baseline.interpretedTotal} deckContext={deckContext} opponent={selected} snapshot={snapshot}
+    report={report} currentEvidence={previewEvidence} evidenceLoading={evidenceLoading} evidenceError={evidenceError}
+    feedback={pendingTurn?.feedback ?? revisionInFlight?.feedback ?? feedback} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : null
+  const aiControls = hasBaseline && <MatchupAiControls connection={connection} connectionError={connectionError}
+    loading={connectionLoading} onReload={() => setConnectionRequest((value) => value + 1)}
+    model={overrideModel} effort={overrideEffort} onModel={(value) => { setOverrideModel(value); setOverrideEffort('') }}
+    onEffort={setOverrideEffort} disabled={generating || aiBusy} onOpenSettings={onOpenAiSettings}>
+    {preview(discussion ? discussion.current ? 'revise' : 'continue' : 'generate')}
+  </MatchupAiControls>
 
-  return <section className="matchup-section" aria-label="Matchup del progetto">
+  const opponentOptions = allOpponents.map((opponent) => ({
+    ...opponent,
+    inCurrentMeta: !!snapshot?.decks.some((deck) => deck.id === opponent.id),
+    guideStatus: currentReports.some((item) => item.opponentId === opponent.id) ? 'Guida disponibile'
+      : knownHistory.some((item) => item.id === opponent.id) && (reportsLoaded || !snapshot?.decks.some((deck) => deck.id === opponent.id)) ? 'Guida storica'
+      : historyLoaded && reportsLoaded
+        ? 'Nessuna guida' : 'Disponibilità da verificare'
+  }))
+
+  return <section className="matchup-section" aria-label="Matchup del progetto" data-nav-loading={!error && (loading || !historyLoaded || !reportsLoaded || (!!selectedId && !!snapshot && discussionsKey !== `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`))}>
+    {!loading && historyLoaded && selectedId && !selected && <p className="error-banner" role="alert">Questo avversario non è più disponibile. Scegline un altro oppure torna indietro.</p>}
     <div className="panel-heading">
-      <div><span className="eyebrow">Metagame e analisi AI</span><h2>Matchup</h2></div>
-      <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || generating}>Aggiorna Limitless</button>
+      <h2>Matchup</h2>
+      <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || generating}>{loading && <Spinner />}Aggiorna Limitless</button>
     </div>
-    <p className="content-note">Gli archetipi arrivano dal Metagame Limitless: Standard, ultimo mese, Europa, Nord America, America Latina e Oceania. Scegli un mazzo per generare con Codex punti forti, debolezze, carte chiave e piano di gioco sulla tua lista.</p>
     {error && <div className="error-banner" role="alert">{error}</div>}
-    {loading && !snapshot ? <p className="content-note">Caricamento del metagame Limitless…</p> : snapshot && <>
-      <div className="meta-provenance">
-        <strong>{snapshot.decks.length} archetipi presenti nella tabella Limitless</strong>
-        <span>Acquisito {date(snapshot.fetchedAt)} · {snapshot.period} · {snapshot.cached ? 'Copia locale: aggiornamento online non riuscito' : 'Aggiornato online'}</span>
-        <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(snapshot.sourceUrl)}>Apri fonte Limitless ↗</button>
-      </div>
+    {loading && snapshot && <ActivityStatus title="Aggiornamento del metagame…" detail="La guida salvata resta consultabile." />}
+    {(generating || aiJob?.status === 'running') && !revisionInFlight && aiJob?.status !== 'ready' && <ActivityStatus title="Preparazione della guida…" startedAt={startedAt}
+      detail={report ? 'La guida precedente resta consultabile.' : 'Puoi consultare la lista o cambiare sezione.'} />}
+    {aiJob && (aiJob.status === 'running' || aiJob.status === 'ready') &&
+      <div className="content-note">{aiJob.status === 'ready' && <span role="status">La guida è pronta, ma non è stata salvata.</span>}
+        <button type="button" className="text-button" onClick={() => void cancelAi()}>{aiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
+        {aiJob.status === 'ready' &&
+          <button type="button" className="text-button" onClick={() => void recoverAi()}>Completa salvataggio</button>}
+      </div>}
+    {aiJob && (aiJob.status === 'interrupted' || aiJob.status === 'failed' || aiJob.status === 'cancelled') &&
+      <p className="content-note" role="status">{aiJob.status === 'cancelled'
+        ? 'Preparazione annullata.' : 'La guida non è stata aggiornata. Puoi riprovare.'}</p>}
+    {loading && !snapshot ? <LoadingSkeleton label="Caricamento del metagame Limitless…" rows={3} /> : snapshot && <>
       <div className="meta-layout">
-        <div className="meta-deck-list" aria-label="Archetipi Limitless">
-          {allOpponents.map((deck) => <button type="button" key={deck.id}
-            className={`meta-deck ${selectedId === deck.id ? 'active' : ''}`}
-            onClick={() => setSelectedId(deck.id)}>
-            <strong>{deck.name}</strong><span>{snapshot.decks.some((current) => current.id === deck.id)
-              ? `${deck.share.toFixed(2)}% quota · ${deck.points} punti${currentReports.some((item) => item.opponentId === deck.id) ? ' · Analisi AI' : ''}`
-              : 'Solo nello storico · Analisi AI'}</span>
-          </button>)}
-        </div>
+        <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading || generating} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
         <div className="meta-analysis">
           {selected && <>
-            <div className="matchup-card-head"><div><h3>{selected.name}</h3><span className="note-source">{selectedInCurrentMeta ? 'Metagame Limitless · quota nel periodo, non percentuale di vittoria' : 'Archetipo presente in uno snapshot precedente'}</span></div></div>
-            <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(selected.url)}>Apri archetipo su Limitless ↗</button>
-            {visibleDiscussions.length > 0 && <div className="discussion-switcher" aria-label="Discussioni Matchup">
+            {discussion && !discussion.current && <p className="matchup-freshness stale">Guida precedente · {versionLabel(report?.deckVersionId)}. Lista attuale: {versionLabel(baseline?.versionId)}. Il metagame o le corrispondenze delle carte possono essere cambiati.</p>}
+            {visibleDiscussions.length > 1 && <div className="discussion-switcher" aria-label="Discussioni Matchup">
               {visibleDiscussions.map((item, index) => <button type="button" key={item.id}
                 className={`secondary-button ${discussion?.id === item.id ? 'selected' : ''}`}
-                onClick={() => setActiveDiscussionId(item.id)}>
+                onClick={() => nav.visit({ 'matchup.discussion': item.id }, `Matchup · ${selected?.name ?? 'Guida'} · base ${date(item.createdAt)}`)}>
                 {item.current ? 'Base attuale' : `Storico ${index + 1}`}{item.parentId ? ' · collegata' : ''}
               </button>)}
             </div>}
             {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p> : report ? <>
-              {discussion && !discussion.current && <p className="stale-discussion">Questa discussione riguarda una lista o uno snapshot precedente. La guida resta consultabile come storico.</p>}
-              <p className="content-note">Analisi Codex generata il {date(report.generatedAt)} · Standard occidentale · lista {report.deckHash.slice(0, 12)} · snapshot Meta {report.metaId.slice(0, 12)}{report.metaPeriod ? ` · ${report.metaPeriod}` : ''}{report.metaFetchedAt ? ` · acquisito ${date(report.metaFetchedAt)}` : ''}. {report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p>
-              {report.metaSourceUrl && <button type="button" className="text-button"
-                onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}
-              <div className="matchup-fields">
-                <div><strong>Punti forti del nostro mazzo</strong><p>{report.strengths}</p></div>
-                <div><strong>Debolezze del nostro mazzo</strong><p>{report.weaknesses}</p></div>
-                <div><strong>Le nostre carte chiave</strong><p>{report.ourKeyCards}</p>
-                  {ourCatalogCards.map((card) => <button key={card.identityId} type="button" className="text-button"
-                    onClick={() => onOpenCatalogCard(card.identityId!)}>Apri {card.name} nel Catalogo ↗</button>)}
-                </div>
-                <div><strong>Le loro carte chiave</strong><p>{report.theirKeyCards}</p>
-                  {theirCatalogCards.map((card) => <button key={card.catalogIdentityId} type="button" className="text-button"
-                    onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri {card.name} nel Catalogo ↗</button>)}
-                </div>
-                <div className="strategy-field"><strong>Come giocare il matchup</strong><p>{report.strategy}</p></div>
-                <div className="strategy-field"><strong>Limiti dell’analisi</strong><p>{report.limitations}</p></div>
+              <div className="matchup-fields" aria-label="Guida tattica">
+                <section className="strategy-field"><h3>Piano di gioco</h3><MatchupPlan key={`${report.projectId}:${report.opponentId}:${report.metaId}:${report.deckVersionId ?? report.deckHash}:${report.generatedAt}`} report={report} renderText={body} /></section>
+                <section><h3>Punti forti</h3>{list(report.strengths)}</section>
+                <section><h3>Rischi e punti deboli</h3>{list(report.weaknesses)}</section>
+                <section><h3>Le nostre carte chiave</h3>{list(report.ourKeyCards)}</section>
+                <section><h3>Le loro carte chiave</h3>{list(report.theirKeyCards)}</section>
+                <section className="matchup-trust"><h3>Incertezze e limiti</h3>{body(report.limitations)}<AiEvidenceLimit trace={report.aiQueries} /></section>
               </div>
+              <details className="guide-sources"><summary>Fonti e dettagli</summary>
+                <div className="matchup-source-links"><button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.opponentSourceUrl ?? selected.url)}>Apri archetipo su Limitless ↗</button>
+                  {report.metaSourceUrl && <button type="button" className="text-button"
+                    onClick={() => void window.projectsApi.openLimitless(report.metaSourceUrl!)}>Apri fonte Meta usata ↗</button>}</div>
+              <div className="matchup-report-meta"><p>{versionLabel(report.deckVersionId)} · guida del {date(report.generatedAt)} · Standard occidentale{report.metaPeriod ? ` · ${report.metaPeriod}` : ''}{report.metaFetchedAt ? ` · dati acquisiti il ${date(report.metaFetchedAt)}` : ''}.</p><p>{report.ai ? `Modello: ${report.ai.model ?? 'automatico'} · ragionamento: ${report.ai.reasoningEffort ?? 'predefinito'} · ${report.ai.source === 'override' ? 'scelta per questa analisi' : 'preferenze globali'}.` : 'Configurazione non registrata per questa analisi precedente.'}</p></div>
+              <AiDiagnostics trace={report.aiQueries} audit={report.promptAudit}>
+                <p>Impronta lista: {report.deckHash}<br />Snapshot Meta: {report.metaId}<br />Versione lista: {report.deckVersionId ?? 'non registrata'}<br />Corrispondenze: {report.deckResolutionId ?? 'non registrate'}</p>
+              </AiDiagnostics>
               {report.tournamentEvidence && <section className="rotation-panel" aria-label="Evidenze torneo del matchup">
-                <strong>Liste osservate in un evento online</strong>
-                <p>{report.tournamentEvidence.status === 'matched'
-                  ? `${report.tournamentEvidence.matchedCompleteLists} liste complete dell’archetipo in ${report.tournamentEvidence.eventName} (${report.tournamentEvidence.eventDate ? date(report.tournamentEvidence.eventDate) : 'data non indicata'}); ${report.tournamentEvidence.eventLists}/${report.tournamentEvidence.eventParticipants} liste complete nell’intero evento. Sono osservazioni di un singolo torneo Limitless Play, non statistiche del matchup né del meta in presenza.`
-                  : report.tournamentEvidence.detail}</p>
+                <strong>{report.tournamentEvidence.schemaVersion === 2 ? 'Tornei e liste osservate' : 'Liste osservate in un evento online'}</strong>
+                <div>{body(report.tournamentEvidence.schemaVersion === 2 ? report.tournamentEvidence.detail
+                  : report.tournamentEvidence.status === 'matched'
+                    ? `${report.tournamentEvidence.matchedCompleteLists} liste complete dell’archetipo in ${report.tournamentEvidence.eventName} (${report.tournamentEvidence.eventDate ? date(report.tournamentEvidence.eventDate) : 'data non indicata'}). Evento online singolo; non è un winrate.`
+                    : report.tournamentEvidence.detail)}</div>
+                {report.tournamentEvidence.events && <ul>{report.tournamentEvidence.events.map((item) => <li key={`${item.source}:${item.eventId}`}>
+                  {item.name} · {date(item.date)} · {item.source === 'main' ? 'Regional' : 'Play online'} · {item.matchedLists} liste dell’archetipo / {item.completeLists} liste complete acquisite · {item.visibleParticipants}/{item.totalParticipants} partecipanti visibili.
+                  <button type="button" className="text-button" onClick={() => void (item.source === 'main'
+                    ? window.projectsApi.openMainTournament(item.url) : window.projectsApi.openLimitless(item.url))}>Apri fonte ↗</button>
+                </li>)}</ul>}
+                {report.tournamentEvidence.opponentFieldRecord && <p>Risultati osservati dell’archetipo avversario contro il campo online: {report.tournamentEvidence.opponentFieldRecord.wins}V / {report.tournamentEvidence.opponentFieldRecord.losses}S / {report.tournamentEvidence.opponentFieldRecord.ties}P su {report.tournamentEvidence.opponentFieldRecord.denominator} match con esito ({report.tournamentEvidence.opponentFieldRecord.eligiblePairings} abbinamenti pertinenti, {report.tournamentEvidence.opponentFieldRecord.events} eventi, {date(report.tournamentEvidence.opponentFieldRecord.windowStart)}–{date(report.tournamentEvidence.opponentFieldRecord.windowEnd)}). Non è il winrate del tuo mazzo contro questo archetipo.</p>}
                 {report.tournamentEvidence.status === 'matched' && <>
-                  <p>Carte osservate nelle liste collegate (presenza, non copie):</p>
-                  <ul>{report.tournamentEvidence.observedCards.slice(0, 18).map((card) => <li key={card.name}>
-                    {card.name} · {card.lists}/{report.tournamentEvidence!.matchedCompleteLists} liste · {card.catalogStatus === 'recognized'
-                      ? 'identità catalogo riconosciuta' : card.catalogStatus === 'ambiguous' ? 'identità da verificare' : 'non nel catalogo locale'}
+                  <details className="observed-cards"><summary>Carte osservate · frequenza e meccaniche</summary><p className="content-note">Numero di liste, non copie.</p>
+                  <ul className="evidence-card-list">{report.tournamentEvidence.observedCards.slice(0, 18).map((card) => <li key={card.name} tabIndex={0}
+                    {...cardPreview({ name: card.name, identityId: card.catalogIdentityId })}>
+                    {card.name} · {card.lists}/{report.tournamentEvidence!.matchedCompleteLists} liste{card.catalogStatus === 'recognized'
+                      ? '' : card.catalogStatus === 'ambiguous' ? ' · identità da verificare' : ' · non nel catalogo locale'}
                     {card.catalogIdentityId && <button type="button" className="text-button"
-                      onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo ↗</button>}
-                  </li>)}</ul>
-                  {report.tournamentEvidence.eventUrl && <button type="button" className="text-button"
+                      onClick={() => onOpenCatalogCard(card.catalogIdentityId!)}>Apri nel Catalogo</button>}
+                    {card.gameplay && <details><summary>Meccaniche verificate</summary>{body(card.gameplay)}
+                      {card.cardSourceUrl && <small><GuideText text={card.cardSourceUrl} inline cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /></small>}</details>}
+                  </li>)}</ul></details>
+                  {report.tournamentEvidence.schemaVersion !== 2 && report.tournamentEvidence.eventUrl && <button type="button" className="text-button"
                     onClick={() => void window.projectsApi.openLimitless(report.tournamentEvidence!.eventUrl!)}>Apri evento online ↗</button>}
-                  {report.tournamentEvidence.sampleLists.map((list, index) => <button type="button" className="text-button" key={list.url}
-                    onClick={() => void window.projectsApi.openLimitless(list.url)}>Lista osservata {index + 1} ↗</button>)}
+                  {report.tournamentEvidence.sampleLists.map((list, index) => <div key={list.url}>
+                    <button type="button" className="text-button"
+                      onClick={() => void (list.source === 'main' ? window.projectsApi.openMainTournament(list.url)
+                        : window.projectsApi.openLimitless(list.url))}>Lista osservata {index + 1}{list.eventName ? ` · ${list.eventName}` : ''} ↗</button>
+                    {!!list.cards?.length && <ExpandablePreviewDeck summary="Carte della lista osservata" lines={list.cards} />}
+                  </div>)}
                 </>}
               </section>}
               {report.sampleDeckUrl && <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.sampleDeckUrl!)}>Apri la lista avversaria usata ↗</button>}
-              {discussion && <div className="matchup-discussion">
-                <h4>Discussione dell’analisi</h4>
-                <p className="content-note">Ogni risposta crea una nuova versione della guida. Le tue osservazioni restano distinte dai dati Limitless e dalle conclusioni AI.</p>
-                <div className="discussion-timeline">
-                  {discussion.turns.map((turn, index) => <details key={turn.id} open={index === discussion.turns.length - 1}>
-                    <summary>{index === 0 ? 'Analisi iniziale' : `Revisione ${index}`} · {date(turn.createdAt)}{turn.report ? '' : ' · in attesa'}</summary>
-                    {turn.feedback && <p><strong>La tua osservazione:</strong> {turn.feedback}</p>}
-                    {turn.changeSummary && <p><strong>Cosa è cambiato:</strong> {turn.changeSummary}</p>}
-                    {turn.report && <div className="discussion-version">
-                      <p><strong>Punti forti:</strong> {turn.report.strengths}</p>
-                      <p><strong>Debolezze:</strong> {turn.report.weaknesses}</p>
-                      <p><strong>Le nostre carte chiave:</strong> {turn.report.ourKeyCards}</p>
-                      <p><strong>Le carte chiave avversarie:</strong> {turn.report.theirKeyCards}</p>
-                      <p><strong>Piano di gioco:</strong> {turn.report.strategy}</p>
-                      <p><strong>Limiti:</strong> {turn.report.limitations}</p>
-                    </div>}
-                  </details>)}
-                </div>
-                {discussion.current ? pendingTurn ? <div className="pending-feedback">
-                  <p>Commento in attesa: {pendingTurn.feedback}</p>
-                  <button type="button" className="secondary-button" onClick={() => void submitFeedback(pendingTurn.id)} disabled={generating || !reconciliation}>Riprova la revisione</button>
-                </div> : <div className="feedback-form">
-                  <label htmlFor="matchup-feedback">Rispondi a questa analisi</label>
-                  <textarea id="matchup-feedback" value={feedback} maxLength={5000}
-                    onChange={(event) => setFeedback(event.target.value)}
-                    placeholder="Per esempio: secondo me conviene andare secondi perché…" disabled={generating} />
-                  <button type="button" className="primary-button" onClick={() => void submitFeedback()}
-                    disabled={!feedback.trim() || generating || snapshot.cached || !reconciliation}>{generating ? 'Codex sta rivedendo…' : 'Rivedi analisi con Codex'}</button>
-                </div> : !currentDiscussion && selectedInCurrentMeta ? <button type="button" className="primary-button"
-                  onClick={() => void continueOnCurrentBase()} disabled={generating || snapshot.cached || !hasBaseline || !reconciliation}>
-                  {generating ? 'Codex sta rivalutando…' : 'Continua sulla nuova base'}
-                </button> : !selectedInCurrentMeta && <p className="content-note">Questo archetipo non compare nello snapshot attuale. Puoi consultare lo storico; per continuare, seleziona uno snapshot in cui è presente quando sarà disponibile questa scelta.</p>}
-              </div>}
-            </> : <p className="matchup-empty">Analisi AI non ancora generata per questo archetipo e questa lista.</p>}
-            {hasBaseline && <div className="matchup-ai-options">
-              <div className="matchup-ai-heading"><strong>AI per questa analisi</strong><button type="button" className="text-button" onClick={onOpenAiSettings}>Impostazioni AI</button></div>
-              <div className="settings-grid">
-                <div className="settings-field"><label htmlFor="matchup-model">Modello</label>
-                  <select id="matchup-model" value={overrideModel} onChange={(event) => { setOverrideModel(event.target.value); setOverrideEffort('') }} disabled={generating}>
-                    <option value="">Usa preferenze globali</option>
-                    {connection?.models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                  </select>
-                </div>
-                <div className="settings-field"><label htmlFor="matchup-effort">Ragionamento</label>
-                  <select id="matchup-effort" value={overrideEffort} onChange={(event) => setOverrideEffort(event.target.value)} disabled={generating || !model}>
-                    <option value="">Predefinito</option>
-                    {model?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
-                  </select>
-                </div>
-              </div>
-              <details className="ai-data-preview"><summary>Dati inviati a Codex per questa analisi</summary>
-                <p>La richiesta include le righe interpretate e, se presenti, le stampe scelte e i totali per identità di gioco:</p>
-                <pre>{deckContext ?? 'Caricamento corrispondenze…'}</pre>
-                <p>Per una nuova analisi, evento online salvato: {previewEvidence?.status === 'matched'
-                  ? `${previewEvidence.eventName}: ${previewEvidence.matchedCompleteLists} liste complete dell’archetipo su ${previewEvidence.eventLists} liste complete dell’evento. Pokéguru invia a Codex i nomi delle carte osservate, il numero di liste in cui compaiono e i link alle liste pubbliche; non invia risultati di match del nostro mazzo.`
-                  : previewEvidence?.detail ?? 'Nessun dato evento disponibile.'} Le revisioni riutilizzano le evidenze salvate nella guida precedente.</p>
-                <p>Include l’archetipo {selected.name}, la quota e i punti del metagame, il periodo {snapshot.period} e le fonti Limitless {snapshot.sourceUrl} e {selected.url}. Pokéguru cercherà una lista avversaria pubblica di esempio su Limitless e, se la trova, ne invierà i nomi e le quantità delle carte. Per una revisione invia anche il nuovo commento, la guida precedente e un contesto delle revisioni passate; per «Continua sulla nuova base» invia il contesto della discussione collegata. Non invia il testo grezzo dell’import né altri progetti.</p>
               </details>
+              {discussion && <DiscussionView discussion={discussion} feedback={feedback} onFeedback={setFeedback}
+                onSubmit={() => void submitFeedback()} onRetry={(turnId) => void submitFeedback(turnId)}
+                onContinue={() => void continueOnCurrentBase()} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard}
+                generating={generating} startedAt={startedAt} inFlight={revisionInFlight} error={revisionError}
+                canRevise={!aiBusy && !snapshot.cached && !!reconciliation} canRetry={!aiBusy && !!reconciliation}
+                canContinue={!aiBusy && !currentDiscussion && selectedInCurrentMeta && hasBaseline}
+                absentFromMeta={!selectedInCurrentMeta} cached={snapshot.cached} aiControls={aiControls} />}
+            </> : <p className="matchup-empty">Nessuna guida per questo archetipo e questa lista.</p>}
+            {selectedInCurrentMeta && (!discussion || discussion.current) && <div className="matchup-generation-actions">
+              {!discussion && aiControls}
+              <button type="button" className={report ? 'secondary-button matchup-regenerate' : 'primary-button'} onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || aiBusy || snapshot.cached || !!pendingTurn}>
+              {generating && !revisionInFlight && <Spinner />}{generating && !revisionInFlight ? 'Analisi in corso…' : report ? 'Rigenera guida' : 'Genera analisi con Codex'}
+              </button>
+              {report && discussion && <details className="matchup-regenerate-data"><summary>Dati per rigenerare</summary>{preview('generate')}</details>}
             </div>}
-            {selectedInCurrentMeta && (!discussion || discussion.current) && <button type="button" className="primary-button" onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || snapshot.cached || !!pendingTurn}>
-              {generating ? 'Codex sta analizzando…' : report ? 'Rigenera analisi' : 'Genera analisi con Codex'}
-            </button>}
-            {snapshot.cached && <p className="content-note">Per generare una nuova analisi, aggiorna prima il metagame online.</p>}
+            {snapshot.cached && !discussion?.current && <p className="content-note">Per generare una nuova analisi, aggiorna prima il metagame online.</p>}
           </>}
         </div>
       </div>
+      <details className="meta-provenance meta-disclosure">
+        <summary>{snapshot.decks.length} archetipi Limitless · {snapshot.cached ? 'copia locale' : `aggiornato ${date(snapshot.fetchedAt)}`}</summary>
+        <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(snapshot.sourceUrl)}>Apri fonte Limitless ↗</button>
+        <p>{snapshot.period} · Standard occidentale · acquisito {date(snapshot.fetchedAt)}. Le quote indicano il meta, non il winrate.</p>
+        {selected && selectedInCurrentMeta && <p>{selected.name} · {selected.points} punti Limitless.</p>}
+        {selected && !report && <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(selected.url)}>Apri archetipo su Limitless ↗</button>}
+      </details>
     </>}
   </section>
 }

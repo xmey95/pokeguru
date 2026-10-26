@@ -5,7 +5,7 @@ export const STANDARD_RULE_PACKAGE_VERSION = BUNDLED_WESTERN_RULE_PACKAGE.versio
 export type RuleSourceStatus = 'matching' | 'changed' | 'unavailable'
 
 export interface RuleSourceAudit {
-  id: 'rotation-2026' | 'set-admission-2026'
+  id: 'rotation-2026' | 'set-admission-2026' | 'promo-registry'
   url: string
   status: RuleSourceStatus
   detail: string

@@ -1,0 +1,25 @@
+import { useState } from 'react'
+import { Icon } from './Icon'
+
+/** The same local image may represent several physical copies; each copy stays a separate button. */
+export function CardImageTile({ name, print, src, copy, total, selected, constraintCount, onClick }: {
+  name: string; print?: string; src: string | null; copy: number; total: number
+  selected: boolean; constraintCount?: number | null; onClick(): void
+}) {
+  const [failed, setFailed] = useState(false)
+  const available = Boolean(src && (src.startsWith('pokeguru://cards/') || src.startsWith('data:image/')) && !failed)
+  const constraintLabel = constraintCount === undefined ? '' : constraintCount === null
+    ? ', vincoli non attribuibili' : `, ${constraintCount} ${constraintCount === 1 ? 'vincolo' : 'vincoli'}`
+  return <button type="button" className="card-image-tile" aria-pressed={selected}
+    aria-label={`${name}${print ? `, ${print}` : ''}, copia ${copy} di ${total}${constraintLabel}`}
+    onClick={onClick}>
+    <span className="card-image-art" aria-hidden="true">
+      {available ? <img src={src!} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+        : <span className="card-image-placeholder"><Icon name="deck" /><span>{name}</span></span>}
+    </span>
+    {constraintCount !== undefined && <span className="card-image-constraint-count" aria-hidden="true">
+      {constraintCount === null ? 'Vincoli —' : `${constraintCount} ${constraintCount === 1 ? 'vincolo' : 'vincoli'}`}
+    </span>}
+    <span className="card-image-tile-label" aria-hidden="true">{name}</span>
+  </button>
+}

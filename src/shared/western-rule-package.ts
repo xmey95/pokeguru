@@ -1,4 +1,5 @@
 import bundled from './western-rule-package.json'
+import type { CardGameplay } from './catalog'
 
 export interface RulePeriod {
   version: string
@@ -11,9 +12,12 @@ export interface RulePeriod {
 
 export interface SetAdmissionRule {
   setId: string
+  /** Qualifying official product release for a derived two-week date. */
+  releaseDate?: string
   legalDate: string
   method: 'two-weeks' | 'explicit'
   sourceUrl: string
+  releaseSourceUrl?: string
 }
 
 export interface WesternRulePackage {
@@ -22,7 +26,9 @@ export interface WesternRulePackage {
   circuit: 'WESTERN'
   checkedAt: string
   standardBans: { checkedAt: string; sourceUrl: string; cardNames: string[] }
-  errata: { checkedAt: string; sourceUrl: string; lastUpdated: string }
+  errata: { checkedAt: string; sourceUrl: string; lastUpdated: string;
+    corrections?: { printId: string; effectiveFrom: string; sourceUrl: string;
+      printed: CardGameplay; corrected: CardGameplay }[] }
   rotations: RulePeriod[]
   setAdmissions: SetAdmissionRule[]
 }
@@ -42,9 +48,36 @@ function officialSource(value: unknown): value is string {
   if (typeof value !== 'string') return false
   try {
     const url = new URL(value)
-    return url.protocol === 'https:' && ['www.pokemon.com', 'community.pokemon.com', 'press.pokemon.com', 'play.pokemon.com']
+    return url.protocol === 'https:' && ['www.pokemon.com', 'community.pokemon.com', 'press.pokemon.com', 'play.pokemon.com', 'worlds.2024.pokemon.com']
       .includes(url.hostname) && !url.username && !url.password
   } catch { return false }
+}
+
+function daysAfter(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00Z`)
+  value.setUTCDate(value.getUTCDate() + days)
+  return value.toISOString().slice(0, 10)
+}
+
+function cardGameplay(value: unknown): value is CardGameplay {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const game = value as Partial<CardGameplay>
+  const nullableText = (item: unknown): boolean => item === null || typeof item === 'string'
+  const modifier = (item: unknown): boolean => !!item && typeof item === 'object' &&
+    typeof (item as { type?: unknown }).type === 'string' &&
+    typeof (item as { value?: unknown }).value === 'string'
+  return (game.hp === null || Number.isInteger(game.hp) && (game.hp ?? 0) > 0) &&
+    Array.isArray(game.types) && game.types.every((item) => typeof item === 'string') &&
+    nullableText(game.evolveFrom) && Array.isArray(game.attacks) &&
+    game.attacks.every((item) => item && typeof item.name === 'string' &&
+      (item.cost === null || Array.isArray(item.cost) && item.cost.every((cost) => typeof cost === 'string')) &&
+      nullableText(item.damage) && nullableText(item.effect)) &&
+    Array.isArray(game.abilities) && game.abilities.every((item) => item &&
+      typeof item.name === 'string' && typeof item.effect === 'string' && nullableText(item.type)) &&
+    nullableText(game.effect) && nullableText(game.trainerType) &&
+    Array.isArray(game.weaknesses) && game.weaknesses.every(modifier) &&
+    Array.isArray(game.resistances) && game.resistances.every(modifier) &&
+    (game.retreat === null || Number.isInteger(game.retreat) && (game.retreat ?? -1) >= 0)
 }
 
 /** Validate curated data before it can replace the bundled snapshot. */
@@ -67,6 +100,22 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
     errata.lastUpdated > errata.checkedAt) {
     throw new Error('Fonti o elenco delle carte vietate non validi nel pacchetto.')
   }
+  const errataCheckedAt = errata.checkedAt as string
+  const corrections = errata.corrections === undefined ? [] : errata.corrections
+  if (!Array.isArray(corrections) || corrections.length > 200) throw new Error('Errata non valide nel pacchetto.')
+  const correctedPrints = new Set<string>()
+  const parsedCorrections = corrections.map((entry): NonNullable<WesternRulePackage['errata']['corrections']>[number] => {
+    const correction = record(entry)
+    if (typeof correction.printId !== 'string' ||
+      !/^[a-zA-Z0-9.]+-[a-zA-Z0-9.]+$/.test(correction.printId) ||
+      !isoDate(correction.effectiveFrom) || correction.effectiveFrom > errataCheckedAt ||
+      !officialSource(correction.sourceUrl) ||
+      !cardGameplay(correction.printed) || !cardGameplay(correction.corrected) ||
+      JSON.stringify(correction.printed) === JSON.stringify(correction.corrected) ||
+      correctedPrints.has(correction.printId)) throw new Error('Errata per stampa non valida o duplicata.')
+    correctedPrints.add(correction.printId)
+    return correction as unknown as NonNullable<WesternRulePackage['errata']['corrections']>[number]
+  })
   const rotations: RulePeriod[] = value.rotations.map((raw) => {
     const rule = record(raw)
     if (typeof rule.version !== 'string' || !/^play-\d{4}-\d{2}-\d{2}$/.test(rule.version) ||
@@ -88,7 +137,12 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
     const rule = record(raw)
     if (typeof rule.setId !== 'string' || !/^[a-z0-9.]{2,20}$/.test(rule.setId) ||
       !isoDate(rule.legalDate) || !['two-weeks', 'explicit'].includes(String(rule.method)) ||
-      !officialSource(rule.sourceUrl) || seen.has(rule.setId)) {
+      !officialSource(rule.sourceUrl) || seen.has(rule.setId) ||
+      (rule.method === 'two-weeks' && (!isoDate(rule.releaseDate) ||
+        !officialSource(rule.releaseSourceUrl) ||
+        daysAfter(rule.releaseDate, 14) !== rule.legalDate)) ||
+      (rule.method === 'explicit' && (rule.releaseDate !== undefined ||
+        rule.releaseSourceUrl !== undefined))) {
       throw new Error('Data di ammissione non valida o duplicata nel pacchetto.')
     }
     seen.add(rule.setId)
@@ -96,7 +150,9 @@ export function parseWesternRulePackage(input: unknown): WesternRulePackage {
   })
   return { schema: 1, version: value.version, circuit: 'WESTERN', checkedAt: value.checkedAt,
     standardBans: bans as unknown as WesternRulePackage['standardBans'],
-    errata: errata as unknown as WesternRulePackage['errata'], rotations, setAdmissions }
+    errata: { checkedAt: errata.checkedAt as string, sourceUrl: errata.sourceUrl as string,
+      lastUpdated: errata.lastUpdated as string, corrections: parsedCorrections },
+    rotations, setAdmissions }
 }
 
 export const BUNDLED_WESTERN_RULE_PACKAGE = parseWesternRulePackage(bundled)

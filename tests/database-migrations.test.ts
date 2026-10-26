@@ -1,0 +1,376 @@
+import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
+import { expect, it } from 'vitest'
+import { ProjectStore } from '../src/main/project-store'
+import { CatalogStore } from '../src/main/catalog'
+import { TournamentStore } from '../src/main/tournament-store'
+import { AiJobStore } from '../src/main/ai-job-store'
+import { DailySyncStore } from '../src/main/daily-sync'
+import { CURRENT_SCHEMA_VERSION, completeDatabaseMigration,
+  prepareDatabaseMigration, verifyDatabase } from '../src/main/database-migrations'
+
+function schemaVersion(path: string): number {
+  const db = new DatabaseSync(path, { readOnly: true })
+  try { return (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version }
+  finally { db.close() }
+}
+
+it('versions a fresh archive and reopens it without another backup', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-new-'))
+  const path = join(folder, 'data', 'pokeguru.sqlite')
+  try {
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 0, needsMigration: true, backupPath: null })
+    const projects = new ProjectStore(path)
+    const catalog = new CatalogStore(path)
+    const events = new TournamentStore(path)
+    const jobs = new AiJobStore(path)
+    const daily = new DailySyncStore(path)
+    const project = projects.create({ name: 'New', format: 'STANDARD' })
+    completeDatabaseMigration(path, preparation)
+    expect(projects.get(project.id)?.name).toBe('New')
+    expect(daily.due('catalog')).toBe(true)
+    daily.close(); jobs.close(); events.close(); catalog.close(); projects.close()
+    verifyDatabase(path)
+    const current = await prepareDatabaseMigration(path)
+    expect(current).toMatchObject({ fromVersion: CURRENT_SCHEMA_VERSION,
+      needsMigration: false, backupPath: null })
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('backs up a live WAL archive before legacy migration and restores its evidence after interruption', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-legacy-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  let projects: ProjectStore | null = null
+  try {
+    projects = new ProjectStore(path)
+    const project = projects.create({ name: 'Legacy', format: 'STANDARD' })
+    projects.importDeck({ projectId: project.id, source: 'paste', rawText: '60 Card MEG 1' })
+    const thread = projects.createDeckThread({ projectId: project.id, title: 'Evidence', openingNote: 'Keep me' })
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 0, needsMigration: true })
+    expect(preparation.backupPath && existsSync(preparation.backupPath)).toBe(true)
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const restoredPath = join(folder, 'restored.sqlite')
+    cpSync(preparation.backupPath!, restoredPath)
+    verifyDatabase(restoredPath)
+    const restored = new ProjectStore(restoredPath)
+    expect(restored.get(project.id)?.name).toBe('Legacy')
+    expect(restored.getDeckThread(project.id, thread.id)?.messages[0].text).toBe('Keep me')
+    restored.close()
+    // A process may exit after one constructor but before the version marker is committed.
+    projects.close(); projects = null
+    const partial = new CatalogStore(path)
+    partial.close()
+    expect(schemaVersion(path)).toBe(0)
+    const retry = await prepareDatabaseMigration(path)
+    const reopenedProjects = new ProjectStore(path)
+    const reopenedCatalog = new CatalogStore(path)
+    const reopenedEvents = new TournamentStore(path)
+    const reopenedJobs = new AiJobStore(path)
+    const reopenedDaily = new DailySyncStore(path)
+    completeDatabaseMigration(path, retry)
+    expect(reopenedProjects.getDeckThread(project.id, thread.id)?.messages[0].text).toBe('Keep me')
+    reopenedDaily.close(); reopenedJobs.close(); reopenedEvents.close(); reopenedCatalog.close(); reopenedProjects.close()
+    verifyDatabase(path)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
+  } finally { projects?.close(); rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+}, 30_000)
+
+it('backs up schema 4 before adding the Catalog retry clock, job identity and daily sync', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-catalog-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const old = new DatabaseSync(path)
+    old.exec(`CREATE TABLE catalog_job (
+      id INTEGER PRIMARY KEY CHECK (id = 1), mode TEXT NOT NULL,
+      state TEXT NOT NULL, phase TEXT NOT NULL, expected INTEGER NOT NULL,
+      error TEXT, updated_at TEXT NOT NULL
+    ) STRICT`)
+    old.prepare('INSERT INTO catalog_job VALUES (1, ?, ?, ?, 0, NULL, ?)')
+      .run('new', 'running', 'Lettura inventario TCGdex', '2026-10-25T00:00:00.000Z')
+    old.exec('PRAGMA user_version = 4')
+    old.close()
+
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 4, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const catalog = new CatalogStore(path)
+    const daily = new DailySyncStore(path)
+    expect(catalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
+    expect(daily.due('catalog')).toBe(true)
+    daily.close()
+    catalog.close()
+    completeDatabaseMigration(path, preparation)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('backs up schema 5 and preserves a Catalog job while adding run identity', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-alerts-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const original = new CatalogStore(path)
+    original.startJob('new')
+    original.close()
+    const old = new DatabaseSync(path)
+    old.exec('ALTER TABLE catalog_job DROP COLUMN run_id; PRAGMA user_version = 5')
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 5, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const upgraded = new CatalogStore(path)
+    expect(upgraded.jobStatus()).toMatchObject({ state: 'interrupted', runId: null })
+    upgraded.startJob('new')
+    const runId = upgraded.jobStatus().runId
+    expect(runId).toMatch(/^[a-f0-9-]{36}$/)
+    upgraded.pauseJob(null)
+    upgraded.close()
+    completeDatabaseMigration(path, preparation)
+    const reopened = new CatalogStore(path)
+    expect(reopened.jobStatus().runId).toBe(runId)
+    reopened.startJob('new')
+    expect(reopened.jobStatus().runId).not.toBe(runId)
+    reopened.close()
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('preserves a project and Catalog job across verified v3→v4→v8 upgrades', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-chain-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const original = new ProjectStore(path)
+    const project = original.create({ name: 'Continuità', format: 'STANDARD' })
+    original.close()
+    const initialCatalog = new CatalogStore(path)
+    initialCatalog.startJob('new')
+    initialCatalog.close()
+    const legacy = new DatabaseSync(path)
+    legacy.exec('ALTER TABLE projects DROP COLUMN archived_at; ALTER TABLE catalog_job DROP COLUMN retry_at; PRAGMA user_version = 3')
+    legacy.close()
+
+    const v3 = await prepareDatabaseMigration(path)
+    expect(v3).toMatchObject({ fromVersion: 3, needsMigration: true })
+    expect(existsSync(`${v3.backupPath}.verified`)).toBe(true)
+    const archived = new ProjectStore(path)
+    expect(archived.get(project.id)?.archivedAt).toBeNull()
+    archived.close()
+    verifyDatabase(path)
+    const v4Marker = new DatabaseSync(path)
+    v4Marker.exec('PRAGMA user_version = 4') // The APP-106 release completed before APP-104.
+    v4Marker.close()
+
+    const v4 = await prepareDatabaseMigration(path)
+    expect(v4).toMatchObject({ fromVersion: 4, needsMigration: true })
+    expect(v4.backupPath).not.toBe(v3.backupPath)
+    expect(existsSync(`${v4.backupPath}.verified`)).toBe(true)
+    const backup = new DatabaseSync(v4.backupPath!, { readOnly: true })
+    try {
+      const columns = (table: string) => (backup.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[])
+        .map((column) => column.name)
+      expect(columns('projects')).toContain('archived_at')
+      expect(columns('catalog_job')).not.toContain('retry_at')
+    } finally { backup.close() }
+    const completedCatalog = new CatalogStore(path)
+    const daily = new DailySyncStore(path)
+    expect(completedCatalog.jobStatus()).toMatchObject({ state: 'interrupted', cooldownUntil: null })
+    completedCatalog.close()
+    daily.close()
+    completeDatabaseMigration(path, v4)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
+    const reopened = new ProjectStore(path)
+    expect(reopened.get(project.id)?.name).toBe('Continuità')
+    reopened.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+}, 30_000)
+
+it('backs up v6 before installing rotation tables and preserves the Catalog run ID', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-rotation-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const projects = new ProjectStore(path)
+    const project = projects.create({ name: 'Prima della rotazione', format: 'STANDARD' })
+    projects.close()
+    const originalCatalog = new CatalogStore(path)
+    originalCatalog.startJob('new')
+    const runId = originalCatalog.jobStatus().runId
+    originalCatalog.close()
+    new TournamentStore(path).close()
+    const old = new DatabaseSync(path)
+    old.exec(`DROP TABLE catalog_retired_prints;
+      DROP TABLE catalog_rotation_cleanup;
+      DROP TABLE historical_event_references;
+      DROP TABLE tournament_rotation;
+      ALTER TABLE catalog_job DROP COLUMN rule_version;
+      PRAGMA user_version = 6`)
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 6, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const restored = new DatabaseSync(preparation.backupPath!, { readOnly: true })
+    expect(restored.prepare("SELECT name FROM sqlite_master WHERE name='tournament_rotation'").get())
+      .toBeUndefined()
+    restored.close()
+    const upgradedProjects = new ProjectStore(path)
+    const upgradedCatalog = new CatalogStore(path)
+    const upgradedEvents = new TournamentStore(path)
+    completeDatabaseMigration(path, preparation)
+    expect(upgradedProjects.get(project.id)?.name).toBe('Prima della rotazione')
+    expect(upgradedCatalog.jobStatus().runId).toBe(runId)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
+    upgradedEvents.close(); upgradedCatalog.close(); upgradedProjects.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('backs up v7 before daily sync and seeds the last Catalog success', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-daily-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const catalog = new CatalogStore(path)
+    catalog.startJob('new')
+    const runId = catalog.jobStatus().runId
+    catalog.close()
+    const completedAt = '2026-10-25T08:00:00.000Z'
+    const legacy = new DatabaseSync(path)
+    legacy.prepare("UPDATE catalog_job SET state='done', updated_at=? WHERE id=1").run(completedAt)
+    legacy.exec('PRAGMA user_version = 7')
+    legacy.close()
+
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 7, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const backup = new DatabaseSync(preparation.backupPath!, { readOnly: true })
+    expect(backup.prepare("SELECT name FROM sqlite_master WHERE name='daily_sync'").get())
+      .toBeUndefined()
+    backup.close()
+
+    const daily = new DailySyncStore(path)
+    expect(daily.read('catalog').lastSuccessAt).toBe(completedAt)
+    expect(daily.due('catalog', new Date('2026-10-25T09:00:00.000Z'))).toBe(false)
+    daily.close()
+    completeDatabaseMigration(path, preparation)
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
+    const reopened = new CatalogStore(path)
+    expect(reopened.jobStatus().runId).toBe(runId)
+    reopened.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('backs up v8 and scopes legacy guides to the list active at migration', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-deck-context-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Guida storica', format: 'STANDARD' })
+    const baseline = store.importDeck({ projectId: project.id,
+      rawText: '1 Carta A MEG 1', source: 'paste' })
+    store.saveLineMapping({ projectId: project.id, importedAt: baseline.importedAt,
+      lineNumber: 1, rawLine: baseline.rawText, printId: 'meg-001' },
+    { id: 'meg-001', name: 'Carta A', category: 'Trainer', setId: 'meg',
+      setName: 'Mega', localId: '001', rarity: null, variants: null,
+      identityId: 'identity-a', identityBasis: 'trainer-text',
+      sourceUrl: 'https://api.tcgdex.net/v2/en/cards/meg-001', sourceUpdated: null })
+    const snapshot = { id: 'a'.repeat(64), fetchedAt: '2026-10-25T10:00:00.000Z',
+      sourceUrl: 'https://limitlesstcg.com/decks', period: 'Ultimo mese',
+      circuit: 'WESTERN' as const, format: 'STANDARD' as const, cached: false,
+      decks: [{ id: '284', name: 'Dragapult ex', points: 100, share: 12,
+        url: 'https://limitlesstcg.com/decks/284' }] }
+    store.saveMetaSnapshot(snapshot)
+    store.saveMatchupReport({ projectId: project.id, metaId: snapshot.id, opponentId: '284',
+      deckHash: store.getCurrentDeckHash(project.id)!, generatedAt: '2026-10-25T10:01:00.000Z',
+      sampleDeckUrl: null, strengths: 'A', weaknesses: 'B', ourKeyCards: 'Carta A',
+      theirKeyCards: '', strategy: 'Piano', limitations: 'Campione' })
+    store.close()
+    const old = new DatabaseSync(path)
+    old.exec(`DROP TABLE deck_resolution_heads; DROP TABLE deck_resolution_revisions;
+      DROP TABLE deck_restores; DROP TABLE deck_version_annotations;
+      ALTER TABLE matchup_discussions DROP COLUMN content_hash;
+      ALTER TABLE matchup_discussions DROP COLUMN deck_version_id;
+      ALTER TABLE matchup_discussions DROP COLUMN deck_resolution_id;
+      PRAGMA user_version = 8`)
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 8, needsMigration: true })
+    expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
+    const reopened = new ProjectStore(path)
+    completeDatabaseMigration(path, preparation)
+    const guide = reopened.listMatchupDiscussions(project.id, '284')[0]
+    expect(guide.current).toBe(true)
+    expect(guide.deckVersionId).toBe(reopened.getBaseline(project.id)?.versionId)
+    expect(reopened.listMatchupReports(project.id, snapshot.id)).toHaveLength(1)
+    reopened.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste' })
+    const head = reopened.listDeckVersions(project.id)[0]
+    reopened.restoreDeckVersion({ projectId: project.id,
+      versionId: guide.deckVersionId!, expectedHeadId: head.id })
+    expect(reopened.getMatchupDiscussion(guide.id)?.current).toBe(false)
+    expect(reopened.listMatchupReports(project.id, snapshot.id)).toEqual([])
+    reopened.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('keeps legacy guides historical when v1 and v3 contain the same text', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-ambiguous-guides-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const store = new ProjectStore(path)
+    const project = store.create({ name: 'Guide ambigue', format: 'STANDARD' })
+    store.importDeck({ projectId: project.id, rawText: '1 Carta A MEG 1', source: 'paste' })
+    const v1 = store.listDeckVersions(project.id)[0]
+    const snapshot = (id: string) => ({ id: id.repeat(64), fetchedAt: `2026-10-25T1${id === 'a' ? 0 : 1}:00:00.000Z`,
+      sourceUrl: 'https://limitlesstcg.com/decks', period: 'Ultimo mese',
+      circuit: 'WESTERN' as const, format: 'STANDARD' as const, cached: false,
+      decks: [{ id: '284', name: 'Dragapult ex', points: 100, share: 12,
+        url: 'https://limitlesstcg.com/decks/284' }] })
+    const firstMeta = snapshot('a')
+    store.saveMetaSnapshot(firstMeta)
+    const report = (metaId: string, generatedAt: string) => ({ projectId: project.id,
+      metaId, opponentId: '284', deckHash: store.getCurrentDeckHash(project.id)!,
+      generatedAt, sampleDeckUrl: null, strengths: 'A', weaknesses: 'B',
+      ourKeyCards: 'Carta A', theirKeyCards: '', strategy: 'Piano', limitations: 'Campione' })
+    store.saveMatchupReport(report(firstMeta.id, '2026-10-25T10:01:00.000Z'))
+    store.importDeck({ projectId: project.id, rawText: '1 Carta B MEG 2', source: 'paste' })
+    const v2 = store.listDeckVersions(project.id)[0]
+    store.restoreDeckVersion({ projectId: project.id, versionId: v1.id,
+      expectedHeadId: v2.id })
+    const secondMeta = snapshot('b')
+    store.saveMetaSnapshot(secondMeta)
+    store.saveMatchupReport(report(secondMeta.id, '2026-10-25T11:01:00.000Z'))
+    store.close()
+
+    const old = new DatabaseSync(path)
+    old.exec(`DROP TABLE deck_resolution_heads; DROP TABLE deck_resolution_revisions;
+      DROP TABLE deck_restores; DROP TABLE deck_version_annotations;
+      ALTER TABLE matchup_discussions DROP COLUMN content_hash;
+      ALTER TABLE matchup_discussions DROP COLUMN deck_version_id;
+      ALTER TABLE matchup_discussions DROP COLUMN deck_resolution_id;
+      PRAGMA user_version = 8`)
+    old.close()
+    const preparation = await prepareDatabaseMigration(path)
+    const reopened = new ProjectStore(path)
+    completeDatabaseMigration(path, preparation)
+    const discussions = reopened.listMatchupDiscussions(project.id, '284')
+    expect(discussions).toHaveLength(2)
+    expect(discussions.every((item) => !item.current && item.deckVersionId === 'legacy-unscoped')).toBe(true)
+    expect(reopened.listMatchupReports(project.id, secondMeta.id)).toEqual([])
+    reopened.close()
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('refuses a newer archive schema before opening stores', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-future-'))
+  const path = join(folder, 'future.sqlite')
+  try {
+    const db = new DatabaseSync(path)
+    db.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION + 1}`)
+    db.close()
+    await expect(prepareDatabaseMigration(path)).rejects.toThrow('non supportata')
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})

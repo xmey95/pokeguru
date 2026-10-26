@@ -1,6 +1,7 @@
 node_modules/
 out/
 release/
+build/mac-codex/
 .verify/
 dist/
 coverage/

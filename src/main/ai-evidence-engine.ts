@@ -1,0 +1,162 @@
+import { createHash } from 'node:crypto'
+import type { CatalogView } from '../shared/catalog'
+import type { TournamentSnapshot } from '../shared/tournament'
+import type { MainTournamentSnapshot } from '../shared/main-tournament'
+import type { AiEvidenceQueryResult } from '../shared/ai-evidence'
+import { searchCatalogEvidence } from './catalog-evidence-search'
+
+export type AiEvidenceQuery =
+  | { operation: 'catalog.search'; terms?: string[]; printIds?: string[];
+      identityIds?: string[]; mode?: 'any' | 'all'; offset?: number; limit?: number }
+  | { operation: 'events.search'; deckName?: string; cardName?: string;
+      from?: string; to?: string; offset?: number; limit?: number }
+
+export interface AiEvidenceEngine {
+  describe(): { operations: string[]; catalog: { syncedAt: string | null;
+    expected: number; indexed: number; gameplay: number }; eventWindow: { from: string; to: string } }
+  execute(input: unknown): AiEvidenceQueryResult
+}
+
+function fingerprint(value: unknown): string {
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex')
+}
+
+function date(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value
+}
+
+function boundedString(value: unknown, max = 100): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= max && !value.includes('\0')
+}
+
+function strings(value: unknown, max: number, size: number): value is string[] {
+  return value === undefined || Array.isArray(value) && value.length <= max &&
+    value.every((entry) => boundedString(entry, size))
+}
+
+function page(value: unknown, fallback: number, max: number): number | null {
+  return value === undefined ? fallback : Number.isInteger(value) &&
+    Number(value) >= 0 && Number(value) <= max ? Number(value) : null
+}
+
+function parseQuery(input: unknown, window: { from: string; to: string }): AiEvidenceQuery {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Query non valida.')
+  const value = input as Record<string, unknown>
+  if (value.operation === 'catalog.search') {
+    if (Object.keys(value).some((key) => !['operation', 'terms', 'printIds', 'identityIds',
+      'mode', 'offset', 'limit'].includes(key))) throw new Error('Argomenti Catalogo non consentiti.')
+    if (!strings(value.terms, 8, 80) || !strings(value.printIds, 20, 40) ||
+      !strings(value.identityIds, 20, 100) ||
+      ![undefined, 'any', 'all'].includes(value.mode as string | undefined) ||
+      page(value.offset, 0, 1000) === null || page(value.limit, 12, 20) === null ||
+      page(value.limit, 12, 20) === 0 ||
+      ![value.terms, value.printIds, value.identityIds].some((items) =>
+        Array.isArray(items) && items.length > 0)) throw new Error('Argomenti Catalogo non validi.')
+    return { operation: 'catalog.search', terms: value.terms as string[] | undefined,
+      printIds: value.printIds as string[] | undefined,
+      identityIds: value.identityIds as string[] | undefined,
+      mode: value.mode as 'any' | 'all' | undefined,
+      offset: page(value.offset, 0, 1000)!, limit: page(value.limit, 12, 20)! }
+  }
+  if (value.operation === 'events.search') {
+    if (Object.keys(value).some((key) => !['operation', 'deckName', 'cardName', 'from',
+      'to', 'offset', 'limit'].includes(key))) throw new Error('Argomenti Eventi non consentiti.')
+    const from = value.from ?? window.from
+    const to = value.to ?? window.to
+    if (!boundedString(value.deckName, 100) && !boundedString(value.cardName, 100) ||
+      value.deckName !== undefined && !boundedString(value.deckName, 100) ||
+      value.cardName !== undefined && !boundedString(value.cardName, 100) ||
+      !date(from) || !date(to) || from > to || from < window.from || to > window.to ||
+      page(value.offset, 0, 1000) === null || page(value.limit, 3, 4) === null ||
+      page(value.limit, 3, 4) === 0) throw new Error('Argomenti Eventi non validi.')
+    return { operation: 'events.search', deckName: value.deckName as string | undefined,
+      cardName: value.cardName as string | undefined, from, to,
+      offset: page(value.offset, 0, 1000)!, limit: page(value.limit, 3, 4)! }
+  }
+  throw new Error('Operazione non consentita.')
+}
+
+function normalized(value: string): string {
+  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+type EventRow = { id: string; snapshotId: string; name: string; date: string;
+  kind: 'online' | 'in-person'; url: string; participants: number; completeLists: number;
+  deck: string; placing: number | null; listUrl: string; cards: string[] }
+
+function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[]): EventRow[] {
+  const rows: EventRow[] = []
+  for (const event of play) {
+    if (event.circuit !== 'WESTERN' || event.format !== 'STANDARD') continue
+    for (const item of event.participations) {
+      if (item.listStatus !== 'available' || item.cardTotal !== 60) continue
+      rows.push({ id: `play:${event.eventId}`, snapshotId: event.id, name: event.name,
+        date: event.date, kind: event.isOnline ? 'online' : 'in-person', url: event.publicUrl,
+        participants: event.coverage.returnedParticipants,
+        completeLists: event.coverage.complete60Lists, deck: item.deck?.name ?? '',
+        placing: item.placing, listUrl: `${event.publicUrl}/player/${encodeURIComponent(item.playerId)}/decklist`,
+        cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) })
+    }
+  }
+  for (const event of main) {
+    if (event.circuit !== 'WESTERN' || event.format !== 'STANDARD') continue
+    for (const item of event.participants) {
+      if (item.cardTotal !== 60 || !item.cards || !item.listUrl) continue
+      rows.push({ id: `main:${event.eventId}`, snapshotId: event.id, name: event.name,
+        date: event.date, kind: 'in-person', url: event.url,
+        participants: event.coverage.returnedParticipants,
+        completeLists: event.coverage.complete60Lists, deck: item.deckName ?? '',
+        placing: item.placing, listUrl: item.listUrl,
+        cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) })
+    }
+  }
+  return rows
+}
+
+/** A read-only, bounded gateway from model-chosen queries to local app data. */
+export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSnapshot[],
+  main: MainTournamentSnapshot[], window: { from: string; to: string }): AiEvidenceEngine {
+  if (!date(window.from) || !date(window.to) || window.from > window.to)
+    throw new Error('Intervallo Eventi non valido.')
+  const rows = eventRows(play, main)
+  const scope = searchCatalogEvidence(catalog, { terms: ['pokemon'], limit: 1 }).scope
+  return {
+    describe: () => ({ operations: ['catalog.search', 'events.search'],
+      catalog: { syncedAt: catalog.syncedAt, expected: scope.expected,
+        indexed: scope.indexed, gameplay: scope.withGameplay }, eventWindow: window }),
+    execute(input) {
+      let query: AiEvidenceQuery
+      try { query = parseQuery(input, window) }
+      catch (error) {
+        const rejected = { query: String(JSON.stringify(input) ?? input).slice(0, 1000),
+          status: 'rejected' as const,
+          data: { error: error instanceof Error ? error.message : 'Query non valida.' },
+          sourceIds: [] as string[] }
+        return { ...rejected, fingerprint: fingerprint({ input, ...rejected }) }
+      }
+      if (query.operation === 'catalog.search') {
+        const data = searchCatalogEvidence(catalog, { ...query, asOf: window.to })
+        const sourceIds = data.matches.map((item) => `card:${item.printId}`)
+        return { query, status: 'ok', data, sourceIds,
+          fingerprint: fingerprint({ query, data }) }
+      }
+      const deck = query.deckName ? normalized(query.deckName) : null
+      const card = query.cardName ? normalized(query.cardName) : null
+      const matching = rows.filter((row) => row.date >= query.from! && row.date <= query.to! &&
+        (!deck || normalized(row.deck).includes(deck)) &&
+        (!card || row.cards.some((line) => normalized(line).includes(card))))
+        .sort((a, b) => b.date.localeCompare(a.date) ||
+          (a.placing ?? Infinity) - (b.placing ?? Infinity))
+      const selected = matching.slice(query.offset, query.offset! + query.limit!)
+      const data = { scope: { from: query.from, to: query.to, listsInspected: rows.length,
+        matchingLists: matching.length }, offset: query.offset, remaining: Math.max(0,
+        matching.length - query.offset! - selected.length), lists: selected }
+      const sourceIds = selected.map((item) => `list:${fingerprint(item.listUrl).slice(0, 16)}`)
+      return { query, status: 'ok', data, sourceIds,
+        fingerprint: fingerprint({ query, data }) }
+    }
+  }
+}

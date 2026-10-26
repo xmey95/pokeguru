@@ -1,10 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, expect, it, vi } from 'vitest'
-import { CatalogStore, fetchStandardManifest, syncStandardCatalog } from '../src/main/catalog'
-import { OFFICIAL_SET_RELEASE_CHECKED_AT, officialSetRelease, officialSetReleases } from '../src/main/official-set-releases'
+import { CatalogStore, fetchCatalogImage, fetchStandardManifest, syncStandardCatalog } from '../src/main/catalog'
+import { OFFICIAL_SET_RELEASE_CHECKED_AT, officialSetRelease, officialSetReleases,
+  officialUnmappedProducts } from '../src/main/official-set-releases'
+import { BUNDLED_WESTERN_RULE_PACKAGE } from '../src/shared/western-rule-package'
 
 const folders: string[] = []
 afterEach(() => {
@@ -12,11 +14,20 @@ afterEach(() => {
   for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true })
 })
 
+it('propaga il limite 429 della fonte immagini per fermare le richieste successive', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) =>
+    String(input).endsWith('/low.webp')
+      ? new Response('', { status: 429, headers: { 'Retry-After': '90' } })
+      : new Response(null, { status: 200 })))
+  await expect(fetchCatalogImage('https://assets.tcgdex.net/en/sv/sv05/001', 'sv05-001'))
+    .rejects.toThrow('HTTP 429')
+})
+
 it('mappa le date di uscita ufficiali dei set senza inferire quelle delle promo o dei set ignoti', () => {
   const releases = officialSetReleases()
   expect(releases).toHaveLength(17)
   expect(new Set(releases.map((entry) => entry.setId)).size).toBe(releases.length)
-  expect(OFFICIAL_SET_RELEASE_CHECKED_AT).toBe('2026-10-23')
+  expect(OFFICIAL_SET_RELEASE_CHECKED_AT).toBe('2026-10-25')
   for (const entry of releases) {
     expect(entry.product.length).toBeGreaterThan(2)
     expect(new Date(`${entry.releaseDate}T00:00:00Z`).toISOString().slice(0, 10)).toBe(entry.releaseDate)
@@ -25,6 +36,12 @@ it('mappa le date di uscita ufficiali dei set senza inferire quelle delle promo 
   expect(officialSetRelease('30th')).toBe('2026-09-16')
   expect(officialSetRelease('mep')).toBeNull()
   expect(officialSetRelease('sv99')).toBeNull()
+  for (const admission of BUNDLED_WESTERN_RULE_PACKAGE.setAdmissions.filter((entry) => entry.method === 'two-weeks')) {
+    expect(admission.releaseDate).toBe(officialSetRelease(admission.setId))
+  }
+  expect(BUNDLED_WESTERN_RULE_PACKAGE.setAdmissions.some((entry) => entry.setId === '30th')).toBe(false)
+  expect(officialUnmappedProducts()).toEqual([{ product: 'Mega Evolution—Delta Reign',
+    releaseDate: '2026-11-06', sourceUrl: 'https://press.pokemon.com/en/Pokemon-TCG-Mega-EvolutionDelta-Reign' }])
 })
 
 it('salva l’inventario Standard a lotti, riprende un errore e conserva i dettagli acquisiti', async () => {
@@ -45,6 +62,11 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   const details = new Map<string, number>()
   vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
     const url = String(input)
+    if (url.startsWith('https://assets.tcgdex.net/')) {
+      if (url.endsWith('/high.webp')) return new Response(null, { status: 200 })
+      return new Response(new TextEncoder().encode('RIFF0000WEBP'),
+        { status: 200, headers: { 'content-type': 'image/webp' } })
+    }
     if (url.includes('/cards?regulationMark=eq:h')) return Response.json([briefs[2]])
     if (url.includes('/cards?')) return Response.json([briefs[0], briefs[1], briefs[3]])
     if (url.endsWith('/sets')) return Response.json(sets)
@@ -57,9 +79,11 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     }
     const id = url.split('/').at(-1)!
     details.set(id, (details.get(id) ?? 0) + 1)
-    if (id === 'mep-001' && failPromo) return new Response('', { status: 503 })
+    if (id === 'mep-001' && failPromo) return new Response('', { status: 503,
+      headers: { 'Retry-After': '120' } })
     const name = briefs.find((card) => card.id === id)?.name ?? 'Basic Energy'
     return Response.json({ id, localId: '001', name, category: name === 'Basic Energy' ? 'Energy' : 'Pokemon',
+      image: id === 'sv05-001' ? 'https://assets.tcgdex.net/en/sv/sv05/001' : undefined,
       regulationMark: id === 'mep-001' ? 'i' : id === 'nvp-001' ? 'K' : id.startsWith('me') ? 'I' : 'H',
       rarity: id === 'sv05-001' && updatedRarity ? 'Rare' : 'Common', stage: 'Basic', updated: '2026-10-23' })
   }))
@@ -73,8 +97,13 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
   })
   const store = new CatalogStore(database)
   await expect(syncStandardCatalog(store)).rejects.toThrow('limitato temporaneamente')
-  expect(store.jobStatus()).toMatchObject({ mode: 'new', state: 'paused', expected: 6, acquired: 5 })
+  expect(store.jobStatus()).toMatchObject({ mode: 'new', state: 'rate-limited', expected: 6, acquired: 5,
+    cooldownUntil: expect.any(String) })
+  expect(Date.parse(store.jobStatus().cooldownUntil!)).toBeGreaterThan(Date.now() + 115_000)
   expect(store.view().standardCoverage).toMatchObject({ expected: 6, acquired: 5, missing: 1 })
+  expect(store.getPrint('sv05-001')?.thumbnail).toBe('pokeguru://cards/sv05-001.webp')
+  expect(existsSync(join(folder, 'catalog-images', 'sv05-001.webp'))).toBe(true)
+  expect(readFileSync(join(folder, 'catalog-images', 'sv05-001.webp')).toString('ascii')).toBe('RIFF0000WEBP')
   expect(store.view().standardCoverage?.officialSets).toMatchObject({
     expected: 17, present: 2, missing: 15,
     missingSets: expect.arrayContaining([{ setId: 'sv06', product: 'Scarlet & Violet—Twilight Masquerade' }])
@@ -107,20 +136,21 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     dateNote: null, checkedAt: '2026-11-01' } }])
   expect(reopened.view().prints.find((print) => print.id === 'nvp-001')?.promoStatus?.state).toBe('unlisted')
   expect(details.get('sv05-001')).toBe(1)
-  expect(details.get('mep-001')).toBe(5)
+  expect(details.get('mep-001')).toBe(2)
   expect(view.prints.find((print) => print.id === 'mep-001')?.rarity).toBe('Common')
   expect(view.prints.find((print) => print.id === 'mep-001')?.regulationMark).toBe('I')
   const standardPrint = view.prints.find((print) => print.id === 'sv05-001')!
   reopened.savePrints([{ ...standardPrint, id: 'sv05-099', localId: '099', regulationMark: 'G' }])
   expect(reopened.getPrint('sv05-099')).not.toBeNull()
   expect(reopened.view().prints.some((print) => print.id === 'sv05-099')).toBe(false)
+  expect(reopened.view().referencePrints?.some((print) => print.id === 'sv05-099')).toBe(true)
   expect(reopened.view().standardCoverage?.bySet.find((set) => set.setId === 'sv05')?.expected).toBe(1)
   updatedRarity = true
   await syncStandardCatalog(reopened)
   expect(details.get('sv05-001')).toBe(1)
   expect(reopened.getPrint('sv05-001')?.rarity).toBe('Common')
   await syncStandardCatalog(reopened, undefined, 'full')
-  expect(details.get('mep-001')).toBe(6)
+  expect(details.get('mep-001')).toBe(3)
   expect(reopened.getPrint('sv05-001')?.rarity).toBe('Rare')
   const unchangedDetailAt = reopened.getPrint('mep-001')?.detailAt
   const latestOfficialCheck = reopened.view().promoAudit?.checkedAt
@@ -132,6 +162,71 @@ it('salva l’inventario Standard a lotti, riprende un errore e conserva i detta
     String(url).includes('promo-status-western.json'))).toBe(false)
   expect(reopened.getPrint('mep-001')?.detailAt).toBe(unchangedDetailAt)
   reopened.close()
+}, 45_000)
+
+it('prosegue oltre una scheda non disponibile, poi riprende solo quella dopo il riavvio', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-standard-blocks-'))
+  folders.push(folder)
+  const database = join(folder, 'catalog.sqlite')
+  const briefs = Array.from({ length: 14 }, (_, index) => ({
+    id: `sv05-${String(index + 1).padStart(3, '0')}`,
+    localId: String(index + 1).padStart(3, '0'), name: `Carta ${index + 1}`
+  }))
+  const energy = (set: string) => ({ id: `${set}-001`, localId: '001', name: 'Basic Energy' })
+  const sets = ['sv05', 'sve', 'mee'].map((id) => ({ id, name: id.toUpperCase(),
+    cardCount: { total: id === 'sv05' ? 14 : 1 } }))
+  let missing = true
+  const reads = new Map<string, number>()
+  vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
+    const url = String(input)
+    if (url.includes('/cards?regulationMark=eq:h')) return Response.json([])
+    if (url.includes('/cards?')) return Response.json(briefs)
+    if (url.endsWith('/sets')) return Response.json(sets)
+    if (url.includes('/sets/')) {
+      const id = url.split('/').at(-1)!
+      const set = sets.find((value) => value.id === id)!
+      return Response.json({ ...set, cards: id === 'sv05' ? briefs : [energy(id)] })
+    }
+    const id = url.split('/').at(-1)!
+    reads.set(id, (reads.get(id) ?? 0) + 1)
+    if (id === 'sv05-001' && missing) return new Response('', { status: 404 })
+    const card = [...briefs, energy('sve'), energy('mee')].find((value) => value.id === id)!
+    return Response.json({ ...card, category: 'Pokemon', stage: 'Basic', regulationMark: 'H' })
+  }))
+
+  const store = new CatalogStore(database)
+  await expect(syncStandardCatalog(store)).rejects.toThrow('1 dettaglio TCGdex non disponibile')
+  expect(store.jobStatus()).toMatchObject({ state: 'paused', expected: 16, acquired: 15 })
+  expect(reads.get('sv05-014')).toBe(1) // The second block advanced without a click.
+  store.close()
+
+  missing = false
+  const reopened = new CatalogStore(database)
+  await syncStandardCatalog(reopened)
+  expect(reopened.jobStatus()).toMatchObject({ state: 'done', expected: 16, acquired: 16 })
+  expect(reads.get('sv05-001')).toBe(2)
+  expect(reads.get('sv05-014')).toBe(1)
+  reopened.startJob('full')
+  reopened.queueJob('full')
+  reopened.pauseJob(null, 'In pausa su richiesta')
+  reopened.close()
+
+  const paused = new CatalogStore(database)
+  expect(paused.jobStatus()).toMatchObject({ state: 'paused', expected: 16, acquired: 0 })
+  expect(paused.resumeJob('full')).toBe(true)
+  paused.cancelJob()
+  paused.close()
+  const cancelled = new CatalogStore(database)
+  expect(cancelled.jobStatus()).toMatchObject({ state: 'cancelled', expected: 16, acquired: 0 })
+  expect(cancelled.resumeJob('full')).toBe(false)
+  cancelled.startJob('full')
+  cancelled.queueJob('full')
+  cancelled.interruptJob()
+  cancelled.close()
+  const interrupted = new CatalogStore(database)
+  expect(interrupted.jobStatus()).toMatchObject({ state: 'interrupted', expected: 16, acquired: 0 })
+  expect(interrupted.resumeJob('full')).toBe(true)
+  interrupted.close()
 }, 20_000)
 
 it('migra un archivio catalogo precedente senza perdere i set e salva la data nuova', () => {
@@ -156,3 +251,37 @@ it('migra un archivio catalogo precedente senza perdere i set e salva la data nu
   expect(reopened.view().sets[0].releaseDate).toBe('2025-09-26')
   reopened.close()
 })
+
+it('conserva il 429 dell’indice Limitless e attende un clic dopo il riavvio', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-limitless-cooldown-'))
+  folders.push(folder)
+  const database = join(folder, 'catalog.sqlite')
+  const energy = (id: string) => ({ id: `${id}-001`, localId: '001', name: 'Basic Energy' })
+  const sets = ['sve', 'mee'].map((id) => ({ id, name: id.toUpperCase(), cardCount: { total: 1 } }))
+  const request = vi.fn(async (input: string | URL | Request) => {
+    const url = String(input)
+    if (url.includes('limitlesstcg.com/cards/SVE')) {
+      return new Response('', { status: 429, headers: { 'Retry-After': '90' } })
+    }
+    if (url.includes('/cards?')) return Response.json([])
+    if (url.endsWith('/sets')) return Response.json(sets)
+    if (url.includes('/sets/')) {
+      const id = url.split('/').at(-1)!
+      return Response.json({ ...sets.find((set) => set.id === id), cards: [energy(id)] })
+    }
+    throw new Error(`Unexpected request: ${url}`)
+  })
+  vi.stubGlobal('fetch', request)
+  const store = new CatalogStore(database)
+  await expect(syncStandardCatalog(store)).rejects.toThrow('Limitless: HTTP 429')
+  expect(store.jobStatus()).toMatchObject({ state: 'rate-limited', phase: 'Attesa Limitless', expected: 0,
+    cooldownUntil: expect.any(String) })
+  expect(Date.parse(store.jobStatus().cooldownUntil!)).toBeGreaterThan(Date.now() + 85_000)
+  store.close()
+
+  request.mockClear()
+  const reopened = new CatalogStore(database)
+  expect(reopened.jobStatus().state).toBe('rate-limited')
+  expect(request).not.toHaveBeenCalled()
+  reopened.close()
+}, 10_000)

@@ -4,7 +4,8 @@ import { basename, dirname, join } from 'node:path'
 import { expect, it } from 'vitest'
 import { CodexControl } from '../src/main/codex-control'
 import { ProjectStore } from '../src/main/project-store'
-import { deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from '../src/main/deck-ai'
+import { deckThreadPrompt, DECK_THREAD_SCHEMA, readDeckThreadTurn } from '../src/main/deck-ai'
+import { buildThreadEvidence } from '../src/main/thread-evidence'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import type { AiRunConfig } from '../src/shared/ai'
 
@@ -38,19 +39,32 @@ live('produce due candidate complete in sessioni Codex isolate', async () => {
       prints: [print('me01-086', 'Mega Absol ex', 'Pokemon', 'Basic'),
         print('sve-005', 'Psychic Energy', 'Energy'),
         print('me01-114', "Boss's Orders", 'Trainer')] }
+    const discussion = 'Spiega in una frase perché una modifica alla lista richiede il confronto con la base; non proporre una lista.'
+    const discussionEvidence = buildThreadEvidence(first, base, discussion, [], catalog, [], [])
+    const discussionContext = deckThreadPrompt(first, base, discussion, [], catalog, discussionEvidence)
+    const discussionResult = await control.jsonTurn(null, directory, discussionContext.prompt, config, DECK_THREAD_SCHEMA)
+    const discussionTurn = readDeckThreadTurn(discussionResult.value, project.id, base, catalog, [],
+      discussionEvidence, discussionContext.sources)
+    expect(discussionTurn.answer.length).toBeGreaterThan(0)
+    expect(discussionTurn.proposal).toBeUndefined()
+    store.assignDeckAiSession(project.id, first.id, discussionResult.sessionId)
+    store.saveDeckAiExchange(project.id, first.id, discussionResult.sessionId, discussion,
+      discussionTurn.answer, discussionResult.turnId, config, undefined, discussionEvidence,
+      discussionTurn.citedSourceIds)
     const answers = await Promise.all([first, second].map(async (thread, index) => {
+      const current = store.getDeckThread(project.id, thread.id)!
       const count = index + 1
       const question = `Prepara una candidata di prova: aggiungi esattamente ${count} Boss's Orders ME01 114, togli ${count} Psychic Energy SVE 005 e conserva Mega Absol ex. Restituisci l'intera lista di 60 carte usando i codici del catalogo; è una prova strutturale, non una raccomandazione competitiva.`
-      const context = deckProposalPrompt(thread, base, question, [], catalog, null)
-      const sessionId = await control.startThread(directory, config)
-      store.assignDeckAiSession(project.id, thread.id, sessionId)
-      const answer = await control.jsonTurn(sessionId, directory, context.prompt, config, DECK_PROPOSAL_SCHEMA)
-      const proposal = validateDeckProposal(answer.value, project.id, catalog, [], context.sources)
-      expect(proposal.outcome).toBe('candidate')
+      const evidence = buildThreadEvidence(current, base, question, [], catalog, [], [])
+      const context = deckThreadPrompt(current, base, question, [], catalog, evidence)
+      const answer = await control.jsonTurn(current.aiSessionRef, directory, context.prompt, config, DECK_THREAD_SCHEMA)
+      const sessionId = answer.sessionId
+      if (!current.aiSessionRef) store.assignDeckAiSession(project.id, thread.id, sessionId)
+      const turn = readDeckThreadTurn(answer.value, project.id, base, catalog, [], evidence,
+        context.sources)
+      expect(turn.proposal).toBeDefined()
       const saved = store.saveDeckAiExchange(project.id, thread.id, sessionId,
-        question, proposal.rationale, answer.turnId, config, {
-          rawText: proposal.rawText, note: proposal.rationale,
-          sources: proposal.sources, checks: proposal.checks })
+        question, turn.answer, answer.turnId, config, turn.proposal, evidence, turn.citedSourceIds)
       expect(saved.candidates).toHaveLength(1)
       expect(saved.candidates[0].parsed.interpretedTotal).toBe(60)
       return { sessionId, rawText: saved.candidates[0].rawText }

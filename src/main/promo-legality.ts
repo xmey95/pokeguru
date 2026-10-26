@@ -1,4 +1,5 @@
 import { load } from 'cheerio'
+import { readLimitedText } from './bounded-response'
 
 export const PROMO_LEGALITY_SOURCE =
   'https://www.pokemon.com/uk/play-pokemon/about/pokemon-tcg-promo-card-legality-status'
@@ -76,11 +77,7 @@ export async function fetchPromoRegistry(fetcher: typeof fetch = fetch): Promise
         cache: 'no-store', signal: AbortSignal.timeout(12_000)
       })
       if (!response.ok) throw new Error(`Play! Pokémon: HTTP ${response.status}.`)
-      if (Number(response.headers.get('content-length') ?? 0) > 1_000_000) {
-        throw new Error('Pagina promo ufficiale troppo grande.')
-      }
-      const html = await response.text()
-      if (html.length > 1_000_000) throw new Error('Pagina promo ufficiale troppo grande.')
+      const html = await readLimitedText(response, 1_000_000, 'Pagina promo ufficiale troppo grande.')
       return parsePromoRegistry(html, new Date().toISOString())
     } catch (error) {
       lastError = error

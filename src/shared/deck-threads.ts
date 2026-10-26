@@ -1,5 +1,6 @@
 import type { ParsedDeck } from './deck-import'
 import type { AiRunConfig } from './ai'
+import type { ThreadEvidencePacket } from './thread-evidence'
 
 export interface DeckVersion {
   id: string
@@ -11,6 +12,37 @@ export interface DeckVersion {
   parsed: ParsedDeck
   createdAt: string
   adoption: { threadId: string; candidateId: string } | null
+  restoredFrom: { id: string; sequence: number } | null
+  label: string
+  note: string
+  resolutionId: string | null
+  resolutionKnown: boolean
+}
+
+export interface DeckContextRef {
+  versionId: string
+  resolutionId: string | null
+}
+
+export interface RestoreDeckVersionInput {
+  projectId: string
+  versionId: string
+  expectedHeadId: string
+  expectedResolutionId?: string | null
+}
+
+export interface AnnotateDeckVersionInput {
+  projectId: string
+  versionId: string
+  label: string
+  note: string
+}
+
+export interface ContinueDeckThreadInput {
+  projectId: string
+  threadId: string
+  candidateId: string
+  title: string
 }
 
 export interface DeckThreadMessage {
@@ -20,10 +52,24 @@ export interface DeckThreadMessage {
   author: 'user' | 'assistant'
   aiConfig: AiRunConfig | null
   aiTurnId: string | null
+  /** An immutable copy of the facts sent to this assistant turn. Legacy/manual messages omit it. */
+  evidence?: ThreadEvidencePacket | null
+  citedSourceIds?: string[]
+}
+
+export interface DeckThreadMessageCursor {
+  createdAt: string
+  rowId: number
+}
+
+export interface DeckThreadMessagePage {
+  messages: DeckThreadMessage[]
+  oldestCursor: DeckThreadMessageCursor | null
 }
 
 export interface DeckCandidate {
   id: string
+  parentCandidateId?: string | null
   sequence: number
   rawText: string
   parsed: ParsedDeck
@@ -42,19 +88,35 @@ export interface DeckThread {
   title: string
   baseVersionId: string | null
   baseVersionNumber: number | null
+  baseResolutionId: string | null
+  resolutionChanged: boolean
+  parentThreadId: string | null
+  seedCandidateId: string | null
+  seedCandidateText: string | null
   currentVersionId: string | null
   stale: boolean
   aiSessionRef: string | null
+  openingAiMessageId: string | null
   createdAt: string
   updatedAt: string
   messages: DeckThreadMessage[]
   candidates: DeckCandidate[]
+  /** Present on a recent-message window; older messages can be fetched with oldestMessageCursor. */
+  messageCount?: number
+  oldestMessageCursor?: DeckThreadMessageCursor | null
+  openingAiMessage?: DeckThreadMessage | null
+  openingAiPending?: boolean
+}
+
+export type DeckThreadSummary = Omit<DeckThread, 'messages' | 'candidates'> & {
+  latestCandidateId: string | null
 }
 
 export interface CreateDeckThreadInput {
   projectId: string
   title: string
   openingNote?: string
+  startWithAi?: boolean
 }
 
 export interface SaveDeckCandidateInput {

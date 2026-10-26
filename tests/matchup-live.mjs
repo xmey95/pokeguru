@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { createProjectFromStart, openDeckImport } from './project-ui-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const directory = mkdtempSync(join(tmpdir(), 'pokeguru-ai-live-'))
@@ -13,22 +14,27 @@ try {
   application = await electron.launch({ executablePath: require('electron'), args: ['.'],
     cwd: resolve(import.meta.dirname, '..'), env: { ...process.env, POKEGURU_DATA_DIR: directory } })
   const page = await application.firstWindow()
-  await page.getByLabel('Nome progetto').fill('Prova analisi AI')
-  await page.getByRole('button', { name: 'Crea progetto' }).click()
+  await createProjectFromStart(page, 'Prova analisi AI')
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('Pokémon: 4\n4 Mega Absol ex MEG 86\nTrainer: 8\n4 Rare Candy\n4 Iono')
   await page.getByRole('button', { name: 'Salva lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '12 carte' }).waitFor()
   await page.getByRole('button', { name: 'Matchup' }).click()
-  await page.locator('.meta-deck').first().waitFor({ timeout: 30000 })
-  const deckCount = await page.locator('.meta-deck').count()
+  await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
+  const deckCount = await page.locator('.matchup-option').count()
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
-  const model = connection.value.models.find((item) => item.isDefault) ?? connection.value.models[0]
+  await page.getByRole('button', { name: 'Modifica configurazione AI' }).click()
+  const model = connection.value.models.find((item) => item.id.includes('luna')) ??
+    connection.value.models.find((item) => item.isDefault) ?? connection.value.models[0]
   assert.ok(model, 'Nessun modello Codex disponibile')
-  const effort = model.reasoningEfforts.find((item) => item.id === model.defaultReasoningEffort)?.id ?? null
+  const effort = model.reasoningEfforts.some((item) => item.id === 'low') ? 'low' :
+    model.reasoningEfforts.find((item) => item.id === model.defaultReasoningEffort)?.id ?? null
   await page.getByLabel('Modello', { exact: true }).selectOption(model.id)
   if (effort) await page.getByLabel('Ragionamento', { exact: true }).selectOption(effort)
-  assert.match(await page.locator('.ai-data-preview').textContent(), /Dati inviati a Codex/)
+  await page.getByRole('button', { name: 'Dati inviati', exact: true }).click()
+  assert.match(await page.locator('.matchup-data-preview').textContent(), /Per generare una nuova guida/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
   await Promise.race([
     page.locator('.matchup-fields').getByText('Limiti dell’analisi').waitFor({ timeout: 200000 }),
@@ -36,6 +42,8 @@ try {
       throw new Error(`Analisi non generata: ${await page.getByRole('alert').textContent()}`)
     })
   ])
+  await page.locator('.guide-sources > summary').click()
+  await page.locator('.matchup-report-meta > summary').click()
   assert.match(await page.locator('.meta-analysis').textContent(), /Analisi Codex generata/)
   assert.match(await page.locator('.meta-analysis').textContent(), new RegExp(`Modello: ${model.id}`))
   const observations = [
@@ -43,20 +51,23 @@ try {
     'Nella strategia considera anche il rischio di consumare troppe risorse nel primo turno.'
   ]
   for (let index = 0; index < observations.length; index += 1) {
-    await page.getByLabel('Rispondi a questa analisi').fill(observations[index])
-    await page.getByRole('button', { name: 'Rivedi analisi con Codex' }).click()
+    await page.getByLabel('Aggiungi un’osservazione').fill(observations[index])
+    await page.getByRole('button', { name: 'Aggiorna guida', exact: true }).click()
     await Promise.race([
-      page.waitForFunction((count) => document.querySelectorAll('.discussion-timeline details').length === count,
-        index + 2, { timeout: 200000 }),
+      page.waitForFunction((count) => document.querySelectorAll('.discussion-history-item').length === count &&
+        !!document.querySelector('.discussion-latest .discussion-change') && !!document.querySelector('#matchup-feedback'),
+        index + 1, { timeout: 200000 }),
       page.getByRole('alert').waitFor({ timeout: 200000 }).then(async () => {
         throw new Error(`Revisione non generata: ${await page.getByRole('alert').textContent()}`)
       })
     ])
-    assert.match(await page.locator('.discussion-timeline').textContent(), /Cosa è cambiato/)
+    assert.match(await page.locator('.discussion-latest').textContent(), /Cosa cambia/)
   }
-  await page.getByRole('button', { name: 'Lista', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
+  await openDeckImport(page)
   await page.getByLabel('Testo lista').fill('Pokémon: 5\n4 Mega Absol ex MEG 86\n1 Mega Audino ex MEG 84\nTrainer: 8\n4 Rare Candy\n4 Iono')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
+  await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '13 carte' }).waitFor()
   await page.getByRole('button', { name: 'Matchup' }).click()
   await page.getByRole('button', { name: 'Continua sulla nuova base' }).waitFor({ timeout: 30000 })

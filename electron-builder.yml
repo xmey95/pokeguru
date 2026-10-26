@@ -1,22 +1,50 @@
 appId: io.github.xmey95.pokeguru
 productName: Pokeguru
 directories:
+  buildResources: build
   output: release
 files:
   - out/**/*
 asar: true
+mac:
+  extraResources:
+    - from: resources/icon.png
+      to: icon.png
+    - from: build/mac-codex
+      to: codex
+  icon: build/icons/1024x1024.png
+  identity: null
+  hardenedRuntime: false
+  category: public.app-category.games
+  target: dmg
+  artifactName: Pokeguru-${version}-macos-${arch}.${ext}
 linux:
+  extraResources:
+    - from: resources/icon.png
+      to: icon.png
+    - from: node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl
+      to: codex
+  icon: build/icons
   category: Game
+  syncDesktopName: true
   target:
     - target: AppImage
       arch: [x64]
   artifactName: Pokeguru-${version}-linux-${arch}.${ext}
 win:
+  extraResources:
+    - from: resources/icon.png
+      to: icon.png
+    - from: node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc
+      to: codex
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
   artifactName: Pokeguru-${version}-windows-${arch}-setup.${ext}
 nsis:
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false

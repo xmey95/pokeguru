@@ -1,144 +1,269 @@
-import { useEffect, useState } from 'react'
-import type { AiConnection, AiPreferences } from '../../shared/ai'
+import { useEffect, useRef, useState } from 'react'
+import type { AiConnection, AiLoginStart, AiPreferences, CodexSetupStatus } from '../../shared/ai'
+import { useNavigation, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
+import { ActivityStatus, Spinner } from './Loading'
 
 const automatic: AiPreferences = { model: null, reasoningEffort: null }
+type Action = 'save' | 'test' | 'login' | 'logout'
 
 export function AiSettings() {
-  const [saved, setSaved] = useState<AiPreferences>(automatic)
-  const [draft, setDraft] = useState<AiPreferences>(automatic)
+  const nav = useNavigation()
+  const [saved, setSaved] = useState<AiPreferences | null>(null)
+  const [draftValue, setDraft] = useDraftState<AiPreferences | null>('ai.preferences', null)
+  const draft = draftValue ?? saved ?? automatic
   const [connection, setConnection] = useState<AiConnection | null>(null)
+  const [setup, setSetup] = useState<CodexSetupStatus | null>(null)
+  const [deviceLogin, setDeviceLogin] = useState<Extract<AiLoginStart, { mode: 'device' }> | null>(null)
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [loginPending, setLoginPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [preferencesLoading, setPreferencesLoading] = useState(true)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [preferencesError, setPreferencesError] = useState<string | null>(null)
+  const [busy, setBusy] = useBusyState('ai.settings')
+  const [action, setAction] = useDraftState<Action | null>('ai.action', null)
+  const startedAt = useBusyStartedAt('ai.settings')
+  const [loginPending, setLoginPending] = useDraftState('ai.login-pending', false)
+  const [error, setError] = useDraftState<string | null>('ai.error', null)
+  const [errorScope, setErrorScope] = useDraftState<'connection' | 'preferences'>('ai.error-scope', 'preferences')
+  const [notice, setNotice] = useDraftState<string | null>('ai.notice', null)
+  const connectionRequest = useRef(0)
+  const preferencesRequest = useRef(0)
 
   async function refresh(): Promise<void> {
+    const request = ++connectionRequest.current
     setLoading(true)
-    setError(null)
     try {
+      const setupResult = await window.projectsApi.getCodexSetupStatus()
+      if (request !== connectionRequest.current) return
+      if (setupResult.ok) setSetup(setupResult.value)
       const result = await window.projectsApi.getAiConnection()
+      if (request !== connectionRequest.current) return
       if (!result.ok) throw new Error(result.error)
       setConnection(result.value)
-      if (result.value.account) setLoginPending(false)
+      setConnectionError(null)
+      if (result.value.account) { setLoginPending(false); setDeviceLogin(null) }
+      else if (loginPending) {
+        const progress = await window.projectsApi.getAiLoginProgress()
+        if (request !== connectionRequest.current) return
+        if (progress.ok && progress.value.state === 'error') {
+          setLoginPending(false)
+          setDeviceLogin(null)
+          setErrorScope('connection')
+          setError(progress.value.error ?? 'Accesso Codex non riuscito. Riprova.')
+        }
+      }
     } catch (cause) {
+      if (request !== connectionRequest.current) return
       setConnection(null)
-      setError(cause instanceof Error ? cause.message : 'Impossibile controllare Codex.')
-    } finally { setLoading(false) }
+      setConnectionError(cause instanceof Error ? cause.message : 'Impossibile controllare Codex.')
+      if (loginPending) { setLoginPending(false); setDeviceLogin(null) }
+    } finally { if (request === connectionRequest.current) setLoading(false) }
+  }
+
+  async function readPreferences(): Promise<void> {
+    const request = ++preferencesRequest.current
+    setPreferencesLoading(true)
+    try {
+      const result = await window.projectsApi.getAiPreferences()
+      if (request !== preferencesRequest.current) return
+      if (!result.ok) throw new Error(result.error)
+      setSaved(result.value)
+      setPreferencesError(null)
+    } catch (cause) {
+      if (request !== preferencesRequest.current) return
+      setSaved(null)
+      setPreferencesError(cause instanceof Error ? cause.message : 'Impossibile leggere le preferenze.')
+    } finally { if (request === preferencesRequest.current) setPreferencesLoading(false) }
   }
 
   useEffect(() => {
-    let active = true
-    void window.projectsApi.getAiPreferences().then((result) => {
-      if (!active) return
-      if (result.ok) { setSaved(result.value); setDraft(result.value) }
-      else setError(result.error)
-    })
-    void refresh()
-    return () => { active = false }
-  }, [])
+    if (!busy) { void readPreferences(); void refresh() }
+    return () => { connectionRequest.current++; preferencesRequest.current++ }
+  }, [busy])
 
   useEffect(() => {
-    if (!loginPending) return
-    const timer = window.setInterval(() => { void refresh() }, 3000)
+    if (!loginPending || busy) return
+    const timer = window.setInterval(() => { if (!loading) void refresh() }, 3000)
     return () => window.clearInterval(timer)
-  }, [loginPending])
+  }, [loginPending, busy, loading])
 
   const selectedModel = connection?.models.find((model) => model.id === draft.model)
-  const dirty = saved.model !== draft.model || saved.reasoningEffort !== draft.reasoningEffort
+  const selectedEffort = selectedModel?.reasoningEfforts.find((effort) => effort.id === draft.reasoningEffort)
+  const missingModel = Boolean(draft.model && !selectedModel)
+  const missingEffort = Boolean(draft.reasoningEffort && !selectedEffort)
+  const unavailableChoice = missingModel || missingEffort
+  const dirty = Boolean(saved && (saved.model !== draft.model || saved.reasoningEffort !== draft.reasoningEffort))
+  const connected = connection?.account === 'chatgpt' || connection?.account === 'apiKey'
+  const ready = Boolean(saved) && !preferencesLoading && !busy
+  const testReason = busy ? 'Operazione in corso…' : preferencesLoading ? 'Lettura delle preferenze…'
+    : !saved ? 'Ricarica le preferenze per eseguire la prova.' : dirty ? 'Salva le modifiche prima della prova.'
+    : loading ? 'Verifica di Codex in corso…' : !connection ? 'Codex deve essere disponibile per eseguire la prova.'
+    : connection.account === 'other' ? 'Modalità non supportata. Gestisci la connessione in Account e accesso.'
+    : !connected ? 'Accedi a Codex per eseguire la prova.'
+    : unavailableChoice ? 'Scegli un modello e un livello disponibili.' : null
+
+  function edit(value: AiPreferences) { setDraft(value); setNotice(null); setError(null) }
+  function start(value: Action) {
+    setAction(value); setBusy(true); setError(null); setNotice(null)
+    setErrorScope(value === 'login' || value === 'logout' ? 'connection' : 'preferences')
+  }
+  function finish() {
+    // Completion belongs to the operation, including after its view was unmounted.
+    nav.drafts.set('ai.action', null)
+    setBusy(false)
+  }
 
   async function save(): Promise<void> {
-    setBusy(true); setError(null); setNotice(null)
+    if (!ready || !dirty || unavailableChoice) return
+    start('save')
     try {
       const result = await window.projectsApi.saveAiPreferences(draft)
       if (!result.ok) throw new Error(result.error)
       setSaved(result.value)
       setDraft(result.value)
-      setNotice('Preferenze salvate. Saranno usate dalle prossime analisi.')
+      setNotice('Preferenze salvate.')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Salvataggio non riuscito.') }
-    finally { setBusy(false) }
+    finally { finish() }
   }
 
-  async function login(): Promise<void> {
-    setBusy(true); setError(null); setNotice(null)
+  async function login(mode: 'browser' | 'device'): Promise<void> {
+    start('login')
     try {
-      const result = await window.projectsApi.startAiLogin()
+      const result = await window.projectsApi.startAiLogin(mode)
       if (!result.ok) throw new Error(result.error)
+      setDeviceLogin(result.value.mode === 'device' ? result.value : null)
       setLoginPending(true)
-      setNotice('Completa l’accesso nel browser. Pokéguru aggiornerà lo stato automaticamente.')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Accesso non avviato.') }
-    finally { setBusy(false) }
+    finally { finish() }
+  }
+
+  async function cancelLogin(): Promise<void> {
+    try {
+      const result = await window.projectsApi.cancelAiLogin()
+      if (!result.ok) throw new Error(result.error)
+    } catch (cause) {
+      setErrorScope('connection')
+      setError(cause instanceof Error ? cause.message : 'Impossibile interrompere l’accesso.')
+    } finally { setLoginPending(false); setDeviceLogin(null) }
   }
 
   async function logout(): Promise<void> {
     if (!window.confirm('Disconnettere Codex su questo computer? L’accesso è condiviso con le altre app Codex locali.')) return
-    setBusy(true); setError(null); setNotice(null)
+    start('logout')
     try {
       const result = await window.projectsApi.logoutAi()
       if (!result.ok) throw new Error(result.error)
       setLoginPending(false)
-      await refresh()
-      setNotice('Codex disconnesso su questo computer.')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Disconnessione non riuscita.') }
-    finally { setBusy(false) }
+    finally { finish() }
   }
 
   async function test(): Promise<void> {
-    setBusy(true); setError(null); setNotice(null)
+    if (testReason) return
+    start('test')
     try {
       const result = await window.projectsApi.testAiConnection()
       if (!result.ok) throw new Error(result.error)
-      setNotice('Prova riuscita: Codex ha completato una breve richiesta senza dati dei tuoi mazzi.')
+      setNotice(`Prova AI riuscita · ${selectedModel?.name ?? 'Automatico'} · ${draft.reasoningEffort ?? 'ragionamento predefinito'}.`)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Prova non riuscita.') }
-    finally { setBusy(false) }
+    finally { finish() }
   }
 
-  return <section className="ai-settings" aria-label="Impostazioni AI">
-    <span className="detail-kicker">Impostazioni</span>
-    <h1>AI per Pokéguru</h1>
-    <p className="content-note">Configura Codex per le analisi. Le preferenze valgono per le nuove generazioni; le guide già salvate conservano il modello con cui sono state create.</p>
-    {error && <div className="error-banner" role="alert">{error}</div>}
-    {notice && <div className="success-banner" role="status">{notice}</div>}
+  return <section className="ai-settings" aria-label="Impostazioni AI" data-nav-loading={loading || preferencesLoading}>
+    <h1>Impostazioni AI</h1>
+    <p className="content-note">Configura Codex per le prossime analisi.</p>
 
-    <div className="settings-panel">
-      <div className="panel-heading"><div><span className="eyebrow">Motore iniziale</span><h2>Codex</h2></div>
-        <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || busy}>Aggiorna stato</button></div>
-      <p className="connection-state">{loading ? 'Verifica in corso…' : connection?.account === 'chatgpt' ? `Connesso con ChatGPT${connection.plan ? ` · piano ${connection.plan}` : ''}` : connection?.account === 'apiKey' ? 'Connesso con chiave API Codex' : connection?.account === 'other' ? 'Modalità di accesso non supportata da questa versione' : connection ? 'Accesso richiesto' : 'Codex non disponibile'}</p>
-      <p className="content-note">L’accesso è gestito da Codex sul computer. Pokéguru non salva password, chiavi o token nel proprio archivio.</p>
-      <div className="settings-actions">
-        {!connection?.account && <button type="button" className="secondary-button" onClick={() => void login()} disabled={busy || loading}>Accedi con ChatGPT</button>}
-        {connection?.account && <button type="button" className="text-button" onClick={() => void logout()} disabled={busy}>Disconnetti Codex</button>}
+    <section className="settings-panel ai-connection-panel" aria-labelledby="ai-connection-title">
+      <div className="ai-connection-row">
+        <div className="ai-connection-summary">
+          <h2 id="ai-connection-title">Codex</h2>
+          <span className="connection-state" role="status" data-connected={connected}>{busy && loading ? 'Operazione Codex in corso…' : loading ? 'Verifica in corso…'
+            : connection?.account === 'chatgpt' ? `Connesso con ChatGPT${connection.plan ? ` · ${connection.plan}` : ''}`
+            : connection?.account === 'apiKey' ? 'Connesso con chiave API'
+            : connection?.account === 'other' ? 'Accesso non supportato'
+            : connection ? 'Accesso richiesto' : 'Codex non disponibile'}</span>
+        </div>
+        <div className="ai-connection-actions">
+          <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || busy}>{loading && !busy && <Spinner />}Aggiorna stato</button>
+          {connection && !connection.account && <button type="button" className="primary-button" onClick={() => void login('browser')} disabled={busy || loading || loginPending}>{action === 'login' ? 'Apertura accesso…' : 'Accedi con ChatGPT'}</button>}
+        </div>
       </div>
-    </div>
+      {connectionError && <p className="error-banner" role="alert">{connectionError}</p>}
+      {error && errorScope === 'connection' && <p className="error-banner" role="alert">{error}</p>}
+      {!connected && setup && !setup.cliAvailable && <div className="ai-setup-guide">
+        <h3>Codex non disponibile</h3>
+        <p className="warning-banner" role="status">La CLI ufficiale non si avvia. Verifica l’installazione di Pokéguru e riprova.</p>
+      </div>}
+      {setup?.cliAvailable && <p className="content-note">{setup.bundled ? 'Codex incluso in Pokéguru' : 'CLI Codex disponibile'}: {setup.version}</p>}
+      {connection && !connection.account && <button type="button" className="text-button" onClick={() => void login('device')} disabled={busy || loginPending}>Accedi con codice dispositivo</button>}
+      {loginPending && <div>
+        <ActivityStatus state="paused" title={deviceLogin ? 'Completa l’accesso con il codice' : 'Completa l’accesso nel browser'} detail="Lo stato si aggiorna automaticamente." />
+        {deviceLogin && <p className="content-note">Inserisci il codice <strong>{deviceLogin.userCode}</strong> nella pagina aperta nel browser: {deviceLogin.verificationUrl}. Il codice è temporaneo e non viene salvato.</p>}
+        <button type="button" className="text-button" onClick={() => void cancelLogin()}>Interrompi attesa</button>
+      </div>}
+      <details className="ai-account-details">
+        <summary>Account e accesso</summary>
+        <p className="content-note">L’accesso è condiviso con le altre app Codex su questo computer. Pokéguru non archivia password, chiavi o token.</p>
+        {connection?.account && <button type="button" className="text-button" onClick={() => void logout()} disabled={busy}>{action === 'logout' ? 'Disconnessione…' : 'Disconnetti Codex'}</button>}
+      </details>
+    </section>
 
-    <div className="settings-panel">
-      <div className="panel-heading"><div><span className="eyebrow">Preferenze globali</span><h2>Modello e ragionamento</h2></div></div>
+    <section className="settings-panel ai-preferences-panel" aria-labelledby="ai-preferences-title">
+      <h2 id="ai-preferences-title">Modello e ragionamento</h2>
+      <p className="content-note">Usati in Thread e Matchup, salvo scelte personalizzate.</p>
+      {preferencesError && <div className="error-banner" role="alert">{preferencesError}
+        <button type="button" className="secondary-button" disabled={busy || preferencesLoading} onClick={() => void readPreferences()}>Ricarica preferenze</button>
+      </div>}
       <div className="settings-grid">
         <div className="settings-field"><label htmlFor="ai-model">Modello</label>
-          <select id="ai-model" value={draft.model ?? ''} onChange={(event) => setDraft({ model: event.target.value || null, reasoningEffort: null })} disabled={busy}>
+          <select id="ai-model" value={draft.model ?? ''} onChange={(event) => edit({ model: event.target.value || null, reasoningEffort: null })} disabled={!ready}>
             <option value="">Automatico (predefinito Codex)</option>
-            {draft.model && !connection?.models.some((model) => model.id === draft.model) && <option value={draft.model}>{draft.model} · non disponibile</option>}
-            {connection?.models.map((model) => <option key={model.id} value={model.id}>{model.name}{model.isDefault ? ' · consigliato' : ''}</option>)}
+            {missingModel && <option value={draft.model!}>{draft.model} · disponibilità da verificare</option>}
+            {connection?.models.map((model) => <option key={model.id} value={model.id}>{model.name}{model.isDefault ? ' · predefinito Codex' : ''}</option>)}
           </select>
         </div>
         <div className="settings-field"><label htmlFor="ai-effort">Livello di ragionamento</label>
-          <select id="ai-effort" value={draft.reasoningEffort ?? ''} onChange={(event) => setDraft({ ...draft, reasoningEffort: event.target.value || null })} disabled={busy || !selectedModel}>
+          <select id="ai-effort" value={draft.reasoningEffort ?? ''} onChange={(event) => edit({ ...draft, reasoningEffort: event.target.value || null })} disabled={!ready || !selectedModel} aria-describedby={!draft.model ? 'ai-effort-help' : undefined}>
             <option value="">Predefinito del modello</option>
+            {missingEffort && <option value={draft.reasoningEffort!}>{draft.reasoningEffort} · disponibilità da verificare</option>}
             {selectedModel?.reasoningEfforts.map((effort) => <option key={effort.id} value={effort.id}>{effort.id}</option>)}
           </select>
+          {!draft.model && <span className="content-note" id="ai-effort-help">Scegli un modello per personalizzare il ragionamento.</span>}
         </div>
       </div>
-      <p className="content-note">Modelli e livelli sono proposti dal catalogo Codex; l’accesso effettivo a un modello si conferma con una generazione riuscita. «Automatico» segue il modello predefinito al momento della prossima analisi.</p>
-      <div className="settings-actions">
-        <button type="button" className="primary-button" onClick={() => void save()} disabled={!dirty || busy}>Salva preferenze</button>
-        <button type="button" className="secondary-button" onClick={() => void test()} disabled={busy || dirty || (connection?.account !== 'chatgpt' && connection?.account !== 'apiKey')}>Esegui prova AI</button>
+      {!loading && unavailableChoice && <p className="warning-banner" role="status">{!connection
+        ? 'Disponibilità della scelta salvata da verificare quando Codex sarà raggiungibile.'
+        : !connected ? 'Accedi a Codex per verificare la disponibilità della scelta salvata.'
+        : 'La scelta attuale non è tra quelle disponibili. Scegli un’altra opzione o Automatico.'}</p>}
+      <div className="ai-save-row">
+        <button type="button" className="primary-button" onClick={() => void save()} disabled={!ready || !dirty || unavailableChoice}>{action === 'save' && <Spinner />}{action === 'save' ? 'Salvataggio…' : 'Salva preferenze'}</button>
+        {dirty && <button type="button" className="text-button" onClick={() => edit(saved!)} disabled={!ready}>Annulla modifiche</button>}
+        <span className="content-note" role="status">{preferencesLoading ? 'Lettura preferenze…' : !saved ? 'Preferenze non disponibili' : dirty ? 'Modifiche non salvate' : notice === 'Preferenze salvate.' ? notice : 'Preferenze salvate'}</span>
       </div>
-      <p className="content-note">La prova invia una breve richiesta a Codex e può usare parte del tuo limite. Non include dati di progetto.</p>
-    </div>
+      {error && errorScope === 'preferences' && <div className="error-banner" role="alert">{error}</div>}
+      {action === 'test' && <ActivityStatus title="Codex sta eseguendo la prova…" startedAt={startedAt} detail="La richiesta usa la configurazione salvata." />}
+      <div className="ai-test-row">
+        <div>
+          <h3>Prova della configurazione</h3>
+          <p className="content-note">Usa i limiti Codex · nessun dato del progetto inviato.</p>
+          {testReason && <p className="content-note" id="ai-test-reason">{testReason}</p>}
+          {notice?.startsWith('Prova AI riuscita') && <p className="ai-feedback" role="status">{notice}</p>}
+        </div>
+        <button type="button" className="secondary-button" onClick={() => void test()} disabled={Boolean(testReason)} aria-describedby={testReason ? 'ai-test-reason' : undefined}>{action === 'test' && <Spinner />}{action === 'test' ? 'Prova in corso…' : 'Esegui prova AI'}</button>
+      </div>
+    </section>
 
-    <div className="settings-panel">
-      <div className="panel-heading"><div><span className="eyebrow">Trasparenza</span><h2>Dati inviati nelle analisi</h2></div></div>
-      <p className="content-note">Quando generi un Matchup, Pokéguru invia a Codex i nomi e le quantità delle carte interpretate, l’archetipo scelto, periodo e fonte del metagame Limitless e, se disponibile, una lista avversaria pubblica di esempio. Il dettaglio compare prima della generazione. L’AI non modifica automaticamente la lista del progetto.</p>
+    <div className="ai-settings-details">
+      <details>
+        <summary>Modelli e disponibilità</summary>
+        <p className="content-note">Automatico segue il modello predefinito di Codex. L’elenco dipende dall’account; una prova verifica che la configurazione funzioni.</p>
+        {selectedModel && <p className="content-note">Modello: {selectedModel.id}{selectedModel.defaultReasoningEffort ? ` · ragionamento predefinito: ${selectedModel.defaultReasoningEffort}` : ''}.</p>}
+        {selectedEffort?.description && <p className="content-note">{selectedEffort.description}</p>}
+      </details>
+      <details>
+        <summary>Dati inviati a Codex</summary>
+        <p className="content-note">Thread: messaggio, conversazione, lista di riferimento, vincoli e fonti. Matchup: lista, avversario e fonti; nelle revisioni anche guida e osservazioni.</p>
+        <p className="content-note">Il dettaglio dei dati è consultabile nelle rispettive sezioni, prima dell’invio.</p>
+      </details>
     </div>
   </section>
 }

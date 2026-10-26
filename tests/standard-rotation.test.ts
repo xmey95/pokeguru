@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { parseDeck, type DeckBaseline } from '../src/shared/deck-import'
-import { evaluateWesternRotation, westernRotationRule } from '../src/shared/standard-rotation'
+import { evaluateWesternRotation, westernRotationRule, westernRuleHorizon } from '../src/shared/standard-rotation'
+import { evaluateSetAdmission } from '../src/shared/standard-admission'
 
 function print(id: string, name: string, mark: string | null, identityId: string): CatalogPrint {
   const [setId, localId] = id.split('-')
@@ -43,11 +44,17 @@ describe('Rotazione Standard occidentale, solo marchio', () => {
     expect(deck.rawText).toBe('2 Iono PAL 185\n1 Iono PAL 254')
   })
 
-  it('lascia le stampe storiche fuori perimetro anche se una carta corrente ha lo stesso nome', () => {
+  it('riconosce una stampa Trainer storica già nota con identità e stampa corrente ammesse', () => {
     const result = evaluateWesternRotation(baseline('1 Rare Candy SVI 191\n1 Rare Candy MEG 125'), catalog, '2026-10-23')
-    expect(result.lines.map((line) => line.status)).toEqual(['mark-rotated', 'mark-accepted'])
-    expect(result.lines[0].message).toContain('stampe storiche non sono verificate')
+    expect(result.lines.map((line) => line.status)).toEqual(['mark-accepted', 'mark-accepted'])
+    expect(result.lines[0].message).toContain('me01-125')
     expect(result.legality).toBe('indeterminate')
+  })
+
+  it('copre il marchio I già rilasciato nel periodo 2025 secondo la clausola dei marchi futuri', () => {
+    const deck = baseline('1 Rare Candy MEG 125')
+    expect(evaluateWesternRotation(deck, catalog, '2025-10-10').lines[0].status).toBe('mark-accepted')
+    expect(evaluateSetAdmission(deck, catalog, '2025-10-10').lines[0].status).toBe('admitted')
   })
 
   it('non cambia l’esito storico in base a omonimi o altre stampe correnti', () => {
@@ -55,7 +62,10 @@ describe('Rotazione Standard occidentale, solo marchio', () => {
     expect(result.lines[0].status).toBe('mark-rotated')
     const withoutEquivalent = { ...catalog, prints: catalog.prints.filter((print) => print.id !== newCandy.id) }
     expect(evaluateWesternRotation(baseline('1 Rare Candy SVI 191'), withoutEquivalent, '2026-10-23')
-      .lines[0].message).toBe(result.lines[0].message)
+      .lines[0].status).toBe('mark-rotated')
+    const wrongText = { ...catalog, prints: catalog.prints.filter((print) => print.id !== newCandy.id) }
+    expect(evaluateWesternRotation(baseline('1 Rare Candy SVI 191'), wrongText, '2026-10-23')
+      .lines[0].status).toBe('mark-rotated')
   })
 
   it('lascia indeterminate stampa ignota, ALT, marchio mancante e futuro non documentato', () => {
@@ -70,5 +80,13 @@ describe('Rotazione Standard occidentale, solo marchio', () => {
     const result = evaluateWesternRotation(baseline('1 Iono\n1 Iono PAL 185'), catalog, '2026-10-23')
     expect(result.lines.map((line) => line.status)).toEqual(['indeterminate', 'mark-rotated'])
     expect(evaluateWesternRotation(baseline('1 Iono PAL 185'), null, '2026-10-23').counts.indeterminate).toBe(1)
+  })
+
+  it('espone la scadenza cautelativa senza inventare una rotazione 2027', () => {
+    expect(westernRuleHorizon('2026-10-01').status).toBe('covered')
+    expect(westernRuleHorizon('2026-10-02').status).toBe('expiring')
+    expect(westernRuleHorizon('2026-12-31')).toEqual({ status: 'expiring', until: '2026-12-31' })
+    expect(westernRuleHorizon('2027-01-01')).toEqual({ status: 'expired', until: '2026-12-31' })
+    expect(westernRotationRule('2027-01-01')).toBeNull()
   })
 })

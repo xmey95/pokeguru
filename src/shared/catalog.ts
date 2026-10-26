@@ -1,14 +1,20 @@
 export const CATALOG_SOURCE = 'TCGdex REST v2/en'
+export const CATALOG_GAMEPLAY_SCHEMA_VERSION = 1
 import type { WesternRulePackage } from './western-rule-package'
 export type CatalogSyncMode = 'new' | 'full'
 export interface CatalogSyncStatus {
+  /** Stable across pause/retry; changes when a new scan starts. */
+  runId?: string | null
+  daily?: import('./daily-sync').DailySyncState
   running: boolean
   mode: CatalogSyncMode | null
-  state: 'idle' | 'running' | 'paused' | 'done'
+  state: 'idle' | 'running' | 'rate-limited' | 'interrupted' | 'paused' | 'cancelled' | 'done'
   phase: string
   expected: number
   acquired: number
   error: string | null
+  cooldownUntil: string | null
+  rotationCleanup?: { ruleVersion: string; removedPrints: number; retainedReferences: number; completedAt: string }
 }
 export const CATALOG_SET_IDS = ['sv01', 'sv02', 'sv04.5', 'me01', 'me02.5'] as const
 export interface PromoStatus {
@@ -34,10 +40,25 @@ export const CATALOG_NAMES = [
 export interface CatalogSet {
   id: string
   name: string
+  /** Official short code from the detailed TCGdex set response. */
+  abbreviation?: string | null
   sourceTotal: number
   sampleTotal: number
   fetchedAt: string
   releaseDate?: string | null
+}
+
+export interface CardGameplay {
+  hp: number | null
+  types: string[]
+  evolveFrom: string | null
+  attacks: { name: string; cost: string[] | null; damage: string | null; effect: string | null }[]
+  abilities: { name: string; effect: string; type: string | null }[]
+  effect: string | null
+  trainerType: string | null
+  weaknesses: { type: string; value: string }[]
+  resistances: { type: string; value: string }[]
+  retreat: number | null
 }
 
 export interface CatalogPrint {
@@ -51,11 +72,16 @@ export interface CatalogPrint {
   energyType?: string | null
   rarity: string | null
   regulationMark?: string | null
+  /** Official code retained with a cited historical print after its set leaves the active Catalog. */
+  historicalSetCode?: string | null
   isPromo?: boolean
   promoStatus?: PromoStatus | null
   variants: Record<string, boolean> | null
   identityId: string | null
-  identityBasis: 'trainer-text' | 'unverified' | null
+  identityBasis: 'trainer-text' | 'pokemon-text' | 'energy-text' | 'unverified' | null
+  /** Absent on archives created before gameplay extraction was introduced. */
+  gameplaySchemaVersion?: number
+  gameplay?: CardGameplay | null
   imageBase: string | null
   thumbnail: string | null
   highImageAvailable: boolean | null
@@ -72,17 +98,55 @@ export interface CatalogView {
   source: typeof CATALOG_SOURCE
   sourceLanguage: 'en'
   scope: { setIds: readonly string[]; names: readonly string[]; kind?: 'sample' | 'standard-marks' }
-  standardCoverage?: { expected: number; acquired: number; missing: number; marks: readonly string[];
+  standardCoverage?: { expected: number; acquired: number; missing: number;
+    gameplayAcquired: number; gameplayMissing: number; marks: readonly string[];
     releaseSource: { url: string; version: number; checkedAt: string };
     officialSets: { expected: number; present: number; missing: number;
-      missingSets: { setId: string; product: string }[] };
+      missingSets: { setId: string; product: string }[];
+      unmappedProducts?: readonly { product: string; releaseDate: string; sourceUrl: string }[] };
     bySet: { setId: string; name: string; sourceTotal: number; releaseDate?: string | null;
       officialReleaseDate: string | null; expected: number;
-      acquired: number; missing: number; promo: boolean; promoVerified: number; promoUnchecked: number }[];
+      acquired: number; missing: number; gameplayAcquired: number; gameplayMissing: number;
+      promo: boolean; promoVerified: number; promoUnchecked: number }[];
     promos: { expected: number; acquired: number; missing: number; series: number;
       available: number; upcoming: number; unlisted: number; unchecked: number } }
   promoAudit?: PromoAudit
   syncedAt: string | null
   sets: CatalogSet[]
   prints: CatalogPrint[]
+  /** Stored older prints used only to verify an explicitly imported print. */
+  referencePrints?: CatalogPrint[]
+}
+
+export type CatalogBrowseGroup = {
+  key: string
+  name: string
+  category: string | null
+  basis: CatalogPrint['identityBasis']
+  printCount: number
+  canConstrain: boolean
+}
+
+export type CatalogBrowseOverview = Omit<CatalogView, 'prints' | 'referencePrints'> & {
+  stats: {
+    sampled: number
+    acquired: number
+    missing: number
+    missingPreview: { id: string; error: string | null }[]
+    groups: number
+    confirmedGroups: number
+    rarity: number
+    variants: number
+    thumbnails: number
+    highImages: number
+    imageSourceMissing: number
+    imageCacheMissing: number
+    limitlessThumbnails: number
+  }
+}
+
+export type CatalogBrowsePage = {
+  total: number
+  offset: number
+  groups: CatalogBrowseGroup[]
 }

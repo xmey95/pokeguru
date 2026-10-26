@@ -1,6 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../../shared/catalog'
+import { useEffect, useState } from 'react'
+import { useNavigation, useViewState, useBusyState, useBusyStartedAt, useDraftState } from './Navigation'
+import type { CatalogBrowseGroup, CatalogBrowseOverview, CatalogBrowsePage,
+  CatalogPrint, CatalogSyncMode, CatalogSyncStatus } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
+import { CatalogCardDetail } from './CatalogCardDetail'
+import { SearchEmpty } from './SearchEmpty'
+import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
+import { CatalogActivity } from './CatalogActivity'
+import { DailySyncNotice } from './DailySyncNotice'
+import { useCardPreview } from './CardPreview'
+import { westernRuleHorizon } from '../../shared/standard-rotation'
+import { localCalendarDate } from '../../shared/calendar-date'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -11,48 +21,81 @@ function legalDate(value: string): string {
     .format(new Date(`${value}T00:00:00Z`))
 }
 
-type Group = { key: string; name: string; category: string | null; basis: CatalogPrint['identityBasis']; prints: CatalogPrint[] }
-
-function groupPrints(prints: CatalogPrint[]): Group[] {
-  const groups = new Map<string, Group>()
-  for (const print of prints) {
-    const key = print.identityId ?? `pending-${print.id}`
-    const group = groups.get(key) ?? { key, name: print.name, category: print.category, basis: print.identityBasis, prints: [] }
-    group.prints.push(print)
-    groups.set(key, group)
-  }
-  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name) || a.key.localeCompare(b.key))
-}
-
-export function CatalogSection({ onConstrain, focusIdentityId }: {
-  onConstrain?: (identityId: string) => void
+export function CatalogSection({ canConstrain = false, focusIdentityId }: {
+  canConstrain?: boolean
   focusIdentityId?: string | null
 }) {
-  const [catalog, setCatalog] = useState<CatalogView | null>(null)
-  const [busy, setBusy] = useState(false)
+  const preview = useCardPreview()
+  const nav = useNavigation()
+  const [catalog, setCatalog] = useState<CatalogBrowseOverview | null>(null)
+  const [page, setPage] = useState<CatalogBrowsePage | null>(null)
+  const [pageLoading, setPageLoading] = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
+  const [detail, setDetail] = useState<{ group: CatalogBrowseGroup; prints: CatalogPrint[] } | null>(null)
+  const [detailKeyLoaded, setDetailKeyLoaded] = useState<string | null>(null)
+  const [revision, setRevision] = useState(0)
+  const [requesting, setRequesting] = useBusyState('catalog.sync')
+  const startedAt = useBusyStartedAt('catalog.sync')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [setFilter, setSetFilter] = useState('all')
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [error, setError] = useDraftState<string | null>('catalog.error', null)
+  const [query, setQuery] = useViewState('catalog.query', '')
+  const [setFilter, setSetFilter] = useViewState('catalog.set', 'all')
+  const [offset, setOffset] = useViewState('catalog.offset', 0)
+  const [selectedKey, setSelectedKey] = useViewState<string | null>('catalog.selected', null)
+  const [focusConsumed, setFocusConsumed] = useViewState('catalog.focusConsumed', false)
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null)
+  const [controlPending, setControlPending] = useState(false)
+  const busy = requesting || controlPending || !!syncStatus?.running
+  const recoverableJob = syncStatus?.state === 'paused' || syncStatus?.state === 'interrupted' ||
+    syncStatus?.state === 'rate-limited'
+  const [progressError, setProgressError] = useState<string | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
-  const [checkingRules, setCheckingRules] = useState(false)
+  const [checkingRules, setCheckingRules] = useBusyState('catalog.rules')
+  const [managementOpen, setManagementOpen] = useViewState('catalog.management', false)
+
+  async function refreshCatalog(): Promise<void> {
+    const result = await window.projectsApi.getCatalogBrowseOverview()
+    if (!result.ok) throw new Error(result.error)
+    setCatalog(result.value)
+    setRevision((value) => value + 1)
+  }
+
+  function closeManagement() {
+    setManagementOpen(false)
+    document.getElementById('catalog-management-trigger')?.focus()
+  }
+
+  function selectCoveredSet(id: string) {
+    setSetFilter(id)
+    setOffset(0)
+    setManagementOpen(false)
+    requestAnimationFrame(() => document.getElementById('catalog-set-filter')?.focus())
+  }
 
   useEffect(() => {
-    if (!focusIdentityId || !catalog) return
-    const print = catalog.prints.find((item) => item.identityId === focusIdentityId)
-    if (!print) return
-    setQuery(print.name)
-    setSetFilter('all')
-    setSelectedKey(focusIdentityId)
+    if (!focusIdentityId || !catalog || focusConsumed) return
+    let active = true
+    void window.projectsApi.getCatalogGroup(focusIdentityId).then((result) => {
+      if (!active) return
+      if (!result.ok || !result.value) {
+        setError('Questa carta non è più disponibile nel catalogo locale. Torna indietro o cerca un’altra carta.')
+        return
+      }
+      setQuery(result.value.group.name)
+      setSetFilter('all')
+      setOffset(0)
+      setSelectedKey(focusIdentityId)
+      setFocusConsumed(true)
+      nav.entry.label = `Catalogo · ${result.value.group.name}`
+    }).catch(() => { if (active) setError('Carta non disponibile nel catalogo locale.') })
+    return () => { active = false }
   }, [focusIdentityId, catalog?.syncedAt])
 
   useEffect(() => {
     let active = true
-    void window.projectsApi.getCatalog().then((result) => {
+    void window.projectsApi.getCatalogBrowseOverview().then((result) => {
       if (!active) return
-      if (result.ok) setCatalog(result.value)
+      if (result.ok) { setCatalog(result.value); setRevision((value) => value + 1) }
       else setError(result.error)
     }).catch(() => { if (active) setError('Catalogo locale non disponibile.') })
       .finally(() => { if (active) setLoading(false) })
@@ -60,12 +103,43 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
   }, [])
 
   useEffect(() => {
+    if (!catalog?.syncedAt) { setPage(null); return }
+    let active = true
+    setPageLoading(true)
+    setPage(null)
+    setSearchFailed(false)
+    const timer = window.setTimeout(() => {
+      void window.projectsApi.searchCatalog(query, setFilter, offset).then((result) => {
+        if (!active) return
+        if (result.ok) setPage(result.value)
+        else { setError(result.error); setSearchFailed(true) }
+      }).catch(() => { if (active) { setError('Ricerca catalogo non disponibile.'); setSearchFailed(true) } })
+        .finally(() => { if (active) setPageLoading(false) })
+    }, query ? 120 : 0)
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [catalog?.syncedAt, query, setFilter, offset, revision])
+
+  const selected = page?.groups.find((group) => group.key === selectedKey) ?? page?.groups[0]
+  useEffect(() => {
+    if (!selected) { setDetail(null); setDetailKeyLoaded(null); return }
+    let active = true
+    setDetail(null)
+    setDetailKeyLoaded(null)
+    void window.projectsApi.getCatalogGroup(selected.key).then((result) => {
+      if (active && result.ok) setDetail(result.value)
+      else if (active) setError('Dettaglio carta non disponibile.')
+    }).catch(() => { if (active) setError('Dettaglio carta non disponibile.') })
+      .finally(() => { if (active) setDetailKeyLoaded(selected.key) })
+    return () => { active = false }
+  }, [selected?.key, revision])
+
+  useEffect(() => {
     let active = true
     void window.projectsApi.getStandardRuleAudit().then((result) => {
       if (active && result.ok) setRuleAudit(result.value)
     }).catch(() => undefined)
     return () => { active = false }
-  }, [])
+  }, [checkingRules])
 
   async function checkRules(): Promise<void> {
     if (checkingRules) return
@@ -84,145 +158,160 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
     let lastProgress = ''
     let lastRefresh = 0
     async function poll(): Promise<void> {
-      const result = await window.projectsApi.getCatalogSyncStatus()
-      if (!active || !result.ok) return
-      setSyncStatus(result.value)
-      setBusy(result.value.running)
-      const progress = `${result.value.state}:${result.value.acquired}:${result.value.expected}`
-      if (progress !== lastProgress && (!result.value.running || Date.now() - lastRefresh > 5_000)) {
-        lastProgress = progress
-        lastRefresh = Date.now()
-        const current = await window.projectsApi.getCatalog()
-        if (active && current.ok) setCatalog(current.value)
-      }
+      try {
+        const result = await window.projectsApi.getCatalogSyncStatus()
+        if (!active) return
+        if (!result.ok) throw new Error(result.error)
+        setProgressError(null)
+        setSyncStatus(result.value)
+        const progress = `${result.value.state}:${result.value.acquired}:${result.value.expected}`
+        if (progress !== lastProgress && (!result.value.running || Date.now() - lastRefresh > 5_000)) {
+          lastProgress = progress
+          lastRefresh = Date.now()
+          const current = await window.projectsApi.getCatalogBrowseOverview()
+          if (active && current.ok) {
+            setCatalog(current.value)
+            setRevision((value) => value + 1)
+          }
+        }
+      } catch {
+        if (active) setProgressError('Avanzamento non disponibile. Nuovo controllo in corso…')
+      } finally { if (active) timer = window.setTimeout(() => void poll(), 1500) }
     }
+    let timer: number | undefined
     void poll()
-    const timer = window.setInterval(() => void poll(), 1500)
-    return () => { active = false; window.clearInterval(timer) }
-  }, [])
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [requesting])
 
   async function sync(): Promise<void> {
     if (busy) return
-    setBusy(true)
+    setRequesting(true)
     setError(null)
     try {
       const result = await window.projectsApi.syncCatalog()
       if (!result.ok) throw new Error(result.error)
-      setCatalog(result.value)
+      await refreshCatalog()
     } catch (cause) {
       setError(`${cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.'} I dati già acquisiti restano consultabili.`)
-    } finally { setBusy(false) }
+    } finally { setRequesting(false) }
   }
 
   async function syncStandard(mode: CatalogSyncMode): Promise<void> {
-    if (busy) return
-    setBusy(true)
+    if (busy || (recoverableJob && syncStatus?.mode !== mode)) return
+    setRequesting(true)
     setError(null)
     try {
       const result = await window.projectsApi.syncStandardCatalog(mode)
       if (!result.ok) throw new Error(result.error)
       setSyncStatus(result.value)
-      setBusy(result.value.running)
     } catch (cause) {
-      setBusy(false)
       setError(`${cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.'} I dettagli già acquisiti restano salvati.`)
-      const current = await window.projectsApi.getCatalog()
-      if (current.ok) setCatalog(current.value)
-    }
+      try { await refreshCatalog() } catch { /* Keep the last visible overview. */ }
+    } finally { setRequesting(false) }
   }
 
-  async function openSource(url: string): Promise<void> {
-    const result = await window.projectsApi.openCatalogSource(url)
-    if (!result.ok) setError(result.error)
+  async function controlStandard(action: 'pause' | 'cancel'): Promise<void> {
+    if (requesting || controlPending) return
+    setControlPending(true)
+    setError(null)
+    try {
+      const result = action === 'pause' ? await window.projectsApi.pauseCatalogSync()
+        : await window.projectsApi.cancelCatalogSync()
+      if (!result.ok) throw new Error(result.error)
+      setSyncStatus(result.value)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Controllo aggiornamento non riuscito.')
+    } finally { setControlPending(false) }
   }
 
-  const groups = useMemo(() => groupPrints(catalog?.prints ?? []), [catalog])
-  const filtered = groups.filter((group) => {
-    const text = query.trim().toLocaleLowerCase()
-    return (!text || group.name.toLocaleLowerCase().includes(text) || group.prints.some((print) =>
-      `${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase().includes(text))) &&
-      (setFilter === 'all' || group.prints.some((print) => print.setId === setFilter))
-  })
-  const visible = filtered.slice(0, 100)
-  const selected = visible.find((group) => group.key === selectedKey) ?? visible[0]
-  const selectedPrints = selected?.prints.filter((print) => setFilter === 'all' || print.setId === setFilter) ?? []
-  const sampled = catalog?.sets.reduce((sum, set) => sum + set.sampleTotal, 0) ?? 0
-  const sourceTotal = catalog?.sets.reduce((sum, set) => sum + set.sourceTotal, 0) ?? 0
-  const acquired = catalog?.prints.filter((print) => print.detailAt !== null) ?? []
-  const missing = catalog?.prints.filter((print) => print.detailAt === null) ?? []
-  const rarityCount = acquired.filter((print) => print.rarity !== null).length
-  const variantCount = acquired.filter((print) => print.variants !== null).length
-  const thumbnailCount = acquired.filter((print) => print.thumbnail !== null).length
-  const highCount = acquired.filter((print) => print.highImageAvailable === true).length
-  const confirmedGroups = groups.filter((group) => group.basis === 'trainer-text').length
+  const visible = page?.groups ?? []
+  const selectedPrints = detail && detail.group.key === selected?.key
+    ? detail.prints.filter((print) => setFilter === 'all' || print.setId === setFilter) : []
+  const sampled = catalog?.stats.sampled ?? 0
+  const acquired = catalog?.stats.acquired ?? 0
+  const missing = catalog?.stats.missing ?? 0
+  const rarityCount = catalog?.stats.rarity ?? 0
+  const variantCount = catalog?.stats.variants ?? 0
+  const thumbnailCount = catalog?.stats.thumbnails ?? 0
+  const highCount = catalog?.stats.highImages ?? 0
+  const confirmedGroups = catalog?.stats.confirmedGroups ?? 0
   const standard = catalog?.scope.kind === 'standard-marks'
 
-  return <section className="catalog-section" aria-label="Catalogo occidentale">
-    <div className="panel-heading">
-      <div><span className="eyebrow">Catalogo condiviso · Standard occidentale</span><h2>Carte e ristampe</h2></div>
-      <div className="catalog-actions">
-        {!standard && <button type="button" className="secondary-button" onClick={() => void sync()} disabled={busy}>
+  const coverage = catalog?.standardCoverage
+  const gaps = [
+    (standard ? coverage?.missing : missing) ? `${standard ? coverage!.missing : missing} ${(standard ? coverage!.missing : missing) === 1 ? 'dettaglio mancante' : 'dettagli mancanti'}` : null,
+    standard && coverage?.gameplayMissing ? `${coverage.gameplayMissing} ${coverage.gameplayMissing === 1 ? 'scheda di gioco mancante' : 'schede di gioco mancanti'}` : null,
+    standard && coverage?.officialSets.missing ? `${coverage.officialSets.missing} set ${coverage.officialSets.missing === 1 ? 'assente' : 'assenti'} dall’inventario` : null
+  ].filter(Boolean)
+  const currentRuleAudit = ruleAudit?.packageVersion === catalog?.rulePackage?.version ? ruleAudit : null
+  const ruleHorizon = catalog?.rulePackage ? westernRuleHorizon(localCalendarDate(), catalog.rulePackage) : null
+  const management = <section id="catalog-management" className="catalog-management" aria-labelledby="catalog-management-heading"
+    hidden={!managementOpen} onKeyDown={(event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeManagement() }
+    }}>
+    <div className="panel-heading"><h2 id="catalog-management-heading">Gestione catalogo</h2>
+      <button type="button" className="text-button" onClick={closeManagement}>Chiudi gestione</button></div>
+    <div className="catalog-maintenance-actions">
+      <div><button type="button" className="secondary-button" onClick={() => void syncStandard('full')} disabled={loading || busy || !syncStatus || !!progressError || (recoverableJob && syncStatus.mode !== 'full')}>
+          {recoverableJob && syncStatus?.mode === 'full' ? 'Riprendi scansione completa' : 'Scansione completa'}
+        </button>
+        <p className="content-note">Ricontrolla anche le schede già acquisite.</p></div>
+      {!standard && <div><button type="button" className="secondary-button" onClick={() => void sync()} disabled={loading || busy || recoverableJob || !syncStatus || !!progressError}>
           {busy ? 'Sincronizzazione…' : catalog?.syncedAt ? 'Aggiorna campione' : 'Sincronizza campione'}
-        </button>}
-        <button type="button" className="primary-button" onClick={() => void syncStandard('new')} disabled={busy}>
-          {busy ? 'Aggiornamento in corso…' : syncStatus?.state === 'paused' && syncStatus.mode === 'new' ? 'Riprendi aggiornamento' : 'Aggiorna nuove carte'}
         </button>
-        <button type="button" className="secondary-button" onClick={() => void syncStandard('full')} disabled={busy}>
-          {syncStatus?.state === 'paused' && syncStatus.mode === 'full' ? 'Riprendi scansione completa' : 'Scansione completa'}
-        </button>
-      </div>
+        <p className="content-note">Acquisisce un piccolo gruppo di carte.</p></div>}
     </div>
-    {standard ? <p className="content-note">Inventario TCGdex occidentale con marchi H e successivi, serie promo individuate dinamicamente ed Energie Base. I marchi successivi a J sono candidati di catalogo: richiedono regole di legalità aggiornate. I dati sono condivisi fra progetti.</p>
-      : <p className="content-note">Campione dichiarato: {catalog?.scope.setIds.join(', ') ?? 'sv01, sv02, sv04.5, me01, me02.5'}; Arven, Boss’s Orders, Iono, Mew ex, Nest Ball, Professor’s Research, Rare Candy, Ultra Ball, Mega Absol ex e Mega Audino ex. Fonte TCGdex in inglese (metadato tecnico), circuito occidentale. Il catalogo è identico in tutti i progetti.</p>}
-    <section className="rotation-panel" aria-label="Fonti delle regole Standard">
-      <strong>Regole Standard occidentali · pacchetto {catalog?.rulePackage?.version ?? 'in caricamento'}</strong>
-      {catalog?.rulePackageError && <p role="alert">{catalog.rulePackageError}</p>}
-      <p>{!ruleAudit ? 'Fonti online non ancora ricontrollate da questa installazione.'
-        : ruleAudit.status === 'matching' ? `Fonti coerenti con il pacchetto locale al ${date(ruleAudit.checkedAt)}.`
-          : ruleAudit.status === 'changed' ? `Fonte cambiata o non interpretabile al ${date(ruleAudit.checkedAt)}: revisione delle regole necessaria.`
-            : `Fonti non raggiungibili al ${date(ruleAudit.checkedAt)}; ultima verifica riuscita ${ruleAudit.verifiedAt ? date(ruleAudit.verifiedAt) : 'mai'}.`}</p>
-      <p>Rotazione e ammissione dei set usano le regole incluse in questa versione dell’app. Il controllo delle fonti segnala eventuali cambiamenti, ma le nuove regole arrivano solo con una nuova release dell’app. «Aggiorna nuove carte» aggiorna il Catalogo, non le regole Standard. Le promo si confrontano con il registro del Catalogo.</p>
-      {ruleAudit?.sources.map((source) => <p key={source.id}>{source.id === 'rotation-2026' ? 'Rotazione 2026' : 'Attesa dei prodotti'}: {source.status === 'matching' ? 'coerente' : source.status === 'changed' ? 'da rivedere' : 'non raggiungibile'} · {source.detail}{' '}
-        <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(source.id === 'rotation-2026' ? 'play-2026-01-09' : 'set-admission')}>Fonte ↗</button></p>)}
-      <button type="button" className="secondary-button" disabled={checkingRules} onClick={() => void checkRules()}>{checkingRules ? 'Controllo in corso…' : 'Controlla fonti Standard'}</button>
-    </section>
-    {catalog?.syncedAt && <p className="content-note">Ultimo aggiornamento: {date(catalog.syncedAt)}. Ricerca e miniature già scaricate funzionano offline. Le nuove acquisizioni richiedono rete.</p>}
-    {syncStatus && syncStatus.state !== 'idle' && <p className="content-note" role="status">{syncStatus.phase}: {syncStatus.acquired}/{syncStatus.expected || '?'} dettagli controllati. {syncStatus.running ? 'Puoi usare le altre sezioni mentre il lavoro prosegue.' : syncStatus.state === 'paused' ? 'Il lavoro riprenderà senza riscaricare i lotti completati.' : ''}</p>}
-    {syncStatus?.error && <p className="diagnostics" role="status">{syncStatus.error}</p>}
-    {error && <div className="error-banner" role="alert">{error}</div>}
-    {loading ? <p className="content-note">Apertura catalogo…</p> : !catalog?.syncedAt ? (
-      <div className="matchup-empty">Nessun dato acquisito. Premi <strong>Aggiorna nuove carte</strong> per avviare l'acquisizione oppure <strong>Sincronizza campione</strong> per la prova rapida.</div>
-    ) : <>
+    {syncStatus?.phase && syncStatus.state !== 'idle' && <p className="content-note">{syncStatus.phase}</p>}
+    <details className="rotation-panel" aria-label="Fonti delle regole Standard">
+      <summary>Regole Standard v{catalog?.rulePackage?.version ?? '—'} · {!currentRuleAudit ? 'fonti non ricontrollate' : currentRuleAudit.status === 'matching' ? 'fonti coerenti' : currentRuleAudit.status === 'changed' ? 'revisione necessaria' : 'fonti non raggiungibili'}</summary>
+      <p>{!currentRuleAudit ? 'Fonti online non ancora ricontrollate per questa versione delle regole.'
+        : currentRuleAudit.status === 'matching' ? `Fonti coerenti con il pacchetto locale al ${date(currentRuleAudit.checkedAt)}.`
+          : currentRuleAudit.status === 'changed' ? `Fonte cambiata o non interpretabile al ${date(currentRuleAudit.checkedAt)}: revisione delle regole necessaria.`
+            : `Fonti non raggiungibili al ${date(currentRuleAudit.checkedAt)}; ultima verifica riuscita ${currentRuleAudit.verifiedAt ? date(currentRuleAudit.verifiedAt) : 'mai'}.`}</p>
+      <p>Le regole e lo stato delle promo sono inclusi nella release dell’app; aggiornare le carte o controllare queste fonti non li cambia. Il controllo confronta le pagine note e non scopre nuovi annunci.</p>
+      {currentRuleAudit?.sources.map((source) => <p key={source.id}>{source.id === 'rotation-2026' ? 'Rotazione 2026' : source.id === 'promo-registry' ? 'Registro promo' : 'Attesa dei prodotti'}: {source.status === 'matching' ? 'coerente' : source.status === 'changed' ? 'da rivedere' : 'non raggiungibile'} · {source.detail}{' '}
+        <button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource(source.id === 'rotation-2026' ? 'play-2026-01-09' : source.id === 'promo-registry' ? 'promo' : 'set-admission')}>Fonte ↗</button></p>)}
+      <button type="button" className="secondary-button" disabled={checkingRules} onClick={() => void checkRules()}>{checkingRules && <Spinner />}{checkingRules ? 'Controllo in corso…' : 'Controlla fonti Standard'}</button>
+    </details>
+
+    {catalog?.syncedAt && <>
+      <h3 className="catalog-coverage-heading">Copertura del catalogo</h3>
+      <p className="content-note">{standard ? 'Inventario Standard TCGdex · marchi dal primo ammesso dalla rotazione verificata, promo ed Energie Base.' : 'Campione TCGdex condiviso fra i progetti.'}</p>
       <div className="catalog-metrics" aria-label={standard ? 'Copertura dell’inventario Standard' : 'Copertura del campione'}>
         {standard ? <>
-          <div><strong>{catalog.standardCoverage?.acquired ?? 0}/{catalog.standardCoverage?.expected ?? 0}</strong><span>Dettagli dell’inventario con marchio acquisiti</span></div>
-          <div><strong>{catalog.standardCoverage?.missing ?? 0}</strong><span>Dettagli ancora mancanti</span></div>
-          <div><strong>{catalog.standardCoverage?.promos.acquired ?? 0}/{catalog.standardCoverage?.promos.expected ?? 0}</strong><span>Promo con marchio, dettagli acquisiti</span></div>
-          <div><strong>{catalog.standardCoverage?.promos.series ?? 0}</strong><span>Serie promo riconosciute</span></div>
-          <div><strong>{catalog.scope.setIds.length}</strong><span>Set con stampe nell’inventario</span></div>
-          <div><strong>{catalog.standardCoverage?.officialSets.present ?? 0}/{catalog.standardCoverage?.officialSets.expected ?? 0}</strong><span>Set rilasciati nel calendario ufficiale presenti nel manifest</span></div>
-          <div><strong>{groups.length}</strong><span>Gruppi locali, equivalenza da verificare</span></div>
+          <div><strong>{catalog.standardCoverage?.acquired ?? 0}/{catalog.standardCoverage?.expected ?? 0}</strong><span>Stampe acquisite</span></div>
+          <div><strong>{catalog.standardCoverage?.missing ?? 0}</strong><span>Dettagli mancanti</span></div>
+          <div><strong>{catalog.standardCoverage?.gameplayAcquired ?? 0}/{catalog.standardCoverage?.expected ?? 0}</strong><span>Regole di gioco disponibili</span></div>
+          <div><strong>{catalog.standardCoverage?.promos.acquired ?? 0}/{catalog.standardCoverage?.promos.expected ?? 0}</strong><span>Promo acquisite</span></div>
         </> : <>
         <div><strong>{catalog.sets.length}/{catalog.scope.setIds.length}</strong><span>Set acquisiti</span></div>
-        <div><strong>{acquired.length}/{sampled}</strong><span>Stampe del campione con dettaglio</span></div>
-        <div><strong>{acquired.length}/{sourceTotal}</strong><span>Stampe dei set interi</span></div>
-        <div><strong>{groups.length}/?</strong><span>Gruppi locali; identità della fonte non misurabili</span></div>
-        <div><strong>{rarityCount}/{sampled}</strong><span>Rarità note</span></div>
-        <div><strong>{variantCount}/{sampled}</strong><span>Varianti note</span></div>
-        <div><strong>{thumbnailCount}/{sampled}</strong><span>Miniature verificate e salvate</span></div>
-        <div><strong>{highCount}/{sampled}</strong><span>Immagini grandi verificate online</span></div>
+        <div><strong>{acquired}/{sampled}</strong><span>Stampe del campione</span></div>
+        <div><strong>{catalog.stats.groups}</strong><span>Gruppi locali</span></div>
         </>}
       </div>
-      {standard && catalog.standardCoverage && <details className="catalog-set-coverage" open>
+
+      <h3 className="catalog-coverage-heading">Immagini delle stampe acquisite</h3>
+      <p className="content-note">Le miniature conservate sono disponibili offline. Se TCGdex non ha la scansione, l'aggiornamento cerca la stampa esatta in Limitless. Le immagini assenti da entrambe le fonti mantengono il segnaposto.</p>
+      <div className="catalog-metrics" aria-label="Copertura immagini">
+        <div><strong>{thumbnailCount}/{acquired}</strong><span>Miniature conservate</span></div>
+        <div><strong>{catalog.stats.limitlessThumbnails}</strong><span>Miniature da Limitless</span></div>
+        <div><strong>{catalog.stats.imageSourceMissing}</strong><span>URL immagine assente nelle fonti</span></div>
+        <div><strong>{catalog.stats.imageCacheMissing}</strong><span>Miniature da acquisire</span></div>
+      </div>
+
+      {standard && catalog.standardCoverage && <details className="catalog-set-coverage">
         <summary>Copertura per set · {catalog.standardCoverage.bySet.filter((set) => set.missing > 0).length} con dettagli mancanti</summary>
-        <p className="content-note">Audit dei set ufficiali: {catalog.standardCoverage.officialSets.present}/{catalog.standardCoverage.officialSets.expected} presenti nel manifest, {catalog.standardCoverage.officialSets.missing} mancanti. Il calendario è uno snapshot controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}; la presenza di un set non certifica tutte le sue stampe né la legalità.</p>
+        <p className="content-note">Espansioni presenti nel catalogo: {catalog.standardCoverage.officialSets.present}/{catalog.standardCoverage.officialSets.expected} previste dal calendario ufficiale verificato; {catalog.standardCoverage.officialSets.missing} mancanti. Calendario controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}.</p>
         {catalog.standardCoverage.officialSets.missing > 0 && <div className="diagnostics" role="status"><strong>Set ufficiali non presenti nel manifest</strong><ul>{catalog.standardCoverage.officialSets.missingSets.map((set) => <li key={set.setId}>{set.product} ({set.setId})</li>)}</ul></div>}
-        <p className="content-note">«Nel perimetro» conta le stampe presenti nel manifest TCGdex; «Totale set» include anche stampe fuori dal filtro. Date di uscita ufficiali: pacchetto v{catalog.standardCoverage.releaseSource.version}, controllato il {legalDate(catalog.standardCoverage.releaseSource.checkedAt)}.
-          {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti Pokémon ↗</button> Le date di uscita non sono date di ammissione ai tornei.</p>
+        {!!catalog.standardCoverage.officialSets.unmappedProducts?.length && <div className="content-note" role="status"><strong>Prodotti annunciati senza ID set verificato</strong><ul>
+          {catalog.standardCoverage.officialSets.unmappedProducts.map((item) => <li key={item.product}>{item.product} · uscita {legalDate(item.releaseDate)}. La data di ammissione e il mapping TCGdex restano da verificare.</li>)}
+        </ul></div>}
+        <p className="content-note">«Nel perimetro» indica il filtro TCGdex; «Totale set» include le altre stampe. La presenza di un set non prova la legalità.
+          {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('set-releases')}>Calendario prodotti Pokémon ↗</button></p>
         <div className="catalog-set-table-wrap"><table aria-label="Copertura Standard per set">
           <thead><tr><th>Set</th><th>Data set (TCGdex)</th><th>Uscita ufficiale</th><th>Nel perimetro</th><th>Acquisiti</th><th>Mancanti</th><th>Promo classificate</th><th>Totale set</th></tr></thead>
           <tbody>{catalog.standardCoverage.bySet.map((set) => <tr key={set.setId}>
-            <th scope="row"><button type="button" className="text-button" onClick={() => setSetFilter(set.setId)}>{set.name} ({set.setId})</button></th>
+            <th scope="row"><button type="button" className="text-button" onClick={() => selectCoveredSet(set.setId)}>{set.name} ({set.setId})</button></th>
             <td>{set.releaseDate ? legalDate(set.releaseDate) : '—'}</td>
             <td>{set.officialReleaseDate ? legalDate(set.officialReleaseDate)
               : set.promo || set.setId === 'sve' || set.setId === 'mee' ? '—' : 'Da verificare'}
@@ -234,41 +323,80 @@ export function CatalogSection({ onConstrain, focusIdentityId }: {
           </tr>)}</tbody>
         </table></div>
       </details>}
+      <details className="catalog-set-coverage"><summary>Metodo, promo e dati delle stampe</summary>
       {standard ? <>
-        <p className="content-note">Denominatore: stampe TCGdex con marchio H–Z (anche minuscolo) più Energie Base `sve`/`mee`, rilevate il {catalog.syncedAt ? date(catalog.syncedAt) : '—'}. Aggiorna nuove carte scarica soltanto i dettagli mancanti; Scansione completa ricontrolla tutti i dettagli. I dati validi restano conservati se una richiesta fallisce. Miniature non scaricate in massa.</p>
-        <p className="content-note">Promo: {catalog.standardCoverage?.promos.available ?? 0} disponibili nel pacchetto verificato · {catalog.standardCoverage?.promos.upcoming ?? 0} future · {catalog.standardCoverage?.promos.unlisted ?? 0} non elencate · {catalog.standardCoverage?.promos.unchecked ?? 0} non verificate. Pacchetto v{catalog.promoAudit?.packageVersion ?? '—'} incluso nell’app, {catalog.promoAudit?.complete ? 'con tutte le righe del registro osservato' : 'parziale'}, controllato il {catalog.promoAudit?.checkedAt ? date(catalog.promoAudit.checkedAt) : 'mai'}. Nuovi stati e date arrivano con una release dell’app.
+        <p className="content-note">Perimetro: stampe TCGdex con marchio dal primo ammesso dalla rotazione verificata fino a Z ed Energie Base `sve`/`mee`. «Aggiorna nuove carte» completa anche le schede già presenti ma prive delle regole di gioco e delle miniature disponibili; «Scansione completa» ricontrolla tutti i dettagli. Le immagini grandi sono solo segnalate online.</p>
+        <p className="content-note">Promo: {catalog.standardCoverage?.promos.available ?? 0} disponibili · {catalog.standardCoverage?.promos.upcoming ?? 0} future · {catalog.standardCoverage?.promos.unlisted ?? 0} non elencate · {catalog.standardCoverage?.promos.unchecked ?? 0} non verificate. Registro v{catalog.promoAudit?.packageVersion ?? '—'}, controllato il {catalog.promoAudit?.checkedAt ? date(catalog.promoAudit.checkedAt) : 'mai'}. Nuovi stati richiedono una release.
           {' '}<button type="button" className="text-button" onClick={() => void window.projectsApi.openStandardSource('promo')}>Registro promo ufficiale ↗</button>
         </p>
       </>
-        : <p className="content-note">Denominatori delle stampe: indice dei {catalog.sets.length} set TCGdex ({catalog.sets.map((set) => `${set.id}: ${set.sourceTotal}`).join('; ')}). {confirmedGroups} identità Trainer collegate per testo coincidente; le altre richiedono verifica. La copertura delle identità di gioco dell’intera fonte non è misurabile.</p>}
-      {missing.length > 0 && <div className="diagnostics" role="status"><strong>Dettagli mancanti ({missing.length})</strong><ul>{missing.slice(0, 12).map((print) => <li key={print.id}>{print.id}: {print.error ?? 'Non ancora acquisito'}</li>)}</ul>{missing.length > 12 && <p>Mostrati i primi 12; gli altri saranno ripresi al prossimo aggiornamento.</p>}</div>}
+        : <p className="content-note">Set TCGdex: {catalog.sets.map((set) => `${set.id}: ${set.sourceTotal}`).join('; ')}. Rarità {rarityCount}/{sampled}, varianti {variantCount}/{sampled}, miniature {thumbnailCount}/{sampled}, immagini grandi {highCount}/{sampled}. {confirmedGroups} gruppi collegati per regole di gioco; le altre equivalenze richiedono verifica.</p>}
+      </details>
+      {missing > 0 && <details className="diagnostics"><summary>Dettagli mancanti ({missing})</summary><ul>{catalog.stats.missingPreview.map((print) => <li key={print.id}>{print.id}: {print.error ?? 'Non ancora acquisito'}</li>)}</ul>{missing > 12 && <p>Mostrati i primi 12; gli altri saranno ripresi al prossimo aggiornamento.</p>}</details>}
+
+    </>}
+  </section>
+
+  return <section className="catalog-section" aria-label="Catalogo occidentale"
+    data-nav-loading={loading || (!!catalog?.syncedAt && ((!page && !searchFailed) || pageLoading ||
+      (!!selected && detailKeyLoaded !== selected.key)))}>
+    <div className="panel-heading">
+      <div><h1>Catalogo</h1><p className="content-note">{catalog?.syncedAt ? `Aggiornato ${date(catalog.syncedAt)}${standard ? '' : ' · campione di prova'}` : 'Carte condivise fra i progetti'}</p></div>
+      <div className="catalog-actions">
+        <button type="button" className="primary-button" onClick={() => void syncStandard('new')} disabled={loading || busy || !syncStatus || !!progressError || (recoverableJob && syncStatus.mode !== 'new')}>
+          {busy && <Spinner />}
+          {busy ? syncStatus?.state === 'rate-limited' ? 'In attesa TCGdex…'
+            : syncStatus?.mode === 'full' ? 'Scansione in corso…' : 'Aggiornamento in corso…'
+            : recoverableJob && syncStatus?.mode === 'new' ? 'Riprendi aggiornamento' : 'Aggiorna nuove carte'}
+        </button>
+        <button type="button" id="catalog-management-trigger" className="secondary-button"
+          aria-expanded={managementOpen} aria-controls="catalog-management" onClick={() => setManagementOpen(!managementOpen)}>Gestisci catalogo</button>
+      </div>
+    </div>
+    {catalog?.rulePackageError && <p className="diagnostics" role="alert">{catalog.rulePackageError}</p>}
+    {ruleHorizon?.status === 'expiring' && <p className="diagnostics" role="status">Il pacchetto Standard occidentale copre le date fino al {legalDate(ruleHorizon.until!)}. Questa è una scadenza cautelativa dell’app, non una data di rotazione annunciata: servirà una release con regole ricontrollate prima di allora.</p>}
+    {ruleHorizon?.status === 'expired' && <p className="diagnostics" role="alert">Le regole Standard occidentali incluse terminano il {legalDate(ruleHorizon.until!)}. Date successive e nuovi aggiornamenti richiedono una release con regole verificate; le liste salvate restano consultabili.</p>}
+    {currentRuleAudit?.status === 'changed' && <p className="diagnostics" role="alert">Fonti Standard cambiate · verifica le regole prima di fidarti dell’esito.</p>}
+    {currentRuleAudit?.status === 'unavailable' && <p className="catalog-gap-summary" role="status">Fonti Standard non raggiungibili · ultimo controllo riuscito {currentRuleAudit.verifiedAt ? date(currentRuleAudit.verifiedAt) : 'mai'}.</p>}
+    <DailySyncNotice state={syncStatus?.daily} active={syncStatus?.running} />
+    <CatalogActivity status={syncStatus} requesting={requesting} controlling={controlPending} startedAt={startedAt}
+      onResume={() => void syncStandard(syncStatus?.mode ?? 'new')}
+      onPause={() => void controlStandard('pause')} onCancel={() => void controlStandard('cancel')} />
+    {progressError && <p className="warning-banner" role="status">{progressError}</p>}
+    {checkingRules && <ActivityStatus title="Controllo delle fonti Standard…" />}
+    {syncStatus?.error && <p className="diagnostics" role="status">{syncStatus.error}</p>}
+    {syncStatus?.rotationCleanup && <p className="content-note" role="status">
+      Ultima pulizia Catalogo con {syncStatus.rotationCleanup.ruleVersion}: {syncStatus.rotationCleanup.removedPrints} stampe fuori rotazione rimosse dalla ricerca; {syncStatus.rotationCleanup.retainedReferences} schede storiche conservate solo per verificare import esatti.
+    </p>}
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    {catalog?.syncedAt && gaps.length > 0 && <p className="catalog-gap-summary" role="status">{gaps.join(' · ')}.</p>}
+    {management}
+    {loading ? <LoadingSkeleton label="Apertura catalogo…" /> : !catalog?.syncedAt ? (
+      <div className="matchup-empty">Catalogo vuoto. Usa <strong>Aggiorna nuove carte</strong> per iniziare.</div>
+    ) : <>
       <div className="catalog-filters">
-        <label>Ricerca carta, set, stampa o rarità<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Es. Iono o sv02-185" /></label>
-        <label>Espansione<select value={setFilter} onChange={(event) => setSetFilter(event.target.value)}><option value="all">Tutte</option>{catalog.sets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.id})</option>)}</select></label>
+        <label>Cerca carta o stampa<input id="catalog-query" value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0) }} placeholder="Es. Iono o sv02-185" /></label>
+        <label>Espansione<select id="catalog-set-filter" value={setFilter} onChange={(event) => { setSetFilter(event.target.value); setOffset(0) }}><option value="all">Tutte</option>{catalog.sets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.id})</option>)}</select></label>
       </div>
       <div className="catalog-layout">
+        {searchFailed ? <div className="error-banner" role="status">Ricerca non disponibile. <button type="button" className="text-button" onClick={() => setRevision((value) => value + 1)}>Riprova</button></div>
+          : !page || pageLoading ? <LoadingSkeleton label="Ricerca nel catalogo…" /> : page.total === 0 ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : <>
         <div className="catalog-list" aria-label="Risultati catalogo">
-          {filtered.length === 0 ? <p className="content-note">Nessuna carta locale corrisponde alla ricerca.</p> : <>{filtered.length > 100 && <p className="content-note">{filtered.length} risultati; mostrati i primi 100. Restringi la ricerca per trovare altre carte.</p>}{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => setSelectedKey(group.key)}>
-            <strong>{group.name}</strong><span>{group.prints.length} {group.prints.length === 1 ? 'stampa' : 'stampe'} · {group.basis === 'trainer-text' ? 'testo di gioco coincidente' : 'equivalenza da verificare'}</span>
-          </button>)}</>}
+          <p className="content-note">{page.total} risultati · {page.offset + 1}–{page.offset + visible.length}</p>{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`, { preservePosition: true })} aria-pressed={selected?.key === group.key}
+            {...preview({ name: group.name, identityId: group.key })}>
+            <strong>{group.name}</strong><span>{group.printCount} {group.printCount === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
+          </button>)}
+          {page.total > 100 && <div className="catalog-page-controls">
+            <button type="button" className="secondary-button" disabled={page.offset === 0} onClick={() => setOffset(Math.max(0, page.offset - 100))}>Precedenti</button>
+            <button type="button" className="secondary-button" disabled={page.offset + 100 >= page.total} onClick={() => setOffset(page.offset + 100)}>Successivi</button>
+          </div>}
         </div>
         <div className="catalog-detail">
-          {selected && <>
-            <h3>{selected.name}</h3>
-            {onConstrain && selected.prints.some((print) => print.detailAt && print.identityId) &&
-              <button type="button" className="secondary-button" onClick={() => onConstrain(selected.key)}>Aggiungi vincolo su questa carta</button>}
-            <p className="content-note">{selected.category ?? 'Categoria non disponibile'} · {selected.basis === 'trainer-text' ? 'Stampe collegate perché nome, tipo e testo di gioco coincidono. Legalità e possibili errata non ancora verificate.' : 'Equivalenza competitiva non verificata: questa stampa resta separata.'}</p>
-            <div className="catalog-print-grid">{selectedPrints.map((print) => <article key={print.id} className="catalog-print">
-              {print.thumbnail ? <img src={print.thumbnail} alt={`Carta ${print.name}, ${print.setName} ${print.localId}`} /> : <div className="catalog-no-image">Miniatura assente</div>}
-              <div><strong>{print.setName}</strong><span>{print.setId} · N. {print.localId}</span><span>Rarità: {print.rarity ?? 'non disponibile'}</span><span>Marchio: {print.regulationMark ?? 'non disponibile'}</span>
-                {print.isPromo && <span>Registro promo: {print.promoStatus?.state === 'available' ? 'disponibile alla data del controllo' :
-                  print.promoStatus?.state === 'upcoming' ? `futura · ${print.promoStatus.legalDate ? `dal ${legalDate(print.promoStatus.legalDate)}` : print.promoStatus.dateNote ?? 'data da verificare'}` :
-                    print.promoStatus?.state === 'unlisted' ? 'non elencata · da verificare' : 'non verificata'}
-                  {print.promoStatus && ` · controllo ${date(print.promoStatus.checkedAt)}`}</span>}
-                <span>Varianti: {print.variants ? Object.entries(print.variants).filter(([, yes]) => yes).map(([name]) => name).join(', ') || 'nessuna indicata' : 'non disponibili'}</span><span>Immagine grande: {print.highImageAvailable === null ? 'non verificabile' : print.highImageAvailable ? 'disponibile online' : 'non disponibile'}</span><span>Fonte aggiornata: {print.sourceUpdated ? date(print.sourceUpdated) : 'non indicata'}</span>{print.error && <span className="catalog-error">{print.error}</span>}<button type="button" className="text-button" onClick={() => void openSource(print.sourceUrl)}>Apri scheda fonte ↗</button></div>
-            </article>)}</div>
-          </>}
-        </div>
+          {selected && (selectedPrints.length ? <CatalogCardDetail key={selected.key} name={selected.name} basis={selected.basis} prints={selectedPrints}
+            constraintIdentityId={canConstrain && selected.canConstrain ? selected.key : undefined} />
+            : detailKeyLoaded === selected.key ? <p className="diagnostics" role="status">Dettaglio carta non disponibile.</p>
+              : <LoadingSkeleton label="Caricamento dettaglio carta…" />)}
+        </div></>}
       </div>
     </>}
   </section>

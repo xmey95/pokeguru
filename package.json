@@ -1,23 +1,28 @@
 {
   "name": "pokeguru",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "desktopName": "io.github.xmey95.pokeguru.desktop",
   "description": "Progetti locali per mazzi Pokémon TCG",
   "main": "./out/main/index.js",
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
+    "brand:generate": "node scripts/generate-brand.mjs",
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && electron-vite build",
     "package:linux": "npm run build && electron-builder --linux AppImage --x64 --publish never",
     "package:win": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "package:mac": "npm run build && node scripts/stage-mac-codex.mjs && electron-builder --mac --publish never",
     "package:dir": "npm run build && electron-builder --dir --publish never",
     "test": "vitest run",
     "test:e2e": "npm run build && node tests/electron-smoke.mjs",
     "test:e2e:offline": "npm run build && node tests/electron-smoke.mjs --offline",
+    "test:workspace-ui": "npm run build && node tests/workspace-ui-live.mjs",
+    "test:performance:growth": "npm run build && node tests/growth-performance-live.mjs",
     "test:reconciliation-live": "npm run build && node tests/reconciliation-live.mjs",
     "test:export-live": "npm run build && node tests/export-live.mjs",
     "test:threads-live": "npm run build && node tests/threads-live.mjs",
@@ -34,14 +39,19 @@
     "test:standard-catalog-live": "npm run build && node tests/standard-catalog-electron-live.mjs",
     "test:catalog-ui": "npm run build && node tests/catalog-ui-live.mjs",
     "test:tournament-ui-live": "npm run build && node tests/tournament-ui-live.mjs",
-    "test:tournament-ui:offline": "npm run build && node tests/tournament-ui-live.mjs --offline"
+    "test:tournament-ui:offline": "npm run build && node tests/tournament-ui-live.mjs --offline",
+    "test:main-tournament-ui-live": "npm run build && node tests/main-tournament-ui-live.mjs"
   },
   "dependencies": {
     "cheerio": "^1.1.2",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "rehype-sanitize": "6.0.0",
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
+    "@openai/codex": "0.164.0",
     "@types/node": "^24.0.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

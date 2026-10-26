@@ -1,27 +1,36 @@
-import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
-import { mkdirSync } from 'node:fs'
+import { app, BrowserWindow, clipboard, ipcMain, Menu, protocol, shell } from 'electron'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { execFile } from 'node:child_process'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { ProjectStore } from './project-store'
 import type { DeckBaseline, ImportDeckInput } from '../shared/deck-import'
-import type { AdoptDeckCandidateInput, CreateDeckThreadInput, DeckThread, DeckVersion, SaveDeckCandidateInput } from '../shared/deck-threads'
+import type { AdoptDeckCandidateInput, AnnotateDeckVersionInput, ContinueDeckThreadInput, CreateDeckThreadInput, DeckContextRef, DeckThread, DeckThreadMessageCursor, DeckThreadMessagePage, DeckThreadSummary, DeckVersion, RestoreDeckVersionInput, SaveDeckCandidateInput } from '../shared/deck-threads'
 import { reviewCandidate } from '../shared/candidate-review'
 import { auditStandardRuleSources } from './standard-rule-audit'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 import type { OperationResult, Project } from '../shared/projects'
-import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
-import type { AiConnection, AiPreferences, AiRunConfig } from '../shared/ai'
+import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../shared/meta-matchups'
+import type { AiConnection, AiLoginProgress, AiLoginStart, AiPreferences, AiRunConfig, CodexSetupStatus } from '../shared/ai'
+import type { AiEvidenceQueryTrace } from '../shared/ai-evidence'
 import { fetchMeta, fetchOpponentSample } from './limitless-meta'
 import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
-import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
-  deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from './deck-ai'
-import { CatalogStore, fetchCatalogSample, syncStandardCatalog } from './catalog'
-import type { CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
-import { matchupDeckContext, snapshotPrint, type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
-import { matchupTournamentEvidence } from '../shared/matchup-evidence'
+import { CodexSetup } from './codex-setup'
+import { deckThreadPrompt, DECK_THREAD_SCHEMA, readDeckThreadTurn } from './deck-ai'
+import { buildThreadEvidence } from './thread-evidence'
+import { createAiEvidenceEngine } from './ai-evidence-engine'
+import { makeAiPromptAudit, runAiEvidenceQueries,
+  threadEvidenceWithQueries } from './ai-evidence-queries'
+import { planEvidenceQueriesWithCodex } from './codex-evidence-plan'
+import type { ThreadEvidencePacket } from '../shared/thread-evidence'
+import { CatalogStore, enrichCatalogPrints, fetchCatalogSample, syncStandardCatalog } from './catalog'
+import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
+  CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
+import { buildDeckCards, matchupDeckContext, snapshotPrint,
+  type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
+import { multiMatchupEvidence } from '../shared/matchup-evidence'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
 import { prepareDeckExport, type DeckExportPreview, type DeckExportRequest } from '../shared/deck-export'
 import { WESTERN_ROTATION_RULES } from '../shared/standard-rotation'
@@ -30,46 +39,207 @@ import { OFFICIAL_SET_RELEASE_SOURCE } from './official-set-releases'
 import { SET_ADMISSION_OLDER_RULE_SOURCE, SET_ADMISSION_RULE_SOURCE } from '../shared/standard-admission'
 import { ACE_SPEC_SOURCE, DECK_CONSTRUCTION_SOURCE } from '../shared/deck-construction'
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../shared/western-rule-package'
+import { gameplaySummary } from '../shared/card-gameplay'
+import { effectiveCardGameplay } from '../shared/card-errata'
+import { OFFICIAL_SET_CODES } from '../shared/set-codes'
+import { evaluateStandardDeck } from '../shared/standard-deck'
+import { localCalendarDate } from '../shared/calendar-date'
+import { safeThreadLink } from '../shared/thread-links'
 import { TournamentStore } from './tournament-store'
+import { completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
+import { AiJobStore } from './ai-job-store'
+import type { AiJob } from './ai-job-store'
+import type { AiJobSummary } from '../shared/ai-job'
+import { recoverMatchupJob, recoverThreadJob } from './ai-job-recovery'
 import { fetchRecentWesternTournament } from './limitless-event'
-import type { TournamentSnapshot } from '../shared/tournament'
+import { syncTournamentBlock } from './tournament-sync'
+import { syncMainTournamentBlock } from './main-tournament-sync'
+import { TournamentSyncJob } from './tournament-sync-job'
+import { DailySyncStore } from './daily-sync'
+import type { DailySyncSource } from '../shared/daily-sync'
+import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../shared/tournament'
+import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
+import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
 
 app.setName('Pokeguru')
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'pokeguru', privileges: { standard: true, secure: true }
+}])
 
 let mainWindow: BrowserWindow | null = null
+let aiJobStore: AiJobStore | null = null
 let projectStore: ProjectStore | null = null
 let catalogStore: CatalogStore | null = null
 let tournamentStore: TournamentStore | null = null
+let dailySyncStore: DailySyncStore | null = null
+let playTournamentJob: TournamentSyncJob<TournamentSyncProgress> | null = null
+let mainTournamentJob: TournamentSyncJob<MainTournamentSyncProgress> | null = null
 let storageError: string | null = null
 let aiPreferencesStore: AiPreferencesStore | null = null
-const codexControl = new CodexControl()
+const codexControl = new CodexControl(() => app.getPath('userData'))
+const codexSetup = new CodexSetup(() => app.getPath('userData'))
 const generatingProjects = new Set<string>()
 const generatingDeckThreads = new Set<string>()
+const activeAiControllers = new Map<string, AbortController>()
+let recoveringAiJobs = false
+
+function aiArtifactDirectory(jobId: string): string {
+  if (!/^[a-f0-9-]{36}$/i.test(jobId)) throw new Error('Identificativo job AI non valido.')
+  return join(app.getPath('userData'), 'data', 'ai-jobs', jobId)
+}
+
+function clearAiArtifacts(jobId: string): void {
+  const directory = aiArtifactDirectory(jobId)
+  if (existsSync(directory)) rmSync(directory, { recursive: true, force: true })
+}
+
+function finishAiJob(job: AiJob, error: unknown): void {
+  if (!aiJobStore) return
+  const current = aiJobStore.get(job.id)
+  if (!current || current.status === 'applied') return
+  if (current.status === 'cancelled') {
+    clearAiArtifacts(job.id)
+    return
+  }
+  if (activeAiControllers.get(job.id)?.signal.aborted) {
+    aiJobStore.transition(job.id, 'cancelled')
+    clearAiArtifacts(job.id)
+  } else if (current.status === 'running' && existsSync(join(aiArtifactDirectory(job.id), 'result.json'))) {
+    // The completed CLI output is retained for recovery after a downstream failure.
+  } else if (current.status === 'ready') {
+    // A validated response is awaiting its project transaction; keep it recoverable.
+  } else {
+    aiJobStore.transition(job.id, 'failed', error instanceof Error ? error.message : 'Operazione AI non completata.')
+    clearAiArtifacts(job.id)
+  }
+}
+
+async function recoverAiJobs(): Promise<void> {
+  if (!aiJobStore || !projectStore || !catalogStore || recoveringAiJobs) return
+  recoveringAiJobs = true
+  try {
+    for (const job of aiJobStore.recoverable()) {
+      if (activeAiControllers.has(job.id)) continue
+      try {
+        const outcome = job.kind === 'thread-ask' || job.kind === 'thread-propose'
+          ? await recoverThreadJob(job, aiJobStore, projectStore, catalogStore,
+            codexControl, aiArtifactDirectory(job.id))
+          : recoverMatchupJob(job, aiJobStore, projectStore, aiArtifactDirectory(job.id))
+        if (outcome === 'applied' || outcome === 'interrupted') clearAiArtifacts(job.id)
+      } catch (error) {
+        aiJobStore.noteError(job.id, error instanceof Error ? error.message : 'Recupero Codex non riuscito.')
+      }
+    }
+  } finally { recoveringAiJobs = false }
+}
+function hasRecoverableThreadJob(): boolean {
+  return !!aiJobStore?.recoverable().some((job) =>
+    job.kind === 'thread-ask' || job.kind === 'thread-propose')
+}
 let catalogSyncing = false
 let catalogRetryTimer: ReturnType<typeof setTimeout> | null = null
+let catalogJobController: AbortController | null = null
+let catalogShuttingDown = false
+let startupSyncTimer: ReturnType<typeof setTimeout> | null = null
+const rendererFile = join(__dirname, '../renderer/index.html')
+const rendererUrl = 'pokeguru://bundle/index.html'
+const packagedCsp = [
+  "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' data: pokeguru://cards",
+  "font-src 'self'", "connect-src 'none'", "object-src 'none'", "base-uri 'none'",
+  "form-action 'none'", "frame-src 'none'"
+].join('; ')
+let trustedRendererUrl: string | null = null
 
-function runCatalogJob(mode: CatalogSyncMode): void {
+function developmentRendererUrl(): string | null {
+  if (app.isPackaged || !process.env.ELECTRON_RENDERER_URL) return null
+  try {
+    const url = new URL(process.env.ELECTRON_RENDERER_URL)
+    if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
+      url.username || url.password || url.search || url.hash) return null
+    return url.toString()
+  } catch { return null }
+}
+
+function isTrustedRendererUrl(value: string): boolean {
+  if (!trustedRendererUrl) return false
+  try {
+    return new URL(value).href === new URL(trustedRendererUrl).href
+  } catch { return false }
+}
+
+function catalogJobStatus(store: CatalogStore): CatalogSyncStatus {
+  const status = store.jobStatus()
+  return { ...status, daily: dailySyncStore?.read('catalog'), running: status.state === 'running' ? catalogSyncing
+    : status.state === 'rate-limited' ? catalogSyncing || catalogRetryTimer !== null : false }
+}
+
+function runCatalogJob(mode: CatalogSyncMode, background = false): void {
   const store = catalogStore
   if (!store || catalogSyncing) return
+  const status = store.jobStatus()
+  if (status.state === 'rate-limited' && status.cooldownUntil &&
+    Date.parse(status.cooldownUntil) > Date.now()) {
+    if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
+    catalogRetryTimer = setTimeout(() => {
+      catalogRetryTimer = null
+      runCatalogJob(mode, background)
+    }, Math.min(60 * 60_000, Date.parse(status.cooldownUntil) - Date.now()))
+    return
+  }
   catalogSyncing = true
-  void syncStandardCatalog(store, undefined, mode).then(() => {
-    catalogSyncing = false
-  }).catch((error: unknown) => {
-    catalogSyncing = false
-    const message = error instanceof Error ? error.message : 'Aggiornamento interrotto.'
-    if (/HTTP 429|HTTP 503|limitato temporaneamente/.test(message)) {
-      catalogRetryTimer = setTimeout(() => runCatalogJob(mode), 60_000)
+  const controller = new AbortController()
+  catalogJobController = controller
+  void syncStandardCatalog(store, undefined, mode, controller.signal).then(() => {
+    if (!catalogShuttingDown) dailySyncStore?.success('catalog')
+  }).catch((error) => {
+    if (!catalogShuttingDown && !controller.signal.aborted) {
+      const message = error instanceof Error ? error.message : 'Catalogo non aggiornato.'
+      dailySyncStore?.failed('catalog', message,
+        /HTTP 429|HTTP 503|limitato temporaneamente/i.test(message) ? store.jobStatus().cooldownUntil : null)
     }
+  }).finally(() => {
+    catalogSyncing = false
+    if (catalogJobController === controller) catalogJobController = null
+    if (!background && !catalogShuttingDown && catalogStore === store && store.jobStatus().state === 'rate-limited')
+      runCatalogJob(mode)
   })
 }
-async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig): Promise<MatchupDiscussion> {
+
+function startDailySync(): void {
+  startupSyncTimer = null
+  if (catalogShuttingDown || !dailySyncStore || !catalogStore || !playTournamentJob || !mainTournamentJob) return
+  const attempt = (source: DailySyncSource, allowed: boolean, start: () => void): void => {
+    if (!allowed || !dailySyncStore?.claim(source)) return
+    try { start() }
+    catch (error) { dailySyncStore?.failed(source, error instanceof Error ? error.message : 'Avvio non riuscito.') }
+  }
+  const catalog = catalogStore.jobStatus()
+  attempt('catalog', !catalogSyncing && !catalogRetryTimer &&
+    !(catalog.state === 'paused' && dailySyncStore.read('catalog').outcome === 'paused') &&
+    !(catalog.mode === 'full' && !['done', 'idle'].includes(catalog.state)),
+  () => runCatalogJob('new', true))
+  const play = tournamentStore?.progress()
+  attempt('play', !playTournamentJob.status().active &&
+    !(dailySyncStore.read('play').outcome === 'idle' && play &&
+      (play.status === 'running' || play.status === 'rate-limited')) &&
+    !(play?.mode === 'full' && play.status !== 'complete') && dailySyncStore.read('play').outcome !== 'paused',
+  () => { playTournamentJob!.start('new', true) })
+  const main = tournamentStore?.mainProgress()
+  attempt('main', !mainTournamentJob.status().active &&
+    !(dailySyncStore.read('main').outcome === 'idle' && main &&
+      (main.status === 'running' || main.status === 'rate-limited')) &&
+    !(main?.mode === 'full' && main.status !== 'complete') && dailySyncStore.read('main').outcome !== 'paused',
+  () => { mainTournamentJob!.start('new', true) })
+}
+async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig,
+  signal?: AbortSignal): Promise<MatchupDiscussion> {
   if (!projectStore) throw new Error(unavailableMessage())
   let current = discussion
   const lastToSummarize = current.turns.length - 5
   while (lastToSummarize > current.summarizedThrough) {
     const through = Math.min(current.summarizedThrough + 5, lastToSummarize)
     if (!current.turns[through]?.report) break
-    const summary = await summarizeMatchupContext(current, through, config)
+    const summary = await summarizeMatchupContext(current, through, config, signal)
     projectStore.saveMatchupContextSummary(current.id, summary, through)
     current = projectStore.getMatchupDiscussion(current.id)!
   }
@@ -94,6 +264,129 @@ async function runConfig(override?: unknown): Promise<AiRunConfig> {
 
 function unavailableMessage(): string {
   return storageError ?? 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
+}
+
+function currentMatchupDeckContext(projectId: string, baseline: DeckBaseline): string {
+  const catalog = catalogStore?.view() ?? null
+  const asOf = localCalendarDate()
+  const standard = evaluateStandardDeck(baseline, catalog, asOf,
+    projectStore?.getStandardRuleAudit() ?? null)
+  return matchupDeckContext(baseline, projectStore!.getReconciliation(projectId), catalog, standard)
+}
+
+function currentAiEventWindow(catalog: CatalogView, recentDays?: number):
+  { from: string; to: string } {
+  const to = localCalendarDate()
+  const rotation = catalog.rulePackage?.rotations.find((period) =>
+    period.effectiveFrom <= to && period.effectiveUntil >= to)
+  const recent = recentDays ? new Date(Date.parse(`${to}T00:00:00Z`) -
+    recentDays * 86_400_000).toISOString().slice(0, 10) : null
+  return { from: recent && rotation ? (recent > rotation.effectiveFrom ? recent
+    : rotation.effectiveFrom) : recent ?? rotation?.effectiveFrom ?? to, to }
+}
+
+async function matchupAiQueries(request: string, deckContext: string,
+  sample: { url: string | null; cards: string[]; mechanics?: unknown },
+  evidence: MatchupTournamentEvidence, config: AiRunConfig,
+  signal: AbortSignal, history?: string) {
+  if (!catalogStore) throw new Error('Catalogo non disponibile per le query AI.')
+  const catalog = catalogStore.view()
+  const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
+    tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog, 31))
+  return runAiEvidenceQueries(request, { deckContext, sample, evidence,
+    history: history?.slice(0, 8000) }, engine,
+    (prompt) => planEvidenceQueriesWithCodex(prompt, config, signal))
+}
+
+async function enrichMatchupDeck(projectId: string, baseline: DeckBaseline): Promise<void> {
+  if (!catalogStore || !projectStore || catalogSyncing) return
+  const reconciliation = projectStore.getReconciliation(projectId)
+  const cards = buildDeckCards(baseline, catalogStore.view(), reconciliation)
+  const ids = [...new Set([
+    ...cards.flatMap((card) => card.importedPrintIds),
+    ...reconciliation.mappings.map((mapping) => mapping.print.id)
+  ])]
+  try { await enrichCatalogPrints(catalogStore, ids) }
+  catch { /* A source outage is reported through the resulting missing card data. */ }
+}
+
+function currentMatchupEvidence(snapshot: MetaSnapshot, opponent: MetaDeck): MatchupTournamentEvidence {
+  return multiMatchupEvidence(snapshot, opponent, tournamentStore?.list() ?? [],
+    tournamentStore?.listMain() ?? [], catalogStore?.view() ?? null)
+}
+
+function matchupJobBase(jobId: string, projectId: string, deckHash: string,
+  snapshot: MetaSnapshot, opponent: MetaDeck,
+  sample: { url: string | null; cards: string[];
+    mechanics?: { name: string; text: string; sourceUrl: string }[] },
+  config: AiRunConfig, evidence: MatchupTournamentEvidence,
+  aiQueries?: AiEvidenceQueryTrace, deckVersion?: DeckContextRef | null):
+  Omit<MatchupReport, 'strengths' | 'weaknesses' | 'ourKeyCards' | 'theirKeyCards' |
+    'strategy' | 'limitations'> {
+  return { jobId, projectId, deckHash,
+    deckVersionId: deckVersion?.versionId ?? null, deckResolutionId: deckVersion?.resolutionId ?? null,
+    metaId: snapshot.id, opponentId: opponent.id,
+    generatedAt: new Date().toISOString(), sampleDeckUrl: sample.url,
+    sampleDeckCards: sample.cards, sampleDeckMechanics: sample.mechanics ?? [], ai: config,
+    metaSourceUrl: snapshot.sourceUrl, metaPeriod: snapshot.period,
+    metaFetchedAt: snapshot.fetchedAt, opponentSourceUrl: opponent.url,
+    tournamentEvidence: evidence, aiQueries }
+}
+
+async function enrichOpponentCards(snapshot: MetaSnapshot, opponent: MetaDeck): Promise<void> {
+  if (!catalogStore || catalogSyncing) return
+  const preview = currentMatchupEvidence(snapshot, opponent)
+  const catalog = catalogStore.view()
+  const prints = catalog.prints
+  const codes = new Map(catalog.sets.flatMap((set) =>
+    set.abbreviation ? [[set.id, set.abbreviation.toUpperCase()] as const] : []))
+  const names = new Set(preview.observedCards.map((card) => card.name.toLocaleLowerCase()))
+  const exactIds = preview.sampleLists.flatMap((sample) => sample.cards ?? []).flatMap((line) => {
+    const match = /^(?:\d+)\s+(.+)\s+([A-Z0-9.]+)\s+([A-Z0-9]+)$/i.exec(line)
+    if (!match || !names.has(match[1].toLocaleLowerCase())) return []
+    const matches = prints.filter((candidate) => candidate.name.toLocaleLowerCase() === match[1].toLocaleLowerCase() &&
+      (codes.get(candidate.setId) ?? OFFICIAL_SET_CODES[candidate.setId]) === match[2].toUpperCase() &&
+      candidate.localId.replace(/^0+/, '') === match[3].replace(/^0+/, ''))
+    return matches.length === 1 ? [matches[0].id] : []
+  })
+  const fallbackIds = preview.observedCards.filter((card) => !card.gameplay).flatMap((card) => {
+    const print = prints.find((candidate) => candidate.name.toLocaleLowerCase() === card.name.toLocaleLowerCase() &&
+      candidate.detailAt !== null && candidate.gameplaySchemaVersion !== 1)
+    return print ? [print.id] : []
+  })
+  try { await enrichCatalogPrints(catalogStore, [...new Set([...exactIds, ...fallbackIds])]) }
+  catch { /* The evidence packet keeps each remaining mechanics gap explicit. */ }
+}
+
+async function opponentSampleWithMechanics(sample: { url: string | null; cards: string[] },
+  evidence: MatchupTournamentEvidence): Promise<{
+  url: string | null; cards: string[]; mechanics: { name: string; text: string; sourceUrl: string }[]
+}> {
+  if (!catalogStore || catalogSyncing) return { ...sample, mechanics: [] }
+  const names = [...new Set(sample.cards.map((line) => line.replace(/^\d+\s+/, '').trim()).filter(Boolean))].slice(0, 60)
+  const initial = catalogStore.view().prints
+  const ids = names.flatMap((name) => {
+    const print = initial.find((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase() &&
+      item.detailAt !== null && !item.gameplay)
+    return print ? [print.id] : []
+  })
+  try { await enrichCatalogPrints(catalogStore, ids) }
+  catch { /* The prompt receives only the mechanics actually present after this attempt. */ }
+  const catalog = catalogStore.view()
+  const prints = catalog.prints
+  const mechanics = names.flatMap((name) => {
+    const observed = evidence.observedCards.find((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())
+    if (observed?.gameplay && observed.cardSourceUrl) return [{ name,
+      text: observed.gameplay, sourceUrl: observed.cardSourceUrl }]
+    const comparable = prints.filter((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase() && item.gameplay)
+    const summaries = new Set(comparable.map((item) => {
+      const effective = effectiveCardGameplay(item, localCalendarDate(), catalog.rulePackage)
+      return effective.effective ? gameplaySummary(effective.effective, item) : ''
+    }))
+    return summaries.size === 1 && comparable[0]
+      ? [{ name, text: [...summaries][0], sourceUrl: comparable[0].sourceUrl }] : []
+  })
+  return { ...sample, mechanics }
 }
 
 function withStore<T>(operation: () => T): OperationResult<T> {
@@ -124,7 +417,8 @@ function withStore<T>(operation: () => T): OperationResult<T> {
 
 function registerProjectHandlers(): void {
   const isMainFrame = (event: Electron.IpcMainInvokeEvent): boolean =>
-    mainWindow !== null && event.sender === mainWindow.webContents && event.senderFrame === mainWindow.webContents.mainFrame
+    mainWindow !== null && event.sender === mainWindow.webContents &&
+    event.senderFrame === mainWindow.webContents.mainFrame && isTrustedRendererUrl(event.senderFrame.url)
 
   ipcMain.handle('tournament:get', (event): OperationResult<TournamentSnapshot | null> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
@@ -140,6 +434,116 @@ function registerProjectHandlers(): void {
     catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Evento Limitless Play non disponibile.' }
     }
+  })
+
+  ipcMain.handle('tournament:list', (event): OperationResult<TournamentSummary[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: tournamentStore.summaries() } }
+    catch { return { ok: false, error: 'Archivio tornei non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:get-event', (event, eventId: unknown): OperationResult<TournamentSnapshot | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    if (typeof eventId !== 'string' || !/^[a-f0-9]{24}$/.test(eventId))
+      return { ok: false, error: 'ID evento non valido.' }
+    try { return { ok: true, value: tournamentStore.getEvent(eventId) } }
+    catch { return { ok: false, error: 'Evento salvato non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:sync-status', (event): OperationResult<TournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: { ...playTournamentJob.status(), daily: dailySyncStore?.read('play') } } }
+    catch { return { ok: false, error: 'Stato aggiornamento tornei non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:sync', (event, mode: unknown): OperationResult<TournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
+    if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità aggiornamento non valida.' }
+    try {
+      if (!playTournamentJob.status().active) dailySyncStore?.started('play')
+      return { ok: true, value: { ...playTournamentJob.start(mode), daily: dailySyncStore?.read('play') } }
+    }
+    catch (error) {
+      dailySyncStore?.failed('play', error instanceof Error ? error.message : 'Aggiornamento tornei non riuscito.')
+      return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento tornei non riuscito.' }
+    }
+  })
+
+  ipcMain.handle('tournament:sync-pause', (event): OperationResult<TournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!playTournamentJob) return { ok: false, error: unavailableMessage() }
+    if (!playTournamentJob.status().active) return { ok: false, error: 'Nessuna scansione da mettere in pausa.' }
+    try {
+      const value = playTournamentJob.pause()
+      dailySyncStore?.paused('play')
+      return { ok: true, value: { ...value, daily: dailySyncStore?.read('play') } }
+    }
+    catch { return { ok: false, error: 'Pausa tornei non riuscita.' } }
+  })
+
+  ipcMain.handle('tournament:main-list', (event): OperationResult<MainTournamentSummary[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: tournamentStore.mainSummaries() } }
+    catch { return { ok: false, error: 'Archivio Regional non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:main-get', (event, eventId: unknown): OperationResult<MainTournamentSnapshot | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!tournamentStore) return { ok: false, error: unavailableMessage() }
+    if (typeof eventId !== 'string' || !/^\d{1,10}$/.test(eventId)) return { ok: false, error: 'ID Regional non valido.' }
+    try { return { ok: true, value: tournamentStore.getMain(eventId) } }
+    catch { return { ok: false, error: 'Regional salvato non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:main-sync-status', (event): OperationResult<MainTournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: { ...mainTournamentJob.status(), daily: dailySyncStore?.read('main') } } }
+    catch { return { ok: false, error: 'Stato Regional non leggibile.' } }
+  })
+
+  ipcMain.handle('tournament:main-sync', (event, mode: unknown): OperationResult<MainTournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
+    if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità Regional non valida.' }
+    try {
+      if (!mainTournamentJob.status().active) dailySyncStore?.started('main')
+      return { ok: true, value: { ...mainTournamentJob.start(mode), daily: dailySyncStore?.read('main') } }
+    }
+    catch (error) {
+      dailySyncStore?.failed('main', error instanceof Error ? error.message : 'Aggiornamento Regional non riuscito.')
+      return { ok: false, error: error instanceof Error ? error.message : 'Aggiornamento Regional non riuscito.' }
+    }
+  })
+
+  ipcMain.handle('tournament:main-sync-pause', (event): OperationResult<MainTournamentSyncProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!mainTournamentJob) return { ok: false, error: unavailableMessage() }
+    if (!mainTournamentJob.status().active) return { ok: false, error: 'Nessuna scansione da mettere in pausa.' }
+    try {
+      const value = mainTournamentJob.pause()
+      dailySyncStore?.paused('main')
+      return { ok: true, value: { ...value, daily: dailySyncStore?.read('main') } }
+    }
+    catch { return { ok: false, error: 'Pausa Regional non riuscita.' } }
+  })
+
+  ipcMain.handle('tournament:open-main-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event) || typeof input !== 'string' || input.length > 300)
+      return { ok: false, error: 'URL Regional non valido.' }
+    try {
+      const url = new URL(input)
+      if (url.protocol !== 'https:' || url.hostname !== 'limitlesstcg.com' ||
+        !/^\/(tournaments|decks\/list)\/\d+$/.test(url.pathname))
+        return { ok: false, error: 'URL Regional non consentito.' }
+      await shell.openExternal(url.toString())
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Fonte Regional non apribile.' } }
   })
 
   ipcMain.handle('tournament:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
@@ -162,6 +566,73 @@ function registerProjectHandlers(): void {
     catch { return { ok: false, error: 'Catalogo locale non disponibile.' } }
   })
 
+  ipcMain.handle('catalog:browse-overview', (event): OperationResult<CatalogBrowseOverview> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: catalogStore.browseOverview() } }
+    catch { return { ok: false, error: 'Catalogo locale non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:search', (event, query: unknown, setId: unknown,
+    offset: unknown): OperationResult<CatalogBrowsePage> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (typeof query !== 'string' || query.length > 200 || query.includes('\0') ||
+      typeof setId !== 'string' || (setId !== 'all' && !/^[a-zA-Z0-9.]{1,20}$/.test(setId)) ||
+      !Number.isInteger(offset) || (offset as number) < 0 || (offset as number) > 1_000_000) {
+      return { ok: false, error: 'Ricerca catalogo non valida.' }
+    }
+    try { return { ok: true, value: catalogStore.browseSearch(query, setId, offset as number) } }
+    catch { return { ok: false, error: 'Ricerca catalogo non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:group', (event, key: unknown): OperationResult<{
+    group: CatalogBrowseGroup; prints: CatalogPrint[] } | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (typeof key !== 'string' || key.length > 150 || key.includes('\0'))
+      return { ok: false, error: 'Carta catalogo non valida.' }
+    try { return { ok: true, value: catalogStore.browseGroup(key) } }
+    catch { return { ok: false, error: 'Dettaglio carta non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:print', (event, id: unknown): OperationResult<CatalogPrint | null> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (typeof id !== 'string' || !/^[a-zA-Z0-9.-]{1,100}$/.test(id))
+      return { ok: false, error: 'Stampa non valida.' }
+    try { return { ok: true, value: catalogStore.getPrint(id) } }
+    catch { return { ok: false, error: 'Dettaglio stampa non disponibile.' } }
+  })
+
+  function validCardPreviewLookup(value: unknown): value is CardPreviewLookup {
+    const input = value as Partial<CardPreviewLookup> | null
+    return !!input && typeof input.name === 'string' && input.name.length >= 1 && input.name.length <= 150 &&
+      ![input.name, input.printId, input.identityId, input.setCode, input.cardNumber].some((part) =>
+        part != null && (typeof part !== 'string' || part.length > 150 || part.includes('\0'))) &&
+      (input.printId == null || /^[a-zA-Z0-9.-]{1,100}$/.test(input.printId)) &&
+      (input.setCode == null || /^[a-zA-Z0-9.]{1,20}$/.test(input.setCode)) &&
+      (input.cardNumber == null || /^[a-zA-Z0-9/.-]{1,20}$/.test(input.cardNumber))
+  }
+
+  ipcMain.handle('catalog:card-preview', (event, value: unknown): OperationResult<CardPreviewData> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (!validCardPreviewLookup(value))
+      return { ok: false, error: 'Carta non valida.' }
+    try { return { ok: true, value: catalogStore.cardPreview(value) } }
+    catch { return { ok: false, error: 'Anteprima non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:card-previews', (event, value: unknown): OperationResult<CardPreviewData[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (!Array.isArray(value) || value.length > 120 || !value.every(validCardPreviewLookup))
+      return { ok: false, error: 'Lista carte non valida.' }
+    try { return { ok: true, value: value.map((lookup) => catalogStore!.cardPreview(lookup)) } }
+    catch { return { ok: false, error: 'Immagini locali non disponibili.' } }
+  })
+
   ipcMain.handle('catalog:sync', async (event): Promise<OperationResult<CatalogView>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!catalogStore) return { ok: false, error: unavailableMessage() }
@@ -176,7 +647,7 @@ function registerProjectHandlers(): void {
   ipcMain.handle('catalog:sync-status', (event): OperationResult<CatalogSyncStatus> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!catalogStore) return { ok: false, error: unavailableMessage() }
-    return { ok: true, value: catalogStore.jobStatus() }
+    return { ok: true, value: catalogJobStatus(catalogStore) }
   })
 
   ipcMain.handle('catalog:sync-standard', (event, mode: unknown): OperationResult<CatalogSyncStatus> => {
@@ -184,9 +655,39 @@ function registerProjectHandlers(): void {
     if (!catalogStore) return { ok: false, error: unavailableMessage() }
     if (mode !== 'new' && mode !== 'full') return { ok: false, error: 'Modalità catalogo non valida.' }
     if (catalogSyncing) return { ok: false, error: 'Sincronizzazione già in corso.' }
+    const status = catalogStore.jobStatus()
+    if (['paused', 'interrupted', 'rate-limited'].includes(status.state) && status.mode !== mode)
+      return { ok: false, error: 'Completa o annulla l’aggiornamento recuperabile prima di cambiare modalità.' }
     if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
+    dailySyncStore?.started('catalog')
     runCatalogJob(mode)
-    return { ok: true, value: catalogStore.jobStatus() }
+    return { ok: true, value: catalogJobStatus(catalogStore) }
+  })
+
+  ipcMain.handle('catalog:pause', (event): OperationResult<CatalogSyncStatus> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    const status = catalogStore.jobStatus()
+    if (status.state !== 'running' && status.state !== 'rate-limited')
+      return { ok: false, error: 'Nessun aggiornamento da mettere in pausa.' }
+    if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
+    catalogStore.pauseJob(null, 'In pausa su richiesta')
+    dailySyncStore?.paused('catalog')
+    catalogJobController?.abort()
+    return { ok: true, value: catalogJobStatus(catalogStore) }
+  })
+
+  ipcMain.handle('catalog:cancel', (event): OperationResult<CatalogSyncStatus> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    const status = catalogStore.jobStatus()
+    if (!['running', 'rate-limited', 'paused', 'interrupted'].includes(status.state))
+      return { ok: false, error: 'Nessun aggiornamento da annullare.' }
+    if (catalogRetryTimer) { clearTimeout(catalogRetryTimer); catalogRetryTimer = null }
+    catalogStore.cancelJob()
+    dailySyncStore?.cancelled('catalog')
+    catalogJobController?.abort()
+    return { ok: true, value: catalogJobStatus(catalogStore) }
   })
 
   ipcMain.handle('catalog:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
@@ -246,6 +747,12 @@ function registerProjectHandlers(): void {
     catch (error) { return { ok: false, error: aiError(error) } }
   })
 
+  ipcMain.handle('ai:setup-status', async (event): Promise<OperationResult<CodexSetupStatus>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try { return { ok: true, value: await codexSetup.status() } }
+    catch (error) { return { ok: false, error: aiError(error) } }
+  })
+
   ipcMain.handle('ai:save-preferences', async (event, value: unknown): Promise<OperationResult<AiPreferences>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!aiPreferencesStore) return { ok: false, error: unavailableMessage() }
@@ -257,13 +764,30 @@ function registerProjectHandlers(): void {
     } catch (error) { return { ok: false, error: aiError(error) } }
   })
 
-  ipcMain.handle('ai:start-login', async (event): Promise<OperationResult<boolean>> => {
+  ipcMain.handle('ai:start-login', async (event, mode: unknown): Promise<OperationResult<AiLoginStart>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (mode !== 'browser' && mode !== 'device') return { ok: false, error: 'Modalità di accesso non valida.' }
     try {
-      const url = await codexControl.startLogin()
-      await shell.openExternal(url)
-      return { ok: true, value: true }
-    } catch (error) { return { ok: false, error: aiError(error) } }
+      const result = await codexControl.startLogin(mode)
+      await shell.openExternal(result.url)
+      if (result.mode === 'device') return { ok: true, value: { mode: 'device',
+        verificationUrl: result.verificationUrl, userCode: result.userCode } }
+      return { ok: true, value: { mode: 'browser' } }
+    } catch (error) {
+      await codexControl.cancelLogin().catch(() => undefined)
+      return { ok: false, error: aiError(error) }
+    }
+  })
+
+  ipcMain.handle('ai:login-progress', (event): OperationResult<AiLoginProgress> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return { ok: true, value: codexControl.loginProgress() }
+  })
+
+  ipcMain.handle('ai:cancel-login', async (event): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    try { await codexControl.cancelLogin(); return { ok: true, value: true } }
+    catch (error) { return { ok: false, error: aiError(error) } }
   })
 
   ipcMain.handle('ai:logout', async (event): Promise<OperationResult<boolean>> => {
@@ -283,6 +807,11 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.list())
   })
 
+  ipcMain.handle('projects:list-archived', (event): OperationResult<Project[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listArchived())
+  })
+
   ipcMain.handle('projects:get', (event, id: unknown): OperationResult<Project | null> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.get(id as string))
@@ -291,6 +820,37 @@ function registerProjectHandlers(): void {
   ipcMain.handle('projects:create', (event, input: unknown): OperationResult<Project> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.create(input as Parameters<ProjectStore['create']>[0]))
+  })
+
+  function projectHasActiveAiJob(id: string): boolean {
+    return Boolean(aiJobStore?.recoverable().some((job) => job.projectId === id)) ||
+      generatingProjects.has(id) || Boolean(projectStore?.listDeckThreadSummaries(id).some((thread) => generatingDeckThreads.has(thread.id)))
+  }
+
+  ipcMain.handle('projects:archive', (event, id: unknown): OperationResult<Project> => {
+    if (!isMainFrame(event) || typeof id !== 'string') return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore?.get(id)) return { ok: false, error: 'Progetto attivo non trovato.' }
+    if (projectHasActiveAiJob(id)) return { ok: false, error: 'Attendi o annulla il job AI prima di archiviare il progetto.' }
+    return withStore(() => projectStore!.archive(id))
+  })
+
+  ipcMain.handle('projects:restore', (event, id: unknown): OperationResult<Project> => {
+    if (!isMainFrame(event) || typeof id !== 'string') return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.restore(id))
+  })
+
+  ipcMain.handle('projects:delete-archived', (event, id: unknown, confirmationName: unknown): OperationResult<boolean> => {
+    if (!isMainFrame(event) || typeof id !== 'string' || typeof confirmationName !== 'string')
+      return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (generatingProjects.has(id) || Boolean(aiJobStore?.recoverable().some((job) => job.projectId === id)))
+      return { ok: false, error: 'Attendi o annulla il job AI prima di cancellare il progetto.' }
+    const result = withStore(() => projectStore!.deleteArchived(id, confirmationName))
+    if (!result.ok) return result
+    for (const jobId of result.value) {
+      try { clearAiArtifacts(jobId) }
+      catch (error) { console.warn('Pulizia dei file temporanei AI da completare:', jobId, error) }
+    }
+    return { ok: true, value: true }
   })
 
   ipcMain.handle('projects:get-baseline', (event, projectId: unknown): OperationResult<DeckBaseline | null> => {
@@ -308,96 +868,194 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.listDeckVersions(projectId as string))
   })
 
+  ipcMain.handle('deck:annotate-version', (event, input: unknown): OperationResult<DeckVersion> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.annotateDeckVersion(input as AnnotateDeckVersionInput))
+  })
+
+  ipcMain.handle('deck:restore-version', (event, input: unknown): OperationResult<DeckBaseline> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.restoreDeckVersion(input as RestoreDeckVersionInput))
+  })
+
   ipcMain.handle('deck:list-threads', (event, projectId: unknown): OperationResult<DeckThread[]> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.listDeckThreads(projectId as string))
   })
 
+  ipcMain.handle('deck:list-thread-summaries', (event, projectId: unknown): OperationResult<DeckThreadSummary[]> => {
+    if (!isMainFrame(event) || typeof projectId !== 'string') return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.listDeckThreadSummaries(projectId))
+  })
+
+  ipcMain.handle('deck:get-thread', (event, projectId: unknown, threadId: unknown): OperationResult<DeckThread | null> => {
+    if (!isMainFrame(event) || typeof projectId !== 'string' || typeof threadId !== 'string')
+      return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getDeckThread(projectId, threadId))
+  })
+
+  ipcMain.handle('deck:get-thread-window', (event, projectId: unknown, threadId: unknown): OperationResult<DeckThread | null> => {
+    if (!isMainFrame(event) || typeof projectId !== 'string' || typeof threadId !== 'string')
+      return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getDeckThreadWindow(projectId, threadId))
+  })
+
+  ipcMain.handle('deck:get-thread-before', (event, projectId: unknown, threadId: unknown,
+    cursor: unknown): OperationResult<DeckThreadMessagePage> => {
+    if (!isMainFrame(event) || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+      !cursor || typeof cursor !== 'object') return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => projectStore!.getDeckThreadMessagesBefore(projectId, threadId, cursor as DeckThreadMessageCursor))
+  })
+
+  function validAiResource(projectId: unknown, resourceId: unknown): projectId is string {
+    if (!projectStore || typeof projectId !== 'string' || typeof resourceId !== 'string' ||
+      !projectStore.get(projectId)) return false
+    return resourceId === `matchup:${projectId}` || projectStore.hasDeckThread(projectId, resourceId)
+  }
+
+  ipcMain.handle('ai:job-status', (event, projectId: unknown, resourceId: unknown) => {
+    if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
+      return { ok: false, error: 'Job AI non disponibile.' }
+    return { ok: true, value: aiJobStore.latest(projectId, resourceId as string) }
+  })
+
+  ipcMain.handle('ai:recent-jobs', (event): OperationResult<AiJobSummary[]> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!aiJobStore) return { ok: false, error: unavailableMessage() }
+    try { return { ok: true, value: aiJobStore.recent() } }
+    catch { return { ok: false, error: 'Stato dei job AI non leggibile.' } }
+  })
+
+  ipcMain.handle('ai:cancel-job', (event, projectId: unknown, resourceId: unknown) => {
+    if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
+      return { ok: false, error: 'Job AI non disponibile.' }
+    const job = aiJobStore.active(projectId, resourceId as string)
+    if (!job) return { ok: false, error: 'Nessun job AI da annullare.' }
+    aiJobStore.transition(job.id, 'cancelled')
+    const controller = activeAiControllers.get(job.id)
+    if (controller) {
+      controller.abort()
+      codexControl.cancelTurn(job.id)
+    } else {
+      clearAiArtifacts(job.id)
+    }
+    return { ok: true, value: true }
+  })
+
+  ipcMain.handle('ai:recover-jobs', async (event) => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    await recoverAiJobs()
+    return { ok: true, value: true }
+  })
+
   ipcMain.handle('deck:create-thread', (event, input: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    return withStore(() => projectStore!.createDeckThread(input as CreateDeckThreadInput))
+    return withStore(() => {
+      const saved = projectStore!.createDeckThread(input as CreateDeckThreadInput)
+      return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
+    })
+  })
+
+  ipcMain.handle('deck:continue-thread', (event, input: unknown): OperationResult<DeckThread> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    return withStore(() => {
+      const saved = projectStore!.continueDeckThread(input as ContinueDeckThreadInput)
+      return projectStore!.getDeckThreadWindow(saved.projectId, saved.id)!
+    })
   })
 
   ipcMain.handle('deck:add-thread-message', (event, projectId: unknown, threadId: unknown, message: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    return withStore(() => projectStore!.addDeckThreadMessage(projectId as string, threadId as string, message as string))
+    return withStore(() => projectStore!.addDeckThreadMessage(projectId as string,
+      threadId as string, message as string, true))
+  })
+
+  ipcMain.handle('deck:preview-evidence', (event, projectId: unknown, threadId: unknown,
+    question: unknown): OperationResult<ThreadEvidencePacket> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || !catalogStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+      typeof question !== 'string' || !question.trim() || question.length > 5000)
+      return { ok: false, error: 'Scrivi prima una domanda o una modifica da valutare.' }
+    return withStore(() => {
+      const thread = projectStore!.getDeckThread(projectId, threadId)
+      if (!thread) throw new Error('Thread non trovato in questo progetto.')
+      const base = thread.baseVersionId
+        ? projectStore!.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null : null
+      return buildThreadEvidence(thread, base, question.trim(), projectStore!.listConstraints(projectId),
+        catalogStore!.view(), tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
+    })
   })
 
   ipcMain.handle('deck:ask-thread', async (event, projectId: unknown, threadId: unknown,
-    message: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
+    message: unknown, override: unknown, existingUserMessageId: unknown): Promise<OperationResult<DeckThread>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
+    if (!projectStore || !catalogStore || !aiJobStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
       typeof message !== 'string' || !message.trim() || message.trim().length > 5000 || message.includes('\0'))
       return { ok: false, error: 'Scrivi una domanda da 1 a 5.000 caratteri.' }
     const project = projectStore.get(projectId)
     if (!project) return { ok: false, error: 'Progetto non trovato.' }
     if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le sessioni Codex sono disponibili solo per il circuito occidentale.' }
-    const thread = projectStore.listDeckThreads(projectId).find((item) => item.id === threadId)
+    const thread = projectStore.getDeckThread(projectId, threadId)
     if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
+    if (existingUserMessageId !== undefined && (typeof existingUserMessageId !== 'string' ||
+      thread.openingAiMessageId !== existingUserMessageId ||
+      !thread.messages.some((entry) => entry.id === existingUserMessageId &&
+        entry.author === 'user' && entry.text === message.trim()) ||
+      thread.messages.some((entry) => entry.author === 'assistant')))
+      return { ok: false, error: 'Primo messaggio Codex non recuperabile.' }
     if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questo thread.' }
+    let job: AiJob
+    try { job = aiJobStore.start('thread-ask', projectId, threadId) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo thread.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingDeckThreads.add(threadId)
     try {
       const config = await runConfig(override)
       const base = thread.baseVersionId
         ? projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null
         : null
-      const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
-      mkdirSync(cwd, { recursive: true })
-      const prompt = deckDiscussionPrompt(thread, base, message.trim())
-      const sessionId = thread.aiSessionRef ?? await codexControl.startThread(cwd, config)
-      if (thread.aiSessionRef) await codexControl.resumeThread(sessionId, cwd)
-      else projectStore.assignDeckAiSession(projectId, threadId, sessionId)
-      const result = await codexControl.jsonTurn(sessionId, cwd, prompt, config, DECK_DISCUSSION_SCHEMA)
-      const answer = readDeckDiscussionReply(result.value)
-      return { ok: true, value: projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
-        message.trim(), answer, result.turnId, config) }
-    } catch (error) {
-      return { ok: false, error: aiError(error) }
-    } finally {
-      generatingDeckThreads.delete(threadId)
-    }
-  })
-
-  ipcMain.handle('deck:propose-thread', async (event, projectId: unknown, threadId: unknown,
-    request: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
-    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore || !catalogStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
-      typeof request !== 'string' || !request.trim() || request.trim().length > 5000 || request.includes('\0'))
-      return { ok: false, error: 'Descrivi una modifica da valutare (massimo 5.000 caratteri).' }
-    const project = projectStore.get(projectId)
-    if (!project) return { ok: false, error: 'Progetto non trovato.' }
-    if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le proposte Codex sono disponibili solo per il circuito occidentale.' }
-    const thread = projectStore.listDeckThreads(projectId).find((item) => item.id === threadId)
-    if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
-    if (!thread.baseVersionId) return { ok: false, error: 'Importa una lista prima di chiedere una proposta completa.' }
-    if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Codex sta già lavorando su questo thread.' }
-    generatingDeckThreads.add(threadId)
-    try {
-      const base = projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId)
-      if (!base) throw new Error('Versione di partenza del thread non disponibile.')
-      const config = await runConfig(override)
-      const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
-      mkdirSync(cwd, { recursive: true })
       const catalog = catalogStore.view()
-      const constraints = projectStore.listConstraints(projectId)
-      const context = deckProposalPrompt(thread, base, request.trim(), constraints, catalog,
-        tournamentStore?.latest() ?? null)
-      const sessionId = thread.aiSessionRef ?? await codexControl.startThread(cwd, config)
-      if (thread.aiSessionRef) await codexControl.resumeThread(sessionId, cwd)
-      else projectStore.assignDeckAiSession(projectId, threadId, sessionId)
-      const result = await codexControl.jsonTurn(sessionId, cwd, context.prompt, config, DECK_PROPOSAL_SCHEMA)
-      const proposal = validateDeckProposal(result.value, projectId, catalog, constraints, context.sources)
-      const citedSources = proposal.sources.filter((source) => !source.id.startsWith('print:'))
-      const answer = proposal.rationale + (citedSources.length
-        ? `\n\nFonti: ${citedSources.map((source) => source.label).join('; ')}.` : '')
-      return { ok: true, value: projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
-        request.trim(), answer, result.turnId, config,
-        proposal.outcome === 'candidate' ? { rawText: proposal.rawText, note: proposal.rationale,
-          sources: proposal.sources, checks: proposal.checks } : undefined) }
+      const initialEvidence = buildThreadEvidence(thread, base, message.trim(),
+        projectStore.listConstraints(projectId), catalog,
+        tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
+      const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
+        tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog))
+      const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
+        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal))
+      const evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
+      const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
+      mkdirSync(cwd, { recursive: true })
+      const context = deckThreadPrompt(thread, base, message.trim(),
+        projectStore.listConstraints(projectId), catalog, evidence)
+      evidence.promptAudit = makeAiPromptAudit(context.prompt)
+      aiJobStore.prepare(job.id, { schemaVersion: 2, message: message.trim(), config, evidence,
+        sources: context.sources, existingUserMessageId })
+      const answerStarted = Date.now()
+      const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, context.prompt, config,
+        DECK_THREAD_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal, onSessionStarted: (id) => {
+            if (!thread.aiSessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
+          } })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      evidence.promptAudit = makeAiPromptAudit(context.prompt, Date.now() - answerStarted, result.usage)
+      aiJobStore.ready(job.id, result)
+      const sessionId = result.sessionId
+      if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
+      const turn = readDeckThreadTurn(result.value, projectId, base, catalog,
+        projectStore.listConstraints(projectId), evidence, context.sources)
+      const saved = projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
+        message.trim(), turn.answer, result.turnId, config, turn.proposal, evidence, turn.citedSourceIds,
+        typeof existingUserMessageId === 'string' ? existingUserMessageId : undefined)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
+      return { ok: true, value: projectStore.getDeckThreadWindow(saved.projectId, saved.id)! }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
     } finally {
       generatingDeckThreads.delete(threadId)
+      activeAiControllers.delete(job.id)
     }
   })
 
@@ -409,17 +1067,29 @@ function registerProjectHandlers(): void {
       const tcgdex = url.hostname === 'api.tcgdex.net' &&
         /^\/v2\/en(?:\/(?:cards|sets)\/[a-zA-Z0-9.-]+)?$/.test(url.pathname)
       const limitless = url.hostname === 'play.limitlesstcg.com' &&
-        /^\/tournament\/[a-f0-9]{24}$/.test(url.pathname)
-      if (url.protocol !== 'https:' || (!tcgdex && !limitless) || url.search || url.hash)
+        /^\/tournament\/[a-f0-9]{24}(?:\/player\/[a-zA-Z0-9_-]+\/decklist)?$/.test(url.pathname)
+      const mainTournament = url.hostname === 'limitlesstcg.com' &&
+        /^\/(?:tournaments|decks\/list)\/\d+$/.test(url.pathname)
+      if (url.protocol !== 'https:' || (!tcgdex && !limitless && !mainTournament) || url.search || url.hash)
         return { ok: false, error: 'URL fonte non valido.' }
       await shell.openExternal(url.toString())
       return { ok: true, value: true }
     } catch { return { ok: false, error: 'Impossibile aprire la fonte.' } }
   })
 
+  ipcMain.handle('thread:open-link', async (event, input: unknown): Promise<OperationResult<boolean>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    const url = safeThreadLink(input)
+    if (!url) return { ok: false, error: 'Link non valido: è consentito solo HTTPS.' }
+    try {
+      await shell.openExternal(url)
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Impossibile aprire il link.' } }
+  })
+
   ipcMain.handle('deck:save-candidate', (event, input: unknown): OperationResult<DeckThread> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    return withStore(() => projectStore!.saveDeckCandidate(input as SaveDeckCandidateInput))
+    return withStore(() => projectStore!.saveDeckCandidate(input as SaveDeckCandidateInput, true))
   })
 
   ipcMain.handle('deck:adopt-candidate', (event, input: unknown): OperationResult<DeckBaseline> => {
@@ -427,10 +1097,10 @@ function registerProjectHandlers(): void {
     return withStore(() => {
       if (!catalogStore || !input || typeof input !== 'object') throw new Error('Catalogo o richiesta non disponibile.')
       const request = input as AdoptDeckCandidateInput
-      const thread = projectStore!.listDeckThreads(request.projectId).find((item) => item.id === request.threadId)
+      const thread = projectStore!.getDeckThread(request.projectId, request.threadId)
       const candidate = thread?.candidates.find((item) => item.id === request.candidateId)
       if (!thread || !candidate) throw new Error('Candidata non trovata in questo progetto.')
-      const today = new Date().toLocaleDateString('sv-SE')
+      const today = localCalendarDate()
       const review = reviewCandidate(request.projectId, candidate, catalogStore.view(),
         projectStore!.listConstraints(request.projectId), today, projectStore!.getStandardRuleAudit())
       if (review.blockers.length) throw new Error(`Adozione bloccata: ${review.blockers.join(' ')}`)
@@ -446,16 +1116,17 @@ function registerProjectHandlers(): void {
     const baseline = projectStore.getBaseline(request.projectId)
     if (!project || !baseline) throw new Error('Lista corrente non disponibile.')
     if (baseline.importedAt !== request.importedAt) throw new Error('La lista è cambiata. Riapri il progetto prima di esportare.')
-    return prepareDeckExport(baseline)
+    return prepareDeckExport(baseline, catalogStore?.setAbbreviations() ?? {})
   }
 
-  ipcMain.handle('deck:copy-export', (event, input: unknown): OperationResult<boolean> => {
+  ipcMain.handle('deck:copy-export', (event, input: unknown): OperationResult<string[]> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     try {
       const preview = exportFor(input)
-      if (!preview.canExport) throw new Error('Correggi le righe non interpretate prima di esportare.')
+      if (!preview.canExport) throw new Error(preview.notes.find((note) => note.startsWith('Codici TCGdex'))
+        ?? 'Correggi le righe non interpretate prima di esportare.')
       clipboard.writeText(preview.text)
-      return { ok: true, value: true }
+      return { ok: true, value: preview.notes }
     } catch (error) { return { ok: false, error: aiError(error) } }
   })
 
@@ -530,6 +1201,18 @@ function registerProjectHandlers(): void {
     }
   })
 
+  ipcMain.handle('matchups:evidence-preview', (event, metaId: unknown,
+    opponentId: unknown): OperationResult<MatchupTournamentEvidence> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!projectStore || !tournamentStore) return { ok: false, error: unavailableMessage() }
+    const meta = projectStore.getLatestMetaSnapshot()
+    const opponent = meta?.decks.find((item) => item.id === opponentId)
+    if (typeof metaId !== 'string' || meta?.id !== metaId || !opponent)
+      return { ok: false, error: 'Snapshot Meta non disponibile.' }
+    try { return { ok: true, value: currentMatchupEvidence(meta, opponent) } }
+    catch { return { ok: false, error: 'Evidenze torneo non leggibili.' } }
+  })
+
   ipcMain.handle('matchups:list-reports', (event, projectId: unknown, metaId: unknown): OperationResult<MatchupReport[]> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.listMatchupReports(projectId as string, metaId as string))
@@ -547,7 +1230,7 @@ function registerProjectHandlers(): void {
 
   ipcMain.handle('matchups:generate', async (event, projectId: unknown, metaId: unknown, opponentId: unknown, override: unknown): Promise<OperationResult<MatchupReport>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore) return { ok: false, error: unavailableMessage() }
+    if (!projectStore || !aiJobStore) return { ok: false, error: unavailableMessage() }
     if (typeof projectId !== 'string' || typeof metaId !== 'string' || typeof opponentId !== 'string' ||
       !/^\d+$/.test(opponentId) || generatingProjects.has(projectId)) {
       return { ok: false, error: 'Analisi già in corso o richiesta non valida.' }
@@ -560,28 +1243,58 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Importa una lista e aggiorna il metagame prima di generare l’analisi.' }
     }
     const hash = projectStore.getCurrentDeckHash(projectId)!
+    const deckVersion = projectStore.getCurrentDeckContext(projectId)
+    let job: AiJob
+    try { job = aiJobStore.start('matchup-generate', projectId, `matchup:${projectId}`) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingProjects.add(projectId)
     try {
       const config = await runConfig(override)
-      const sample = await fetchOpponentSample(opponent)
-      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(projectId), catalogStore?.view())
-      const evidence = matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null,
-        catalogStore?.view() ?? null)
-      const report = await generateMatchup(projectId, hash, deckContext, snapshot, opponent, sample, config, evidence)
+      const sampleDeck = await fetchOpponentSample(opponent)
+      await enrichMatchupDeck(projectId, baseline)
+      await enrichOpponentCards(snapshot, opponent)
+      const evidence = currentMatchupEvidence(snapshot, opponent)
+      const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
+      const deckContext = currentMatchupDeckContext(projectId, baseline)
+      const aiQueries = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
+        deckContext, sample, evidence, config, controller.signal)
+      const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config,
+        evidence, aiQueries, deckVersion)
+      const generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
+        sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal, aiQueries,
+          onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            { analysisVersion: 2, base: { ...base, promptAudit: audit } }) })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
+        deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
+      aiJobStore.ready(job.id, { report })
       projectStore.saveMatchupReport(report)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
       return { ok: true, value: report }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: error instanceof Error ? error.message : 'Analisi non completata.' }
     } finally {
       generatingProjects.delete(projectId)
+      activeAiControllers.delete(job.id)
     }
   })
 
   async function runRevision(discussionId: unknown, turnId: unknown, feedback: unknown,
     override: unknown): Promise<OperationResult<MatchupDiscussion>> {
-    if (!projectStore || typeof discussionId !== 'string') return { ok: false, error: 'Discussione Matchup non valida.' }
+    if (!projectStore || !aiJobStore || typeof discussionId !== 'string') return { ok: false, error: 'Discussione Matchup non valida.' }
     const discussion = projectStore.getMatchupDiscussion(discussionId)
     if (!discussion || generatingProjects.has(discussion.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
+    let job: AiJob
+    try { job = aiJobStore.start('matchup-revise', discussion.projectId,
+      `matchup:${discussion.projectId}`) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingProjects.add(discussion.projectId)
     try {
       const pending = turnId === null
@@ -596,20 +1309,49 @@ function registerProjectHandlers(): void {
       const snapshot = projectStore.getLatestMetaSnapshot()
       const opponent = snapshot?.decks.find((deck) => deck.id === discussion.opponentId)
       if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot ||
-        snapshot.id !== discussion.metaId || projectStore.getCurrentDeckHash(discussion.projectId) !== discussion.deckHash || !opponent)
+        snapshot.id !== discussion.metaId || projectStore.getCurrentDeckHash(discussion.projectId) !== discussion.deckHash ||
+        (discussion.deckVersionId && (discussion.deckVersionId !== projectStore.getCurrentDeckContext(discussion.projectId)?.versionId ||
+          discussion.deckResolutionId !== projectStore.getCurrentDeckContext(discussion.projectId)?.resolutionId)) || !opponent)
         throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
       const config = await runConfig(override)
-      const context = await prepareMatchupHistory(pending, config)
-      const sample = await fetchOpponentSample(opponent)
-      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(discussion.projectId), catalogStore?.view())
-      const evidence = [...context.turns].reverse().find((turn) => turn.report)?.report?.tournamentEvidence ??
-        matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null, catalogStore?.view() ?? null)
-      const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot, opponent, sample, config, evidence)
-      return { ok: true, value: projectStore.completeMatchupFeedback(discussion.id, target.id, revised.report, revised.changeSummary) }
+      const context = await prepareMatchupHistory(pending, config, controller.signal)
+      const previousReport = [...context.turns].reverse().find((turn) => turn.report)?.report
+      const sample = previousReport?.sampleDeckCards
+        ? { url: previousReport.sampleDeckUrl, cards: previousReport.sampleDeckCards,
+          mechanics: previousReport.sampleDeckMechanics ?? [] }
+        : await opponentSampleWithMechanics(await fetchOpponentSample(opponent),
+          currentMatchupEvidence(snapshot, opponent))
+      await enrichMatchupDeck(discussion.projectId, baseline)
+      const deckContext = currentMatchupDeckContext(discussion.projectId, baseline)
+      const evidence = previousReport?.tournamentEvidence ??
+        currentMatchupEvidence(snapshot, opponent)
+      const aiQueries = await matchupAiQueries(target.feedback, deckContext,
+        sample, evidence, config, controller.signal, matchupHistoryContext(context))
+      const base = matchupJobBase(job.id, discussion.projectId, discussion.deckHash,
+        snapshot, opponent, sample, config, evidence, aiQueries,
+        discussion.deckVersionId ? { versionId: discussion.deckVersionId,
+          resolutionId: discussion.deckResolutionId ?? null } : null)
+      const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot,
+        opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal, aiQueries,
+          onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            { analysisVersion: 2, base: { ...base, promptAudit: audit },
+              discussionId: discussion.id, turnId: target.id }) })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      const report = { ...revised.report, jobId: job.id, generatedAt: base.generatedAt,
+        deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
+      aiJobStore.ready(job.id, { report, changeSummary: revised.changeSummary })
+      const saved = projectStore.completeMatchupFeedback(discussion.id, target.id,
+        report, revised.changeSummary)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
+      return { ok: true, value: saved }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
     } finally {
       generatingProjects.delete(discussion.projectId)
+      activeAiControllers.delete(job.id)
     }
   }
 
@@ -626,10 +1368,15 @@ function registerProjectHandlers(): void {
   ipcMain.handle('matchups:continue', async (event, discussionId: unknown, metaId: unknown,
     override: unknown): Promise<OperationResult<MatchupDiscussion>> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore || typeof discussionId !== 'string' || typeof metaId !== 'string')
+    if (!projectStore || !aiJobStore || typeof discussionId !== 'string' || typeof metaId !== 'string')
       return { ok: false, error: 'Discussione Matchup non valida.' }
     const parent = projectStore.getMatchupDiscussion(discussionId)
     if (!parent || generatingProjects.has(parent.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
+    let job: AiJob
+    try { job = aiJobStore.start('matchup-continue', parent.projectId, `matchup:${parent.projectId}`) }
+    catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
+    const controller = new AbortController()
+    activeAiControllers.set(job.id, controller)
     generatingProjects.add(parent.projectId)
     try {
       const project = projectStore.get(parent.projectId)
@@ -637,25 +1384,50 @@ function registerProjectHandlers(): void {
       const snapshot = projectStore.getLatestMetaSnapshot()
       const opponent = snapshot?.decks.find((deck) => deck.id === parent.opponentId)
       const hash = projectStore.getCurrentDeckHash(parent.projectId)
+      const deckVersion = projectStore.getCurrentDeckContext(parent.projectId)
       if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot || snapshot.id !== metaId || !opponent || !hash)
         throw new Error('Importa una lista e aggiorna il metagame prima di continuare.')
-      if (parent.metaId === metaId && parent.deckHash === hash) throw new Error('Questa discussione usa già la base corrente.')
+      if (parent.metaId === metaId && parent.deckHash === hash &&
+        parent.deckVersionId === deckVersion?.versionId &&
+        parent.deckResolutionId === deckVersion?.resolutionId)
+        throw new Error('Questa discussione usa già la base corrente.')
       if (projectStore.listMatchupDiscussions(parent.projectId, parent.opponentId)
-        .some((item) => item.metaId === metaId && item.deckHash === hash))
+        .some((item) => item.metaId === metaId && item.deckHash === hash &&
+          item.deckVersionId === deckVersion?.versionId &&
+          item.deckResolutionId === deckVersion?.resolutionId))
         throw new Error('Esiste già una discussione per la base corrente.')
       const config = await runConfig(override)
-      const context = await prepareMatchupHistory(parent, config)
-      const sample = await fetchOpponentSample(opponent)
-      const deckContext = matchupDeckContext(baseline, projectStore.getReconciliation(parent.projectId), catalogStore?.view())
-      const evidence = matchupTournamentEvidence(snapshot, opponent, tournamentStore?.latest() ?? null,
-        catalogStore?.view() ?? null)
-      const report = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
-        config, evidence, matchupHistoryContext(context))
-      return { ok: true, value: projectStore.saveContinuedMatchupReport(report, parent.id) }
+      const context = await prepareMatchupHistory(parent, config, controller.signal)
+      const sampleDeck = await fetchOpponentSample(opponent)
+      await enrichMatchupDeck(parent.projectId, baseline)
+      await enrichOpponentCards(snapshot, opponent)
+      const evidence = currentMatchupEvidence(snapshot, opponent)
+      const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
+      const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
+      const aiQueries = await matchupAiQueries(`Continua l'analisi di ${opponent.name} sulla nuova lista e sul nuovo metagame`,
+        deckContext, sample, evidence, config, controller.signal,
+        matchupHistoryContext(context))
+      const base = matchupJobBase(job.id, parent.projectId, hash,
+        snapshot, opponent, sample, config, evidence, aiQueries, deckVersion)
+      const generated = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
+        config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
+          signal: controller.signal, aiQueries,
+          onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            { analysisVersion: 2, base: { ...base, promptAudit: audit }, parentId: parent.id }) })
+      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
+        deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
+      aiJobStore.ready(job.id, { report })
+      const saved = projectStore.saveContinuedMatchupReport(report, parent.id)
+      aiJobStore.transition(job.id, 'applied')
+      clearAiArtifacts(job.id)
+      return { ok: true, value: saved }
     } catch (error) {
+      finishAiJob(job, error)
       return { ok: false, error: aiError(error) }
     } finally {
       generatingProjects.delete(parent.projectId)
+      activeAiControllers.delete(job.id)
     }
   })
 
@@ -678,21 +1450,60 @@ function registerProjectHandlers(): void {
 }
 
 function createWindow(): void {
+  const developmentUrl = developmentRendererUrl()
   const window = new BrowserWindow({
     title: 'Pokéguru',
-    width: 1120,
-    height: 760,
-    minWidth: 760,
+    icon: app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(__dirname, '../../resources/icon.png'),
+    width: 1280,
+    height: 800,
+    minWidth: 640,
     minHeight: 580,
-    backgroundColor: '#f6f7f6',
+    backgroundColor: '#edf1ed',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true
+      sandbox: true,
+      devTools: developmentUrl !== null
     }
   })
   mainWindow = window
+
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || input.alt || input.meta) return
+    const key = input.key.toLowerCase()
+    if (input.control) {
+      const zoom = window.webContents.getZoomLevel()
+      if (input.code === 'Equal' || input.code === 'NumpadAdd') {
+        event.preventDefault()
+        window.webContents.setZoomLevel(Math.min(3, zoom + 1))
+        return
+      }
+      if (input.code === 'Minus' || input.code === 'NumpadSubtract') {
+        event.preventDefault()
+        window.webContents.setZoomLevel(Math.max(-3, zoom - 1))
+        return
+      }
+      if (key === '0') {
+        event.preventDefault()
+        window.webContents.setZoomLevel(0)
+        return
+      }
+    }
+    if (!developmentUrl) return
+    if (key === 'f12' || (input.control && input.shift && key === 'i')) {
+      event.preventDefault()
+      setTimeout(() => {
+        if (window.isDestroyed()) return
+        if (window.webContents.isDevToolsOpened()) window.webContents.closeDevTools()
+        else window.webContents.openDevTools({ mode: 'detach' })
+      }, 0)
+    } else if (key === 'f5' || (input.control && key === 'r')) {
+      event.preventDefault()
+      if (input.shift) window.webContents.reloadIgnoringCache()
+      else window.webContents.reload()
+    }
+  })
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
@@ -700,14 +1511,13 @@ function createWindow(): void {
     if (mainWindow === window) mainWindow = null
   })
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    void window.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    void window.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+  trustedRendererUrl = developmentUrl ?? rendererUrl
+  void window.loadURL(trustedRendererUrl)
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  if (process.platform === 'win32') app.setAppUserModelId('io.github.xmey95.pokeguru')
+  if (process.platform === 'win32' || process.platform === 'linux') Menu.setApplicationMenu(null)
   try {
     const override = process.env.POKEGURU_DATA_DIR
     if (override) {
@@ -715,21 +1525,68 @@ app.whenReady().then(() => {
       app.setPath('userData', override)
     }
     const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
+    const migration = await prepareDatabaseMigration(databasePath)
     projectStore = new ProjectStore(databasePath)
     catalogStore = new CatalogStore(databasePath)
     tournamentStore = new TournamentStore(databasePath)
-    const previousJob = catalogStore.jobStatus()
-    if (previousJob.state === 'paused' && previousJob.mode) {
-      setTimeout(() => runCatalogJob(previousJob.mode!), 2_000)
-    }
+    dailySyncStore = new DailySyncStore(databasePath)
+    const eventStore = tournamentStore
+    let playBlockRequests = 0
+    playTournamentJob = new TournamentSyncJob(() => eventStore.progress(),
+      async (mode, shouldStop) => {
+        playBlockRequests = 0
+        const countedFetch: typeof fetch = (input, init) => {
+          playBlockRequests++
+          return fetch(input, init)
+        }
+        return syncTournamentBlock(eventStore, mode, countedFetch, new Date(), shouldStop)
+      }, () => Math.max(7_500, playBlockRequests * 7_500), undefined, (result) => {
+        if (result.kind === 'success') dailySyncStore?.success('play')
+        else dailySyncStore?.failed('play', result.error ?? 'Play non aggiornato.', result.retryAt)
+      })
+    mainTournamentJob = new TournamentSyncJob(() => eventStore.mainProgress(),
+      (mode, shouldStop) => syncMainTournamentBlock(eventStore, mode, fetch, new Date(), shouldStop), 300,
+      () => {
+        if (projectStore && generatingDeckThreads.size === 0 && !hasRecoverableThreadJob())
+          eventStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
+      }, (result) => {
+        if (result.kind === 'success') dailySyncStore?.success('main')
+        else dailySyncStore?.failed('main', result.error ?? 'Regional non aggiornati.', result.retryAt)
+      })
+    aiJobStore = new AiJobStore(databasePath)
+    completeDatabaseMigration(databasePath, migration)
+    if (!hasRecoverableThreadJob())
+      tournamentStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
     aiPreferencesStore = new AiPreferencesStore(app.getPath('userData'))
   } catch (error) {
     console.error('Impossibile aprire l’archivio locale:', error)
+    playTournamentJob?.shutdown(); playTournamentJob = null
+    mainTournamentJob?.shutdown(); mainTournamentJob = null
+    tournamentStore?.close(); tournamentStore = null
+    dailySyncStore?.close(); dailySyncStore = null
+    catalogStore?.close(); catalogStore = null
+    aiJobStore?.close(); aiJobStore = null
+    projectStore?.close(); projectStore = null
     storageError = 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
   }
 
+  const imageDirectory = join(app.getPath('userData'), 'data', 'catalog-images')
+  try { mkdirSync(imageDirectory, { recursive: true }) } catch { /* Storage error is shown in the renderer. */ }
+  protocol.registerSource('pokeguru', { routes: [
+    { match: { host: 'bundle' }, source: { type: 'directory', root: dirname(rendererFile),
+      headers: { 'Content-Security-Policy': packagedCsp } } },
+    { match: { host: 'cards' }, source: { type: 'directory', root: imageDirectory } }
+  ] })
+
   registerProjectHandlers()
   createWindow()
+  if (process.env.POKEGURU_AUTO_SYNC !== '0') {
+    const requestedDelay = Number(process.env.POKEGURU_AUTO_SYNC_DELAY_MS)
+    const delay = Number.isFinite(requestedDelay) && requestedDelay >= 3_000 && requestedDelay <= 30_000
+      ? requestedDelay : 3_000
+    startupSyncTimer = setTimeout(startDailySync, delay)
+  }
+  setTimeout(() => { void recoverAiJobs() }, 0)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -737,12 +1594,21 @@ app.whenReady().then(() => {
 })
 
 app.on('before-quit', () => {
+  catalogShuttingDown = true
+  if (startupSyncTimer) clearTimeout(startupSyncTimer)
+  playTournamentJob?.shutdown()
+  mainTournamentJob?.shutdown()
   if (catalogRetryTimer) clearTimeout(catalogRetryTimer)
+  catalogStore?.interruptJob()
+  catalogJobController?.abort()
   void codexControl.stop()
   projectStore?.close()
   catalogStore?.close()
   tournamentStore?.close()
+  dailySyncStore?.close()
+  aiJobStore?.close()
   projectStore = null
+  aiJobStore = null
 })
 
 app.on('window-all-closed', () => {

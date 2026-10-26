@@ -1,0 +1,47 @@
+export interface AiTokenUsage {
+  inputTokens: number
+  cachedInputTokens: number
+  outputTokens: number
+}
+
+export function readAiTokenUsage(value: unknown): AiTokenUsage | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const item = value as Record<string, unknown>
+  const inputTokens = item.input_tokens ?? item.inputTokens
+  const cachedInputTokens = item.cached_input_tokens ?? item.cachedInputTokens ?? 0
+  const outputTokens = item.output_tokens ?? item.outputTokens
+  if (![inputTokens, cachedInputTokens, outputTokens].every((part) =>
+    Number.isInteger(part) && Number(part) >= 0)) return null
+  return { inputTokens: inputTokens as number,
+    cachedInputTokens: cachedInputTokens as number,
+    outputTokens: outputTokens as number }
+}
+
+export interface AiPromptAudit {
+  text: string
+  sha256: string
+  utf8Bytes: number
+  durationMs: number | null
+  usage: AiTokenUsage | null
+}
+
+export interface AiEvidenceQueryResult {
+  query: unknown
+  status: 'ok' | 'rejected'
+  data: unknown
+  sourceIds: string[]
+  fingerprint: string
+}
+
+export interface AiEvidenceQueryTrace {
+  schemaVersion: 1
+  engine: { operations: string[]; catalog: { syncedAt: string | null;
+    expected: number; indexed: number; gameplay: number };
+    eventWindow: { from: string; to: string } }
+  requests: AiEvidenceQueryResult[]
+  durationMs: number
+  responseBytes: number
+  planningRounds: number
+  plannerUsage?: AiTokenUsage | null
+  exhausted: boolean
+}

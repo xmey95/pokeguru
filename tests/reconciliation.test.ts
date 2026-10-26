@@ -41,6 +41,54 @@ const catalog: CatalogView = {
 }
 
 describe('Riconciliazione APP-006', () => {
+  it('riconosce PR-SV e il numero Live della promo TCGdex SVP nel round trip', () => {
+    const promo: CatalogPrint = { ...printing('svp-189', "N's Zorua", 'zorua-promo', 'Promo'),
+      category: 'Pokemon', identityBasis: 'pokemon-text' }
+    const rawText = "1 N's Zorua PR-SV 189"
+    const baseline = { projectId: 'project', importedAt: '2026-10-25T00:00:00.000Z',
+      rawText, source: 'paste' as const, fileName: null, ...parseDeck(rawText) }
+    const cards = buildDeckCards(baseline, { ...catalog, prints: [promo] })
+    expect(cards).toMatchObject([{ status: 'recognized', importedPrintIds: ['svp-189'] }])
+    expect(suggestPrints(baseline.lines[0], { ...catalog, prints: [promo] })[0])
+      .toMatchObject({ print: { id: 'svp-189' }, reason: 'same-print' })
+  })
+
+  it('riconosce dopo reimport la sigla di un nuovo set acquisito dal Catalogo', () => {
+    const newer = printing('me06-007', 'Carta nuova', 'new-identity', 'Common')
+    const liveCatalog: CatalogView = { ...catalog, sets: [{ id: 'me06', name: 'Nuovo set',
+      abbreviation: 'NEX', sourceTotal: 1, sampleTotal: 1, fetchedAt: '2026-10-25T00:00:00.000Z' }],
+      prints: [newer] }
+    const rawText = '1 Carta nuova NEX 7'
+    const baseline = { projectId: 'project', importedAt: '2026-10-25T00:00:00.000Z',
+      rawText, source: 'paste' as const, fileName: null, ...parseDeck(rawText) }
+    expect(buildDeckCards(baseline, liveCatalog)).toMatchObject([
+      { status: 'recognized', importedPrintIds: ['me06-007'] }
+    ])
+  })
+
+  it('passa al Matchup le regole della stampa e il vero esito Standard', () => {
+    const baseline = {
+      projectId: 'project', importedAt: '2026-10-23T00:00:00.000Z', rawText: '2 Iono PAL 185',
+      source: 'paste' as const, fileName: null, ...parseDeck('2 Iono PAL 185')
+    }
+    const print: CatalogPrint = { ...ionoA, gameplaySchemaVersion: 1,
+      gameplay: { hp: null, types: [], evolveFrom: null, attacks: [], abilities: [],
+        effect: 'Each player shuffles their hand and draws.', trainerType: 'Supporter',
+        weaknesses: [], resistances: [], retreat: null } }
+    const context = matchupDeckContext(baseline, { projectId: 'project', importedAt: baseline.importedAt,
+      mappings: [], identityTotals: [], resolvedLines: 0, unresolvedLines: 0,
+      resolvedCopies: 0, unresolvedCopies: 0 }, { ...catalog, prints: [print],
+      rulePackage: { schema: 1, version: '2026-10-24.1', circuit: 'WESTERN', checkedAt: '2026-10-24',
+        standardBans: { checkedAt: '2026-10-24', sourceUrl: 'https://www.pokemon.com', cardNames: [] },
+        errata: { checkedAt: '2026-10-24', sourceUrl: 'https://play.pokemon.com', lastUpdated: '2024-11-07' },
+        rotations: [], setAdmissions: [] } },
+    { status: 'checks-passed', legality: 'supported', asOf: '2026-10-24',
+      problems: [], toReview: [], passed: ['60 carte'] })
+    expect(context).toContain('Each player shuffles their hand and draws.')
+    expect(context).toContain('CONTROLLO STANDARD (2026-10-24, pacchetto 2026-10-24.1): supported')
+    expect(context).not.toContain('legalità Standard ed errata non sono ancora verificate')
+  })
+
   it('mostra una sola carta di gioco per due rarità e tutte le varianti al clic, senza scelta di stampa', () => {
     const baseline = {
       projectId: 'project', importedAt: '2026-10-23T00:00:00.000Z', rawText: '2 Iono PAL 185\n1 Iono PAL 254',
@@ -92,6 +140,9 @@ describe('Riconciliazione APP-006', () => {
     const conflicting = suggestPrints({ lineNumber: 3, raw: '1 Altro PAL 254', kind: 'card', quantity: 1,
       name: 'Altro', setCode: 'PAL', cardNumber: '254' }, catalog)
     expect(conflicting[0]).toMatchObject({ print: { id: 'sv02-254' }, reason: 'code-conflict' })
+    expect(suggestPrints({ lineNumber: 4, raw: '1 Rare Candy PAF 089', kind: 'card', quantity: 1,
+      name: 'Rare Candy', setCode: 'PAF', cardNumber: '089' }, catalog)[0])
+      .toMatchObject({ print: { id: 'sv04.5-089' }, reason: 'same-print' })
     expect(suggestPrints({ lineNumber: 4, raw: '1 Energia Base', kind: 'card', name: 'Energia Base' }, catalog)).toEqual([])
     expect(suggestPrints({ lineNumber: 5, raw: '1 Carta promo PR-SV 001a', kind: 'card',
       name: 'Carta promo', setCode: 'PR-SV', cardNumber: '001a' }, catalog)).toEqual([])
