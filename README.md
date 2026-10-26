@@ -56,7 +56,7 @@ APP-063 riunisce **totale e stato Standard** nell'intestazione della Lista, sost
 
 APP-064 mostra nel **dettaglio della carta** immagine, abilità, attacchi o effetto, poi il vincolo. Stampe e controlli sono apribili; testi in inglese dal catalogo locale e dati mancanti espliciti.
 
-APP-065 apre **Aggiungi vincolo** direttamente nella carta, con anteprima di esito e conflitti. Il riepilogo si aggiorna al salvataggio e consente modifica nella riga ed eliminazione. Annulla/Escape chiudono il modulo senza scritture; gli errori conservano i valori inseriti.
+APP-130 gestisce creazione, modifica ed eliminazione dei **Vincoli** direttamente nel dettaglio della carta, nella Lista o nel Catalogo. La riga visibile della Lista mostra il numero dei vincoli attribuiti all'identità di gioco; per le carte ancora ambigue mostra «Vincoli —». Le carte vincolate fuori lista restano apribili all'inizio della vista. L'anteprima conserva esito e conflitti; Annulla/Escape chiudono il modulo senza scritture e gli errori conservano i valori inseriti. Questo cambiamento non è nella release v0.1.0.
 
 APP-066 mostra l'importazione su richiesta da **Importa / sostituisci**, sopra la lista, con testo precompilato e **Annulla**. Nei progetti vuoti il modulo è subito disponibile. Il salvataggio chiude il modulo; errori e letture file pendenti conservano l'isolamento fra progetti.
 

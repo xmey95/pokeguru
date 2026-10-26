@@ -23,6 +23,10 @@ const pokemon = { ...empty, hp: 280, types: ['Darkness'], retreat: 0,
 function seed() {
   const db = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
   try {
+    // Keep this fixed catalog fixture stable while exercising its detail UI.
+    db.prepare(`INSERT INTO daily_sync (source, last_attempt_at, last_success_at, trigger, outcome, next_attempt_at, error)
+      VALUES ('catalog', ?, ?, NULL, 'success', NULL, NULL)
+      ON CONFLICT(source) DO UPDATE SET last_success_at=excluded.last_success_at, outcome='success', next_attempt_at=NULL`).run(now, now)
     for (const [id, name] of [['me01', 'Set A · fixture'], ['me02.5', 'Set B · fixture'], ['mee', 'Mega Energy · fixture']]) db.prepare(
       'INSERT INTO catalog_sets (id, name, source_total, sample_total, fetched_at) VALUES (?, ?, 10, 5, ?)').run(id, name, now)
     for (const [id, name, category, gameplay, image, basis, extra] of [
@@ -206,9 +210,11 @@ try {
   assert.ok(await detail.getByText('UI fixture: search your deck for a Pokémon.\nThen shuffle your deck.', { exact: true }).isVisible())
   assert.equal(await detail.locator('.card-battle-stats').count(), 0)
   await detail.getByRole('button', { name: 'Aggiungi vincolo su questa carta' }).click()
-  await page.waitForFunction(() => document.querySelector('#constraint-form select')?.value === 'Allenatore di prova')
-  await page.getByRole('button', { name: 'Indietro', exact: true }).click()
-  await ready()
+  await detail.locator('.constraint-form').waitFor()
+  assert.equal(await detail.locator('.constraint-form').getByLabel('Carta di gioco').count(), 0)
+  await page.keyboard.press('Escape')
+  await detail.locator('.constraint-form').waitFor({ state: 'detached' })
+  await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Aggiungi vincolo su questa carta')
   await select('Energia Base di prova')
   assert.ok(await detail.getByText('Nessun testo effetto riportato dal catalogo.', { exact: true }).isVisible())
   assert.equal(await detail.locator('.card-gameplay-missing').count(), 0)

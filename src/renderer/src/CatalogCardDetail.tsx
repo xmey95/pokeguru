@@ -2,6 +2,7 @@ import type { CatalogPrint } from '../../shared/catalog'
 import { hasComparableGameplay } from '../../shared/card-gameplay'
 import { CardFace } from './CardOverview'
 import { CardThumbnail } from './CardThumbnail'
+import { CardConstraints } from './CardConstraints'
 import { useNavigation, useViewState } from './Navigation'
 
 function date(value: string) {
@@ -17,11 +18,11 @@ function promoStatus(print: CatalogPrint) {
       : promo?.state === 'unlisted' ? 'Promo non elencata · ammissione da verificare' : 'Promo da verificare'
 }
 
-export function CatalogCardDetail({ name, basis, prints, onConstrain }: {
+export function CatalogCardDetail({ name, basis, prints, constraintIdentityId }: {
   name: string
   basis: CatalogPrint['identityBasis']
   prints: CatalogPrint[]
-  onConstrain?: () => void
+  constraintIdentityId?: string
 }) {
   const nav = useNavigation()
   const [printId, setPrintId] = useViewState<string | null>('catalog.print', null)
@@ -40,7 +41,7 @@ export function CatalogCardDetail({ name, basis, prints, onConstrain }: {
     {current.isPromo && current.promoStatus?.state !== 'available' && <p className="catalog-card-notice diagnostics" role="status">{promoStatus(current)}</p>}
     {current.error && <p className="catalog-card-notice diagnostics" role="status">{current.error}</p>}
     <CardFace print={current} imagePrint={current} />
-    {onConstrain && <div className="catalog-card-actions"><button type="button" className="secondary-button" onClick={onConstrain}>Aggiungi vincolo su questa carta</button></div>}
+    {constraintIdentityId && <CardConstraints identityId={constraintIdentityId} name={name} />}
     <details className="catalog-card-prints" id="catalog-card-prints">
       <summary>Stampe e metadati ({prints.length})</summary>
       {basis && basis !== 'unverified' && <p className="content-note">Stampe collegate per regole di gioco coincidenti.</p>}
