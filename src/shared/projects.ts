@@ -83,7 +83,6 @@ export interface ProjectsApi {
   previewDeckThreadEvidence(projectId: string, threadId: string, text: string): Promise<OperationResult<ThreadEvidencePacket>>
   askDeckThread(projectId: string, threadId: string, text: string, override?: AiPreferences | null,
     existingUserMessageId?: string): Promise<OperationResult<DeckThread>>
-  proposeDeckThread(projectId: string, threadId: string, request: string, override?: AiPreferences | null): Promise<OperationResult<DeckThread>>
   openDeckSource(url: string): Promise<OperationResult<boolean>>
   openThreadLink(url: string): Promise<OperationResult<boolean>>
   saveDeckCandidate(input: SaveDeckCandidateInput): Promise<OperationResult<DeckThread>>

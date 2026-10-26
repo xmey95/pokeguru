@@ -4,7 +4,8 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
-import { deckDiscussionPrompt, deckProposalPrompt, readDeckDiscussionReply, validateDeckProposal } from '../src/main/deck-ai'
+import { deckThreadPrompt, readDeckDiscussionReply,
+  readDeckThreadTurn, validateDeckProposal } from '../src/main/deck-ai'
 import { buildThreadEvidence } from '../src/main/thread-evidence'
 import { createAiEvidenceEngine } from '../src/main/ai-evidence-engine'
 import { makeAiPromptAudit, runAiEvidenceQueries,
@@ -70,12 +71,12 @@ it('invia la lista di partenza e il pacchetto aggiornato a ogni turno', () => {
   const catalog: CatalogView = { circuit: 'WESTERN', source: 'TCGdex REST v2/en', sourceLanguage: 'en',
     scope: { setIds: [], names: [] }, syncedAt: null, sets: [], prints: [] }
   const firstEvidence = buildThreadEvidence(thread, base, 'Valuta il motore', [], catalog, [], [])
-  expect(deckDiscussionPrompt(thread, base, 'Valuta il motore', firstEvidence)).toContain('60 Carta A MEG 1')
+  expect(deckThreadPrompt(thread, base, 'Valuta il motore', [], catalog, firstEvidence).prompt).toContain('60 Carta A MEG 1')
   store.assignDeckAiSession(project.id, thread.id, 'session')
   store.saveDeckAiExchange(project.id, thread.id, 'session', 'Valuta il motore', 'Possibile miglioria.', 'turn', config)
   const continued = store.addDeckThreadMessage(project.id, thread.id, 'Considera anche il tempo.')
-  const prompt = deckDiscussionPrompt(continued, base, 'E ora?',
-    buildThreadEvidence(continued, base, 'E ora?', [], catalog, [], []))
+  const prompt = deckThreadPrompt(continued, base, 'E ora?', [], catalog,
+    buildThreadEvidence(continued, base, 'E ora?', [], catalog, [], [])).prompt
   expect(prompt).toContain('Considera anche il tempo.')
   expect(prompt).toContain('60 Carta A MEG 1')
   expect(readDeckDiscussionReply({ reply: ' Sì. ' })).toBe('Sì.')
@@ -98,8 +99,8 @@ it('porta la candidata precedente nelle evidenze e nel prompt di un Thread colle
     sourceLanguage: 'en', scope: { setIds: [], names: [] }, syncedAt: null, sets: [], prints: [] }
   const evidence = buildThreadEvidence(linked, base, 'Valuta la candidata', [], catalog, [], [])
   expect(evidence.sources.some((source) => source.label === 'Candidata del Thread precedente')).toBe(true)
-  expect(deckDiscussionPrompt(linked, base, 'Valuta la candidata', evidence)).toContain('60 Carta B MEG 2')
-  expect(deckProposalPrompt(linked, base, 'Adatta la candidata', [], catalog, evidence).prompt)
+  expect(deckThreadPrompt(linked, base, 'Valuta la candidata', [], catalog, evidence).prompt).toContain('60 Carta B MEG 2')
+  expect(deckThreadPrompt(linked, base, 'Adatta la candidata', [], catalog, evidence).prompt)
     .toContain('60 Carta B MEG 2')
   store.close()
 })
@@ -127,7 +128,7 @@ it('conserva le query automatiche e le fonti nel solo thread che le ha ricevute'
     async () => ({ continueAfterResults: false,
       queries: [{ operation: 'catalog.search', printIds: ['me01-001'] }] }))
   const evidence = threadEvidenceWithQueries(initial, trace)
-  const prompt = deckDiscussionPrompt(thread, null, 'Spiegami Rare Candy', evidence)
+  const prompt = deckThreadPrompt(thread, null, 'Spiegami Rare Candy', [], catalog, evidence).prompt
   expect(prompt).toContain('Search your deck.')
   evidence.promptAudit = makeAiPromptAudit(prompt, 2300,
     { inputTokens: 123, cachedInputTokens: 10, outputTokens: 45 })
@@ -190,6 +191,42 @@ it('salva una candidata AI atomica solo con 60 carte, stampe e fonti verificabil
     identityName: 'Mew ex', printId: null, kind: 'required', quantity: 1,
     createdAt: '2026-10-23T00:00:00.000Z', updatedAt: '2026-10-23T00:00:00.000Z' }
   const rawText = '1 Mew ex SV04.5 216\n59 Psychic Energy SVE 005'
+  const evidence = buildThreadEvidence(thread, store.listDeckVersions(project.id)[0],
+    'Valuta una lista', [constraint], catalog, [], [])
+  const prompt = deckThreadPrompt(thread, store.listDeckVersions(project.id)[0],
+    'Valuta una lista', [constraint], catalog, evidence).prompt
+  expect(prompt).toContain('un solo pensiero oppure una proposta')
+  expect(prompt).toContain('60 carte')
+  const turnSources = evidence.sources.map(({ id, label, url }) => ({ id, label, url }))
+  const fullTurn = readDeckThreadTurn({ kind: 'list', reply: 'Mantieni la carta Base.',
+    rawText, sourceIds: [] }, project.id, store.listDeckVersions(project.id)[0],
+  catalog, [constraint], evidence, turnSources)
+  expect(fullTurn.proposal?.rawText).toBe(rawText)
+  expect(fullTurn.answer).toBe('Mantieni la carta Base.')
+  expect(readDeckThreadTurn({ kind: 'list', reply: '', rawText, sourceIds: [] },
+    project.id, store.listDeckVersions(project.id)[0], catalog, [constraint], evidence,
+    turnSources).proposal?.rawText).toBe(rawText)
+  const incomplete = readDeckThreadTurn({ kind: 'list', reply: 'Provo a costruire la lista.',
+    rawText: '59 Psychic Energy SVE 005', sourceIds: [] }, project.id,
+  store.listDeckVersions(project.id)[0], catalog, [constraint], evidence, turnSources)
+  expect(incomplete.proposal).toBeUndefined()
+  expect(incomplete.answer).toContain('non contiene una lista completa di 60 carte')
+  expect(incomplete.answer).toContain('59 Psychic Energy SVE 005')
+  const unknownPrint = readDeckThreadTurn({ kind: 'list', reply: 'Una variante.',
+    rawText: '1 Carta inventata XXX 1\n59 Psychic Energy SVE 005', sourceIds: [] },
+  project.id, store.listDeckVersions(project.id)[0], catalog, [], evidence, turnSources)
+  expect(unknownPrint.proposal).toBeUndefined()
+  expect(unknownPrint.answer).toContain('Stampa non verificabile')
+  const withoutBase = readDeckThreadTurn({ kind: 'list', reply: 'Una lista prematura.',
+    rawText, sourceIds: [] }, project.id, null, catalog, [], evidence, turnSources)
+  expect(withoutBase.proposal).toBeUndefined()
+  expect(withoutBase.answer).toContain('Manca una lista principale')
+  expect(readDeckThreadTurn({ kind: 'thought', reply: 'Lista etichettata male.',
+    rawText, sourceIds: [] }, project.id, store.listDeckVersions(project.id)[0],
+  catalog, [constraint], evidence, turnSources).proposal?.rawText).toBe(rawText)
+  expect(readDeckThreadTurn({ kind: 'thought', reply: 'Per ora discutiamo.', rawText: '',
+    sourceIds: [] }, project.id, store.listDeckVersions(project.id)[0], catalog,
+  [constraint], evidence, turnSources)).toMatchObject({ answer: 'Per ora discutiamo.' })
   const parsed = validateDeckProposal({ outcome: 'candidate', rawText,
     rationale: 'Mantieni la carta Base.', sourceIds: ['base', 'catalog'] }, project.id, catalog,
   [constraint], sources)
@@ -225,11 +262,10 @@ it('salva una candidata AI atomica solo con 60 carte, stampe e fonti verificabil
   expect(() => validateDeckProposal({ outcome: 'candidate', rawText,
     rationale: 'Futuro', sourceIds: ['base'] }, project.id, future, [], sources))
     .toThrow('non ancora rilasciato')
-  const saved = store.saveDeckAiExchange(project.id, thread.id, 'session', 'Proponi', parsed.rationale,
-    'turn-proposal', config, { rawText: parsed.rawText, note: parsed.rationale,
-      sources: parsed.sources, checks: parsed.checks })
+  const saved = store.saveDeckAiExchange(project.id, thread.id, 'session', 'Proponi', fullTurn.answer,
+    'turn-proposal', config, fullTurn.proposal, evidence, fullTurn.citedSourceIds)
   expect(saved.candidates).toMatchObject([{ origin: 'ai', sequence: 1, aiTurnId: 'turn-proposal', rawText }])
-  expect(saved.candidates[0].sources).toEqual(expect.arrayContaining(sources))
+  expect(saved.candidates[0].sources.some((source) => source.id === 'base')).toBe(true)
   expect(saved.candidates[0].sources.some((source) => source.url?.endsWith('/cards/sv04.5-216'))).toBe(true)
   expect(saved.messages).toHaveLength(2)
   store.saveDeckCandidate({ projectId: project.id, threadId: thread.id, rawText,
@@ -260,7 +296,7 @@ it('inserisce dati e link soltanto per un evento pertinente al thread', () => {
       playerId: 'player', deck: { id: 'a', name: 'Mega Absol ex' }, cards: [{ count: 2, name: 'Mega Absol ex',
         set: 'ME01', number: '086', category: 'pokemon' }] }] } as TournamentSnapshot
   const evidence = buildThreadEvidence(thread, base, 'Valuta Mega Absol', [], catalog, [event], [])
-  const context = deckProposalPrompt(thread, base, 'Valuta Mega Absol', [], catalog, evidence)
+  const context = deckThreadPrompt(thread, base, 'Valuta Mega Absol', [], catalog, evidence)
   expect(context.sources.find((item) => item.id === `event:play:${event.eventId}`)?.url).toBe(event.publicUrl)
   expect(context.prompt).toContain('2 Mega Absol ex ME01 086')
   expect(context.prompt).toContain('Campione Limitless')

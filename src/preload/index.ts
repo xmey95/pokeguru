@@ -45,7 +45,6 @@ const api: ProjectsApi = {
   previewDeckThreadEvidence: (projectId, threadId, text) => ipcRenderer.invoke('deck:preview-evidence', projectId, threadId, text),
   askDeckThread: (projectId, threadId, text, override, existingUserMessageId) =>
     ipcRenderer.invoke('deck:ask-thread', projectId, threadId, text, override, existingUserMessageId),
-  proposeDeckThread: (projectId, threadId, request, override) => ipcRenderer.invoke('deck:propose-thread', projectId, threadId, request, override),
   openDeckSource: (url) => ipcRenderer.invoke('deck:open-source', url),
   openThreadLink: (url) => ipcRenderer.invoke('thread:open-link', url),
   saveDeckCandidate: (input) => ipcRenderer.invoke('deck:save-candidate', input),

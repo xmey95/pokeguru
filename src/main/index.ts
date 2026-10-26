@@ -18,9 +18,7 @@ import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchup
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
 import { CodexSetup } from './codex-setup'
-import { deckDiscussionPrompt, DECK_DISCUSSION_SCHEMA, readDeckDiscussionReply,
-  readDeckDiscussionSourceIds,
-  deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from './deck-ai'
+import { deckThreadPrompt, DECK_THREAD_SCHEMA, readDeckThreadTurn } from './deck-ai'
 import { buildThreadEvidence } from './thread-evidence'
 import { createAiEvidenceEngine } from './ai-evidence-engine'
 import { makeAiPromptAudit, runAiEvidenceQueries,
@@ -1019,90 +1017,27 @@ function registerProjectHandlers(): void {
       const evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
-      const prompt = deckDiscussionPrompt(thread, base, message.trim(), evidence)
-      evidence.promptAudit = makeAiPromptAudit(prompt)
-      aiJobStore.prepare(job.id, { message: message.trim(), config, evidence, existingUserMessageId })
+      const context = deckThreadPrompt(thread, base, message.trim(),
+        projectStore.listConstraints(projectId), catalog, evidence)
+      evidence.promptAudit = makeAiPromptAudit(context.prompt)
+      aiJobStore.prepare(job.id, { schemaVersion: 2, message: message.trim(), config, evidence,
+        sources: context.sources, existingUserMessageId })
       const answerStarted = Date.now()
-      const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, prompt, config,
-        DECK_DISCUSSION_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
+      const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, context.prompt, config,
+        DECK_THREAD_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
           signal: controller.signal, onSessionStarted: (id) => {
             if (!thread.aiSessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
           } })
-      if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
-      evidence.promptAudit = makeAiPromptAudit(prompt, Date.now() - answerStarted, result.usage)
-      aiJobStore.ready(job.id, result)
-      const sessionId = result.sessionId
-      if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
-      const answer = readDeckDiscussionReply(result.value)
-      const citedSourceIds = readDeckDiscussionSourceIds(result.value, evidence)
-      const saved = projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
-        message.trim(), answer, result.turnId, config, undefined, evidence, citedSourceIds,
-        typeof existingUserMessageId === 'string' ? existingUserMessageId : undefined)
-      aiJobStore.transition(job.id, 'applied')
-      clearAiArtifacts(job.id)
-      return { ok: true, value: projectStore.getDeckThreadWindow(saved.projectId, saved.id)! }
-    } catch (error) {
-      finishAiJob(job, error)
-      return { ok: false, error: aiError(error) }
-    } finally {
-      generatingDeckThreads.delete(threadId)
-      activeAiControllers.delete(job.id)
-    }
-  })
-
-  ipcMain.handle('deck:propose-thread', async (event, projectId: unknown, threadId: unknown,
-    request: unknown, override: unknown): Promise<OperationResult<DeckThread>> => {
-    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
-    if (!projectStore || !catalogStore || !aiJobStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
-      typeof request !== 'string' || !request.trim() || request.trim().length > 5000 || request.includes('\0'))
-      return { ok: false, error: 'Descrivi una modifica da valutare (massimo 5.000 caratteri).' }
-    const project = projectStore.get(projectId)
-    if (!project) return { ok: false, error: 'Progetto non trovato.' }
-    if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le proposte Codex sono disponibili solo per il circuito occidentale.' }
-    const thread = projectStore.getDeckThread(projectId, threadId)
-    if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
-    if (!thread.baseVersionId) return { ok: false, error: 'Importa una lista prima di chiedere una proposta completa.' }
-    if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Codex sta già lavorando su questo thread.' }
-    let job: AiJob
-    try { job = aiJobStore.start('thread-propose', projectId, threadId) }
-    catch { return { ok: false, error: 'Esiste già un job Codex per questo thread.' } }
-    const controller = new AbortController()
-    activeAiControllers.set(job.id, controller)
-    generatingDeckThreads.add(threadId)
-    try {
-      const base = projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId)
-      if (!base) throw new Error('Versione di partenza del thread non disponibile.')
-      const config = await runConfig(override)
-      const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
-      mkdirSync(cwd, { recursive: true })
-      const catalog = catalogStore.view()
-      const constraints = projectStore.listConstraints(projectId)
-      const initialEvidence = buildThreadEvidence(thread, base, request.trim(), constraints, catalog,
-        tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
-      const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
-        tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog))
-      const queryTrace = await runAiEvidenceQueries(request.trim(), initialEvidence,
-        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal))
-      const evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
-      const context = deckProposalPrompt(thread, base, request.trim(), constraints, catalog, evidence)
-      evidence.promptAudit = makeAiPromptAudit(context.prompt)
-      aiJobStore.prepare(job.id, { message: request.trim(), config, evidence, sources: context.sources })
-      const answerStarted = Date.now()
-      const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, context.prompt, config,
-        DECK_PROPOSAL_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal })
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
       evidence.promptAudit = makeAiPromptAudit(context.prompt, Date.now() - answerStarted, result.usage)
       aiJobStore.ready(job.id, result)
       const sessionId = result.sessionId
       if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
-      const proposal = validateDeckProposal(result.value, projectId, catalog, constraints, context.sources)
-      const citedSourceIds = [...new Set((result.value as { sourceIds: string[] }).sourceIds)]
-      const answer = proposal.rationale
+      const turn = readDeckThreadTurn(result.value, projectId, base, catalog,
+        projectStore.listConstraints(projectId), evidence, context.sources)
       const saved = projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
-        request.trim(), answer, result.turnId, config,
-        proposal.outcome === 'candidate' ? { rawText: proposal.rawText, note: proposal.rationale,
-          sources: proposal.sources, checks: proposal.checks } : undefined, evidence, citedSourceIds)
+        message.trim(), turn.answer, result.turnId, config, turn.proposal, evidence, turn.citedSourceIds,
+        typeof existingUserMessageId === 'string' ? existingUserMessageId : undefined)
       aiJobStore.transition(job.id, 'applied')
       clearAiArtifacts(job.id)
       return { ok: true, value: projectStore.getDeckThreadWindow(saved.projectId, saved.id)! }

@@ -4,7 +4,7 @@ import { basename, dirname, join } from 'node:path'
 import { expect, it } from 'vitest'
 import { CodexControl } from '../src/main/codex-control'
 import { ProjectStore } from '../src/main/project-store'
-import { deckProposalPrompt, DECK_PROPOSAL_SCHEMA, validateDeckProposal } from '../src/main/deck-ai'
+import { deckThreadPrompt, DECK_THREAD_SCHEMA, readDeckThreadTurn } from '../src/main/deck-ai'
 import { buildThreadEvidence } from '../src/main/thread-evidence'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import type { AiRunConfig } from '../src/shared/ai'
@@ -42,17 +42,16 @@ live('produce due candidate complete in sessioni Codex isolate', async () => {
     const answers = await Promise.all([first, second].map(async (thread, index) => {
       const count = index + 1
       const question = `Prepara una candidata di prova: aggiungi esattamente ${count} Boss's Orders ME01 114, togli ${count} Psychic Energy SVE 005 e conserva Mega Absol ex. Restituisci l'intera lista di 60 carte usando i codici del catalogo; è una prova strutturale, non una raccomandazione competitiva.`
-      const context = deckProposalPrompt(thread, base, question, [], catalog,
-        buildThreadEvidence(thread, base, question, [], catalog, [], []))
-      const answer = await control.jsonTurn(null, directory, context.prompt, config, DECK_PROPOSAL_SCHEMA)
+      const evidence = buildThreadEvidence(thread, base, question, [], catalog, [], [])
+      const context = deckThreadPrompt(thread, base, question, [], catalog, evidence)
+      const answer = await control.jsonTurn(null, directory, context.prompt, config, DECK_THREAD_SCHEMA)
       const sessionId = answer.sessionId
       store.assignDeckAiSession(project.id, thread.id, sessionId)
-      const proposal = validateDeckProposal(answer.value, project.id, catalog, [], context.sources)
-      expect(proposal.outcome).toBe('candidate')
+      const turn = readDeckThreadTurn(answer.value, project.id, base, catalog, [], evidence,
+        context.sources)
+      expect(turn.proposal).toBeDefined()
       const saved = store.saveDeckAiExchange(project.id, thread.id, sessionId,
-        question, proposal.rationale, answer.turnId, config, {
-          rawText: proposal.rawText, note: proposal.rationale,
-          sources: proposal.sources, checks: proposal.checks })
+        question, turn.answer, answer.turnId, config, turn.proposal, evidence, turn.citedSourceIds)
       expect(saved.candidates).toHaveLength(1)
       expect(saved.candidates[0].parsed.interpretedTotal).toBe(60)
       return { sessionId, rawText: saved.candidates[0].rawText }

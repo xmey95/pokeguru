@@ -289,16 +289,14 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const [title, setTitle] = useDraftState(`thread.title:${projectId}`, '')
   const [openingNote, setOpeningNote] = useDraftState(`thread.opening:${projectId}`, '')
   const [message, setMessage] = useDraftState(`thread.message:${projectId}:${selectedId}`, '')
-  const [composerMode, setComposerMode] = useDraftState<'ask' | 'proposal'>(`thread.mode:${projectId}:${selectedId}`, 'ask')
   const [composerError, setComposerError] = useDraftState<string | null>(`thread.error:${projectId}:${selectedId}`, null)
   const composerErrorElement = useRef<HTMLDivElement>(null)
   const previewRequest = useRef(0)
-  const [preview, setPreview] = useState<{ kind: 'ask' | 'proposal'; prompt: string; packet: ThreadEvidencePacket } | null>(null)
+  const [preview, setPreview] = useState<{ prompt: string; packet: ThreadEvidencePacket } | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useBusyState(`thread:${projectId}:${selectedId}`)
   const [asking, setAsking] = useBusyState(`thread.ask:${projectId}:${selectedId}`)
-  const [proposing, setProposing] = useBusyState(`thread.propose:${projectId}:${selectedId}`)
   const startedAt = useBusyStartedAt(`thread:${projectId}:${selectedId}`)
   const [error, setError] = useState<string | null>(null)
   const [openingErrors, setOpeningErrors] = useState<Record<string, string>>({})
@@ -526,12 +524,6 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     setPreviewLoading(false)
   }
 
-  function changeComposerMode(mode: 'ask' | 'proposal'): void {
-    setComposerMode(mode)
-    setComposerError(null)
-    invalidatePreview()
-  }
-
   async function previewEvidence(): Promise<void> {
     if (!selected || previewLoading || working) return
     const prompt = message
@@ -543,7 +535,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
       const result = await window.projectsApi.previewDeckThreadEvidence(projectId, selected.id, prompt)
       if (request !== previewRequest.current) return
       if (!result.ok) throw new Error(result.error)
-      setPreview({ kind: composerMode, prompt, packet: result.value })
+      setPreview({ prompt, packet: result.value })
     } catch (cause) {
       if (request === previewRequest.current) setComposerError(cause instanceof Error ? cause.message : 'Anteprima non disponibile.')
     } finally { if (request === previewRequest.current) setPreviewLoading(false) }
@@ -646,30 +638,6 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     finally { setWorking(false); setAsking(false) }
   }
 
-  async function propose(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault()
-    if (!selected || working || aiBusy || openingAiPending || !selected.baseVersionId || !message.trim()) return
-    setWorking(true)
-    setProposing(true)
-    setComposerError(null)
-    invalidatePreview()
-    try {
-      const result = await window.projectsApi.proposeDeckThread(projectId, selected.id, message,
-        selectedOverride?.model ? selectedOverride : null)
-      if (!result.ok) throw new Error(result.error)
-      showDetail(result.value)
-      await refreshSummaries()
-      setMessage('')
-      setPreview(null)
-    } catch (cause) {
-      setComposerError(cause instanceof Error ? cause.message : 'Proposta Codex non completata.')
-      const current = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
-      if (current.ok) showDetail(current.value)
-      await refreshSummaries()
-    }
-    finally { setWorking(false); setProposing(false) }
-  }
-
   async function adopt(candidate: DeckCandidate): Promise<void> {
     if (!selected || !selected.currentVersionId || working) return
     setWorking(true)
@@ -760,26 +728,20 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)} />)}
             </div>
-            {(asking || proposing) && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
-              title={proposing ? 'Codex sta preparando la proposta…' : 'Codex sta rispondendo…'}
-              detail={proposing ? 'La lista principale resta invariata. Potrai confrontare la proposta quando sarà pronta.' : 'Puoi consultare la lista o cambiare sezione durante l’attesa.'} />}
-            <form className="thread-form thread-composer" onSubmit={(event) => void (composerMode === 'ask' ? ask(event) : propose(event))}>
-              <fieldset className="composer-mode" aria-label="Modalità di invio" disabled={working}>
-                <label><input type="radio" name="thread-composer-mode" value="ask" checked={composerMode === 'ask'}
-                  onChange={() => changeComposerMode('ask')} /><span>Discuti</span></label>
-                <label><input type="radio" name="thread-composer-mode" value="proposal" checked={composerMode === 'proposal'}
-                  onChange={() => changeComposerMode('proposal')} /><span>Proponi una lista</span></label>
-              </fieldset>
+            {asking && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
+              title="Codex sta rispondendo…"
+              detail="Una lista completa e verificata comparirà nel Thread come candidata. Puoi consultare la lista o cambiare sezione durante l’attesa." />}
+            <form className="thread-form thread-composer" onSubmit={(event) => void ask(event)}>
               <label htmlFor="thread-message">Scrivi nel thread</label>
               <textarea id="thread-message" value={message} maxLength={5000} disabled={working} aria-describedby="thread-composer-help"
                 onChange={(event) => { setMessage(event.target.value); invalidatePreview(); setComposerError(null) }} />
-              <p id="thread-composer-help" className="content-note">{composerMode === 'ask' ? 'Ricevi una risposta da Codex.'
-                : !selected.baseVersionId ? 'Per proporre una lista serve una lista iniziale del thread.' : 'Ricevi una lista completa da confrontare.'}</p>
+              <p id="thread-composer-help" className="content-note">{selected.baseVersionId
+                ? 'Scrivi una domanda, un’idea o chiedi una lista. Una proposta completa e verificata apparirà qui come candidata da confrontare e adottare esplicitamente.'
+                : 'Puoi discutere un’idea con Codex. Per salvare una lista candidata, importa prima una lista principale.'}</p>
               {composerError && <div ref={composerErrorElement} className="error-banner" role="alert" tabIndex={-1}>{composerError}</div>}
               <div className="composer-actions"><div className="thread-form-actions">
-                <button className="primary-button" disabled={working || aiBusy || openingAiPending || !message.trim() || (composerMode === 'proposal' && !selected.baseVersionId)}>
-                  {(asking || proposing) && <Spinner />}{asking ? 'Risposta in corso…' : proposing ? 'Proposta in corso…'
-                    : composerMode === 'ask' ? 'Chiedi a Codex' : 'Genera proposta Codex'}
+                <button className="primary-button" disabled={working || aiBusy || openingAiPending || !message.trim()}>
+                  {asking && <Spinner />}{asking ? 'Risposta in corso…' : 'Invia a Codex'}
                 </button>
                 <button type="button" className="secondary-button" disabled={working || !message.trim()}
                   title="Salva il testo senza inviarlo a Codex" onClick={() => void addMessage()}>Salva osservazione</button>
@@ -787,7 +749,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               <button type="button" className="text-button composer-preview" disabled={!message.trim() || previewLoading || working}
                 onClick={() => void previewEvidence()}>{previewLoading && <Spinner />}{previewLoading ? 'Preparo i dati…' : 'Vedi dati inviati a Codex'}</button>
               </div>
-              {preview?.kind === composerMode && preview.prompt === message && <EvidencePreview packet={preview.packet} />}
+              {preview?.prompt === message && <EvidencePreview packet={preview.packet} />}
             </form>
             <details className="thread-ai-options"><summary>Dettagli del thread e AI{selectedOverride?.model && <span className="thread-ai-choice"> · Personalizzata</span>}</summary><div className="thread-form"><p className="content-note">Creato il {displayDate(selected.createdAt)}</p>
               <label htmlFor="thread-ai-model">Modello Codex per questo thread</label>
