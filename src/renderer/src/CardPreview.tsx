@@ -47,7 +47,7 @@ export function CardPreviewProvider({ children }: { children: ReactNode }) {
       void window.projectsApi.getCardPreview(lookup).then((result) => {
         if (id !== sequence.current) return
         const data: CardPreviewData = result.ok ? result.value : {
-          name: lookup.name, printLabel: null, image: null, reason: 'unavailable', sample: false
+          name: lookup.name, printId: null, printLabel: null, image: null, reason: 'unavailable', sample: false
         }
         // Older profiles can contain large data URLs; keep those only while the card is visible.
         if (data.reason === 'available' && data.image?.startsWith('pokeguru://cards/')) {
@@ -57,7 +57,7 @@ export function CardPreviewProvider({ children }: { children: ReactNode }) {
         setCurrent({ anchor: element, lookup, data })
       }).catch(() => {
         if (id === sequence.current) setCurrent({ anchor: element, lookup, data: {
-          name: lookup.name, printLabel: null, image: null, reason: 'unavailable', sample: false
+          name: lookup.name, printId: null, printLabel: null, image: null, reason: 'unavailable', sample: false
         } })
       })
     }

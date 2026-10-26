@@ -1,22 +1,50 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { TournamentCard } from '../../shared/tournament'
 import type { CardPreviewData } from '../../shared/card-preview'
+import type { CatalogPrint } from '../../shared/catalog'
 import { useViewState } from './Navigation'
 import { useCardPreview } from './CardPreview'
 import { CardImageTile } from './CardImageTile'
+import { CardFace } from './CardOverview'
 import { DeckViewToggle, type DeckView } from './DeckViewToggle'
 
 const categories = ['pokemon', 'trainer', 'energy'] as const
 const categoryName = { pokemon: 'Pokémon', trainer: 'Allenatori', energy: 'Energie' }
 
-function EventImageDetail({ card, image }: { card: TournamentCard; image: string | null }) {
-  const [failed, setFailed] = useState(false)
-  const local = image && (image.startsWith('pokeguru://cards/') || image.startsWith('data:image/'))
+function EventImageDetail({ card, preview }: { card: TournamentCard; preview: CardPreviewData | null }) {
+  const printId = preview?.printId ?? null
+  const [detail, setDetail] = useState<{ id: string; print: CatalogPrint | null; error: string | null } | null>(null)
+
+  useEffect(() => {
+    if (!printId) return
+    let active = true
+    void window.projectsApi.getCatalogPrint(printId).then((result) => {
+      if (active) setDetail({ id: printId, print: result.ok ? result.value : null,
+        error: result.ok ? null : result.error })
+    }).catch(() => { if (active) setDetail({ id: printId, print: null, error: 'Dettaglio carta non disponibile.' }) })
+    return () => { active = false }
+  }, [printId])
+
+  const print = detail?.id === printId ? detail.print : null
+  const message = !preview ? 'Cerco la scheda nel Catalogo locale…'
+    : !printId ? preview.reason === 'ambiguous' ? 'La stampa non è univoca nel Catalogo locale.'
+      : 'Scheda non trovata nel Catalogo locale.'
+      : !detail || detail.id !== printId ? 'Carico i dettagli della carta…'
+        : detail.error ?? 'Scheda non più disponibile nel Catalogo locale.'
+  const variants = print?.variants && Object.entries(print.variants).filter(([, active]) => active).map(([name]) => name)
+
   return <div className="event-image-detail" role="region" aria-label={`Dettaglio ${card.name}`}>
-    <strong>{card.name}</strong><span>{card.count} copie · {card.set} {card.number}</span>
-    {local && !failed ? <img src={image} alt={`Carta ${card.name}, ${card.set} ${card.number}`}
-      loading="lazy" decoding="async" onError={() => setFailed(true)} />
-      : <p>Immagine non disponibile nel Catalogo locale.</p>}
+    <div className="event-image-detail-heading"><strong>{card.name}</strong>
+      <span>{card.count} {card.count === 1 ? 'copia' : 'copie'} · Stampa nella lista: {card.set} {card.number}</span></div>
+    {print ? <>
+      <CardFace print={print} imagePrint={print} />
+      <dl className="event-print-details">
+        <div><dt>Set e numero</dt><dd>{print.setName} · {print.localId}</dd></div>
+        <div><dt>Rarità</dt><dd>{print.rarity ?? 'Non indicata'}</dd></div>
+        <div><dt>Marchio</dt><dd>{print.regulationMark ?? 'Non indicato'}</dd></div>
+        <div><dt>Varianti</dt><dd>{variants?.join(', ') || 'Non indicate'}</dd></div>
+      </dl>
+    </> : <p className="event-image-detail-message" role="status">{message}</p>}
   </div>
 }
 
@@ -61,8 +89,8 @@ export function TournamentDeck({ cards, source }: { cards: TournamentCard[]; sou
                 key={`${index}:${copy}:${images?.[index]?.image ?? ''}`} name={card.name} print={`${card.set} ${card.number}`}
                 src={images?.[index]?.image ?? null} copy={copy + 1} total={card.count} selected={selectedIndex === index}
                 onClick={() => setSelection(selectedIndex === index ? null : { key: imageKey, index })} />)}
-              {selectedIndex === index && <EventImageDetail key={`${index}:${images?.[index]?.image ?? ''}`}
-                card={card} image={images?.[index]?.image ?? null} />}
+              {selectedIndex === index && <EventImageDetail key={`${index}:${images?.[index]?.printId ?? ''}`}
+                card={card} preview={images?.[index] ?? null} />}
             </div>)}
           </div> : <p className="content-note">Nessuna carta</p>}
       </section>

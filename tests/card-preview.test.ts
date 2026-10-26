@@ -36,10 +36,12 @@ it('resolves exact printings locally and avoids inventing artwork for ambiguous 
   const store = new CatalogStore(file)
   try {
     expect(store.cardPreview({ name: 'Mega Absol ex', setCode: 'me01', cardNumber: '86' })).toMatchObject({
-      reason: 'available', printLabel: 'Mega Evolution · 086', sample: false
+      reason: 'available', printId: 'me01-086', printLabel: 'Mega Evolution · 086', sample: false
     })
     expect(store.cardPreview({ name: 'Mega Absol ex', setCode: 'MEG', cardNumber: '86' }).reason)
       .toBe('ambiguous')
+    expect(store.cardPreview({ name: 'Mega Absol ex', setCode: 'MEG', cardNumber: '86' }).printId)
+      .toBeNull()
     expect(store.cardPreview({ name: 'Mega Absol ex', identityId: 'absol' })).toMatchObject({
       reason: 'available', sample: true
     })
@@ -50,5 +52,6 @@ it('resolves exact printings locally and avoids inventing artwork for ambiguous 
       image: null, reason: 'not-cached'
     })
     expect(store.cardPreview({ name: 'Absent', setCode: 'MEG', cardNumber: '999' }).reason).toBe('not-in-catalog')
+    expect(store.cardPreview({ name: 'Absent', setCode: 'MEG', cardNumber: '999' }).printId).toBeNull()
   } finally { store.close(); rmSync(folder, { recursive: true, force: true }) }
 })

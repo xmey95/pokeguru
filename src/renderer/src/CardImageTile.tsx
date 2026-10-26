@@ -8,9 +8,10 @@ export function CardImageTile({ name, print, src, copy, total, selected, constra
 }) {
   const [failed, setFailed] = useState(false)
   const available = Boolean(src && (src.startsWith('pokeguru://cards/') || src.startsWith('data:image/')) && !failed)
+  const constraintLabel = constraintCount === undefined ? '' : constraintCount === null
+    ? ', vincoli non attribuibili' : `, ${constraintCount} ${constraintCount === 1 ? 'vincolo' : 'vincoli'}`
   return <button type="button" className="card-image-tile" aria-pressed={selected}
-    aria-label={`${name}${print ? `, ${print}` : ''}, copia ${copy} di ${total}, ${constraintCount === null || constraintCount === undefined
-      ? 'vincoli non attribuibili' : `${constraintCount} ${constraintCount === 1 ? 'vincolo' : 'vincoli'}`}`}
+    aria-label={`${name}${print ? `, ${print}` : ''}, copia ${copy} di ${total}${constraintLabel}`}
     onClick={onClick}>
     <span className="card-image-art" aria-hidden="true">
       {available ? <img src={src!} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />

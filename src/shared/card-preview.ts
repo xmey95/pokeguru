@@ -8,6 +8,7 @@ export interface CardPreviewLookup {
 
 export interface CardPreviewData {
   name: string
+  printId: string | null
   printLabel: string | null
   image: string | null
   reason: 'available' | 'source-missing' | 'not-cached' | 'not-in-catalog' | 'ambiguous' | 'unavailable'
