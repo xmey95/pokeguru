@@ -1,8 +1,8 @@
 # Pokéguru
 
-**Release corrente:** [v0.2.0](https://github.com/xmey95/pokeguru/releases/tag/v0.2.0), con pacchetti per Linux, Windows, macOS Intel e Apple Silicon. I due DMG macOS non sono firmati né notarizzati da Apple.
+**Release corrente:** [v0.2.1](https://github.com/xmey95/pokeguru/releases/tag/v0.2.1), con pacchetti per Linux, Windows, macOS Intel e Apple Silicon. I due DMG macOS non sono firmati né notarizzati da Apple.
 
-**Su `dev` dopo v0.2.0:** i vincoli si creano nelle carte della Lista del progetto; il Catalogo globale non li mostra. I Thread puntano a produrre nello stesso turno una candidata completa per le richieste di modifica, se Catalogo e controlli permettono di verificarla. La candidata resta separata dalla lista principale finché non viene adottata manualmente.
+**In v0.2.1:** i vincoli si creano nelle carte della Lista del progetto; il Catalogo globale non li mostra. I Thread puntano a produrre nello stesso turno una candidata completa per le richieste di modifica, se Catalogo e controlli permettono di verificarla. La candidata resta separata dalla lista principale finché non viene adottata manualmente.
 
 APP-136 amplia il testo del piano Matchup all'intera scheda e mostra punti forti, rischi e carte chiave come elenchi. Anche le guide già salvate e lo storico ricevono questa presentazione, senza rigenerazione o modifica dei testi nell'archivio.
 
