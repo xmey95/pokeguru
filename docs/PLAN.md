@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 24 ottobre 2026. **Fase corrente:** I3 completato e v0.1.0 pubblicata; prova dell'utente prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 26 ottobre 2026. **Fase corrente:** I3 completato e v0.1.0 pubblicata; prova dell'utente prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -110,6 +110,7 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 ## Ripresa
 
 - **APP-128 (26-10-2026) — [PR #39](https://github.com/xmey95/pokeguru/pull/39) verso `dev`:** input manuale rimosso dal Thread; storico, confronto, adozione e contesto in sola lettura nel Thread collegato APP-125 restano disponibili. Build, 223 test e smoke Electron Thread/storico/adozione/workspace passati in locale su profili temporanei Windows. I quattro check Verify sul commit `a3a543e` sono verdi nei run [push](https://github.com/xmey95/pokeguru/actions/runs/40296448877) e [PR](https://github.com/xmey95/pokeguru/actions/runs/40296454754), con pacchetti e smoke su Ubuntu/Windows. Le candidate dello smoke sono fixture storiche; nessuna nuova generazione Codex reale in APP-128. APP-129, percorso di conversazione unico, viene dopo e resta fuori da questo incremento; `main` e release fuori ambito.
+- **APP-130 in corso (26-10-2026):** vincoli spostati nel dettaglio carta della Lista e del Catalogo; contatore per identità nella riga e nella vista Immagini, dettaglio accessibile per carte vincolate fuori lista. Build e prove Electron Windows in profili temporanei passate; suite completa con 220 test passati e tre fallimenti ambientali del sandbox. Resta la CI pulita Ubuntu/Windows, PR e merge coordinato dopo APP-128; APP-131/132 possono cambiare composizione e fondo Lista rispettando questo contratto UI. Stato e limiti in APP-130 del backlog.
 
 - **APP-126 integrato in `dev` (25-10-2026) — [PR #35](https://github.com/xmey95/pokeguru/pull/35), merge `7a2d89e`:** export copiato per Pokémon TCG Live, destinazione confermata dall'utente. Converte sigle TCGdex e numeri decimali, riconosce sezioni italiane, conserva la copia immediata e blocca ID ignoti senza cambiare gli appunti. Build, 41 test mirati e smoke Electron locali passati; [CI run 40195695115](https://github.com/xmey95/pokeguru/actions/runs/40195695115) verde su Ubuntu e Windows, compresi smoke export e packaging (rerun Windows dopo timeout intermittente di un test `daily-sync` non modificato). Nessuna prova nel client Live, poiché l'utente non dispone ora di una lista rifiutata; fonti e limiti in APP-126 e T-126/F-48. `main` e release fuori ambito.
 

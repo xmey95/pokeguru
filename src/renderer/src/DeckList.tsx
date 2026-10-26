@@ -41,7 +41,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
   projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void; importOpen: boolean
 }) {
   const preview = useCardPreview()
-  const { setReconciliation: updateConstraintReconciliation } = useDeckConstraints()
+  const { constraints, setReconciliation: updateConstraintReconciliation } = useDeckConstraints()
   const [catalog, setCatalog] = useState<CatalogView | null>(null)
   const [ruleAudit, setRuleAudit] = useState<StandardRuleAudit | null>(null)
   const [reconciliation, setReconciliation] = useState<DeckReconciliation | null>(null)
@@ -80,6 +80,11 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
   }, [projectId, baseline.importedAt])
 
   const cards = useMemo(() => buildDeckCards(baseline, catalog, reconciliation), [baseline, catalog, reconciliation])
+  const constraintCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const constraint of constraints) counts.set(constraint.identityId, (counts.get(constraint.identityId) ?? 0) + 1)
+    return counts
+  }, [constraints])
   const { groups, usesImportHeadings } = useMemo(() => groupDeckCards(cards, baseline), [cards, baseline])
   const asOf = referenceDate ?? today
   const rotation = useMemo(() => evaluateWesternRotation(baseline, catalog, asOf), [baseline, catalog, asOf])
@@ -239,6 +244,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
           {group.cards.map((card) => <div className="deck-image-entry" key={card.key}>
             {deckImageCopies(card).map((copy, index) => <CardImageTile key={index} name={card.name} print={copy.print}
               src={copy.src} copy={index + 1} total={card.quantity} selected={expanded === card.key}
+              constraintCount={card.identityId ? constraintCounts.get(card.identityId) ?? 0 : null}
               onClick={() => setExpanded(expanded === card.key ? null : card.key)} />)}
             {expanded === card.key && <div className="deck-image-detail" role="region" aria-label={`Dettaglio ${card.name}`}>
               {cardDetail(card)}</div>}
@@ -247,12 +253,18 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
         {deckView === 'list' && <div className="deck-card-list">{group.cards.map((card) => {
         const open = expanded === card.key
         const thumbnail = deckThumbnail(card)
+        const constraintCount = card.identityId ? constraintCounts.get(card.identityId) ?? 0 : null
         return <article className="deck-card" key={card.key} data-testid={card.identityId ? `deck-card-${card.identityId}` : `deck-line-${card.lines[0].lineNumber}`}>
           <button type="button" className="deck-card-toggle" aria-expanded={open} onClick={() => setExpanded(open ? null : card.key)}
             {...preview({ name: card.name, printId: deckImagePrint(card)?.id ?? card.prints[0]?.id })}>
             <span className="deck-card-quantity">{card.quantity}×</span>
             <CardThumbnail key={thumbnail} src={thumbnail} />
             <span className="deck-card-title"><strong>{card.name}</strong>{cardStatus(card.status, catalog) && <small>{cardStatus(card.status, catalog)}</small>}</span>
+            <span className="deck-card-constraint-count" aria-label={card.identityId
+              ? `${constraintCount} ${constraintCount === 1 ? 'vincolo' : 'vincoli'} su ${card.name}`
+              : `Vincoli non attribuibili a ${card.name}: identità da chiarire`}>
+              {constraintCount === null ? 'Vincoli —' : `${constraintCount} ${constraintCount === 1 ? 'vincolo' : 'vincoli'}`}
+            </span>
             <span className="deck-card-chevron"><Icon name="chevron" /></span>
           </button>
           {open && cardDetail(card)}

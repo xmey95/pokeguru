@@ -9,8 +9,8 @@ import { CatalogSection } from './CatalogSection'
 import { DeckList } from './DeckList'
 import { DeckHistory } from './DeckHistory'
 import { DeckCompanion } from './DeckCompanion'
-import { ConstraintsSection } from './ConstraintsSection'
 import { DeckConstraintsProvider } from './DeckConstraintsContext'
+import { DeckConstraintIndex } from './DeckConstraintIndex'
 import { ThreadsSection } from './ThreadsSection'
 import { TournamentSection } from './TournamentSection'
 import { Icon } from './Icon'
@@ -60,8 +60,6 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   const catalogFocusIdentityId = nav.entry.ui['catalog.focus'] as string | null ?? null
   const setView = (next: typeof view) => nav.go({ view: next })
-  const [constraintTargetId, setConstraintTargetId] = useState<string | null>(nav.entry.ui['constraint.target'] as string | null ?? null)
-  const [constraintSelectionVersion, setConstraintSelectionVersion] = useState(0)
   const [showCompactCreate, setShowCompactCreate] = useViewState('project.create', false)
   const selectionVersion = useRef(0)
   const importDraftVersion = useRef(0)
@@ -184,12 +182,6 @@ export function App() {
       document.getElementById('project-switcher-trigger')?.focus()
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Cancellazione non riuscita.') }
     finally { setProjectActionBusy(false) }
-  }
-
-  function selectConstraintTarget(identityId: string): void {
-    setConstraintTargetId(identityId)
-    setConstraintSelectionVersion((version) => version + 1)
-    if (activeTab !== 'deck' || view !== 'project') nav.go({ view: 'project', tab: 'deck' }, { 'constraint.target': identityId })
   }
 
   async function createProject(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -368,7 +360,11 @@ export function App() {
             <button type="submit" className="primary-button" disabled={saving || loading || !name.trim()}>{saving ? 'Salvataggio…' : 'Crea progetto'}</button>
           </form>}
           {error && <div className="error-banner" role="alert">{error}</div>}
-          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? <CatalogSection focusIdentityId={catalogFocusIdentityId} onConstrain={selected ? selectConstraintTarget : undefined} /> : view === 'tournament' ? <TournamentSection /> : loading ? <LoadingSkeleton label="Apertura progetti…" rows={3} /> : selected ? (
+          {view === 'ai' ? <AiSettings /> : view === 'catalog' ? selected && !baselineLoading
+            ? <DeckConstraintsProvider key={selected.id} projectId={selected.id} baseline={baseline}>
+                <CatalogSection focusIdentityId={catalogFocusIdentityId} canConstrain />
+              </DeckConstraintsProvider>
+            : <CatalogSection focusIdentityId={catalogFocusIdentityId} /> : view === 'tournament' ? <TournamentSection /> : loading ? <LoadingSkeleton label="Apertura progetti…" rows={3} /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-headline">
                 <div>
@@ -406,6 +402,7 @@ export function App() {
                   </div>
                 </div>
               </form>}
+              {!baselineLoading && <DeckConstraintIndex />}
               {baselineLoading ? <LoadingSkeleton label="Caricamento lista…" /> : baseline ? (
                 <div className="baseline-panel" data-testid="baseline-panel">
                   <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} importOpen={importOpen} />
@@ -433,10 +430,6 @@ export function App() {
                     }} />
                 </div>
               ) : null}
-              {!baselineLoading && <ConstraintsSection key={selected.id}
-                selectedIdentityId={constraintTargetId} selectionVersion={constraintSelectionVersion}
-                onTargetConsumed={() => { setConstraintTargetId(null); delete nav.entry.ui['constraint.target'] }}
-                onOpenCatalog={() => setView('catalog')} />}
               </DeckConstraintsProvider> : activeTab === 'threads' ? <ThreadsSection key={selected.id} projectId={selected.id} mainContextKey={baseline ? `${baseline.versionId}:${baseline.resolutionId}` : null}
                 onAdopt={(adopted) => {
                   resetImportUi()

@@ -100,6 +100,8 @@ export function ConstraintForm({ id, initial, initialIdentityId = '', fixedIdent
       <label className="constraint-print-field">Stampa specifica (facoltativa)
         <select value={printId} onChange={(event) => setPrintId(event.target.value)} disabled={!identityId}>
           <option value="">Tutte le stampe equivalenti</option>
+          {initial?.printId && !prints.some((print) => print.id === initial.printId) &&
+            <option value={initial.printId}>{initial.printId} · stampa non disponibile nel catalogo</option>}
           {prints.filter((print) => print.identityId === identityId).map((print) =>
             <option key={print.id} value={print.id}>{print.setName} {print.localId} · {print.rarity ?? 'rarità ignota'}</option>)}
         </select>

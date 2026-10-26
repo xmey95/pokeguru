@@ -97,6 +97,12 @@ L'utente approva la creazione del vincolo direttamente nel dettaglio carta e il 
 
 Il riepilogo apre la modifica nella riga selezionata e la creazione soltanto su richiesta; resta possibile imporre una carta fuori dalla lista tramite il Catalogo. Un provider del renderer condivide dati e mutazioni tra carta e riepilogo, con blocco dei salvataggi concorrenti; una correzione d'identità aggiorna la valutazione. I contratti IPC, il database e il validatore restano invariati. Lo scorrimento per il focus muove solo l'area di lavoro.
 
+### T-130 — Gestione dei vincoli nella scheda carta (APP-130)
+
+Il feedback utente del 26-10-2026 supera la collocazione del riepilogo APP-065: nella Lista ogni riga mostra il conteggio dei vincoli per `identityId`, mentre creazione, modifica ed eliminazione sono contestuali al dettaglio della carta. Il Catalogo apre la stessa gestione nella scheda; le carte vincolate assenti dalla lista hanno un dettaglio apribile all'inizio della vista di progetto. I vincoli persistiti non vengono migrati o cancellati. Una riga senza identità certa mostra un conteggio indeterminato, senza usare il nome per attribuire i vincoli di omonime.
+
+Il validatore, i contratti IPC e l'isolamento per progetto rimangono invariati. Le schede mostrano il messaggio dell'esito e i conflitti, inclusi i requisiti per stampa. La gestione è parte del dettaglio carta anche se APP-131 ne cambierà la composizione e APP-132 il fondo della Lista.
+
 ### T-55 — Importazione apribile e annullabile (APP-066)
 
 L'utente approva il modulo su richiesta per liste già caricate e l'accesso immediato nel progetto vuoto. Il comando nell'intestazione apre il modulo sopra le carte, nel flusso della pagina; il testo salvato è precompilato. “Sostituisci lista” esplicita l'effetto del salvataggio. Annulla/Escape ripristinano testo e provenienza salvati, chiudono senza scritture e restituiscono il focus al comando. Dopo un salvataggio riuscito si torna alla lista con conferma breve; il progetto vuoto mostra direttamente il modulo.
