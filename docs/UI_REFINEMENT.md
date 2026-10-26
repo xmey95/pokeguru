@@ -2,6 +2,8 @@
 
 26 ottobre 2026 · direzione aggiornata dopo il feedback dell'utente
 
+**Obiettivo attivo:** la richiesta successiva dell'utente imposta l'implementazione di questa direzione. Per sequenza, criteri di completamento e verifiche previste, vedere APP-135 in [BACKLOG.md](BACKLOG.md). Gli esempi descritti qui sono il riferimento della modifica, non risultati già presenti nel renderer.
+
 L'utente apprezza l'organizzazione attuale del software. Le alternative strutturali di UX_DIRECTIONS sono troppo estese: restano Lista, Thread, Matchup, selettori, creazione dei Thread e lista persistente. La scelta da riprendere è il piano Matchup con tre tab **Apertura, Sviluppo, Chiusura**. Il resto del lavoro riguarda maturità della presentazione, chiarezza degli stati e quantità di informazioni esposte.
 
 ## Da interfaccia tecnica a strumento quotidiano
@@ -12,7 +14,7 @@ La proposta è assegnare alle informazioni tre posizioni coerenti, senza cambiar
 
 - **Nel lavoro corrente:** piano, carte, differenze della proposta, versione utile, stato dell'operazione e problemi che richiedono una scelta. Una lacuna che cambia il significato di una guida resta qui.
 - **In Fonti e dettagli:** dati consultati, provenienza, periodo, copertura, versioni e impostazioni effettive. Restano verificabili senza interrompere la lettura.
-- **Nella Diagnostica AI, dentro i dettagli:** prompt integrale, hash, byte, query, token e dati utili all'assistenza. Non occupano più più titoli separati fra piano e discussione.
+- **Nella Diagnostica AI, dentro i dettagli:** prompt integrale, hash, byte, query, token e dati utili all'assistenza. Non occupano più titoli separati fra piano e discussione.
 
 La selezione delle informazioni è contestuale. «Lista precedente» e «Carta non identificata» aiutano una decisione; un hash della lista o la dimensione del prompt servono a un approfondimento tecnico. Le credenziali e lo stato di accesso appartengono alle Impostazioni AI, mentre un problema di connessione che impedisce un'analisi deve essere visibile nel punto dell'azione.
 
