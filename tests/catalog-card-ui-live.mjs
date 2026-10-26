@@ -140,7 +140,13 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 })
   const select = async (name) => {
     await search.fill(name)
-    await page.locator('.catalog-list').getByRole('button', { name: new RegExp(name) }).click({ timeout: 30000 })
+    try {
+      await page.locator('.catalog-list').getByRole('button', { name: new RegExp(name) }).click({ timeout: 15000 })
+    } catch (error) {
+      console.log('Catalog selection failed', { name, query: await search.inputValue(), filter: await page.getByLabel('Espansione').inputValue(),
+        layout: await page.locator('.catalog-layout').innerText() })
+      throw error
+    }
     await ready()
     await detail.getByRole('heading', { name, exact: true }).waitFor()
   }
@@ -210,6 +216,7 @@ try {
   assert.equal(await detail.locator('.constraint-form').getByLabel('Carta di gioco').count(), 0)
   await page.keyboard.press('Escape')
   await detail.locator('.constraint-form').waitFor({ state: 'detached' })
+  await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Aggiungi vincolo su questa carta')
   await select('Energia Base di prova')
   assert.ok(await detail.getByText('Nessun testo effetto riportato dal catalogo.', { exact: true }).isVisible())
   assert.equal(await detail.locator('.card-gameplay-missing').count(), 0)
