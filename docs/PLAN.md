@@ -109,7 +109,7 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
-- **APP-144 in corso sul ramo `task/app-144-advanced-catalog-search`:** Ricerca avanzata AI implementata come filtro della lista Catalogo; build, suite locale, prove Electron/Codex e scansione 5.000/10.000 stampe passano. Restano PR verso `dev`, quattro check CI, merge e apertura dell'app per la prova utente. Dopo l'integrazione chiudere APP-144 nel backlog e registrare i limiti confermati. `main`, release e I4 non sono inclusi.
+- **APP-144 Done in `dev`:** [PR #68](https://github.com/xmey95/pokeguru/pull/68) integrata come `6b729c8` dopo quattro check CI verdi. La Ricerca avanzata AI è nella lista Catalogo; build, suite locale, prove Electron/Codex e scansione 5.000/10.000 stampe passano. L'app è aperta per la prova utente; raccogliere feedback sulle otto domande, sulla precisione tattica e sui tempi prima di pianificare miglioramenti. `main`, release e I4 restano fuori da questo incremento.
 
 - **APP-143 integrato in `dev` — [PR #66](https://github.com/xmey95/pokeguru/pull/66), merge `8ca3797`:** il piano Matchup usa prosa naturale nelle tre fasi, e le guide già salvate mostrano i vecchi blocchi come paragrafi senza alterare l'archivio. Build, test mirati, smoke Electron e generazione/revisione Codex su contesto sintetico passati; quattro [check CI](https://github.com/xmey95/pokeguru/actions/runs/40504456603) verdi. Da provare una guida reale con fonti del proprio catalogo; nessuna nuova release o I4.
 
