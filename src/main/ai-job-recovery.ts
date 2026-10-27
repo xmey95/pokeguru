@@ -17,6 +17,7 @@ import { hasStrategyPhases } from '../shared/meta-matchups'
 
 interface ThreadRequest {
   schemaVersion?: number
+  validatedDraft?: boolean
   message: string
   existingUserMessageId?: string
   config: AiRunConfig
@@ -50,6 +51,10 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
   const request = job.request as ThreadRequest | null
   if (!request || typeof request.message !== 'string' || !request.config || !request.evidence)
     throw new Error('Contesto del job Codex incompleto.')
+  if (job.status === 'running' && request.validatedDraft === false) {
+    jobs.transition(job.id, 'interrupted', 'Bozza interrotta prima della verifica delle schede. Riprova il turno.')
+    return 'interrupted'
+  }
   let result = job.result as ThreadResult | null
   if (job.status === 'running') {
     const path = join(directory, 'result.json')
@@ -101,6 +106,7 @@ type MatchupBase = Omit<MatchupReport, 'strengths' | 'weaknesses' | 'ourKeyCards
   'theirKeyCards' | 'strategy' | 'limitations'>
 interface MatchupRequest {
   analysisVersion?: 2
+  validatedDraft?: boolean
   base: MatchupBase
   discussionId?: string
   turnId?: string
@@ -131,6 +137,10 @@ export function recoverMatchupJob(job: AiJob, jobs: AiJobStore, projects: Projec
   const request = job.request as MatchupRequest | null
   if (!request?.base || request.base.projectId !== job.projectId || request.base.jobId !== job.id)
     throw new Error('Contesto Matchup del job incompleto.')
+  if (job.status === 'running' && request.validatedDraft === false) {
+    jobs.transition(job.id, 'interrupted', 'Bozza interrotta prima della verifica delle schede. Riprova la guida.')
+    return 'interrupted'
+  }
   let result = job.result as MatchupResult | null
   if (job.status === 'running') {
     const path = join(directory, 'result.json')

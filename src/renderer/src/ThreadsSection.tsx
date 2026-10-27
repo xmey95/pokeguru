@@ -84,14 +84,14 @@ function ThreadMessageEvidence({ message, cardTargets, onOpenCatalogCard }: {
   const cited = new Set(message.citedSourceIds ?? [])
   const changed = packet.change.updated.length + packet.change.added.length + packet.change.removed.length
   return <><AiEvidenceLimit trace={packet.aiQueries} />
-    {packet.cardCoverage.omitted > 0 && <p className="content-note">{packet.cardCoverage.omitted} carte non incluse nei dati inviati.</p>}
+    {packet.cardCoverage.omitted > 0 && <p className="content-note">{packet.cardCoverage.omitted} carte delle liste Evento fuori dal campione iniziale; controlla anche le query del turno.</p>}
     <details className="candidate-evidence"><summary>Fonti e dettagli</summary>
     <p>Dati consultati: {packet.cardCoverage.withGameplay}/{packet.cardCoverage.selected} schede con testo di gioco · {packet.events.length} eventi{changed ? ` · ${changed} cambi nelle fonti` : ''}.</p>
     <p>Contesto del {new Date(packet.capturedAt).toLocaleString('it-IT')} · Catalogo: {packet.catalogSyncedAt ? new Date(packet.catalogSyncedAt).toLocaleString('it-IT') : 'non aggiornato'}. Le risposte precedenti mantengono questi dati.</p>
     {packet.change.updated.length > 0 && <p>Fonti aggiornate: {packet.change.updated.join('; ')}.</p>}
     {packet.change.added.length > 0 && <p>Nuove fonti selezionate: {packet.change.added.join('; ')}.</p>}
     {packet.change.removed.length > 0 && <p>Fonti non selezionate in questo turno: {packet.change.removed.join('; ')}.</p>}
-    {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte oltre il limite del contesto; la loro meccanica non è stata inviata.</p>}
+    {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte delle liste Evento fuori dal campione iniziale. Le query automatiche possono averne consegnato le schede nel turno.</p>}
     <AiDiagnostics trace={packet.aiQueries} audit={packet.promptAudit} />
     <p>Fonti fornite a Codex; «citata» indica una fonte dichiarata nella risposta, non una verifica automatica della conclusione.</p>
     {packet.sources.length === 0 ? <p>Nessuna scheda o lista pertinente disponibile nell'archivio locale.</p> :
@@ -111,14 +111,14 @@ function EvidencePreview({ packet }: { packet: ThreadEvidencePacket }) {
       <ul>{packet.cards.map((card) => <li key={card.name} tabIndex={0}
         {...preview({ name: card.name, printId: card.printId })}><strong>{card.name}</strong>{card.mentionedAs ? ` (citata come ${card.mentionedAs})` : ''} · {card.identityStatus === 'ambiguous' ? 'identità ambigua' : card.identityStatus === 'missing' ? 'scheda assente' : card.printId}
         {card.gameplayText && <p>{card.gameplayText}</p>}</li>)}</ul>
-      {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte omesse per il limite del contesto.</p>}
+      {packet.cardCoverage.omitted > 0 && <p>{packet.cardCoverage.omitted} carte delle liste Evento fuori dal campione iniziale.</p>}
       {packet.events.map((event) => <details key={event.eventId}><summary>{event.name} · {event.date} · {event.lists.length} liste</summary>
         <p>{event.kind === 'online' ? 'Online' : 'In presenza'} · {event.completeLists} liste complete su {event.participants} partecipazioni visibili.</p>
         {event.lists.map((list) => <ExpandablePreviewDeck key={list.sourceId}
           summary={`${list.deck} · posto ${list.placing ?? '?'}`} lines={list.cards} />)}
       </details>)}
     </details>
-    <p>I dati si aggiornano all’invio. Codex può consultare altre carte e liste nell’archivio locale.</p>
+    <p>I dati si aggiornano all’invio. Pokéguru recupera le schede delle carte nominate e delle liste Evento trovate; verifica anche le nuove carte citate nella risposta prima di salvarla.</p>
     <details><summary>Come vengono scelti i dati</summary><p>Le ricerche sono di sola lettura e possono richiedere un turno Codex aggiuntivo. Richieste, risultati e token saranno disponibili in Fonti e dettagli → Diagnostica AI della risposta.</p></details>
   </div>
 }

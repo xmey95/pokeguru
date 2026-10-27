@@ -21,8 +21,8 @@ import { CodexControl } from './codex-control'
 import { CodexSetup } from './codex-setup'
 import { deckThreadPrompt, DECK_THREAD_SCHEMA, readDeckThreadTurn } from './deck-ai'
 import { buildThreadEvidence } from './thread-evidence'
-import { createAiEvidenceEngine } from './ai-evidence-engine'
-import { makeAiPromptAudit, runAiEvidenceQueries,
+import { createAiEvidenceEngine, type AiEvidenceEngine } from './ai-evidence-engine'
+import { extendAiEvidenceForText, makeAiPromptAudit, runAiEvidenceQueries,
   threadEvidenceWithQueries } from './ai-evidence-queries'
 import { planEvidenceQueriesWithCodex } from './codex-evidence-plan'
 import { questionUsesCurrentDeck,
@@ -319,9 +319,28 @@ async function matchupAiQueries(request: string, deckContext: string,
   const catalog = catalogStore.view()
   const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
     tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog, 31))
-  return runAiEvidenceQueries(request, { deckContext, sample, evidence,
-    history: history?.slice(0, 8000) }, engine,
-    (prompt) => planEvidenceQueriesWithCodex(prompt, config, signal))
+  const trace = await runAiEvidenceQueries(request, { deckContext, sample, evidence,
+    history }, engine,
+    (prompt) => planEvidenceQueriesWithCodex(prompt, config, signal),
+    { contextTexts: [deckContext, sample.cards.join('\n'), history ?? ''] })
+  return { trace, engine }
+}
+
+function matchupDraftText(report: MatchupReport, changeSummary = ''): string {
+  return [report.strengths, report.weaknesses, report.ourKeyCards, report.theirKeyCards,
+    report.strategy, ...Object.values(report.strategyPhases ?? {}), report.limitations,
+    changeSummary].join('\n')
+}
+
+function extendMatchupDraftEvidence(trace: AiEvidenceQueryTrace, engine: AiEvidenceEngine,
+  report: MatchupReport,
+  changeSummary = ''): number {
+  return extendAiEvidenceForText(trace, engine, matchupDraftText(report, changeSummary))
+}
+
+function requireNamedEvidence(trace: AiEvidenceQueryTrace): void {
+  const missing = trace.cardTargets?.filter((target) => target.status === 'not-supplied') ?? []
+  if (missing.length) throw new Error(`Prove locali non consegnate per ${missing.map((item) => item.name).join(', ')}. Riprova l’analisi.`)
 }
 
 async function enrichMatchupDeck(projectId: string, baseline: DeckBaseline): Promise<void> {
@@ -1114,23 +1133,49 @@ function registerProjectHandlers(): void {
       const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
         tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog))
       const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
-        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal))
-      const evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
+        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal),
+        { contextTexts: [thread.title, ...thread.messages.slice(-12).map((item) => item.text),
+          base?.rawText ?? '', thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? ''],
+        eventContextTexts: thread.messages.slice(-2).map((item) => item.text) })
+      let evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
-      const context = deckThreadPrompt(thread, base, message.trim(),
+      let context = deckThreadPrompt(thread, base, message.trim(),
         projectStore.listConstraints(projectId), catalog, evidence)
       evidence.promptAudit = makeAiPromptAudit(context.prompt)
-      aiJobStore.prepare(job.id, { schemaVersion: 2, message: message.trim(), config, evidence,
+      aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: false,
+        message: message.trim(), config, evidence,
         sources: context.sources, existingUserMessageId })
-      const answerStarted = Date.now()
-      const result = await codexControl.jsonTurn(thread.aiSessionRef, cwd, context.prompt, config,
-        DECK_THREAD_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal, onSessionStarted: (id) => {
-            if (!thread.aiSessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
-          } })
+      let sessionRef = thread.aiSessionRef
+      let result: Awaited<ReturnType<typeof codexControl.jsonTurn>> | null = null
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const answerStarted = Date.now()
+        result = await codexControl.jsonTurn(sessionRef, cwd, context.prompt, config,
+          DECK_THREAD_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
+            signal: controller.signal, onSessionStarted: (id) => {
+              if (!sessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
+              sessionRef = id
+            } })
+        sessionRef = result.sessionId
+        evidence.promptAudit = makeAiPromptAudit(context.prompt, Date.now() - answerStarted, result.usage)
+        const draft = result.value as { reply?: unknown; rawText?: unknown }
+        const added = extendAiEvidenceForText(queryTrace, engine,
+          [draft.reply, draft.rawText].filter((part): part is string => typeof part === 'string').join('\n'))
+        if (!added) break
+        if (attempt === 3) throw new Error('La risposta ha introdotto altre carte: completa il recupero delle prove e riprova.')
+        evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
+        context = deckThreadPrompt(thread, base, message.trim(),
+          projectStore.listConstraints(projectId), catalog, evidence)
+        evidence.promptAudit = makeAiPromptAudit(context.prompt)
+        aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: false,
+          message: message.trim(), config, evidence,
+          sources: context.sources, existingUserMessageId })
+      }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
-      evidence.promptAudit = makeAiPromptAudit(context.prompt, Date.now() - answerStarted, result.usage)
+      if (!result || queryTrace.cardTargets?.some((target) => target.status === 'not-supplied'))
+        throw new Error('Le schede nominate non sono state tutte consegnate a Codex. Riprova l’analisi.')
+      aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: true,
+        message: message.trim(), config, evidence, sources: context.sources, existingUserMessageId })
       aiJobStore.ready(job.id, result)
       const sessionId = result.sessionId
       if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
@@ -1350,16 +1395,27 @@ function registerProjectHandlers(): void {
       const evidence = currentMatchupEvidence(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
       const deckContext = currentMatchupDeckContext(projectId, baseline)
-      const aiQueries = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
+      const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
         deckContext, sample, evidence, config, controller.signal)
       const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config,
         evidence, aiQueries, deckVersion)
-      const generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
-        sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal, aiQueries,
-          onPrompt: (audit) => aiJobStore!.prepare(job.id,
-            { analysisVersion: 2, base: { ...base, promptAudit: audit } }) })
+      let generated: MatchupReport | null = null
+      for (let attempt = 0; attempt < 4; attempt++) {
+        generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
+          sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
+            signal: controller.signal, aiQueries,
+            onPrompt: (audit) => aiJobStore!.prepare(job.id,
+              { analysisVersion: 2, validatedDraft: false,
+                base: { ...base, promptAudit: audit } }) })
+        const added = extendMatchupDraftEvidence(aiQueries, queryEngine, generated)
+        if (!added) break
+        if (attempt === 3) throw new Error('La guida ha introdotto altre carte: completa il recupero delle prove e riprova.')
+      }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      requireNamedEvidence(aiQueries)
+      if (!generated) throw new Error('Guida Matchup non prodotta.')
+      aiJobStore.prepare(job.id, { analysisVersion: 2, validatedDraft: true,
+        base: { ...base, promptAudit: generated.promptAudit } })
       const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
         deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
       aiJobStore.ready(job.id, { report })
@@ -1417,19 +1473,31 @@ function registerProjectHandlers(): void {
       const deckContext = currentMatchupDeckContext(discussion.projectId, baseline)
       const evidence = previousReport?.tournamentEvidence ??
         currentMatchupEvidence(snapshot, opponent)
-      const aiQueries = await matchupAiQueries(target.feedback, deckContext,
+      const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(target.feedback, deckContext,
         sample, evidence, config, controller.signal, matchupHistoryContext(context))
       const base = matchupJobBase(job.id, discussion.projectId, discussion.deckHash,
         snapshot, opponent, sample, config, evidence, aiQueries,
         discussion.deckVersionId ? { versionId: discussion.deckVersionId,
           resolutionId: discussion.deckResolutionId ?? null } : null)
-      const revised = await reviseMatchup(context, target.feedback, deckContext, snapshot,
-        opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal, aiQueries,
-          onPrompt: (audit) => aiJobStore!.prepare(job.id,
-            { analysisVersion: 2, base: { ...base, promptAudit: audit },
-              discussionId: discussion.id, turnId: target.id }) })
+      let revised: Awaited<ReturnType<typeof reviseMatchup>> | null = null
+      for (let attempt = 0; attempt < 4; attempt++) {
+        revised = await reviseMatchup(context, target.feedback, deckContext, snapshot,
+          opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
+            signal: controller.signal, aiQueries,
+            onPrompt: (audit) => aiJobStore!.prepare(job.id,
+              { analysisVersion: 2, validatedDraft: false,
+                base: { ...base, promptAudit: audit },
+                discussionId: discussion.id, turnId: target.id }) })
+        const added = extendMatchupDraftEvidence(aiQueries, queryEngine, revised.report, revised.changeSummary)
+        if (!added) break
+        if (attempt === 3) throw new Error('La revisione ha introdotto altre carte: completa il recupero delle prove e riprova.')
+      }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      requireNamedEvidence(aiQueries)
+      if (!revised) throw new Error('Revisione Matchup non prodotta.')
+      aiJobStore.prepare(job.id, { analysisVersion: 2, validatedDraft: true,
+        base: { ...base, promptAudit: revised.report.promptAudit },
+        discussionId: discussion.id, turnId: target.id })
       const report = { ...revised.report, jobId: job.id, generatedAt: base.generatedAt,
         deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
       aiJobStore.ready(job.id, { report, changeSummary: revised.changeSummary })
@@ -1496,17 +1564,28 @@ function registerProjectHandlers(): void {
       const evidence = currentMatchupEvidence(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
       const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
-      const aiQueries = await matchupAiQueries(`Continua l'analisi di ${opponent.name} sulla nuova lista e sul nuovo metagame`,
+      const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Continua l'analisi di ${opponent.name} sulla nuova lista e sul nuovo metagame`,
         deckContext, sample, evidence, config, controller.signal,
         matchupHistoryContext(context))
       const base = matchupJobBase(job.id, parent.projectId, hash,
         snapshot, opponent, sample, config, evidence, aiQueries, deckVersion)
-      const generated = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
-        config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
-          signal: controller.signal, aiQueries,
-          onPrompt: (audit) => aiJobStore!.prepare(job.id,
-            { analysisVersion: 2, base: { ...base, promptAudit: audit }, parentId: parent.id }) })
+      let generated: MatchupReport | null = null
+      for (let attempt = 0; attempt < 4; attempt++) {
+        generated = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
+          config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
+            signal: controller.signal, aiQueries,
+            onPrompt: (audit) => aiJobStore!.prepare(job.id,
+              { analysisVersion: 2, validatedDraft: false,
+                base: { ...base, promptAudit: audit }, parentId: parent.id }) })
+        const added = extendMatchupDraftEvidence(aiQueries, queryEngine, generated)
+        if (!added) break
+        if (attempt === 3) throw new Error('La guida ha introdotto altre carte: completa il recupero delle prove e riprova.')
+      }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      requireNamedEvidence(aiQueries)
+      if (!generated) throw new Error('Guida Matchup non prodotta.')
+      aiJobStore.prepare(job.id, { analysisVersion: 2, validatedDraft: true,
+        base: { ...base, promptAudit: generated.promptAudit }, parentId: parent.id })
       const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
         deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
       aiJobStore.ready(job.id, { report })
