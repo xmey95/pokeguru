@@ -1,6 +1,6 @@
 # Prodotto e requisiti iniziali
 
-**Versione:** 26 ottobre 2026. **Stato:** I1–I3 implementati; v0.2.1 pubblicata da `main` per Linux, Windows, macOS Intel e Apple Silicon. Il checkpoint di qualità Matchup prima di I4 è incluso: Catalogo Standard occidentale con meccaniche e codici set, archivio globale Play e Regional, guide Codex con più liste ed evidenze salvate. Una lista interamente coperta può ricevere esito conforme allo snapshot di regole incluso; casi fuori copertura restano da verificare.
+**Versione:** 27 ottobre 2026. **Stato:** I1–I3 implementati; v0.3.1 pubblicata da `main` per Linux, Windows, macOS Intel e Apple Silicon. Il checkpoint di qualità Matchup prima di I4 è incluso: Catalogo Standard occidentale con meccaniche e codici set, archivio globale Play e Regional, guide Codex con più liste ed evidenze salvate. Una lista interamente coperta può ricevere esito conforme allo snapshot di regole incluso; casi fuori copertura restano da verificare.
 
 ## Visione e confini
 
