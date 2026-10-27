@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 28 ottobre 2026. **Fase corrente:** I3 completato e v0.3.1 pubblicata su `main`; APP-153 corregge il recupero delle prove AI prima di I4. Il pacchetto Apple Silicon ha una firma ad hoc gratuita, senza notarizzazione; l'apertura da Finder dopo il download resta da provare sul Mac che ha segnalato il problema v0.2.1. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 28 ottobre 2026. **Fase corrente:** I3 completato e v0.3.2 pubblicata su `main`; APP-153 ha corretto il recupero delle prove AI prima di I4. Il pacchetto Apple Silicon ha una firma ad hoc gratuita, senza notarizzazione; l'apertura da Finder dopo il download resta da provare sul Mac che ha segnalato il problema v0.2.1. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -109,7 +109,7 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
-- **APP-153 In progress (28-10-2026):** il difetto osservato è nella consegna delle prove, non nell'assenza generale delle schede nel Catalogo. La richiesta autorizza completamento, integrazione in `dev` e nuova release da `main`. Il worktree `task/app-153-ai-evidence` contiene recupero dei nomi dello storico, della lista e delle liste Evento, verifica delle carte introdotte dalla bozza e diagnostica di copertura. Typecheck, build e suite locale sono passati; completare prove Codex/Electron, revisione del percorso, CI, merge e release. Il profilo SQLite personale corrotto resta invariato.
+- **APP-153 Done — v0.3.2 pubblicata (28-10-2026):** il recupero delle prove nei Thread e Matchup comprende lista, storico e liste Evento, riconosce le carte introdotte dalla bozza e rigenera la risposta prima del salvataggio; la diagnostica mostra copertura e limiti reali. [PR #85](https://github.com/xmey95/pokeguru/pull/85) integrata in `dev` e [PR #86](https://github.com/xmey95/pokeguru/pull/86) in `main`, entrambe con quattro check CI verdi. Il [workflow Release #40604296079](https://github.com/xmey95/pokeguru/actions/runs/40604296079) ha superato quattro package/smoke, attestazione e pubblicazione; [v0.3.2](https://github.com/xmey95/pokeguru/releases/tag/v0.3.2) ha nove asset, tag sul merge `e9d981b` e otto checksum verificati. Il profilo SQLite personale già corrotto resta invariato; APP-147 attende ancora la prova Finder sul Mac Apple Silicon esterno alla CI. I4 non è avviato.
 
 - **APP-152 Done — v0.3.1 pubblicata (27-10-2026):** [PR #82](https://github.com/xmey95/pokeguru/pull/82) in `dev` e [PR #83](https://github.com/xmey95/pokeguru/pull/83) in `main`, con quattro check CI verdi ciascuna. Il [workflow Release #40584218221](https://github.com/xmey95/pokeguru/actions/runs/40584218221) ha superato package/smoke su quattro piattaforme, attestazione e pubblicazione. La [release pubblica v0.3.1](https://github.com/xmey95/pokeguru/releases/tag/v0.3.1) ha nove asset; tag sul merge `0bc20f2` e otto checksum confrontati con i digest GitHub. Il controllo d'integrità non ripara il profilo attivo danneggiato, che resta invariato. APP-147 rimane `Blocked` per la prova Finder esterna sul Mac Apple Silicon; I4 non è avviato.
 
