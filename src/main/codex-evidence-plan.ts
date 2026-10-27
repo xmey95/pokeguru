@@ -8,14 +8,14 @@ import { CODEX_ISOLATION_ARGS } from './codex-isolation'
 import { codexLauncher } from './codex-setup'
 import { AI_QUERY_PLAN_SCHEMA } from './ai-evidence-queries'
 
-/** An isolated, ephemeral planning call. The app executes only validated local queries. */
-export async function planEvidenceQueriesWithCodex(prompt: string, config: AiRunConfig,
-  signal?: AbortSignal): Promise<unknown> {
+/** An isolated, ephemeral structured call. The app validates the result before using it. */
+export async function runStructuredCodex(prompt: string, config: AiRunConfig,
+  schema: unknown, signal?: AbortSignal): Promise<unknown> {
   if (signal?.aborted) throw new Error('Operazione Codex annullata.')
   const directory = mkdtempSync(join(tmpdir(), 'pokeguru-query-plan-'))
   const schemaPath = join(directory, 'schema.json')
   const resultPath = join(directory, 'result.json')
-  writeFileSync(schemaPath, JSON.stringify(AI_QUERY_PLAN_SCHEMA), 'utf8')
+  writeFileSync(schemaPath, JSON.stringify(schema), 'utf8')
   const launcher = codexLauncher('')
   const args = ['exec', '--ephemeral', '--json', ...CODEX_ISOLATION_ARGS,
     '--config', 'approval_policy="never"', '--skip-git-repo-check',
@@ -54,23 +54,29 @@ export async function planEvidenceQueriesWithCodex(prompt: string, config: AiRun
         signal?.removeEventListener('abort', abort)
         reject(new Error(error.message.includes('ENOENT')
           ? 'Codex non disponibile. Verifica l’installazione di Pokéguru.'
-          : 'Impossibile avviare Codex per le query.'))
+          : 'Impossibile avviare Codex.'))
       })
       child.on('close', (code) => {
         clearTimeout(timer)
         signal?.removeEventListener('abort', abort)
         if (signal?.aborted) return reject(new Error('Operazione Codex annullata.'))
         if (code !== 0) return reject(new Error(stderr.includes('Not logged in')
-          ? 'Accedi a Codex prima di interrogare le evidenze.'
-          : 'Codex non ha completato la scelta delle query.'))
+          ? 'Accedi a Codex prima della ricerca AI.'
+          : 'Codex non ha completato la richiesta.'))
         try {
           const raw = readFileSync(resultPath, 'utf8')
-          if (raw.length > 100_000) throw new Error('Piano delle query troppo lungo.')
+          if (raw.length > 100_000) throw new Error('Risposta Codex troppo lunga.')
           const value = JSON.parse(raw) as unknown
           resolve(value && typeof value === 'object' && !Array.isArray(value)
             ? { ...value, __usage: usage } : value)
-        } catch { reject(new Error('Codex ha restituito un piano delle query non valido.')) }
+        } catch { reject(new Error('Codex ha restituito una risposta non valida.')) }
       })
     })
   } finally { rmSync(directory, { recursive: true, force: true }) }
+}
+
+/** The existing Matchup/Thread query planner keeps its fixed schema. */
+export function planEvidenceQueriesWithCodex(prompt: string, config: AiRunConfig,
+  signal?: AbortSignal): Promise<unknown> {
+  return runStructuredCodex(prompt, config, AI_QUERY_PLAN_SCHEMA, signal)
 }

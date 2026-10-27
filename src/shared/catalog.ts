@@ -149,3 +149,49 @@ export type CatalogBrowsePage = {
   offset: number
   groups: CatalogBrowseGroup[]
 }
+
+export type CatalogAdvancedMatch = CatalogBrowseGroup & {
+  assessment: 'supported' | 'possible'
+  reason: string
+  conditions: string | null
+  sourcePrintId: string
+  printIds: string[]
+  /** Set IDs of the prints that matched the advanced criterion. */
+  setIds: string[]
+}
+
+export type CatalogAdvancedPage = {
+  total: number
+  offset: number
+  supported: number
+  possible: number
+  groups: CatalogAdvancedMatch[]
+}
+
+export type CatalogAdvancedSearchSummary = {
+  id: string
+  query: string
+  interpretation: string
+  searchedAt: string
+  catalogSyncedAt: string | null
+  scope: {
+    expectedPrints: number
+    indexedPrints: number
+    comparablePrints: number
+    candidateGroups: number
+    reviewedGroups: number
+    unreviewedGroups: number
+    /** True when the model reviewed only a prefix of the local candidate set. */
+    reviewLimited: boolean
+    /** A semantic search can never certify exhaustive tactical relevance. */
+    semantic: boolean
+    eventSources: { label: string; url: string }[]
+  }
+  page: CatalogAdvancedPage
+}
+
+export type CatalogAdvancedSearchInput = {
+  query: string
+  selectedKey: string | null
+  projectId: string | null
+}

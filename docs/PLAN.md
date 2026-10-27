@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 26 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata per Linux, Windows, macOS Intel e Apple Silicon; APP-141 concluso prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata per Linux, Windows, macOS Intel e Apple Silicon; APP-143 in corso prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-144 in corso sul ramo `task/app-144-advanced-catalog-search`:** Ricerca avanzata AI implementata come filtro della lista Catalogo; build, suite locale, prove Electron/Codex e scansione 5.000/10.000 stampe passano. Restano PR verso `dev`, quattro check CI, merge e apertura dell'app per la prova utente. Dopo l'integrazione chiudere APP-144 nel backlog e registrare i limiti confermati. `main`, release e I4 non sono inclusi.
 
 - **APP-143 integrato in `dev` — [PR #66](https://github.com/xmey95/pokeguru/pull/66), merge `8ca3797`:** il piano Matchup usa prosa naturale nelle tre fasi, e le guide già salvate mostrano i vecchi blocchi come paragrafi senza alterare l'archivio. Build, test mirati, smoke Electron e generazione/revisione Codex su contesto sintetico passati; quattro [check CI](https://github.com/xmey95/pokeguru/actions/runs/40504456603) verdi. Da provare una guida reale con fonti del proprio catalogo; nessuna nuova release o I4.
 

@@ -61,6 +61,8 @@ Gli ID `R-01`–`R-13` sono stabili. La colonna incremento indica la prima coper
 
 Per ogni fonte e sincronizzazione registrare circuito coperto, espansioni e serie promo note/acquisite, carte di gioco attese/acquisite, stampe/rarità/varianti note/acquisite, miniature e immagini ad alta risoluzione presenti/mancanti, campi disponibili, timestamp e anomalie. Mostrare numeratore, denominatore e origine del denominatore; se ignoto, indicare «copertura non misurabile». La lingua può restare un metadato tecnico della fonte, senza diventare una dimensione primaria di copertura competitiva. Promo e codici ALT entrano nella riconciliazione, non sono tacitamente equivalenti. Il primo campione I2 dichiara quali circuiti e stampe copre; I3 acquisisce l'intero perimetro Standard occidentale verificabile prima della legalità completa, incluse le promo pertinenti e il confronto con il registro ufficiale delle date di ammissione. Le vecchie stampe fuori formato non fanno parte del denominatore.
 
+La **Ricerca avanzata** del Catalogo interpreta una domanda naturale e filtra la stessa lista locale usata dalla ricerca rapida, mantenendo dettaglio, paginazione e filtro espansione. I criteri verificabili, come PS e ritirata, sono applicati alle stampe prima del raggruppamento; effetti e interazioni sono valutazioni AI motivate, con risultati incerti distinti in fondo. La vista mostra copertura dell'inventario, schede confrontabili e limiti della valutazione: nessun filtro tattico garantisce tutte le carte utili. Il mazzo corrente entra nel contesto soltanto se la domanda lo cita esplicitamente; le liste Evento, quando disponibili localmente, restano campioni e non dimostrano winrate.
+
 ## Requisiti derivati proposti
 
 | ID | Proposta | Motivo e verifica |
