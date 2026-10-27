@@ -14,26 +14,18 @@ Per verificare un pacchetto scaricato:
 2. Esegui `gh attestation verify <file> --repo xmey95/pokeguru --source-digest <sourceSha> --source-ref refs/heads/main --signer-workflow xmey95/pokeguru/.github/workflows/release.yml` per ciascun pacchetto e manifest. Il comando interroga le attestazioni del repository e verifica la firma e il digest. La procedura richiede accesso a GitHub.
 3. Su Windows, se il pacchetto dichiara una firma Authenticode, verifica anche l'editore con `Get-AuthenticodeSignature` sull'installer. Un'attestazione GitHub e la firma dell'editore sono controlli distinti.
 
-Su una futura release Mac firmata e notarizzata, verificare il DMG con `hdiutil verify <file.dmg>`, quindi l'app montata con `codesign --verify --deep --strict --verbose=2 <Pokeguru.app>`, `xcrun stapler validate <Pokeguru.app>` e `spctl --assess --type execute --verbose=4 <Pokeguru.app>`. La CI di release esegue questi controlli su entrambi i Mac; la CI delle PR continua a usare pacchetti non firmati come smoke applicativo e non certifica Gatekeeper.
+Per il prossimo pacchetto Mac ad hoc, la CI verifica il DMG con `hdiutil verify <file.dmg>` e l'app montata con `codesign --verify --deep --strict --verbose=2 <Pokeguru.app>`, inclusa la CLI Codex. Questa prova verifica l'integrità della firma ad hoc e l'avvio del binario; non equivale all'approvazione di Gatekeeper né all'apertura dal Finder su un Mac che ha scaricato il file.
 
 I pacchetti pubblicati prima di APP-098 non hanno questa attestazione. Non attribuire loro retroattivamente la provenienza del nuovo workflow.
 
 ## Firma nativa
 
-Per la prossima release macOS servono un certificato **Developer ID Application** e credenziali di notarizzazione Apple, salvati come secret GitHub e mai nel codice o in chat:
+Il progetto hobby usa per il prossimo pacchetto macOS una **firma ad hoc gratuita** (`identity: "-"`) per il bundle e il binario Codex incluso. Apple Silicon richiede almeno una firma per eseguire codice nativo; questa firma può essere verificata anche su un altro Mac, ma non attesta l'identità dello sviluppatore e **non supera Gatekeeper** su un download in quarantena. Non servono account, certificato Developer ID o secret Apple. La release resta non notarizzata.
 
-| Secret | Contenuto |
-| --- | --- |
-| `MAC_CSC_LINK` | Certificato Developer ID Application `.p12` codificato in base64. |
-| `MAC_CSC_KEY_PASSWORD` | Password del certificato `.p12`. |
-| `APPLE_API_KEY_P8_BASE64` | File `.p8` della chiave API App Store Connect codificato in base64. |
-| `APPLE_API_KEY_ID` | ID della chiave API. |
-| `APPLE_API_ISSUER` | Issuer ID della chiave API. |
-
-Il preflight interrompe la release prima del packaging quando manca un secret o la chiave `.p8` non è leggibile. Il job conserva la chiave solo nel percorso temporaneo del runner, firma anche il Codex incluso, richiede la notarizzazione e controlla firma, ticket allegato e policy Gatekeeper sul DMG montato. Restano necessarie una prova effettiva con credenziali reali e una prova dal Finder su un Mac Apple Silicon prima di dichiarare risolto il problema della v0.2.1.
+Per una prova volontaria su un Mac dopo aver confrontato SHA-256 e provenienza del DMG con la release ufficiale: copiare l'app in Applicazioni e provare prima l'autorizzazione in **Impostazioni di Sistema → Privacy e sicurezza → Apri comunque**, se disponibile. Se il sistema non offre questa azione, rimuovere la quarantena **solo** dalla copia verificata di Pokéguru con `xattr -dr com.apple.quarantine /Applications/Pokeguru.app` è un'opzione manuale; evita il controllo Gatekeeper per quell'app e va scelta consapevolmente, non automatizzata dall'installer. Non disattivare Gatekeeper per l'intero Mac. La prova sul Mac Apple Silicon dell'utente manca ancora: non dichiarare risolto il difetto finché il pacchetto ad hoc non viene avviato lì.
 
 L'installer Windows resta senza firma Authenticode finché non è disponibile un certificato di code signing del publisher. Il workflow è predisposto a ricevere `WIN_CSC_LINK` e `WIN_CSC_KEY_PASSWORD` come secret GitHub; quando sono presenti, controlla che sia l'eseguibile sia l'installer abbiano firma valida e fallisce in caso contrario. Prima di configurare i secret serve scegliere identità/editore e certificato, custodire la chiave fuori dal repository e provare una release su Windows. L'AppImage non incorpora una firma GPG: l'attestazione GitHub copre provenienza e integrità del file scaricato, mentre una firma incorporata richiederebbe una chiave di distribuzione e un flusso di verifica Linux separati.
 
-La release v0.2.1 ha verificato manifest e attestazioni, ma non firma o notarizzazione Mac. La prossima esecuzione reale del workflow con i secret Apple va controllata prima di considerare verificata la nuova distribuzione end-to-end.
+La release v0.2.1 ha verificato manifest e attestazioni, ma non la firma del bundle Mac. La prossima esecuzione del workflow con firma ad hoc va controllata; la prova da Finder/quarantena richiede inoltre un Mac esterno alla CI.
 
-Fonti: [Apple sulla firma Developer ID](https://developer.apple.com/developer-id/), [Apple sulla notarizzazione](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution), [electron-builder 26](https://www.electron.build/v26/docs/notarization/), [GitHub artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations), [verifica con GitHub CLI](https://cli.github.com/manual/gh_attestation_verify), [firma AppImage](https://docs.appimage.org/packaging-guide/optional/signatures.html).
+Fonti: [Apple sulla firma ad hoc richiesta da Apple Silicon](https://developer.apple.com/documentation/macos-release-notes/macos-big-sur-11_0_1-universal-apps-release-notes?changes=_2%2C_2), [Apple su Gatekeeper e quarantena](https://developer.apple.com/forums/topics/code-signing-topic?open-dropdown=true&sortBy=boosts&sortOrder=asc), [electron-builder 26 su firma macOS](https://www.electron.build/v26/docs/mac/), [GitHub artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations), [verifica con GitHub CLI](https://cli.github.com/manual/gh_attestation_verify), [firma AppImage](https://docs.appimage.org/packaging-guide/optional/signatures.html).

@@ -13,7 +13,8 @@ mac:
     - from: build/mac-codex
       to: codex
   icon: build/icons/1024x1024.png
-  hardenedRuntime: true
+  identity: "-"
+  hardenedRuntime: false
   binaries:
     - Contents/Resources/codex/bin/codex
   category: public.app-category.games
