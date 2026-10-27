@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata; è segnalato un difetto di apertura del pacchetto Apple Silicon. APP-147 prepara firma, notarizzazione e controllo Gatekeeper della prossima release Mac. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata; è segnalato un difetto di apertura del pacchetto Apple Silicon. La preparazione APP-147 è in `dev`; la release corretta attende credenziali Apple e prova dal Finder. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -109,7 +109,7 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
-- **APP-147 in corso (27-10-2026):** la v0.2.1 Apple Silicon è segnalata come «danneggiata» all'apertura da Finder, senza possibilità di «Apri comunque», mentre Intel si apre con eccezione manuale. La v0.2.1 non ha firma Developer ID né notarizzazione e la CI precedente non verificava Gatekeeper. Preparare una release che richieda credenziali Apple e superi firma/ticket/Gatekeeper prima della pubblicazione; integrare la preparazione in `dev`. L'utente controllerà in seguito l'account Apple e l'hash del DMG scaricato. Nessuna nuova release o dichiarazione di correzione finché non passano una build firmata reale e una prova dal Finder su Apple Silicon.
+- **APP-147 preparato in `dev`, completamento bloccato — [PR #71](https://github.com/xmey95/pokeguru/pull/71), merge `7f7021b`:** il workflow Release richiede credenziali Apple e verifica firma, ticket e Gatekeeper; quattro [check CI](https://github.com/xmey95/pokeguru/actions/runs/40538169157) della PR verdi, ma usano pacchetti non firmati. Mancano ancora un account/certificato Developer ID, cinque secret GitHub, hash del download segnalato e prova Finder sul Mac Apple Silicon. L'utente controllerà account e file in seguito. La release v0.2.1 ha un [avviso pubblico](https://github.com/xmey95/pokeguru/releases/tag/v0.2.1); non pubblicare o dichiarare corretta una nuova release finché non supera le prove firmate reali.
 
 - **APP-145 — README di prodotto:** consegna a `dev` nella [PR #70](https://github.com/xmey95/pokeguru/pull/70), con esito dei quattro check CI e commit di integrazione tracciati nella PR. Presentazione, installazione, primo utilizzo, dati, limiti e sviluppo riordinati in 118 righe; v0.2.1 distinta dalle novità di `dev`. Parsing Markdown, 15 riferimenti locali, script npm, confronto con codice/workflow, asset pubblicati verificati tramite GitHub CLI e `git diff --check` passati. Nessun codice applicativo modificato o test applicativo locale ripetuto. I4 e una nuova release restano fuori ambito. APP-146 registra separatamente l'aggiornamento futuro della guida di distribuzione. Nessuna decisione bloccante per questa consegna.
 
