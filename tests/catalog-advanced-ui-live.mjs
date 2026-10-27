@@ -24,6 +24,7 @@ function seed() {
       .run(id, `Set ${id} · fixture`, now)
     for (const [id, name, effect] of [
       ['me01-001', 'Fixture Recycler', 'Shuffle up to 5 basic Energy cards from your discard pile into your deck.'],
+      ['me01-004', 'Fixture Ability Lock', 'Your opponent’s Pokémon have no Abilities.'],
       ['me02-002', 'Fixture Search', 'Search your deck for a basic Energy card. Reveal it and put it into your hand.'],
       ['me02-003', 'Fixture Recovery', 'Put a Pokémon from your discard pile into your hand.']
     ]) {
@@ -67,7 +68,7 @@ try {
       throw new Error(`Ricerca avanzata fallita: ${await page.locator('.error-banner[role=alert]').last().textContent()}`)
     })
   ])
-  assert.match(await page.locator('.catalog-advanced-summary').textContent(), /Inventario locale: 3\/3 stampe/)
+  assert.match(await page.locator('.catalog-advanced-summary').textContent(), /Inventario locale: 4\/4 stampe/)
   await page.locator('.catalog-list').getByRole('button', { name: /Fixture Recycler/ }).waitFor()
   await page.locator('.catalog-list').getByRole('button', { name: /Fixture Recycler/ }).click()
   await page.locator('.catalog-detail').getByText(/Shuffle up to 5 basic Energy cards/).waitFor()
@@ -76,6 +77,9 @@ try {
     .waitFor({ state: 'detached' })
   await page.getByLabel('Espansione').selectOption('all')
   await page.locator('.catalog-list').getByRole('button', { name: /Fixture Recycler/ }).waitFor()
+  await page.getByLabel('Descrivi le carte da trovare').fill('Carte utili contro le Abilità')
+  await page.getByRole('button', { name: 'Cerca con AI' }).click()
+  await page.locator('.catalog-list').getByRole('button', { name: /Fixture Ability Lock/ }).waitFor({ timeout: 180000 })
   await page.getByRole('button', { name: 'Ricerca rapida' }).click()
   assert.equal(await page.getByLabel('Cerca carta o stampa').inputValue(), 'Fixture Recycler')
   await page.locator('.catalog-list').getByRole('button', { name: /Fixture Recycler/ }).waitFor()

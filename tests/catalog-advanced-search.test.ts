@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CATALOG_SOURCE, type CardGameplay, type CatalogPrint, type CatalogView } from '../src/shared/catalog'
 import { advancedCatalogCandidates, advancedCatalogMatches, advancedCatalogPage,
-  readCatalogAdvancedAssessments, readCatalogAdvancedPlan, type CatalogAdvancedPlan } from '../src/main/catalog-advanced-search'
+  hasCatalogAdvancedCriteria, readCatalogAdvancedAssessments, readCatalogAdvancedPlan,
+  type CatalogAdvancedPlan } from '../src/main/catalog-advanced-search'
 import { namedCatalogReferences, questionUsesCurrentDeck,
   searchCatalogAdvanced } from '../src/main/catalog-advanced-service'
 
@@ -102,13 +103,83 @@ describe('Catalog advanced search', () => {
   it('does not treat literal effect terms as exact proof and sends deck context only on explicit request', () => {
     expect(readCatalogAdvancedPlan({ ...emptyPlan, textGroups: [['discard']] }).mode)
       .toBe('interpretive')
-    expect(() => readCatalogAdvancedPlan({ ...emptyPlan, textGroups: [],
-      category: null, stage: null, minHp: null, maxRetreat: null })).toThrow(/criteri/)
+    expect(hasCatalogAdvancedCriteria(readCatalogAdvancedPlan({ ...emptyPlan, textGroups: [],
+      category: null, stage: null, minHp: null, maxRetreat: null }))).toBe(false)
     expect(questionUsesCurrentDeck('Carte utili al mio mazzo contro Dragapult')).toBe(true)
     expect(questionUsesCurrentDeck('Carte utili contro Dragapult')).toBe(false)
     const source = catalog([print('me01-001', 'Munkidori', 'Pokemon', game('', 110, 1))])
     expect(namedCatalogReferences(source, 'Carte contro Munkidori XXX 123', []))
       .toHaveLength(1)
+  })
+
+  it('accepts broad Codex plans and finds non-contiguous English effect text', () => {
+    const raw = { ...emptyPlan, mode: 'interpretive', category: null, stage: null,
+      minHp: null, maxRetreat: null,
+      textGroups: [Array.from({ length: 24 }, (_, index) => `unrelated ${index}`)
+        .concat('recover Energy from discard pile')] }
+    const plan = readCatalogAdvancedPlan(raw)
+    expect(plan.textGroups[0]).toHaveLength(25)
+    const cards = [print('me01-001', 'Energy Recycler', 'Trainer',
+      game('Shuffle up to 5 basic Energy cards from your discard pile into your deck.'))]
+    expect(advancedCatalogCandidates(catalog(cards), plan, '2026-10-27')
+      .map((item) => item.group.name)).toEqual(['Energy Recycler'])
+  })
+
+  it('ranks a direct Ability lock ahead of generic Ability mentions', () => {
+    const cards = Array.from({ length: 100 }, (_, index) =>
+      print(`me01-${String(index).padStart(3, '0')}`, `Ability Card ${index}`, 'Trainer',
+        game('This Pokémon has an Ability.')))
+    cards.push(print('me01-999', 'Ability Lock', 'Trainer',
+      game('Your opponent’s Pokémon have no Abilities.')))
+    const plan = readCatalogAdvancedPlan({ ...emptyPlan, category: null, stage: null,
+      minHp: null, maxRetreat: null, mode: 'interpretive',
+      textGroups: [['Ability', 'no Abilities']] })
+    expect(advancedCatalogCandidates(catalog(cards), plan, '2026-10-27')[0].group.name)
+      .toBe('Ability Lock')
+  })
+
+  it('broadens a plan with no usable criteria instead of blaming the question', async () => {
+    const cards = [print('me01-001', 'Ability Lock', 'Trainer',
+      game('Your opponent’s Pokémon have no Abilities.'))]
+    const calls: string[] = []
+    const result = await searchCatalogAdvanced(catalog(cards), 'Carte utili contro le Abilità',
+      { selected: [], deckText: null, events: [] },
+      { provider: 'codex', model: null, reasoningEffort: null, source: 'global' }, undefined,
+      async (prompt) => {
+        calls.push(prompt)
+        if (calls.length === 1) return { ...emptyPlan, mode: 'interpretive',
+          category: null, stage: null, minHp: null, maxRetreat: null, textGroups: [] }
+        if (calls.length === 2) return { ...emptyPlan, mode: 'interpretive',
+          category: null, stage: null, minHp: null, maxRetreat: null,
+          textGroups: [['no Abilities']] }
+        return { assessments: [{ key: 'game-Ability Lock', status: 'supported',
+          reason: 'Impedisce le Abilità avversarie.', conditions: null }] }
+      })
+    expect(calls).toHaveLength(3)
+    expect(calls[1]).toContain('Non chiedere chiarimenti')
+    expect(result.matches[0]).toMatchObject({ name: 'Ability Lock', assessment: 'supported' })
+  })
+
+  it('tries broader retrieval when an English hint finds no local card', async () => {
+    const cards = [print('me01-001', 'Bench Hitter', 'Pokemon',
+      game('This attack does 30 damage to 1 of your opponent’s Benched Pokémon.', 110, 1))]
+    let calls = 0
+    const result = await searchCatalogAdvanced(catalog(cards), 'Carte che fanno danni alla Panchina',
+      { selected: [], deckText: null, events: [] },
+      { provider: 'codex', model: null, reasoningEffort: null, source: 'global' }, undefined,
+      async () => {
+        calls++
+        if (calls === 1) return { ...emptyPlan, mode: 'interpretive',
+          category: null, stage: null, minHp: null, maxRetreat: null,
+          textGroups: [['sniping the farthest bench target']] }
+        if (calls === 2) return { ...emptyPlan, mode: 'interpretive',
+          category: null, stage: null, minHp: null, maxRetreat: null,
+          textGroups: [['Benched Pokémon', 'damage to 1 of your opponent’s Pokémon']] }
+        return { assessments: [{ key: 'game-Bench Hitter', status: 'supported',
+          reason: 'Infligge danni alla Panchina avversaria.', conditions: null }] }
+      })
+    expect(calls).toBe(3)
+    expect(result.matches[0].name).toBe('Bench Hitter')
   })
 
   it.skipIf(process.env.POKEGURU_PERF !== '1')('scans 5,000 and 10,000 prints before paging', () => {
@@ -127,6 +198,13 @@ describe('Catalog advanced search', () => {
       expect(advancedCatalogPage(matches, 'all', 100)).toMatchObject({ offset: 100,
         total: candidates.length })
       console.log(`Catalogo avanzato: ${count} stampe in ${elapsed} ms`)
+      const semantic = readCatalogAdvancedPlan({ ...emptyPlan, mode: 'interpretive',
+        category: null, stage: null, minHp: null, maxRetreat: null,
+        textGroups: [Array.from({ length: 24 }, (_, index) => `irrelevant ${index}`)
+          .concat('Darkness')] })
+      const semanticStarted = performance.now()
+      expect(advancedCatalogCandidates(source, semantic, '2026-10-27')).toHaveLength(count)
+      console.log(`Catalogo semantico: ${count} stampe in ${Math.round(performance.now() - semanticStarted)} ms`)
     }
   })
 })
