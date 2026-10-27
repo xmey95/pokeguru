@@ -86,7 +86,7 @@ const codexSetup = new CodexSetup(() => app.getPath('userData'))
 const generatingProjects = new Set<string>()
 const generatingDeckThreads = new Set<string>()
 const activeAiControllers = new Map<string, AbortController>()
-const catalogAdvancedResults = new Map<string, { result: CatalogAdvancedExecution; catalog: CatalogView }>()
+const catalogAdvancedResults = new Map<string, CatalogAdvancedExecution>()
 let activeCatalogAdvancedSearch: AbortController | null = null
 let recoveringAiJobs = false
 
@@ -648,9 +648,8 @@ function registerProjectHandlers(): void {
       const result = await searchCatalogAdvanced(catalog, value.query.trim(),
         { selected, deckText, events: catalogAdvancedEvents(value.query, catalog) },
         config, controller.signal)
-      if (catalogStore.view() !== catalog) throw new Error('Il Catalogo è cambiato durante la ricerca. Riprova.')
       const id = randomUUID()
-      catalogAdvancedResults.set(id, { result, catalog })
+      catalogAdvancedResults.set(id, result)
       if (catalogAdvancedResults.size > 5) catalogAdvancedResults.delete(catalogAdvancedResults.keys().next().value!)
       return { ok: true, value: { id, query: result.query,
         interpretation: result.interpretation, searchedAt: result.searchedAt,
@@ -669,9 +668,8 @@ function registerProjectHandlers(): void {
       !Number.isInteger(offset) || (offset as number) < 0 || (offset as number) > 1_000_000)
       return { ok: false, error: 'Pagina della ricerca non valida.' }
     const stored = catalogAdvancedResults.get(id)
-    if (!stored || catalogStore.view() !== stored.catalog)
-      return { ok: false, error: 'Il Catalogo è cambiato o la ricerca è scaduta. Ripeti la ricerca.' }
-    return { ok: true, value: advancedCatalogPage(stored.result.matches, setId, offset as number) }
+    if (!stored) return { ok: false, error: 'La ricerca è scaduta. Ripeti la ricerca.' }
+    return { ok: true, value: advancedCatalogPage(stored.matches, setId, offset as number) }
   })
 
   ipcMain.handle('catalog:advanced-cancel', (event): OperationResult<boolean> => {

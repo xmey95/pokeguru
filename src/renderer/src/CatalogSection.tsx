@@ -145,7 +145,7 @@ export function CatalogSection({ focusIdentityId, projectId }: {
     }).catch(() => { if (active) { setAdvancedPage(null); setAdvancedError('Pagina della ricerca non disponibile.') } })
       .finally(() => { if (active) setAdvancedPageLoading(false) })
     return () => { active = false }
-  }, [searchMode, advanced?.id, setFilter, offset, catalog?.syncedAt, revision])
+  }, [searchMode, advanced?.id, setFilter, offset])
 
   async function runAdvancedSearch(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
@@ -458,7 +458,7 @@ export function CatalogSection({ focusIdentityId, projectId }: {
       {searchMode === 'advanced' && advanced && <div className="catalog-advanced-summary" role="status">
         <strong>Filtro interpretato:</strong> {advanced.interpretation}
         <p>{advancedPage?.supported ?? advanced.page.supported} corrispondenze · {advancedPage?.possible ?? advanced.page.possible} da valutare{setFilter === 'all' ? '' : ' nell’espansione selezionata'}.</p>
-        <p>Inventario locale: {advanced.scope.indexedPrints}/{advanced.scope.expectedPrints} stampe; {advanced.scope.comparablePrints} schede di gioco confrontabili.
+        <p>Inventario locale al momento della ricerca: {advanced.scope.indexedPrints}/{advanced.scope.expectedPrints} stampe; {advanced.scope.comparablePrints} schede di gioco confrontabili.
           {advanced.scope.semantic ? ' Le interazioni tattiche non hanno una completezza dimostrabile.' : ''}
           {advanced.scope.reviewLimited ? ` Codex ha valutato ${advanced.scope.reviewedGroups}/${advanced.scope.candidateGroups} gruppi candidati; gli altri restano visibili come da valutare.` : ''}</p>
         {advanced.scope.eventSources.length > 0 ? <details><summary>Liste evento consultate ({advanced.scope.eventSources.length})</summary><ul>

@@ -68,7 +68,7 @@ try {
       throw new Error(`Ricerca avanzata fallita: ${await page.locator('.error-banner[role=alert]').last().textContent()}`)
     })
   ])
-  assert.match(await page.locator('.catalog-advanced-summary').textContent(), /Inventario locale: 4\/4 stampe/)
+  assert.match(await page.locator('.catalog-advanced-summary').textContent(), /Inventario locale al momento della ricerca: 4\/4 stampe/)
   await page.locator('.catalog-list').getByRole('button', { name: /Fixture Recycler/ }).waitFor()
   await page.locator('.catalog-list').getByRole('button', { name: /Fixture Recycler/ }).click()
   await page.locator('.catalog-detail').getByText(/Shuffle up to 5 basic Energy cards/).waitFor()
