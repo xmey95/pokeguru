@@ -44,4 +44,7 @@ export interface AiEvidenceQueryTrace {
   planningRounds: number
   plannerUsage?: AiTokenUsage | null
   exhausted: boolean
+  /** Exact names recognized in the local catalog, including names introduced by a draft. */
+  cardTargets?: { name: string; printIds: string[];
+    status: 'supplied' | 'missing-gameplay' | 'not-supplied' }[]
 }

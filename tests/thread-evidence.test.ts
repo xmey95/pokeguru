@@ -160,10 +160,18 @@ it('recupera dal contesto del thread le schede italiane e stampe con la stessa r
       `1 Carta di prova ${index + 1} ME05 ${String(index + 1).padStart(3, '0')}`).join('\n') }
     const crowded = buildThreadEvidence(thread, crowdedBase, 'Come posso arginare questa cosa?',
       [], example, [], [])
-    expect(crowded.cards).toHaveLength(36)
+    expect(crowded.cards).toHaveLength(38)
     expect(crowded.cards.some((card) => card.name === 'Mega Lucario ex')).toBe(true)
     expect(crowded.cards.some((card) => card.name === "Wally's Compassion")).toBe(true)
-    expect(crowded.cardCoverage.omitted).toBe(2)
+    expect(crowded.cardCoverage.omitted).toBe(0)
+
+    example.prints.push(print('me02-150', 'Dragapult ex', { ...gameplay, hp: 320 }))
+    store.assignDeckAiSession(project.id, created.id, 'session-context')
+    const previous = store.saveDeckAiExchange(project.id, created.id, 'session-context',
+      'Valutiamo altri avversari', 'Dragapult ex può cambiare le soglie del piano.',
+      'turn-context', config, undefined, packet, [])
+    const followUp = buildThreadEvidence(previous, base, 'E in quel caso?', [], example, [], [])
+    expect(followUp.cards.find((card) => card.name === 'Dragapult ex')?.gameplay?.hp).toBe(320)
   } finally {
     store.close()
     rmSync(directory, { recursive: true, force: true })

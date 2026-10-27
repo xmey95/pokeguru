@@ -17,5 +17,13 @@ export function AiDiagnostics({ trace, audit, children }: {
 }
 
 export function AiEvidenceLimit({ trace }: { trace?: AiEvidenceQueryTrace }) {
-  return trace?.exhausted ? <p className="content-note">La ricerca nei dati locali ha raggiunto il limite disponibile. La risposta potrebbe non includere tutti i dati pertinenti.</p> : null
+  if (!trace) return null
+  const incomplete = trace.cardTargets?.filter((item) => item.status !== 'supplied') ?? []
+  const rejected = trace.requests.some((item) => item.status === 'rejected')
+  if (!trace.exhausted && !incomplete.length && !rejected) return null
+  return <p className="content-note">{trace.exhausted
+    ? 'La ricerca locale ha raggiunto un limite tecnico; controlla la diagnostica prima di usare la risposta. '
+    : ''}{rejected ? 'Una query locale è stata rifiutata; i suoi risultati non sono inclusi. ' : ''}{incomplete.length
+    ? `Schede nominate senza testo confrontabile: ${incomplete.map((item) => item.name).join(', ')}.`
+    : ''}</p>
 }

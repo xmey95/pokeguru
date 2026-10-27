@@ -4,7 +4,7 @@ import type { DeckConstraint } from '../shared/constraints'
 import { parseDeck } from '../shared/deck-import'
 import type { DeckThread, DeckVersion } from '../shared/deck-threads'
 import type { MainTournamentSnapshot } from '../shared/main-tournament'
-import { gameplaySummary } from '../shared/card-gameplay'
+import { gameplaySummary, hasComparableGameplay } from '../shared/card-gameplay'
 import { effectiveCardGameplay } from '../shared/card-errata'
 import { localCalendarDate } from '../shared/calendar-date'
 import { suggestPrints } from '../shared/reconciliation'
@@ -134,8 +134,10 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
     const prior = byName.get(key)
     byName.set(key, { name, quantity: (prior?.quantity ?? 0) + (line.quantity ?? 0), line })
   }
-  const searchText = [thread.title, ...thread.messages.filter((message) => message.author === 'user')
-    .slice(-6).map((message) => message.text), question].join('\n')
+  // The final Codex turn sees assistant history too. Search that same history so
+  // a card introduced by an earlier answer is not absent from the evidence.
+  const searchText = [thread.title, ...thread.messages.slice(-12).map((message) => message.text),
+    question].join('\n')
   const normalizedQuestion = normal(searchText)
   const mentioned = new Set<string>()
   let unmatchedText = ` ${normalizedQuestion} `
@@ -198,7 +200,10 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
     Number(b.category === 'pokemon') - Number(a.category === 'pokemon') ||
     b.count - a.count || a.name.localeCompare(b.name)))
     names.push({ name: item.name, quantity: 0, line: null })
-  const selected = names.slice(0, MAX_CARDS)
+  // Every card in the current deck and every explicitly named card is required.
+  // The small preview limit applies only to incidental cards from event lists.
+  const required = byName.size + [...mentioned].filter((key) => !byName.has(key)).length
+  const selected = names.slice(0, Math.max(MAX_CARDS, required))
   const asOf = localCalendarDate()
   const cards: ThreadCardEvidence[] = selected.map((item) => {
     const explicit = explicitPrints.get(normal(item.name)) ?? []
@@ -261,7 +266,12 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   } : { updated: [], added: [], removed: [] }
   return { schemaVersion: 1, capturedAt: new Date().toISOString(), baseVersionId: base?.id ?? null,
     candidateId: candidate?.id ?? null, catalogSyncedAt: catalog.syncedAt,
-    cardCoverage: { selected: cards.length, withGameplay: cards.filter((item) => item.gameplay).length,
+    cardCoverage: { selected: cards.length, withGameplay: cards.filter((item) => {
+      const print = catalog.prints.find((entry) => entry.id === item.printId)
+      return Boolean(print && effectiveCardGameplay(print, asOf, catalog.rulePackage).status !== 'source-mismatch' &&
+        hasComparableGameplay(print.category, print.stage ?? null,
+          print.energyType ?? null, item.gameplay))
+    }).length,
       omitted: Math.max(0, names.length - cards.length) }, cards,
     events: [...eventMap.values()], sources, change }
 }

@@ -71,6 +71,10 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Correzioni della v0.3.2
+
+Nei Thread e nei Matchup Pokéguru recupera le schede delle carte nominate nella discussione e nelle liste Evento trovate. Se una prima risposta cita altre carte, le cerca nel Catalogo locale e rivede la risposta prima di salvarla. La diagnostica mostra quali testi sono stati consegnati, quali schede sono incomplete e quando una ricerca raggiunge un limite tecnico. Le liste del progetto vengono considerate per intero; le stampe con regole diverse restano distinte.
+
 ### Correzioni della v0.3.1
 
 La Ricerca avanzata del Catalogo accetta domande più ampie e varianti lessicali; i risultati restano visibili anche durante l'aggiornamento del Catalogo. All'avvio l'app verifica l'integrità dell'archivio SQLite prima di aprire connessioni scrivibili: se è danneggiato, mostra un errore specifico e ferma gli aggiornamenti automatici. Questo controllo non ripara un archivio già corrotto e non elimina le possibili cause esterne di corruzione.

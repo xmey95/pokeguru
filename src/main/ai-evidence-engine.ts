@@ -14,6 +14,11 @@ export type AiEvidenceQuery =
 export interface AiEvidenceEngine {
   describe(): { operations: string[]; catalog: { syncedAt: string | null;
     expected: number; indexed: number; gameplay: number }; eventWindow: { from: string; to: string } }
+  /** Resolve exact card names in discussion text to representative local prints.
+   * Distinct rules remain distinct even when the printed name is the same. */
+  cardTargets(text: string): { name: string; printIds: string[] }[]
+  /** Resolve archetype labels that actually occur in complete local event lists. */
+  eventTargets(text: string): string[]
   execute(input: unknown): AiEvidenceQueryResult
 }
 
@@ -123,10 +128,61 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
     throw new Error('Intervallo Eventi non valido.')
   const rows = eventRows(play, main)
   const scope = searchCatalogEvidence(catalog, { terms: ['pokemon'], limit: 1 }).scope
+  const setCodes = new Map(catalog.sets.map((set) => [set.id,
+    [set.id, set.abbreviation].filter((code): code is string => Boolean(code))]))
+  const names = new Map<string, CatalogView['prints']>()
+  for (const print of catalog.prints) {
+    const key = normalized(print.name)
+    if (key.length < 4) continue
+    names.set(key, [...(names.get(key) ?? []), print])
+  }
+  const sortedNames = [...names.keys()].sort((a, b) => b.length - a.length)
+  const decks = new Map(rows.filter((row) => normalized(row.deck).length >= 5)
+    .map((row) => [normalized(row.deck), row.deck]))
+  const sortedDecks = [...decks.keys()].sort((a, b) => b.length - a.length)
   return {
     describe: () => ({ operations: ['catalog.search', 'events.search'],
       catalog: { syncedAt: catalog.syncedAt, expected: scope.expected,
         indexed: scope.indexed, gameplay: scope.withGameplay }, eventWindow: window }),
+    cardTargets(text) {
+      const normalizedText = ` ${normalized(text)} `
+      let remaining = normalizedText
+      const found: { name: string; printIds: string[] }[] = []
+      for (const key of sortedNames) {
+        const phrase = ` ${key} `
+        if (!remaining.includes(phrase)) continue
+        const prints = names.get(key)!
+        // A name can have more than one competitive identity. Fetch one current
+        // representative of each distinct rules text, plus unknown texts.
+        const representatives = new Map<string, typeof prints[number]>()
+        for (const print of prints) {
+          const group = print.gameplay ? JSON.stringify(print.gameplay) : `missing:${print.id}`
+          const existing = representatives.get(group)
+          if (!existing || Boolean(print.detailAt) && !existing.detailAt)
+            representatives.set(group, print)
+        }
+        const printIds = new Set([...representatives.values()].map((print) => print.id))
+        for (const print of prints) {
+          const codes = setCodes.get(print.setId) ?? [print.setId]
+          if (codes.some((code) => normalizedText.includes(
+            ` ${normalized(`${print.name} ${code} ${print.localId}`)} `))) printIds.add(print.id)
+        }
+        found.push({ name: prints[0].name, printIds: [...printIds] })
+        while (remaining.includes(phrase)) remaining = remaining.replace(phrase, ' ')
+      }
+      return found
+    },
+    eventTargets(text) {
+      let remaining = ` ${normalized(text)} `
+      const found: string[] = []
+      for (const key of sortedDecks) {
+        const phrase = ` ${key} `
+        if (!remaining.includes(phrase)) continue
+        found.push(decks.get(key)!)
+        while (remaining.includes(phrase)) remaining = remaining.replace(phrase, ' ')
+      }
+      return found
+    },
     execute(input) {
       let query: AiEvidenceQuery
       try { query = parseQuery(input, window) }
