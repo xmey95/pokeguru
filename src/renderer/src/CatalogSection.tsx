@@ -469,7 +469,7 @@ export function CatalogSection({ focusIdentityId, projectId }: {
         {searchMode === 'advanced' ? advancedLoading ? <LoadingSkeleton label="Codex sta cercando nel catalogo…" />
           : advancedPageLoading ? <LoadingSkeleton label="Caricamento risultati…" />
             : !advanced ? <div className="matchup-empty">Scrivi una domanda e premi <strong>Cerca con AI</strong>. I risultati compariranno nella lista del Catalogo.</div>
-              : advancedPage?.total === 0 ? <SearchEmpty focusId="catalog-advanced-query" onReset={setFilter !== 'all' ? () => { setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde al filtro interpretato. Prova a precisare o ampliare la domanda.</SearchEmpty> : null
+              : advancedPage?.total === 0 ? <SearchEmpty focusId="catalog-advanced-query" onReset={setFilter !== 'all' ? () => { setSetFilter('all'); setOffset(0) } : undefined}>Non ho trovato schede compatibili nel Catalogo locale. Il filtro interpretato è mostrato sopra: puoi cambiarlo o aggiornare il Catalogo.</SearchEmpty> : null
           : searchFailed ? <div className="error-banner" role="status">Ricerca non disponibile. <button type="button" className="text-button" onClick={() => setRevision((value) => value + 1)}>Riprova</button></div>
             : !page || pageLoading ? <LoadingSkeleton label="Ricerca nel catalogo…" /> : page.total === 0 ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : null}
         {visible.length > 0 && <>
