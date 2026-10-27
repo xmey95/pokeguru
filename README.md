@@ -32,7 +32,7 @@ La lista principale resta consultabile mentre lavori nei Thread o nei Matchup. L
 
 ## Installazione
 
-Scarica il pacchetto adatto dalla pagina delle [release](https://github.com/xmey95/pokeguru/releases/latest). La release pubblicata di riferimento è [v0.2.1](https://github.com/xmey95/pokeguru/releases/tag/v0.2.1).
+Scarica il pacchetto adatto dalla pagina delle [release](https://github.com/xmey95/pokeguru/releases/latest).
 
 | Sistema | Pacchetto | Installazione |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ Scarica il pacchetto adatto dalla pagina delle [release](https://github.com/xmey
 
 I pacchetti includono la CLI Codex nativa: **non servono Node.js, npm o un'installazione separata di Codex** per usare l'app. Le funzioni AI richiedono connessione e accesso Codex, configurabile in **Impostazioni AI**.
 
-**Problema noto della v0.2.1 su Apple Silicon:** un utente ha segnalato che il DMG si monta, ma macOS mostra «L’app è danneggiata e non può essere aperta» senza offrire «Apri comunque». Il pacchetto non è firmato né notarizzato da Apple; l'integrità della copia scaricata dall'utente non è ancora stata verificata. La versione Intel può richiedere un'autorizzazione nelle impostazioni di sicurezza. La prossima build Mac userà una firma ad hoc gratuita, senza notarizzazione: [guida alla distribuzione e alla prova manuale](docs/DISTRIBUTION.md). L'installer Windows è senza firma Authenticode. La release include `SHA256SUMS.txt`, manifest di provenienza e attestazioni GitHub per verificare i pacchetti.
+**macOS:** i pacchetti v0.3.0 usano una firma ad hoc gratuita, senza certificato Developer ID né notarizzazione Apple. La CI verifica DMG, firma e avvio del binario su Mac Intel e Apple Silicon; l'apertura da Finder dopo il download su un Mac Apple Silicon esterno alla CI resta da provare. Gatekeeper può bloccarla. Nella v0.2.1 un utente ha visto «L'app è danneggiata e non può essere aperta» su Apple Silicon; il nuovo pacchetto non va considerato una correzione confermata di quel caso finché non viene provato sul suo Mac. Consulta la [guida alla distribuzione e alla prova manuale](docs/DISTRIBUTION.md). L'installer Windows è senza firma Authenticode. La release include `SHA256SUMS.txt`, manifest di provenienza e attestazioni GitHub per verificare i pacchetti.
 
 ## Primi passi
 
@@ -71,11 +71,11 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
-### Novità disponibili su `dev`
+### Novità della v0.3.0
 
-Il ramo `dev` include funzionalità successive a v0.2.1: piani Matchup in prosa più scorrevole e **Ricerca avanzata AI** nel Catalogo. Puoi cercare, per esempio, «Pokémon Base con almeno 200 PS e ritirata massimo 1» oppure «carte che recuperano Energie dagli scarti».
+Questa versione include piani Matchup in prosa più scorrevole e **Ricerca avanzata AI** nel Catalogo. Puoi cercare, per esempio, «Pokémon Base con almeno 200 PS e ritirata massimo 1» oppure «carte che recuperano Energie dagli scarti».
 
-La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e considera il mazzo solo quando la domanda lo richiede esplicitamente. Richiede Codex; i risultati sono temporanei e la qualità tattica resta da valutare su carte reali. Queste novità non sono incluse nel pacchetto v0.2.1.
+La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e considera il mazzo solo quando la domanda lo richiede esplicitamente. Richiede Codex; i risultati sono temporanei e la qualità tattica resta da valutare su carte reali.
 
 ## Sviluppo
 
