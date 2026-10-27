@@ -44,7 +44,8 @@ export function TournamentSection() {
             setSnapshot(result.value); setSelectedEventId(first.eventId)
           }
         } else { setSnapshot(null); setSelectedEventId(null); setSelectedId(null) }
-      }).catch(() => { if (active) setError('Archivio tornei non leggibile.') }).finally(() => { if (active) setLoading(false) })
+      }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Archivio tornei non leggibile.') })
+        .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [busy, progress?.saved, progress?.status])
 

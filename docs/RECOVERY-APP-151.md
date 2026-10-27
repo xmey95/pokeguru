@@ -1,4 +1,4 @@
-# APP-151 — diagnosi e candidata di recupero locale (27-10-2026)
+# APP-151 — diagnosi dell'archivio SQLite (27-10-2026)
 
 ## Stato
 
@@ -24,8 +24,20 @@ La candidata è `%APPDATA%\Pokeguru\data\backups\pokeguru-app151-hybrid-2026-10-
 
 Il recupero è stato eseguito con il client SQLite ufficiale 3.54.1, `.recover --ignore-freelist` dopo `PRAGMA writable_schema=ON` su una copia. SQLite [avverte](https://www.sqlite.org/recovery.html) che il recupero può produrre righe mancanti, alterate o precedentemente eliminate: la candidata non dimostra la completezza del profilo originale. Due discussioni Matchup successive al backup sono identificabili, ma le istantanee Meta cui fanno riferimento e i relativi report non sono ricostruibili dal dump; non sono state inserite come record incompleti. I quattro job AI aggiunti non contengono più richiesta o risultato, quindi non ripristinano quelle guide.
 
-## Verifiche e prossima azione
+## Analisi della causa
+
+La pagina 1 del file danneggiato indica come figli dell'albero `sqlite_schema` le pagine 21, 24, 45, 65 e 92. Le pagine 21 e 24 contengono invece record Matchup, mentre le altre tre sono vuote nel file principale; nel WAL preservato non compaiono frame per queste pagine. Il primo frame del WAL relativo alla pagina 1 riporta già gli stessi puntatori. Si può quindi localizzare l'incoerenza fra radice e pagine figlie, ma non stabilire quando queste ultime siano cambiate né quale scrittura o processo l'abbia causata. Il backup verificato del 26 ottobre contiene pagine di schema coerenti.
+
+L'app usa `node:sqlite` e la sua API di backup; nel codice applicativo non ci sono scritture dirette, sostituzioni o `VACUUM` sul file dell'archivio. La build locale Electron 45.0.0 include SQLite 3.53.4 e `PRAGMA synchronous` risulta `FULL` nel runtime esaminato. Il [difetto WAL-reset documentato da SQLite](https://www.sqlite.org/wal.html#the_wal_reset_bug) è corretto dalla 3.51.3: non ci sono elementi per attribuire questo incidente a quel difetto. La [documentazione SQLite sulla corruzione](https://www.sqlite.org/howtocorrupt.html) descrive più cause possibili, incluse manipolazioni incoerenti di database/WAL e problemi di I/O. La causa concreta qui resta **indeterminata**; la Ricerca avanzata non è dimostrata come causa.
+
+La lacuna applicativa verificata è distinta dalla causa: `prepareDatabaseMigration` saltava il controllo di integrità quando `user_version` era già 9. L'app poteva quindi aprire connessioni scrivibili e avviare sincronizzazioni prima che una lettura della sezione Play rendesse visibile la corruzione.
+
+## Verifiche e prevenzione
 
 Sulla candidata conservata: `PRAGMA integrity_check` → `ok`, `PRAGMA foreign_key_check` → nessuna violazione, nessun payload Play JSON invalido. Build e typecheck del ramo `task/app-151-sqlite-recovery` riusciti. In Electron avviato con un profilo temporaneo distinto e aggiornamento automatico disattivato, le API di Progetti, versioni, Thread, Catalogo, Play e Regional sono riuscite; un evento Play e un Thread si aprono, e la pagina Eventi non mostra l'errore. Non è stata eseguita una prova sull'installazione utente con la candidata attiva.
 
-Attendere la scelta esplicita dell'utente tra la candidata ibrida e il solo backup integro prima di sostituire i file del profilo attivo. In entrambi i casi mantenere intatta la copia forense. La candidata conserva più dati recenti, ma le due analisi Matchup citate restano mancanti; il solo backup perde anche i 59 snapshot Play, i 5 messaggi Thread e i 4 record di job AI recuperati.
+Su richiesta successiva dell'utente il ripristino non interessa: **non sostituire il profilo attivo**. La candidata e la copia forense restano come evidenza separata.
+
+Il codice ora esegue `integrity_check` e `foreign_key_check` su ogni archivio esistente prima di aprire i repository scrivibili, anche con schema corrente. Una corruzione SQLite riconosciuta produce un messaggio specifico e non programma sincronizzazioni giornaliere o riprese di job AI. Il controllo rileva e limita la propagazione del danno, ma non può impedire un guasto del filesystem, una manipolazione esterna o un difetto SQLite non riprodotto. Test unitario e smoke Electron offline con schema 9 danneggiato passano; l'avvio della copia forense reale mostra il messaggio di archivio danneggiato. La verifica su archivio sano è coperta dalla prova Electron della candidata e dai test di migrazione. Sulla candidata da 87 MB il controllo completo più `foreign_key_check` ha richiesto circa 221 ms, inclusa la partenza del processo Electron in modalità Node.
+
+`npm run build` è passato. La suite completa nella sandbox ha registrato 331 test riusciti e due errori della cache immagini dovuti a `EPERM` sulla cartella temporanea; ripetendo i due file nel normale ambiente Windows sono passati 13 test. Lo smoke Electron offline è passato. Non è stata eseguita una nuova release dell'app installata.

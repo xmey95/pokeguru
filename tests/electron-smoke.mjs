@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
@@ -157,6 +157,24 @@ try {
   assert.equal(await page.locator('.project-option').count(), 0)
   await application.close()
   application = undefined
+
+  const damagedProfile = join(temporary, 'damaged-profile')
+  const damagedData = join(damagedProfile, 'data')
+  mkdirSync(damagedData, { recursive: true })
+  const damagedPath = join(damagedData, 'pokeguru.sqlite')
+  const damagedDatabase = new DatabaseSync(damagedPath)
+  damagedDatabase.exec('CREATE TABLE sample (id TEXT PRIMARY KEY) STRICT; PRAGMA user_version = 9')
+  damagedDatabase.close()
+  const damagedBytes = readFileSync(damagedPath)
+  damagedBytes[100] = 0
+  writeFileSync(damagedPath, damagedBytes)
+  application = await launch(damagedProfile)
+  page = await application.firstWindow()
+  await page.getByRole('alert').waitFor()
+  assert.match(await page.getByRole('alert').textContent(), /Archivio locale danneggiato/)
+  await application.close()
+  application = undefined
+  assert.deepEqual(readFileSync(damagedPath), damagedBytes)
 
   const legacyProfile = join(temporary, 'legacy-profile')
   const legacyData = join(legacyProfile, 'data')

@@ -14,21 +14,41 @@ export interface MigrationPreparation {
   backupPath: string | null
 }
 
+export class DatabaseIntegrityError extends Error {
+  constructor(cause?: unknown) {
+    super('Archivio SQLite non integro.', { cause })
+    this.name = 'DatabaseIntegrityError'
+  }
+}
+
+function isCorruptDatabaseError(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('errcode' in error)) return false
+  return error.errcode === 11 || error.errcode === 26 // SQLITE_CORRUPT / SQLITE_NOTADB
+}
+
 export function verifyDatabase(filePath: string): void {
-  const db = new DatabaseSync(filePath, { readOnly: true })
   try {
-    const integrity = db.prepare('PRAGMA integrity_check').all() as { integrity_check: string }[]
-    if (integrity.length !== 1 || integrity[0].integrity_check !== 'ok')
-      throw new Error('Integrità SQLite non verificata.')
-    if (db.prepare('PRAGMA foreign_key_check').all().length)
-      throw new Error('Relazioni SQLite non integre.')
-  } finally { db.close() }
+    const db = new DatabaseSync(filePath, { readOnly: true })
+    try {
+      const integrity = db.prepare('PRAGMA integrity_check').all() as { integrity_check: string }[]
+      if (integrity.length !== 1 || integrity[0].integrity_check !== 'ok')
+        throw new DatabaseIntegrityError()
+      if (db.prepare('PRAGMA foreign_key_check').all().length)
+        throw new DatabaseIntegrityError()
+    } finally { db.close() }
+  } catch (error) {
+    if (error instanceof DatabaseIntegrityError) throw error
+    if (isCorruptDatabaseError(error)) throw new DatabaseIntegrityError(error)
+    throw error
+  }
 }
 
 export async function prepareDatabaseMigration(filePath: string): Promise<MigrationPreparation> {
   mkdirSync(dirname(filePath), { recursive: true })
   const existing = existsSync(filePath) && statSync(filePath).size > 0
   if (!existing) return { fromVersion: 0, needsMigration: true, backupPath: null }
+  // Check current schemas too, before any store opens a writable connection or starts a sync.
+  verifyDatabase(filePath)
   const db = new DatabaseSync(filePath, { readOnly: true })
   let fromVersion: number
   try {
@@ -37,7 +57,6 @@ export async function prepareDatabaseMigration(filePath: string): Promise<Migrat
       throw new Error('Versione dell’archivio SQLite non supportata.')
     if (fromVersion === CURRENT_SCHEMA_VERSION)
       return { fromVersion, needsMigration: false, backupPath: null }
-    verifyDatabase(filePath)
     const backupDir = join(dirname(filePath), 'backups')
     mkdirSync(backupDir, { recursive: true })
     const destination = join(backupDir,
