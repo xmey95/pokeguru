@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata; è segnalato un difetto di apertura del pacchetto Apple Silicon. APP-147 prepara firma, notarizzazione e controllo Gatekeeper della prossima release Mac. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata; è segnalato un difetto di apertura del pacchetto Apple Silicon. APP-147 prepara un pacchetto con firma ad hoc gratuita, senza notarizzazione, per la prova su Apple Silicon. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -109,7 +109,7 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
-- **APP-147 in corso (27-10-2026):** la v0.2.1 Apple Silicon è segnalata come «danneggiata» all'apertura da Finder, senza possibilità di «Apri comunque», mentre Intel si apre con eccezione manuale. La v0.2.1 non ha firma Developer ID né notarizzazione e la CI precedente non verificava Gatekeeper. Preparare una release che richieda credenziali Apple e superi firma/ticket/Gatekeeper prima della pubblicazione; integrare la preparazione in `dev`. L'utente controllerà in seguito l'account Apple e l'hash del DMG scaricato. Nessuna nuova release o dichiarazione di correzione finché non passano una build firmata reale e una prova dal Finder su Apple Silicon.
+- **APP-147 in corso, scelta aggiornata (27-10-2026):** l'utente vuole evitare l'abbonamento Apple per il progetto hobby. La [PR #71](https://github.com/xmey95/pokeguru/pull/71) aveva preparato il percorso Developer ID/notarizzazione in `dev`, ma questa scelta è superata. La PR documentale #72 è stata chiusa senza merge. Preparare una build Mac con firma ad hoc del bundle e di Codex, verifica integrità del DMG e della firma, senza secret Apple. Questa firma non supera Gatekeeper: documentare la prova manuale limitata all'app e ottenere l'esito dal Mac Apple Silicon prima di considerare risolto il difetto o pubblicare una nuova release.
 
 - **APP-145 — README di prodotto:** consegna a `dev` nella [PR #70](https://github.com/xmey95/pokeguru/pull/70), con esito dei quattro check CI e commit di integrazione tracciati nella PR. Presentazione, installazione, primo utilizzo, dati, limiti e sviluppo riordinati in 118 righe; v0.2.1 distinta dalle novità di `dev`. Parsing Markdown, 15 riferimenti locali, script npm, confronto con codice/workflow, asset pubblicati verificati tramite GitHub CLI e `git diff --check` passati. Nessun codice applicativo modificato o test applicativo locale ripetuto. I4 e una nuova release restano fuori ambito. APP-146 registra separatamente l'aggiornamento futuro della guida di distribuzione. Nessuna decisione bloccante per questa consegna.
 
