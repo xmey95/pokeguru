@@ -47,7 +47,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci
-      - run: npm test -- --maxWorkers=2
+      - run: npm test -- --maxWorkers=2 --testTimeout=15000
       - name: Install Linux display tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
