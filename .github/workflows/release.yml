@@ -13,7 +13,7 @@ jobs:
     env:
       POKEGURU_AUTO_SYNC: '0'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 35
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -46,6 +46,15 @@ jobs:
         with:
           node-version: '24'
           package-manager-cache: false
+      - name: Require Apple signing and notarization credentials
+        if: runner.os == 'macOS'
+        env:
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: node scripts/check-mac-release-credentials.mjs
       - run: npm ci
       - run: npm test -- --maxWorkers=2 --testTimeout=15000
       - name: Install Linux display tools
@@ -62,7 +71,12 @@ jobs:
         run: npm run package:win
       - name: Package macOS DMG
         if: runner.os == 'macOS'
-        run: npm run package:mac
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: npm run package:mac -- --config.mac.forceCodeSigning=true --config.mac.notarize=true
       - name: Verify Windows publisher signature when configured
         if: runner.os == 'Windows'
         shell: pwsh
@@ -105,7 +119,7 @@ jobs:
       - name: Verify and smoke mounted macOS DMG
         if: runner.os == 'macOS'
         shell: bash
-        run: bash scripts/smoke-mac-dmg.sh release/*.dmg "${{ matrix.macArch }}"
+        run: bash scripts/smoke-mac-dmg.sh release/*.dmg "${{ matrix.macArch }}" --gatekeeper
       - name: Record package provenance
         run: node scripts/release-provenance.mjs create ${{ matrix.name }}
       - uses: actions/upload-artifact@v4
