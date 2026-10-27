@@ -149,6 +149,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-140** | Vincoli solo nella Lista del progetto e proposta concreta nel Thread | UI/AI | R-05, R-07, R-08 / feedback utente | P1 / M | APP-129/130 integrati; validatore candidato esistente | Done |
 | **APP-141** | Pubblicare v0.2.1 da `dev` in `main` | Distribuzione | R-01, R-12 / richiesta utente | P0 / S | APP-140 in `dev`, workflow Release v0.2.0 | Done |
 | **APP-142** | Separare Piano, Fatti e Ipotesi nella guida Matchup | UI/leggibilità | R-10, R-13 / feedback utente | P1 / S | APP-135/136 integrati in `dev` | Done |
+| **APP-143** | Piano Matchup in prosa naturale senza etichette ripetute | UI/AI | R-10, R-13 / feedback utente | P1 / S | APP-142 integrato in `dev` | In progress |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1321,6 +1322,14 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Risultato locale:** il piano separa le etichette Piano, Fatti e Ipotesi in sezioni con intestazioni, spaziatura e testo più leggibile, anche quando la risposta le aveva accostate sulla stessa riga. La trasformazione è solo di presentazione e viene usata anche per le guide storiche; senza etichette resta il rendering precedente.
 - **Verifiche locali:** Node 24, build/typecheck e quattro test mirati passati. Smoke Electron Matchup con fixture: sezioni separate, ordine verticale, fasi e tastiera, storico, report salvato invariato, layout 1920/1440/1280/640 px senza overflow e contrasto minimo 5,16:1. Il primo tentativo di smoke non ha avviato Electron nella sandbox; con il permesso di esecuzione passa. Un'asserzione di geometria pensata per un solo paragrafo è stata adattata ai tre blocchi. Nessuna nuova generazione Codex o modifica ai report salvati.
 - **Integrazione:** la [PR #64](https://github.com/xmey95/pokeguru/pull/64) è integrata in `dev` come `27a40ef` dopo quattro check verdi su Ubuntu, Windows, Mac Intel e Apple Silicon nel [run CI 40403619275](https://github.com/xmey95/pokeguru/actions/runs/40403619275). Il checkout locale `dev` è aggiornato; `main` e la release v0.2.1 restano invariati. La prova UI usa fixture di testo, non una nuova generazione Codex o un giudizio competitivo.
+
+### APP-143 — Piano Matchup discorsivo
+
+- **Autorizzazione e risultato atteso:** feedback utente del 27-10-2026. Nelle fasi della guida Matchup un discorso naturale è preferibile a ripetere «Piano:», «Fatti:» e «Ipotesi:». La distinzione fra osservazioni e ipotesi resta espressa nel linguaggio, nelle fonti e nei limiti, senza intestazioni obbligatorie nel piano.
+- **Accettazione:** i nuovi prompt chiedono prosa tattica leggibile in Apertura/Sviluppo/Chiusura senza sottosezioni artificiali; guide e revisioni salvate con le vecchie etichette vengono mostrate come discorso continuo, senza mutare l'archivio o i collegamenti. Le guide già in prosa restano inalterate. Verificare UI corrente e storico, link, tab e layout compatto.
+- **Risultato locale:** i prompt di generazione e revisione chiedono uno o due paragrafi naturali per fase, senza le tre etichette, mantenendo osservazioni e inferenze riconoscibili nelle frasi. Le guide precedenti con etichette vengono mostrate come paragrafi senza intestazioni; una vecchia sezione «Ipotesi» conserva un breve avviso testuale prima del contenuto. Il report persistito, i link, le fasi e la sezione limiti non cambiano.
+- **Verifiche locali:** Node 24: build/typecheck e quattro test mirati passati. Smoke Electron con report fixture già salvato, fasi e storico senza etichette, testo archiviato invariato, tastiera, link e layout 1920/1440/1280/640 px passati; screenshot 1440 px ispezionato. Un'asserzione dello storico è stata allineata alla nuova frase di incertezza, poi lo smoke è passato. Generazione e revisione con Codex reale su contesto sintetico hanno prodotto tre fasi senza le vecchie etichette; la prova verifica il contratto e lo stile, non la qualità competitiva o l'acquisizione delle fonti.
+- **Integrazione:** PR verso `dev` e check CI da completare; `main` e release fuori ambito.
 
 ## Regola per i blocchi
 

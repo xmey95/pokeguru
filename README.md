@@ -6,7 +6,7 @@
 
 APP-136 amplia il testo del piano Matchup all'intera scheda e mostra punti forti, rischi e carte chiave come elenchi. Anche le guide già salvate e lo storico ricevono questa presentazione, senza rigenerazione o modifica dei testi nell'archivio.
 
-**Su `dev` dopo v0.2.1:** APP-142 separa Piano, Fatti e Ipotesi nel piano Matchup, anche nelle guide salvate che li mostrano sulla stessa riga. Il testo originale e i riferimenti restano invariati.
+**Su `dev` dopo v0.2.1:** APP-143 presenta il piano Matchup come prosa per Apertura, Sviluppo e Chiusura, senza ripetere «Piano», «Fatti» e «Ipotesi» come sottotitoli. Anche le guide precedenti diventano più scorrevoli in lettura; testo originale e riferimenti restano nell'archivio.
 
 APP-135 rifinisce le schermate esistenti: le nuove guide e revisioni Matchup mostrano **Apertura, Sviluppo e Chiusura** come tab, utilizzabili anche con frecce/Home/End. Le guide precedenti restano intere. **Fonti e dettagli** raccoglie provenienza, versione e **Diagnostica AI**; limiti e blocchi rimangono visibili. Durante una revisione resta consultabile la guida salvata. **Completa salvataggio** recupera un risultato già pronto senza chiedere una nuova analisi. Verifiche e perimetro in [docs/UI_REFINEMENT.md](docs/UI_REFINEMENT.md).
 
