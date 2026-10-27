@@ -374,6 +374,10 @@ Le versioni sono l'azione consultiva più utile nel lavoro iterativo: confronto,
 
 Nel campo della conversazione, Enter usa la stessa azione del pulsante Invia e Shift+Enter inserisce una nuova riga. La scorciatoia è indicata accanto al campo e non agisce durante la composizione IME, su testo vuoto o mentre un turno dello stesso Thread è già in corso. Il guardiano sincrono evita un doppio invio prima dell'aggiornamento dello stato React. Dopo un invio riuscito da tastiera il focus torna al campo solo se l'utente non lo ha spostato; un errore mantiene la bozza e porta l'attenzione all'avviso. La decisione riguarda la sola conversazione Thread e si applica al compositore unico di APP-129.
 
+### T-146 — README come punto di ingresso del prodotto (APP-145)
+
+Il README presenta il valore del prodotto, le funzionalità disponibili, l'installazione, il primo utilizzo, i dati locali e i servizi online, i limiti e l'avvio da sorgente. La release pubblicata e le aggiunte presenti solo su `dev` sono indicate separatamente. Diario dei task, prove dettagliate e criteri di sviluppo restano nel backlog e nei documenti dedicati; un task successivo modifica il README quando cambia un'informazione utile al lettore, senza aggiungervi una nuova nota cronologica. Comandi e piattaforme si verificano su `package.json`, builder e workflow; disponibilità dei pacchetti sulle release effettivamente pubblicate. Nessuna licenza software o capacità futura viene presunta.
+
 ## Registro delle fonti primarie
 
 | ID | Fonte consultata il 23-10-2026 | Conclusione utilizzabile | Limite e verifica futura |

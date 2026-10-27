@@ -151,6 +151,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-142** | Separare Piano, Fatti e Ipotesi nella guida Matchup | UI/leggibilità | R-10, R-13 / feedback utente | P1 / S | APP-135/136 integrati in `dev` | Done |
 | **APP-143** | Piano Matchup in prosa naturale senza etichette ripetute | UI/AI | R-10, R-13 / feedback utente | P1 / S | APP-142 integrato in `dev` | Done |
 | **APP-144** | Ricerca avanzata AI come filtro della lista Catalogo | UI/AI | R-02, R-07 / richiesta utente | P1 / L | APP-093/115/116/118 completati; T-144 | Done |
+| **APP-145** | README di prodotto con installazione, primo utilizzo e limiti verificabili | Documentazione | R-01–R-13 / richiesta utente | P1 / S | Funzioni, pacchetti e workflow presenti nel repository | Done |
+| **APP-146** | Allineare la guida di distribuzione ai quattro pacchetti pubblicati | Documentazione | R-12 / manutenzione | P2 / S | APP-139/141; workflow Release corrente | Backlog |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1345,6 +1347,21 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Verifiche locali:** `npm run build` e typecheck passati; suite Vitest 328 test passati e 40 ignorati per default fuori sandbox (due test esistenti sulle immagini falliscono nella Temp sandbox per permessi). Test mirati su stampe raggruppate, filtri, valutazioni incerte e contesto mazzo passati. Scansione deterministica su fixture: 5.000 stampe in 11 ms, 10.000 in 26 ms su Windows locale; i tempi non includono Codex. Ricerca semantica e filtro numerico provati con Codex reale su catalogo isolato. Smoke Electron/Codex: risultati, apertura della carta, filtro espansione, ritorno alla ricerca rapida e layout 640 px passati; smoke Catalogo esistente passato a 1440/1280/640 px. La qualità tattica non è attestata dalle fixture sintetiche.
 - **Integrazione e ripresa:** [PR #68](https://github.com/xmey95/pokeguru/pull/68) integrata in `dev` come `6b729c8` il 27-10-2026 dopo quattro [check CI](https://github.com/xmey95/pokeguru/actions/runs/40510731490) verdi su Ubuntu, Windows, macOS Intel e Apple Silicon. Il checkout locale `dev` è stato aggiornato e l'app aperta per la prova utente. Restano feedback sulle otto query con carte reali, precisione tattica, latenza Codex e possibile persistenza dei risultati; eventuali correzioni saranno un nuovo incremento. `main` e la release restano invariati.
 - **Stabilità CI della chiusura:** la PR documentale #69 ha mostrato su Windows timeout da 5 secondi in test di persistenza diversi tra prima esecuzione e rerun, senza errori di asserzione; gli stessi test erano passati nella PR #68. Il comando CI ora usa 15 secondi per test, anche nel workflow di release. Suite locale con `--maxWorkers=2 --testTimeout=15000`: 328 test passati. Verificare il nuovo run CI prima del merge della chiusura.
+
+### APP-145 — README di prodotto
+
+- **Ready e autorizzazione (27-10-2026):** l'utente richiede un README «production like di prodotto». Ambito documentale: presentazione, capacità disponibili, installazione, primo utilizzo, dati locali, limiti, avvio da sorgente e collegamenti di approfondimento. Le note operative e gli ID dei task restano nei documenti di progetto.
+- **Accettazione:** README leggibile da un nuovo utente, senza diario delle implementazioni o prove obsolete; release pubblicata distinta dalle novità su `dev`; comandi, architetture, dati inviati all'AI e limiti coerenti con codice/configurazione e verifiche già registrate. Nessuna funzionalità futura presentata come disponibile.
+- **Verifiche previste:** controllare link e ancore locali, script npm, pacchetti e matrice CI; rilettura rispetto a requisiti e stato reale; `git diff --check`. Nessuna nuova prova applicativa necessaria per la sola documentazione.
+- **Avvio:** checkout iniziale `dev` pulito a `caf1071`; lavoro sul ramo locale `task/app-145-product-readme`.
+- **Risultato:** README riscritto come pagina di prodotto, da 273 a 118 righe: marchio e accessi rapidi, funzionalità, quattro pacchetti, primo utilizzo, dati locali/servizi AI, copertura, sviluppo e documentazione. Rimosse prove manuali obsolete e cronologia dei task; v0.2.1 e novità successive su `dev` distinte. Nessuna modifica applicativa. Criterio editoriale registrato in T-146.
+- **Verifiche locali:** parsing Markdown/GFM riuscito; 15 riferimenti locali (file, logo e ancore) risolti; sette script `npm run` più `start`/`test` presenti in `package.json`. Confrontati launcher Codex, etichette UI, sincronizzazione all'avvio, builder al tag v0.2.1 e matrice CI a quattro piattaforme. GitHub CLI ha confermato release v0.2.1 pubblica/non draft/non prerelease e nove asset: quattro pacchetti, quattro manifest e checksum. `git diff --check` passato. Nessun nuovo test applicativo locale, download o installazione dichiarati.
+- **Consegna autorizzata (27-10-2026):** richiesta successiva dell'utente «pusha su dev». Pubblicazione del ramo e integrazione tramite PR verso `dev`, subordinata ai quattro check CI obbligatori; nessun rilascio su `main`.
+
+### APP-146 — Guida di distribuzione aggiornata
+
+- **Origine:** durante APP-145 è emerso che `docs/DISTRIBUTION.md` descrive ancora due pacchetti e una pubblicazione da verificare, mentre v0.2.1 ne distribuisce quattro con verifiche registrate. Il README descrive già i quattro pacchetti attuali.
+- **Risultato da raffinare:** allineare guida, conteggio degli asset, firma macOS e procedura di verifica al workflow corrente, mantenendo distinte attestazioni e firme native. Attività fuori dal perimetro della revisione README, non avviata.
 
 ## Regola per i blocchi
 
