@@ -1,8 +1,8 @@
-export type MatchupPlanPart = { label: 'Piano' | 'Fatti' | 'Ipotesi' | null; text: string }
+type MatchupPlanPart = { label: 'Piano' | 'Fatti' | 'Ipotesi' | null; text: string }
 
 // Older reports may put these labels on separate lines or run them together.
 // Split only for presentation: the saved guide and its links stay untouched.
-export function matchupPlanParts(source: string): MatchupPlanPart[] {
+function matchupPlanParts(source: string): MatchupPlanPart[] {
   const marker = /(^|\s)(?:\*\*(Piano|Fatti|Ipotesi):\*\*|\*\*(Piano|Fatti|Ipotesi)\*\*:|(Piano|Fatti|Ipotesi):)/gimu
   const labels = [...source.matchAll(marker)].map((match) => ({
     start: match.index + match[1].length,
@@ -20,4 +20,14 @@ export function matchupPlanParts(source: string): MatchupPlanPart[] {
     parts.push({ label, text })
   }
   return parts
+}
+
+/** Read older labeled guides as one narrative without changing the stored report. */
+export function matchupPlanNarrative(source: string): string {
+  const parts = matchupPlanParts(source)
+  if (parts.length === 1 && !parts[0].label) return source
+  return parts.filter((part) => part.text).map((part) => {
+    const text = part.text.replace(/^\p{Ll}/u, (letter) => letter.toLocaleUpperCase('it'))
+    return part.label === 'Ipotesi' ? `Questo passaggio è un'ipotesi da verificare. ${text}` : text
+  }).join('\n\n')
 }

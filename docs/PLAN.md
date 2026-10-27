@@ -109,6 +109,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **APP-143 in corso:** il feedback del 27-10-2026 preferisce un piano Matchup discorsivo. Adeguare prompt e presentazione delle guide già salvate, conservando fatti e ipotesi riconoscibili attraverso il linguaggio e il contenuto originale nell'archivio. Verificare il percorso prima di integrare in `dev`; nessuna nuova release o I4.
+
 - **APP-142 integrato in `dev` — [PR #64](https://github.com/xmey95/pokeguru/pull/64), merge `27a40ef`:** il piano Matchup separa Piano, Fatti e Ipotesi in blocchi leggibili anche nelle guide storiche, senza cambiare i report salvati. Build, test mirati e smoke Electron di fasi, storico e layout 1920/1440/1280/640 px passati; quattro [check CI](https://github.com/xmey95/pokeguru/actions/runs/40403619275) verdi. Provare la guida reale già salvata in `dev`; nessuna nuova release o I4.
 
 - **APP-141 completato:** [v0.2.1](https://github.com/xmey95/pokeguru/releases/tag/v0.2.1) è pubblica dal commit `aab8d6f` di `main` dopo la [PR #61](https://github.com/xmey95/pokeguru/pull/61) in `dev` e la [PR #62](https://github.com/xmey95/pokeguru/pull/62) verso `main`, entrambe con quattro check CI verdi. Il [workflow Release](https://github.com/xmey95/pokeguru/actions/runs/40396595362) ha superato packaging e smoke nativi, attestazione e pubblicazione. Sono presenti AppImage Linux, installer Windows, due DMG Mac, quattro file provenance e `SHA256SUMS.txt`; i DMG non sono firmati né notarizzati. APP-140 è ora nella release; I4 resta da autorizzare.

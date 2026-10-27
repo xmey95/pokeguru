@@ -604,11 +604,7 @@ details[open] > summary { margin-bottom: 8px; }
 .matchup-phase-tabs [role=tab] { flex: 1; padding: 10px 8px; background: transparent; color: var(--ink-secondary); border: 0; border-bottom: 2px solid transparent; border-radius: 0; }
 .matchup-phase-tabs [aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 650; }
 .matchup-plan [role=tabpanel] { padding: 2px 0; }
-.matchup-plan-parts { display: grid; gap: 14px; }
-.matchup-plan-part { min-width: 0; padding-top: 14px; border-top: 1px solid var(--line); }
-.matchup-plan-part:first-child { padding-top: 0; border-top: 0; }
-.matchup-plan-part h4 { margin: 0 0 7px; font-size: var(--text-base); color: var(--ink); }
-.matchup-plan-part .guide-body p { line-height: 1.65; }
+.matchup-plan .guide-body p { line-height: 1.65; }
 .ai-diagnostics { margin-top: 16px; }
 .matchup-fields > .matchup-trust { grid-column: 1 / -1; border-left: 3px solid var(--warning-line); background: var(--warning-soft); }
 .matchup-fields .matchup-trust h3, .matchup-fields .matchup-trust .guide-body { color: var(--warning); font-size: var(--text-sm); }
