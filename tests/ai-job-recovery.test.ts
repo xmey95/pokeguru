@@ -139,6 +139,38 @@ it('marks a job interrupted even if the process stopped before saving its reques
   } finally { jobs.close(); catalog.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
 })
 
+it('never restores an internal Thread or Matchup draft before evidence validation', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-ai-draft-recovery-'))
+  const path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path)
+  const catalog = new CatalogStore(path)
+  const jobs = new AiJobStore(path)
+  try {
+    const project = projects.create({ name: 'Draft gate', format: 'STANDARD' })
+    const thread = projects.createDeckThread({ projectId: project.id, title: 'Turn' })
+    const threadJob = jobs.start('thread-ask', project.id, thread.id)
+    jobs.prepare(threadJob.id, { schemaVersion: 2, validatedDraft: false,
+      message: 'E Dragapult ex?', config, evidence, sources: [] })
+    const threadArtifact = join(folder, 'ai-jobs', threadJob.id)
+    mkdirSync(threadArtifact, { recursive: true })
+    writeFileSync(join(threadArtifact, 'result.json'), JSON.stringify({ kind: 'thought',
+      reply: 'Prima bozza.', rawText: '', sourceIds: [] }))
+    expect(await recoverThreadJob(jobs.get(threadJob.id)!, jobs, projects, catalog,
+      { latestTurnId: async () => 'draft-turn' }, threadArtifact)).toBe('interrupted')
+    expect(projects.getDeckThread(project.id, thread.id)?.messages).toHaveLength(0)
+
+    const matchupJob = jobs.start('matchup-generate', project.id, `matchup:${project.id}`)
+    jobs.prepare(matchupJob.id, { analysisVersion: 2, validatedDraft: false,
+      base: { jobId: matchupJob.id, projectId: project.id } })
+    const matchupArtifact = join(folder, 'ai-jobs', matchupJob.id)
+    mkdirSync(matchupArtifact, { recursive: true })
+    writeFileSync(join(matchupArtifact, 'result.json'), JSON.stringify({ strengths: 'Prima bozza' }))
+    expect(recoverMatchupJob(jobs.get(matchupJob.id)!, jobs, projects, matchupArtifact))
+      .toBe('interrupted')
+    expect(projects.listMatchupDiscussions(project.id, '284')).toHaveLength(0)
+  } finally { jobs.close(); catalog.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+})
+
 it('replays a completed Matchup response exactly once and preserves the job identity', () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-matchup-recovery-'))
   const path = join(folder, 'data.sqlite')
