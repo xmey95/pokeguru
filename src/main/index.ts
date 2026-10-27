@@ -51,7 +51,7 @@ import { evaluateStandardDeck } from '../shared/standard-deck'
 import { localCalendarDate } from '../shared/calendar-date'
 import { safeThreadLink } from '../shared/thread-links'
 import { TournamentStore } from './tournament-store'
-import { completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
+import { DatabaseIntegrityError, completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
 import { AiJobStore } from './ai-job-store'
 import type { AiJob } from './ai-job-store'
 import type { AiJobSummary } from '../shared/ai-job'
@@ -1659,7 +1659,9 @@ app.whenReady().then(async () => {
     catalogStore?.close(); catalogStore = null
     aiJobStore?.close(); aiJobStore = null
     projectStore?.close(); projectStore = null
-    storageError = 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
+    storageError = error instanceof DatabaseIntegrityError
+      ? 'Archivio locale danneggiato. Gli aggiornamenti sono stati fermati per evitare altre modifiche. Conserva la cartella dati e segnala il problema.'
+      : 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
   }
 
   const imageDirectory = join(app.getPath('userData'), 'data', 'catalog-images')
@@ -1672,13 +1674,13 @@ app.whenReady().then(async () => {
 
   registerProjectHandlers()
   createWindow()
-  if (process.env.POKEGURU_AUTO_SYNC !== '0') {
+  if (!storageError && process.env.POKEGURU_AUTO_SYNC !== '0') {
     const requestedDelay = Number(process.env.POKEGURU_AUTO_SYNC_DELAY_MS)
     const delay = Number.isFinite(requestedDelay) && requestedDelay >= 3_000 && requestedDelay <= 30_000
       ? requestedDelay : 3_000
     startupSyncTimer = setTimeout(startDailySync, delay)
   }
-  setTimeout(() => { void recoverAiJobs() }, 0)
+  if (!storageError) setTimeout(() => { void recoverAiJobs() }, 0)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
