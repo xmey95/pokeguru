@@ -20,6 +20,7 @@ live('generates and revises three phases through the real isolated Codex runner'
   const sample = { url: null, cards: [] }
   const report = await generateMatchup('contract-test', 'fixture', context, snapshot, opponent, sample, config, evidence)
   expect(hasStrategyPhases(report.strategyPhases)).toBe(true)
+  expect(Object.values(report.strategyPhases ?? {}).join('\n')).not.toMatch(/(?:^|\n)\s*(?:\*\*)?(?:Piano|Fatti|Ipotesi)\s*:/iu)
   expect(report.promptAudit?.text).toBeDefined()
   const discussion: MatchupDiscussion = { id: 'contract-discussion', projectId: report.projectId, metaId: report.metaId,
     opponentId: opponent.id, deckHash: report.deckHash, parentId: null, current: true, createdAt: report.generatedAt,
@@ -28,6 +29,7 @@ live('generates and revises three phases through the real isolated Codex runner'
   const revised = await reviseMatchup(discussion, 'Rendi esplicito quando rinunciare al piano senza dati sufficienti.',
     context, snapshot, opponent, sample, config, evidence)
   expect(hasStrategyPhases(revised.report.strategyPhases)).toBe(true)
+  expect(Object.values(revised.report.strategyPhases ?? {}).join('\n')).not.toMatch(/(?:^|\n)\s*(?:\*\*)?(?:Piano|Fatti|Ipotesi)\s*:/iu)
   expect(revised.changeSummary.trim().length).toBeGreaterThan(0)
   expect(revised.report.strategy).toContain(revised.report.strategyPhases!.closing)
 }, 400_000)
