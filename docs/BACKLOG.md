@@ -1356,7 +1356,7 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Avvio:** checkout iniziale `dev` pulito a `caf1071`; lavoro sul ramo locale `task/app-145-product-readme`.
 - **Risultato:** README riscritto come pagina di prodotto, da 273 a 118 righe: marchio e accessi rapidi, funzionalità, quattro pacchetti, primo utilizzo, dati locali/servizi AI, copertura, sviluppo e documentazione. Rimosse prove manuali obsolete e cronologia dei task; v0.2.1 e novità successive su `dev` distinte. Nessuna modifica applicativa. Criterio editoriale registrato in T-146.
 - **Verifiche locali:** parsing Markdown/GFM riuscito; 15 riferimenti locali (file, logo e ancore) risolti; sette script `npm run` più `start`/`test` presenti in `package.json`. Confrontati launcher Codex, etichette UI, sincronizzazione all'avvio, builder al tag v0.2.1 e matrice CI a quattro piattaforme. GitHub CLI ha confermato release v0.2.1 pubblica/non draft/non prerelease e nove asset: quattro pacchetti, quattro manifest e checksum. `git diff --check` passato. Nessun nuovo test applicativo locale, download o installazione dichiarati.
-- **Consegna autorizzata (27-10-2026):** richiesta successiva dell'utente «pusha su dev». Pubblicazione del ramo e integrazione tramite PR verso `dev`, subordinata ai quattro check CI obbligatori; nessun rilascio su `main`.
+- **Consegna autorizzata (27-10-2026):** richiesta successiva dell'utente «pusha su dev». La [PR #70](https://github.com/xmey95/pokeguru/pull/70) consegna il risultato a `dev` tramite i quattro check CI obbligatori; esito dei check e commit di integrazione sono consultabili nella PR. Nessun rilascio su `main`.
 
 ### APP-146 — Guida di distribuzione aggiornata
 
