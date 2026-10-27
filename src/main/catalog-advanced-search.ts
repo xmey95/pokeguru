@@ -67,30 +67,54 @@ function normalize(value: string): string {
     .toLocaleLowerCase('en').replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
+const RETRIEVAL_STOP_WORDS = new Set(['a', 'an', 'and', 'any', 'are', 'as', 'at', 'be',
+  'by', 'card', 'cards', 'each', 'for', 'from', 'has', 'have', 'in', 'into', 'is', 'it',
+  'of', 'on', 'one', 'or', 'opponent', 'opponents', 'pokemon', 'that', 'the', 'their',
+  'this', 'to', 'up', 'your', 'you'])
+
+function retrievalTokens(value: string): string[] {
+  return [...new Set(normalize(value).split(' ').filter((word) =>
+    word.length > 1 && !RETRIEVAL_STOP_WORDS.has(word)))]
+}
+
+export function hasCatalogAdvancedCriteria(plan: CatalogAdvancedPlan): boolean {
+  return plan.textGroups.length > 0 || [plan.category, plan.stage, plan.type,
+    plan.minHp, plan.maxHp, plan.maxRetreat].some((value) => value !== null)
+}
+
 export function readCatalogAdvancedPlan(input: unknown): CatalogAdvancedPlan {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw new Error('Codex non ha restituito un filtro valido.')
   const value = input as Record<string, unknown>
-  const textGroups = value.textGroups
-  const boundedText = (item: unknown, max: number): item is string =>
-    typeof item === 'string' && item.trim().length > 0 && item.length <= max && !item.includes('\0')
-  const optionalText = (item: unknown): item is string | null =>
-    item === null || boundedText(item, 40)
-  const optionalInt = (item: unknown, max: number): item is number | null =>
-    item === null || Number.isInteger(item) && Number(item) >= 0 && Number(item) <= max
   if (!['exact', 'interpretive'].includes(value.mode as string) ||
-    !boundedText(value.interpretation, 300) ||
-    !optionalText(value.category) || !optionalText(value.stage) || !optionalText(value.type) ||
-    !optionalInt(value.minHp, 1000) || !optionalInt(value.maxHp, 1000) ||
-    !optionalInt(value.maxRetreat, 10) ||
-    !Array.isArray(textGroups) || textGroups.length > 5 ||
-    !textGroups.every((group) => Array.isArray(group) && group.length >= 1 &&
-      group.length <= 8 && group.every((item) => boundedText(item, 80))) ||
-    !textGroups.length && [value.category, value.stage, value.type, value.minHp,
-      value.maxHp, value.maxRetreat].every((item) => item === null)) {
-    throw new Error('Codex non ha restituito criteri di ricerca verificabili. Riformula la domanda.')
+    typeof value.interpretation !== 'string' || !value.interpretation.trim() ||
+    value.interpretation.includes('\0') || !Array.isArray(value.textGroups))
+    throw new Error('Codex non ha restituito un filtro valido. Riprova la ricerca.')
+  const optionalText = (item: unknown): string | null =>
+    typeof item === 'string' && item.trim() && !item.includes('\0')
+      ? item.trim().slice(0, 40) : null
+  const optionalInt = (item: unknown, max: number): number | null =>
+    Number.isInteger(item) && Number(item) >= 0 && Number(item) <= max ? Number(item) : null
+  let remaining = 64
+  const textGroups: string[][] = []
+  for (const rawGroup of value.textGroups) {
+    if (!Array.isArray(rawGroup) || remaining === 0) continue
+    const group = [...new Set(rawGroup.filter((item): item is string =>
+      typeof item === 'string' && !!item.trim() && !item.includes('\0'))
+      .map((item) => item.trim().slice(0, 80)))].slice(0, remaining)
+    if (!group.length) continue
+    textGroups.push(group)
+    remaining -= group.length
+    if (textGroups.length === 8) break
   }
-  const plan = value as CatalogAdvancedPlan
+  const plan: CatalogAdvancedPlan = {
+    mode: value.mode as CatalogAdvancedPlan['mode'],
+    interpretation: value.interpretation.trim().slice(0, 300),
+    category: optionalText(value.category), stage: optionalText(value.stage),
+    type: optionalText(value.type), minHp: optionalInt(value.minHp, 1000),
+    maxHp: optionalInt(value.maxHp, 1000), maxRetreat: optionalInt(value.maxRetreat, 10),
+    textGroups
+  }
   // Literal effect terms are retrieval hints, never proof of a semantic effect.
   return plan.mode === 'exact' && plan.textGroups.length ? { ...plan, mode: 'interpretive' } : plan
 }
@@ -115,7 +139,8 @@ export function advancedCatalogCandidates(catalog: CatalogView, plan: CatalogAdv
     allGroups.set(key, group)
   }
   const groups = new Map<string, CatalogAdvancedCandidate>()
-  const normalizedGroups = plan.textGroups.map((items) => items.map(normalize).filter(Boolean))
+  const normalizedGroups = plan.textGroups.map((items) => items.map((item) => ({
+    phrase: normalize(item), tokens: retrievalTokens(item) })).filter((item) => item.phrase))
   for (const print of catalog.prints) {
     const game = effectiveCardGameplay(print, asOf, catalog.rulePackage).effective
     if (plan.category && normalize(print.category ?? '') !== normalize(plan.category)) continue
@@ -127,9 +152,26 @@ export function advancedCatalogCandidates(catalog: CatalogView, plan: CatalogAdv
     if (plan.maxRetreat !== null && (game?.retreat === null || game?.retreat === undefined ||
       game.retreat > plan.maxRetreat)) continue
     const { text, gameplay } = textFor(print, game)
-    const phrases = normalizedGroups.map((alternatives) => alternatives.find((term) => text.includes(term)) ?? null)
-    const score = phrases.filter(Boolean).length
-    if (normalizedGroups.length && (plan.mode === 'exact' ? score !== normalizedGroups.length : score === 0)) continue
+    const words = normalizedGroups.length ? new Set(text.split(' ')) : null
+    const matches = normalizedGroups.map((alternatives) => {
+      let best = { phrase: '', quality: 0 }
+      for (const item of alternatives) {
+        let quality = 0
+        if (text.includes(item.phrase)) quality = 2 + Math.min(5, item.tokens.length) / 5
+        else if (item.tokens.length >= 2) {
+          const shared = item.tokens.filter((word) => words!.has(word)).length
+          const threshold = Math.max(2, Math.ceil(item.tokens.length * 0.6))
+          if (shared >= threshold) quality = 1 + shared / item.tokens.length
+        }
+        if (quality > best.quality) best = { phrase: item.phrase, quality }
+      }
+      return best
+    })
+    const matchedCount = matches.filter((item) => item.quality > 0).length
+    const score = matches.reduce((total, item) => total + item.quality, 0)
+    if (normalizedGroups.length && (plan.mode === 'exact' ? matchedCount !== normalizedGroups.length
+      : matchedCount === 0)) continue
+    const phrases = matches.filter((item) => item.quality > 0).map((item) => item.phrase)
     const key = print.identityId ?? `pending-${print.id}`
     const existing = groups.get(key)
     if (existing) {
@@ -138,13 +180,13 @@ export function advancedCatalogCandidates(catalog: CatalogView, plan: CatalogAdv
       if (score > existing.score || score === existing.score && gameplay.length > existing.gameplay.length) {
         existing.representative = print
         existing.gameplay = gameplay
-        existing.matchedPhrases = phrases.filter((phrase): phrase is string => !!phrase)
+        existing.matchedPhrases = phrases
         existing.score = score
       }
     } else {
       groups.set(key, { group: allGroups.get(key)!, printIds: [print.id], setIds: [print.setId],
         representative: print, gameplay,
-        matchedPhrases: phrases.filter((phrase): phrase is string => !!phrase), score })
+        matchedPhrases: phrases, score })
     }
   }
   return [...groups.values()].sort((a, b) => b.score - a.score ||
@@ -182,7 +224,7 @@ export function advancedCatalogMatches(candidates: readonly CatalogAdvancedCandi
     const supported = plan.mode === 'exact' || modelReviewed && assessment?.status === 'supported'
     matches.push({ ...candidate.group, assessment: supported ? 'supported' : 'possible',
       reason: assessment?.reason ?? (plan.mode === 'exact' ? plan.interpretation
-        : `Corrisponde a: ${candidate.matchedPhrases.join(', ') || 'un criterio della ricerca'}. Da valutare.`),
+        : `Indizi testuali: ${candidate.matchedPhrases.join(', ') || 'un criterio della ricerca'}. Da valutare.`),
       conditions: assessment?.conditions ?? (supported ? null : modelReviewed ? null
         : 'Questa carta non è stata valutata singolarmente dall’AI.'),
       sourcePrintId: candidate.representative.id,

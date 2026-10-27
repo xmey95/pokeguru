@@ -145,7 +145,7 @@ export function CatalogSection({ focusIdentityId, projectId }: {
     }).catch(() => { if (active) { setAdvancedPage(null); setAdvancedError('Pagina della ricerca non disponibile.') } })
       .finally(() => { if (active) setAdvancedPageLoading(false) })
     return () => { active = false }
-  }, [searchMode, advanced?.id, setFilter, offset, catalog?.syncedAt, revision])
+  }, [searchMode, advanced?.id, setFilter, offset])
 
   async function runAdvancedSearch(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
@@ -458,7 +458,7 @@ export function CatalogSection({ focusIdentityId, projectId }: {
       {searchMode === 'advanced' && advanced && <div className="catalog-advanced-summary" role="status">
         <strong>Filtro interpretato:</strong> {advanced.interpretation}
         <p>{advancedPage?.supported ?? advanced.page.supported} corrispondenze · {advancedPage?.possible ?? advanced.page.possible} da valutare{setFilter === 'all' ? '' : ' nell’espansione selezionata'}.</p>
-        <p>Inventario locale: {advanced.scope.indexedPrints}/{advanced.scope.expectedPrints} stampe; {advanced.scope.comparablePrints} schede di gioco confrontabili.
+        <p>Inventario locale al momento della ricerca: {advanced.scope.indexedPrints}/{advanced.scope.expectedPrints} stampe; {advanced.scope.comparablePrints} schede di gioco confrontabili.
           {advanced.scope.semantic ? ' Le interazioni tattiche non hanno una completezza dimostrabile.' : ''}
           {advanced.scope.reviewLimited ? ` Codex ha valutato ${advanced.scope.reviewedGroups}/${advanced.scope.candidateGroups} gruppi candidati; gli altri restano visibili come da valutare.` : ''}</p>
         {advanced.scope.eventSources.length > 0 ? <details><summary>Liste evento consultate ({advanced.scope.eventSources.length})</summary><ul>
@@ -469,7 +469,7 @@ export function CatalogSection({ focusIdentityId, projectId }: {
         {searchMode === 'advanced' ? advancedLoading ? <LoadingSkeleton label="Codex sta cercando nel catalogo…" />
           : advancedPageLoading ? <LoadingSkeleton label="Caricamento risultati…" />
             : !advanced ? <div className="matchup-empty">Scrivi una domanda e premi <strong>Cerca con AI</strong>. I risultati compariranno nella lista del Catalogo.</div>
-              : advancedPage?.total === 0 ? <SearchEmpty focusId="catalog-advanced-query" onReset={setFilter !== 'all' ? () => { setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde al filtro interpretato. Prova a precisare o ampliare la domanda.</SearchEmpty> : null
+              : advancedPage?.total === 0 ? <SearchEmpty focusId="catalog-advanced-query" onReset={setFilter !== 'all' ? () => { setSetFilter('all'); setOffset(0) } : undefined}>Non ho trovato schede compatibili nel Catalogo locale. Il filtro interpretato è mostrato sopra: puoi cambiarlo o aggiornare il Catalogo.</SearchEmpty> : null
           : searchFailed ? <div className="error-banner" role="status">Ricerca non disponibile. <button type="button" className="text-button" onClick={() => setRevision((value) => value + 1)}>Riprova</button></div>
             : !page || pageLoading ? <LoadingSkeleton label="Ricerca nel catalogo…" /> : page.total === 0 ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : null}
         {visible.length > 0 && <>

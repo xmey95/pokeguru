@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -8,7 +8,7 @@ import { CatalogStore } from '../src/main/catalog'
 import { TournamentStore } from '../src/main/tournament-store'
 import { AiJobStore } from '../src/main/ai-job-store'
 import { DailySyncStore } from '../src/main/daily-sync'
-import { CURRENT_SCHEMA_VERSION, completeDatabaseMigration,
+import { CURRENT_SCHEMA_VERSION, DatabaseIntegrityError, completeDatabaseMigration,
   prepareDatabaseMigration, verifyDatabase } from '../src/main/database-migrations'
 
 function schemaVersion(path: string): number {
@@ -37,6 +37,23 @@ it('versions a fresh archive and reopens it without another backup', async () =>
     const current = await prepareDatabaseMigration(path)
     expect(current).toMatchObject({ fromVersion: CURRENT_SCHEMA_VERSION,
       needsMigration: false, backupPath: null })
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
+it('rejects a damaged current-version archive before opening writable stores', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-corrupt-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const db = new DatabaseSync(path)
+    db.exec(`CREATE TABLE sample (id TEXT PRIMARY KEY) STRICT;
+      PRAGMA user_version = ${CURRENT_SCHEMA_VERSION}`)
+    db.close()
+    const damaged = readFileSync(path)
+    damaged[100] = 0 // Invalid sqlite_schema B-tree page; the version header remains current.
+    writeFileSync(path, damaged)
+    await expect(prepareDatabaseMigration(path)).rejects.toBeInstanceOf(DatabaseIntegrityError)
+    expect(readFileSync(path)).toEqual(damaged)
+    expect(existsSync(join(folder, 'backups'))).toBe(false)
   } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 })
 

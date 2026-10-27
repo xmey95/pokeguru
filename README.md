@@ -43,7 +43,7 @@ Scarica il pacchetto adatto dalla pagina delle [release](https://github.com/xmey
 
 I pacchetti includono la CLI Codex nativa: **non servono Node.js, npm o un'installazione separata di Codex** per usare l'app. Le funzioni AI richiedono connessione e accesso Codex, configurabile in **Impostazioni AI**.
 
-**macOS:** i pacchetti v0.3.0 usano una firma ad hoc gratuita, senza certificato Developer ID né notarizzazione Apple. La CI verifica DMG, firma e avvio del binario su Mac Intel e Apple Silicon; l'apertura da Finder dopo il download su un Mac Apple Silicon esterno alla CI resta da provare. Gatekeeper può bloccarla. Nella v0.2.1 un utente ha visto «L'app è danneggiata e non può essere aperta» su Apple Silicon; il nuovo pacchetto non va considerato una correzione confermata di quel caso finché non viene provato sul suo Mac. Consulta la [guida alla distribuzione e alla prova manuale](docs/DISTRIBUTION.md). L'installer Windows è senza firma Authenticode. La release include `SHA256SUMS.txt`, manifest di provenienza e attestazioni GitHub per verificare i pacchetti.
+**macOS:** dalla v0.3.0 i pacchetti usano una firma ad hoc gratuita, senza certificato Developer ID né notarizzazione Apple. La CI verifica DMG, firma e avvio del binario su Mac Intel e Apple Silicon; l'apertura da Finder dopo il download su un Mac Apple Silicon esterno alla CI resta da provare. Gatekeeper può bloccarla. Nella v0.2.1 un utente ha visto «L'app è danneggiata e non può essere aperta» su Apple Silicon; il nuovo pacchetto non va considerato una correzione confermata di quel caso finché non viene provato sul suo Mac. Consulta la [guida alla distribuzione e alla prova manuale](docs/DISTRIBUTION.md). L'installer Windows è senza firma Authenticode. La release include `SHA256SUMS.txt`, manifest di provenienza e attestazioni GitHub per verificare i pacchetti.
 
 ## Primi passi
 
@@ -70,6 +70,10 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Controlli Standard:** l'esito si riferisce alle regole versionate incluse nell'app e alle stampe effettivamente coperte. I casi mancanti o ambigui restano da verificare. Aggiornare il Catalogo non aggiorna le regole: le nuove regole arrivano con una release. L'esito non è una certificazione di legalità torneo.
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
+
+### Correzioni della v0.3.1
+
+La Ricerca avanzata del Catalogo accetta domande più ampie e varianti lessicali; i risultati restano visibili anche durante l'aggiornamento del Catalogo. All'avvio l'app verifica l'integrità dell'archivio SQLite prima di aprire connessioni scrivibili: se è danneggiato, mostra un errore specifico e ferma gli aggiornamenti automatici. Questo controllo non ripara un archivio già corrotto e non elimina le possibili cause esterne di corruzione.
 
 ### Novità della v0.3.0
 

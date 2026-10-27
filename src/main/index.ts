@@ -51,7 +51,7 @@ import { evaluateStandardDeck } from '../shared/standard-deck'
 import { localCalendarDate } from '../shared/calendar-date'
 import { safeThreadLink } from '../shared/thread-links'
 import { TournamentStore } from './tournament-store'
-import { completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
+import { DatabaseIntegrityError, completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
 import { AiJobStore } from './ai-job-store'
 import type { AiJob } from './ai-job-store'
 import type { AiJobSummary } from '../shared/ai-job'
@@ -86,7 +86,7 @@ const codexSetup = new CodexSetup(() => app.getPath('userData'))
 const generatingProjects = new Set<string>()
 const generatingDeckThreads = new Set<string>()
 const activeAiControllers = new Map<string, AbortController>()
-const catalogAdvancedResults = new Map<string, { result: CatalogAdvancedExecution; catalog: CatalogView }>()
+const catalogAdvancedResults = new Map<string, CatalogAdvancedExecution>()
 let activeCatalogAdvancedSearch: AbortController | null = null
 let recoveringAiJobs = false
 
@@ -648,9 +648,8 @@ function registerProjectHandlers(): void {
       const result = await searchCatalogAdvanced(catalog, value.query.trim(),
         { selected, deckText, events: catalogAdvancedEvents(value.query, catalog) },
         config, controller.signal)
-      if (catalogStore.view() !== catalog) throw new Error('Il Catalogo è cambiato durante la ricerca. Riprova.')
       const id = randomUUID()
-      catalogAdvancedResults.set(id, { result, catalog })
+      catalogAdvancedResults.set(id, result)
       if (catalogAdvancedResults.size > 5) catalogAdvancedResults.delete(catalogAdvancedResults.keys().next().value!)
       return { ok: true, value: { id, query: result.query,
         interpretation: result.interpretation, searchedAt: result.searchedAt,
@@ -669,9 +668,8 @@ function registerProjectHandlers(): void {
       !Number.isInteger(offset) || (offset as number) < 0 || (offset as number) > 1_000_000)
       return { ok: false, error: 'Pagina della ricerca non valida.' }
     const stored = catalogAdvancedResults.get(id)
-    if (!stored || catalogStore.view() !== stored.catalog)
-      return { ok: false, error: 'Il Catalogo è cambiato o la ricerca è scaduta. Ripeti la ricerca.' }
-    return { ok: true, value: advancedCatalogPage(stored.result.matches, setId, offset as number) }
+    if (!stored) return { ok: false, error: 'La ricerca è scaduta. Ripeti la ricerca.' }
+    return { ok: true, value: advancedCatalogPage(stored.matches, setId, offset as number) }
   })
 
   ipcMain.handle('catalog:advanced-cancel', (event): OperationResult<boolean> => {
@@ -1661,7 +1659,9 @@ app.whenReady().then(async () => {
     catalogStore?.close(); catalogStore = null
     aiJobStore?.close(); aiJobStore = null
     projectStore?.close(); projectStore = null
-    storageError = 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
+    storageError = error instanceof DatabaseIntegrityError
+      ? 'Archivio locale danneggiato. Gli aggiornamenti sono stati fermati per evitare altre modifiche. Conserva la cartella dati e segnala il problema.'
+      : 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
   }
 
   const imageDirectory = join(app.getPath('userData'), 'data', 'catalog-images')
@@ -1674,13 +1674,13 @@ app.whenReady().then(async () => {
 
   registerProjectHandlers()
   createWindow()
-  if (process.env.POKEGURU_AUTO_SYNC !== '0') {
+  if (!storageError && process.env.POKEGURU_AUTO_SYNC !== '0') {
     const requestedDelay = Number(process.env.POKEGURU_AUTO_SYNC_DELAY_MS)
     const delay = Number.isFinite(requestedDelay) && requestedDelay >= 3_000 && requestedDelay <= 30_000
       ? requestedDelay : 3_000
     startupSyncTimer = setTimeout(startDailySync, delay)
   }
-  setTimeout(() => { void recoverAiJobs() }, 0)
+  if (!storageError) setTimeout(() => { void recoverAiJobs() }, 0)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
