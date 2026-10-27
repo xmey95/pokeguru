@@ -395,9 +395,23 @@ details[open] > summary { margin-bottom: 8px; }
 .catalog-set-coverage thead th { position: sticky; top: 0; background: var(--surface-subtle); color: var(--ink-secondary); }
 .catalog-set-coverage td { text-align: right; white-space: nowrap; }
 .catalog-set-coverage .text-button { text-align: left; justify-content: start; }
-.catalog-filters { display: flex; flex-wrap: wrap; gap: 16px; margin: 24px 0 16px; }
+.catalog-search-modes { display: inline-flex; gap: 4px; padding: 4px; margin-top: 24px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-subtle); }
+.catalog-search-modes button { border: 0; border-radius: var(--radius-sm); padding: 9px 14px; color: var(--ink-secondary); background: transparent; font: inherit; cursor: pointer; }
+.catalog-search-modes button.active { color: var(--ink); background: var(--surface); box-shadow: 0 1px 3px #00000018; }
+.catalog-search-modes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.catalog-filters { display: flex; flex-wrap: wrap; align-items: start; gap: 16px; margin: 16px 0; }
 .catalog-filters label { display: grid; gap: 8px; flex: 1 1 200px; }
-.catalog-filters input, .catalog-filters select { width: 100%; }
+.catalog-filters input, .catalog-filters select, .catalog-filters textarea { width: 100%; }
+.catalog-advanced-form { flex: 1 1 460px; min-width: 0; }
+.catalog-advanced-form label { display: block; margin-bottom: 8px; }
+.catalog-advanced-form textarea { resize: vertical; min-height: 72px; }
+.catalog-advanced-form .content-note { margin: 9px 0 0; }
+.catalog-advanced-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.catalog-advanced-summary { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-subtle); }
+.catalog-advanced-summary p { margin: 8px 0 0; }
+.catalog-advanced-summary details { margin-top: 10px; }
+.catalog-list span.catalog-advanced-possible { color: var(--ink-secondary); font-weight: 700; }
+.catalog-list span.catalog-advanced-supported { color: var(--accent); font-weight: 700; }
 .catalog-layout, .tournament-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 20px; margin-top: 16px; }
 .catalog-list, .tournament-players { min-width: 0; align-self: start; max-height: 640px; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
 .catalog-list > button, .tournament-players button { display: grid; width: 100%; gap: 6px; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--line); background: var(--surface); text-align: left; }
@@ -604,6 +618,7 @@ details[open] > summary { margin-bottom: 8px; }
 .matchup-phase-tabs [role=tab] { flex: 1; padding: 10px 8px; background: transparent; color: var(--ink-secondary); border: 0; border-bottom: 2px solid transparent; border-radius: 0; }
 .matchup-phase-tabs [aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 650; }
 .matchup-plan [role=tabpanel] { padding: 2px 0; }
+.matchup-plan .guide-body p { line-height: 1.65; }
 .ai-diagnostics { margin-top: 16px; }
 .matchup-fields > .matchup-trust { grid-column: 1 / -1; border-left: 3px solid var(--warning-line); background: var(--warning-soft); }
 .matchup-fields .matchup-trust h3, .matchup-fields .matchup-trust .guide-body { color: var(--warning); font-size: var(--text-sm); }

@@ -1,5 +1,6 @@
 import { app, BrowserWindow, clipboard, ipcMain, Menu, protocol, shell } from 'electron'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
@@ -24,9 +25,13 @@ import { createAiEvidenceEngine } from './ai-evidence-engine'
 import { makeAiPromptAudit, runAiEvidenceQueries,
   threadEvidenceWithQueries } from './ai-evidence-queries'
 import { planEvidenceQueriesWithCodex } from './codex-evidence-plan'
+import { questionUsesCurrentDeck,
+  searchCatalogAdvanced, type CatalogAdvancedExecution } from './catalog-advanced-service'
+import { advancedCatalogPage } from './catalog-advanced-search'
 import type { ThreadEvidencePacket } from '../shared/thread-evidence'
 import { CatalogStore, enrichCatalogPrints, fetchCatalogSample, syncStandardCatalog } from './catalog'
-import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
+import type { CatalogAdvancedPage, CatalogAdvancedSearchInput, CatalogAdvancedSearchSummary,
+  CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
   CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from '../shared/catalog'
 import { buildDeckCards, matchupDeckContext, snapshotPrint,
   type ClearLineMappingInput, type DeckReconciliation, type SaveLineMappingInput } from '../shared/reconciliation'
@@ -81,6 +86,8 @@ const codexSetup = new CodexSetup(() => app.getPath('userData'))
 const generatingProjects = new Set<string>()
 const generatingDeckThreads = new Set<string>()
 const activeAiControllers = new Map<string, AbortController>()
+const catalogAdvancedResults = new Map<string, { result: CatalogAdvancedExecution; catalog: CatalogView }>()
+let activeCatalogAdvancedSearch: AbortController | null = null
 let recoveringAiJobs = false
 
 function aiArtifactDirectory(jobId: string): string {
@@ -283,6 +290,25 @@ function currentAiEventWindow(catalog: CatalogView, recentDays?: number):
     recentDays * 86_400_000).toISOString().slice(0, 10) : null
   return { from: recent && rotation ? (recent > rotation.effectiveFrom ? recent
     : rotation.effectiveFrom) : recent ?? rotation?.effectiveFrom ?? to, to }
+}
+
+function catalogAdvancedEvents(question: string, catalog: CatalogView):
+  { label: string; url: string; cards: string[] }[] {
+  const normalized = (value: string) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('en').replace(/[^a-z0-9]+/g, ' ').trim()
+  const text = ` ${normalized(question)} `
+  const archetype = projectStore?.getLatestMetaSnapshot()?.decks
+    .filter((deck) => text.includes(` ${normalized(deck.name)} `))
+    .sort((a, b) => b.name.length - a.name.length)[0]
+  if (!archetype) return []
+  const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
+    tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog, 90))
+  const result = engine.execute({ operation: 'events.search', deckName: archetype.name, limit: 3 })
+  if (result.status !== 'ok') return []
+  const lists = (result.data as { lists?: { name: string; date: string; deck: string;
+    listUrl: string; cards: string[] }[] }).lists ?? []
+  return lists.map((list) => ({ label: `${list.deck} · ${list.name} · ${list.date}`,
+    url: list.listUrl, cards: list.cards }))
 }
 
 async function matchupAiQueries(request: string, deckContext: string,
@@ -584,6 +610,74 @@ function registerProjectHandlers(): void {
     }
     try { return { ok: true, value: catalogStore.browseSearch(query, setId, offset as number) } }
     catch { return { ok: false, error: 'Ricerca catalogo non disponibile.' } }
+  })
+
+  ipcMain.handle('catalog:advanced-search', async (event, input: unknown):
+    Promise<OperationResult<CatalogAdvancedSearchSummary>> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    const value = input as Partial<CatalogAdvancedSearchInput> | null
+    if (!value || typeof value !== 'object' || typeof value.query !== 'string' ||
+      value.query.trim().length < 4 || value.query.length > 500 || value.query.includes('\0') ||
+      value.selectedKey !== null && (typeof value.selectedKey !== 'string' ||
+        value.selectedKey.length > 150 || value.selectedKey.includes('\0')) ||
+      value.projectId !== null && (typeof value.projectId !== 'string' ||
+        value.projectId.length > 100 || value.projectId.includes('\0'))) {
+      return { ok: false, error: 'Domanda di ricerca non valida.' }
+    }
+    if (activeCatalogAdvancedSearch) return { ok: false, error: 'Una ricerca avanzata è già in corso.' }
+    const controller = new AbortController()
+    activeCatalogAdvancedSearch = controller
+    try {
+      const catalog = catalogStore.view()
+      if (!catalog.syncedAt || !catalog.prints.length) throw new Error('Aggiorna il Catalogo prima della ricerca avanzata.')
+      const selected = value.selectedKey ? catalogStore.browseGroup(value.selectedKey)?.prints ?? [] : []
+      const deckRequested = questionUsesCurrentDeck(value.query)
+      let deckText: string | null = null
+      if (deckRequested) {
+        const project = value.projectId ? projectStore?.get(value.projectId) : null
+        if (!project || project.circuit !== 'WESTERN')
+          throw new Error('Seleziona un progetto occidentale per cercare nel tuo mazzo.')
+        const baseline = projectStore!.getBaseline(project.id)
+        if (!baseline) throw new Error('Il progetto selezionato non ha ancora una lista.')
+        deckText = baseline.rawText
+      }
+      if (/\b(?:questa carta|carta selezionata|this card)\b/i.test(value.query) && !selected.length)
+        throw new Error('Seleziona prima una carta del Catalogo.')
+      const config = await runConfig()
+      const result = await searchCatalogAdvanced(catalog, value.query.trim(),
+        { selected, deckText, events: catalogAdvancedEvents(value.query, catalog) },
+        config, controller.signal)
+      if (catalogStore.view() !== catalog) throw new Error('Il Catalogo è cambiato durante la ricerca. Riprova.')
+      const id = randomUUID()
+      catalogAdvancedResults.set(id, { result, catalog })
+      if (catalogAdvancedResults.size > 5) catalogAdvancedResults.delete(catalogAdvancedResults.keys().next().value!)
+      return { ok: true, value: { id, query: result.query,
+        interpretation: result.interpretation, searchedAt: result.searchedAt,
+        catalogSyncedAt: result.catalogSyncedAt, scope: result.scope,
+        page: advancedCatalogPage(result.matches, 'all', 0) } }
+    } catch (error) { return { ok: false, error: aiError(error) } }
+    finally { if (activeCatalogAdvancedSearch === controller) activeCatalogAdvancedSearch = null }
+  })
+
+  ipcMain.handle('catalog:advanced-page', (event, id: unknown, setId: unknown,
+    offset: unknown): OperationResult<CatalogAdvancedPage> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    if (!catalogStore) return { ok: false, error: unavailableMessage() }
+    if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/i.test(id) ||
+      typeof setId !== 'string' || (setId !== 'all' && !/^[a-zA-Z0-9.]{1,20}$/.test(setId)) ||
+      !Number.isInteger(offset) || (offset as number) < 0 || (offset as number) > 1_000_000)
+      return { ok: false, error: 'Pagina della ricerca non valida.' }
+    const stored = catalogAdvancedResults.get(id)
+    if (!stored || catalogStore.view() !== stored.catalog)
+      return { ok: false, error: 'Il Catalogo è cambiato o la ricerca è scaduta. Ripeti la ricerca.' }
+    return { ok: true, value: advancedCatalogPage(stored.result.matches, setId, offset as number) }
+  })
+
+  ipcMain.handle('catalog:advanced-cancel', (event): OperationResult<boolean> => {
+    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+    activeCatalogAdvancedSearch?.abort()
+    return { ok: true, value: true }
   })
 
   ipcMain.handle('catalog:group', (event, key: unknown): OperationResult<{

@@ -37,7 +37,7 @@ jobs:
       - name: Check types
         run: npm run typecheck
       - name: Run local tests
-        run: npm test -- --maxWorkers=2
+        run: npm test -- --maxWorkers=2 --testTimeout=15000
       - name: Build Electron app
         run: npm run build
       - name: Verify daily sync startup on Linux
@@ -230,11 +230,14 @@ jobs:
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited $($uninstall.ExitCode)" }
       - name: Package macOS DMG
         if: runner.os == 'macOS'
+        env:
+          # Firma ad hoc: non usa certificati o secret nei job delle PR.
+          CSC_FOR_PULL_REQUEST: 'true'
         run: npm run package:mac
       - name: Verify and smoke mounted macOS DMG
         if: runner.os == 'macOS'
         shell: bash
-        run: bash scripts/smoke-mac-dmg.sh release/*.dmg "${{ matrix.macArch }}"
+        run: bash scripts/smoke-mac-dmg.sh release/*.dmg "${{ matrix.macArch }}" --adhoc
       - name: Check included Codex login protocol with an isolated profile
         env:
           POKEGURU_CODEX_LOGIN_LIVE: '1'

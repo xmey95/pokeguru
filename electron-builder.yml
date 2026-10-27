@@ -13,8 +13,10 @@ mac:
     - from: build/mac-codex
       to: codex
   icon: build/icons/1024x1024.png
-  identity: null
+  identity: "-"
   hardenedRuntime: false
+  binaries:
+    - Contents/Resources/codex/bin/codex
   category: public.app-category.games
   target: dmg
   artifactName: Pokeguru-${version}-macos-${arch}.${ext}

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { hasStrategyPhases, type MatchupReport } from '../../shared/meta-matchups'
 import { useViewState } from './Navigation'
+import { matchupPlanNarrative } from './matchup-plan-format'
 
 const phases = [['opening', 'Apertura'], ['development', 'Sviluppo'], ['closing', 'Chiusura']] as const
 
@@ -13,8 +14,9 @@ export function MatchupPlan({ report, renderText, scope = 'current' }: {
   const id = `matchup-plan-${encodeURIComponent(context)}`
   const [selected, setSelected] = useViewState<number>(`matchup.phase:${context}`, 0)
   const active = selected >= 0 && selected < phases.length ? selected : 0
+  const planText = (value: string) => renderText(matchupPlanNarrative(value))
   if (!hasStrategyPhases(report.strategyPhases)) return <div className="matchup-plan legacy-plan">
-    {renderText(report.strategy)}
+    {planText(report.strategy)}
   </div>
   return <div className="matchup-plan">
     <div className="matchup-phase-tabs" role="tablist" aria-label="Fasi del piano di gioco">
@@ -34,7 +36,7 @@ export function MatchupPlan({ report, renderText, scope = 'current' }: {
     </div>
     {phases.map(([phase], index) => <div key={phase} id={`${id}-panel-${phase}`}
       role="tabpanel" aria-labelledby={`${id}-${phase}`} tabIndex={0} hidden={active !== index}>
-      {renderText(report.strategyPhases![phase])}
+      {planText(report.strategyPhases![phase])}
     </div>)}
   </div>
 }

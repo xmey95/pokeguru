@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 2 ]]; then
-  echo 'Uso: smoke-mac-dmg.sh <pacchetto.dmg> <x64|arm64>' >&2
+if [[ $# -lt 2 || $# -gt 3 || ( $# -eq 3 && $3 != --adhoc ) ]]; then
+  echo 'Uso: smoke-mac-dmg.sh <pacchetto.dmg> <x64|arm64> [--adhoc]' >&2
   exit 1
 fi
 
@@ -15,6 +15,7 @@ esac
 
 test "$(lipo -archs "$bundle/Contents/MacOS/Pokeguru")" = "$machine"
 test "$(lipo -archs "$bundle/Contents/Resources/codex/bin/codex")" = "$machine"
+hdiutil verify "$dmg" >/dev/null
 
 mount=$(mktemp -d "${TMPDIR:-/tmp}/pokeguru-dmg.XXXXXX")
 cleanup() {
@@ -23,4 +24,12 @@ cleanup() {
 }
 trap cleanup EXIT
 hdiutil attach "$dmg" -readonly -nobrowse -quiet -mountpoint "$mount"
+if [[ ${3:-} == --adhoc ]]; then
+  codesign --verify --deep --strict --verbose=2 "$mount/Pokeguru.app"
+  codesign --verify --strict --verbose=2 "$mount/Pokeguru.app/Contents/Resources/codex/bin/codex"
+  if ! codesign --display --verbose=2 "$mount/Pokeguru.app" 2>&1 | grep -q 'Signature=adhoc'; then
+    echo 'La firma del bundle non è ad hoc.' >&2
+    exit 1
+  fi
+fi
 node tests/package-smoke.mjs "$mount/Pokeguru.app/Contents/MacOS/Pokeguru"

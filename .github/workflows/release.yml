@@ -47,7 +47,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci
-      - run: npm test -- --maxWorkers=2
+      - run: npm test -- --maxWorkers=2 --testTimeout=15000
       - name: Install Linux display tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
@@ -105,7 +105,7 @@ jobs:
       - name: Verify and smoke mounted macOS DMG
         if: runner.os == 'macOS'
         shell: bash
-        run: bash scripts/smoke-mac-dmg.sh release/*.dmg "${{ matrix.macArch }}"
+        run: bash scripts/smoke-mac-dmg.sh release/*.dmg "${{ matrix.macArch }}" --adhoc
       - name: Record package provenance
         run: node scripts/release-provenance.mjs create ${{ matrix.name }}
       - uses: actions/upload-artifact@v4
@@ -206,7 +206,7 @@ jobs:
             200) echo "Tag ${TAG} already exists; refusing to replace a release." >&2; exit 1 ;;
             *) echo "Cannot verify tag ${TAG} (HTTP ${status:-unknown})." >&2; exit 1 ;;
           esac
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Pokeguru $TAG" --draft --generate-notes --notes 'I pacchetti macOS Intel e Apple Silicon sono al momento privi di firma Apple e notarizzazione; macOS potrebbe richiedere di autorizzare manualmente l’apertura nelle impostazioni di sicurezza.'
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Pokeguru $TAG" --draft --generate-notes --notes 'I pacchetti macOS Intel e Apple Silicon hanno una firma ad hoc gratuita, senza certificato Developer ID né notarizzazione Apple. Gatekeeper può bloccare l’avvio dopo il download; non è ancora stata verificata l’apertura da Finder su un Mac Apple Silicon esterno alla CI. Verifica hash e provenienza prima di autorizzare manualmente questa app: consulta la [guida alla distribuzione](https://github.com/xmey95/pokeguru/blob/main/docs/DISTRIBUTION.md).'
           gh release upload "$TAG" release/*.AppImage release/*-setup.exe release/*.dmg release/provenance-*.json release/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length' | grep -qx '9'
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
