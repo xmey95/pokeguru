@@ -361,7 +361,7 @@ export function App() {
           </form>}
           {error && <div className="error-banner" role="alert">{error}</div>}
           {view === 'ai' ? <AiSettings /> : view === 'catalog'
-            ? <CatalogSection focusIdentityId={catalogFocusIdentityId} /> : view === 'tournament' ? <TournamentSection /> : loading ? <LoadingSkeleton label="Apertura progetti…" rows={3} /> : selected ? (
+            ? <CatalogSection focusIdentityId={catalogFocusIdentityId} projectId={selected?.id ?? null} /> : view === 'tournament' ? <TournamentSection /> : loading ? <LoadingSkeleton label="Apertura progetti…" rows={3} /> : selected ? (
             <section className="project-detail" aria-label="Dettaglio progetto">
               <div className="detail-headline">
                 <div>

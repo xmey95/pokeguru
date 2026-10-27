@@ -1,7 +1,8 @@
 import type { DeckBaseline, ImportDeckInput } from './deck-import'
 import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from './meta-matchups'
 import type { AiConnection, AiLoginProgress, AiLoginStart, AiPreferences, CodexSetupStatus } from './ai'
-import type { CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
+import type { CatalogAdvancedPage, CatalogAdvancedSearchInput, CatalogAdvancedSearchSummary,
+  CatalogBrowseOverview, CatalogBrowsePage, CatalogBrowseGroup,
   CatalogPrint, CatalogSyncMode, CatalogSyncStatus, CatalogView } from './catalog'
 import type { ClearLineMappingInput, DeckReconciliation, SaveLineMappingInput } from './reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from './constraints'
@@ -43,6 +44,9 @@ export interface ProjectsApi {
   getCatalog(): Promise<OperationResult<CatalogView>>
   getCatalogBrowseOverview(): Promise<OperationResult<CatalogBrowseOverview>>
   searchCatalog(query: string, setId: string, offset: number): Promise<OperationResult<CatalogBrowsePage>>
+  searchCatalogAdvanced(input: CatalogAdvancedSearchInput): Promise<OperationResult<CatalogAdvancedSearchSummary>>
+  getCatalogAdvancedPage(id: string, setId: string, offset: number): Promise<OperationResult<CatalogAdvancedPage>>
+  cancelCatalogAdvancedSearch(): Promise<OperationResult<boolean>>
   getCatalogGroup(key: string): Promise<OperationResult<{ group: CatalogBrowseGroup; prints: CatalogPrint[] } | null>>
   getCatalogPrint(id: string): Promise<OperationResult<CatalogPrint | null>>
   getCardPreview(lookup: CardPreviewLookup): Promise<OperationResult<CardPreviewData>>

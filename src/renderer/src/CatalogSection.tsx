@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigation, useViewState, useBusyState, useBusyStartedAt, useDraftState } from './Navigation'
-import type { CatalogBrowseGroup, CatalogBrowseOverview, CatalogBrowsePage,
+import type { CatalogAdvancedMatch, CatalogAdvancedPage, CatalogAdvancedSearchSummary,
+  CatalogBrowseGroup, CatalogBrowseOverview, CatalogBrowsePage,
   CatalogPrint, CatalogSyncMode, CatalogSyncStatus } from '../../shared/catalog'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { CatalogCardDetail } from './CatalogCardDetail'
@@ -21,8 +22,13 @@ function legalDate(value: string): string {
     .format(new Date(`${value}T00:00:00Z`))
 }
 
-export function CatalogSection({ focusIdentityId }: {
+function isAdvancedMatch(group: CatalogBrowseGroup): group is CatalogAdvancedMatch {
+  return 'assessment' in group
+}
+
+export function CatalogSection({ focusIdentityId, projectId }: {
   focusIdentityId?: string | null
+  projectId?: string | null
 }) {
   const preview = useCardPreview()
   const nav = useNavigation()
@@ -38,6 +44,14 @@ export function CatalogSection({ focusIdentityId }: {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useDraftState<string | null>('catalog.error', null)
   const [query, setQuery] = useViewState('catalog.query', '')
+  const [searchMode, setSearchMode] = useViewState<'quick' | 'advanced'>('catalog.searchMode', 'quick')
+  const [advancedQuery, setAdvancedQuery] = useViewState('catalog.advancedQuery', '')
+  const [advanced, setAdvanced] = useState<CatalogAdvancedSearchSummary | null>(null)
+  const [advancedPage, setAdvancedPage] = useState<CatalogAdvancedPage | null>(null)
+  const [advancedLoading, setAdvancedLoading] = useState(false)
+  const [advancedPageLoading, setAdvancedPageLoading] = useState(false)
+  const [advancedError, setAdvancedError] = useState<string | null>(null)
+  const advancedRequest = useRef(0)
   const [setFilter, setSetFilter] = useViewState('catalog.set', 'all')
   const [offset, setOffset] = useViewState('catalog.offset', 0)
   const [selectedKey, setSelectedKey] = useViewState<string | null>('catalog.selected', null)
@@ -81,6 +95,7 @@ export function CatalogSection({ focusIdentityId }: {
         return
       }
       setQuery(result.value.group.name)
+      setSearchMode('quick')
       setSetFilter('all')
       setOffset(0)
       setSelectedKey(focusIdentityId)
@@ -103,6 +118,7 @@ export function CatalogSection({ focusIdentityId }: {
 
   useEffect(() => {
     if (!catalog?.syncedAt) { setPage(null); return }
+    if (searchMode !== 'quick') return
     let active = true
     setPageLoading(true)
     setPage(null)
@@ -116,9 +132,51 @@ export function CatalogSection({ focusIdentityId }: {
         .finally(() => { if (active) setPageLoading(false) })
     }, query ? 120 : 0)
     return () => { active = false; window.clearTimeout(timer) }
-  }, [catalog?.syncedAt, query, setFilter, offset, revision])
+  }, [catalog?.syncedAt, query, setFilter, offset, revision, searchMode])
 
-  const selected = page?.groups.find((group) => group.key === selectedKey) ?? page?.groups[0]
+  useEffect(() => {
+    if (searchMode !== 'advanced' || !advanced) return
+    let active = true
+    setAdvancedPageLoading(true)
+    void window.projectsApi.getCatalogAdvancedPage(advanced.id, setFilter, offset).then((result) => {
+      if (!active) return
+      if (result.ok) { setAdvancedPage(result.value); setAdvancedError(null) }
+      else { setAdvancedPage(null); setAdvancedError(result.error) }
+    }).catch(() => { if (active) { setAdvancedPage(null); setAdvancedError('Pagina della ricerca non disponibile.') } })
+      .finally(() => { if (active) setAdvancedPageLoading(false) })
+    return () => { active = false }
+  }, [searchMode, advanced?.id, setFilter, offset, catalog?.syncedAt, revision])
+
+  async function runAdvancedSearch(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    if (advancedLoading || advancedQuery.trim().length < 4) return
+    const request = ++advancedRequest.current
+    setAdvancedLoading(true)
+    setAdvancedError(null)
+    setAdvanced(null)
+    setAdvancedPage(null)
+    setOffset(0)
+    try {
+      const result = await window.projectsApi.searchCatalogAdvanced({ query: advancedQuery.trim(),
+        selectedKey: selectedKey ?? page?.groups[0]?.key ?? null, projectId: projectId ?? null })
+      if (request !== advancedRequest.current) return
+      if (!result.ok) throw new Error(result.error)
+      setAdvanced(result.value)
+      setAdvancedPage(result.value.page)
+    } catch (cause) {
+      if (request === advancedRequest.current)
+        setAdvancedError(cause instanceof Error ? cause.message : 'Ricerca avanzata non riuscita.')
+    } finally { if (request === advancedRequest.current) setAdvancedLoading(false) }
+  }
+
+  async function cancelAdvancedSearch(): Promise<void> {
+    advancedRequest.current++
+    setAdvancedLoading(false)
+    await window.projectsApi.cancelCatalogAdvancedSearch().catch(() => undefined)
+  }
+
+  const activeGroups = searchMode === 'advanced' ? advancedPage?.groups : page?.groups
+  const selected = activeGroups?.find((group) => group.key === selectedKey) ?? activeGroups?.[0]
   useEffect(() => {
     if (!selected) { setDetail(null); setDetailKeyLoaded(null); return }
     let active = true
@@ -223,7 +281,7 @@ export function CatalogSection({ focusIdentityId }: {
     } finally { setControlPending(false) }
   }
 
-  const visible = page?.groups ?? []
+  const visible = activeGroups ?? []
   const selectedPrints = detail && detail.group.key === selected?.key
     ? detail.prints.filter((print) => setFilter === 'all' || print.setId === setFilter) : []
   const sampled = catalog?.stats.sampled ?? 0
@@ -337,8 +395,9 @@ export function CatalogSection({ focusIdentityId }: {
   </section>
 
   return <section className="catalog-section" aria-label="Catalogo occidentale"
-    data-nav-loading={loading || (!!catalog?.syncedAt && ((!page && !searchFailed) || pageLoading ||
-      (!!selected && detailKeyLoaded !== selected.key)))}>
+    data-nav-loading={loading || (!!catalog?.syncedAt && (searchMode === 'quick'
+      ? ((!page && !searchFailed) || pageLoading) : advancedLoading || advancedPageLoading) ||
+      (!!selected && detailKeyLoaded !== selected.key))}>
     <div className="panel-heading">
       <div><h1>Catalogo</h1><p className="content-note">{catalog?.syncedAt ? `Aggiornato ${date(catalog.syncedAt)}${standard ? '' : ' · campione di prova'}` : 'Carte condivise fra i progetti'}</p></div>
       <div className="catalog-actions">
@@ -373,21 +432,58 @@ export function CatalogSection({ focusIdentityId }: {
     {loading ? <LoadingSkeleton label="Apertura catalogo…" /> : !catalog?.syncedAt ? (
       <div className="matchup-empty">Catalogo vuoto. Usa <strong>Aggiorna nuove carte</strong> per iniziare.</div>
     ) : <>
+      <div className="catalog-search-modes" role="group" aria-label="Modalità di ricerca">
+        <button type="button" className={searchMode === 'quick' ? 'active' : ''}
+          aria-pressed={searchMode === 'quick'} onClick={() => { setSearchMode('quick'); setOffset(0) }}>Ricerca rapida</button>
+        <button type="button" className={searchMode === 'advanced' ? 'active' : ''}
+          aria-pressed={searchMode === 'advanced'} onClick={() => { if (selected?.key) setSelectedKey(selected.key); setSearchMode('advanced'); setOffset(0) }}>Ricerca avanzata AI</button>
+      </div>
       <div className="catalog-filters">
-        <label>Cerca carta o stampa<input id="catalog-query" value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0) }} placeholder="Es. Iono o sv02-185" /></label>
+        {searchMode === 'quick' ? <label>Cerca carta o stampa<input id="catalog-query" value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0) }} placeholder="Es. Iono o sv02-185" /></label>
+          : <form className="catalog-advanced-form" onSubmit={(event) => void runAdvancedSearch(event)}>
+            <label htmlFor="catalog-advanced-query">Descrivi le carte da trovare</label>
+            <textarea id="catalog-advanced-query" rows={2} maxLength={500} value={advancedQuery}
+              onChange={(event) => { setAdvancedQuery(event.target.value); setAdvanced(null); setAdvancedPage(null) }}
+              placeholder="Es. Carte che recuperano Energie dagli scarti" />
+            <div className="catalog-advanced-actions">
+              <button type="submit" className="primary-button" disabled={advancedLoading || advancedQuery.trim().length < 4}>
+                {advancedLoading && <Spinner />}{advancedLoading ? 'Ricerca in corso…' : 'Cerca con AI'}</button>
+              {advancedLoading && <button type="button" className="secondary-button" onClick={() => void cancelAdvancedSearch()}>Annulla</button>}
+            </div>
+            <p className="content-note">Codex riceve la domanda, la carta selezionata e le schede candidate locali. La lista del progetto viene usata solo se la nomini nella domanda. I risultati tattici sono suggerimenti da valutare.</p>
+          </form>}
         <label>Espansione<select id="catalog-set-filter" value={setFilter} onChange={(event) => { setSetFilter(event.target.value); setOffset(0) }}><option value="all">Tutte</option>{catalog.sets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.id})</option>)}</select></label>
       </div>
+      {searchMode === 'advanced' && advancedError && <p className="error-banner" role="alert">{advancedError}</p>}
+      {searchMode === 'advanced' && advanced && <div className="catalog-advanced-summary" role="status">
+        <strong>Filtro interpretato:</strong> {advanced.interpretation}
+        <p>{advancedPage?.supported ?? advanced.page.supported} corrispondenze · {advancedPage?.possible ?? advanced.page.possible} da valutare{setFilter === 'all' ? '' : ' nell’espansione selezionata'}.</p>
+        <p>Inventario locale: {advanced.scope.indexedPrints}/{advanced.scope.expectedPrints} stampe; {advanced.scope.comparablePrints} schede di gioco confrontabili.
+          {advanced.scope.semantic ? ' Le interazioni tattiche non hanno una completezza dimostrabile.' : ''}
+          {advanced.scope.reviewLimited ? ` Codex ha valutato ${advanced.scope.reviewedGroups}/${advanced.scope.candidateGroups} gruppi candidati; gli altri restano visibili come da valutare.` : ''}</p>
+        {advanced.scope.eventSources.length > 0 ? <details><summary>Liste evento consultate ({advanced.scope.eventSources.length})</summary><ul>
+          {advanced.scope.eventSources.map((source) => <li key={source.url}>{source.label}</li>)}
+        </ul></details> : <p>Liste evento consultate: nessuna.</p>}
+      </div>}
       <div className="catalog-layout">
-        {searchFailed ? <div className="error-banner" role="status">Ricerca non disponibile. <button type="button" className="text-button" onClick={() => setRevision((value) => value + 1)}>Riprova</button></div>
-          : !page || pageLoading ? <LoadingSkeleton label="Ricerca nel catalogo…" /> : page.total === 0 ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : <>
+        {searchMode === 'advanced' ? advancedLoading ? <LoadingSkeleton label="Codex sta cercando nel catalogo…" />
+          : advancedPageLoading ? <LoadingSkeleton label="Caricamento risultati…" />
+            : !advanced ? <div className="matchup-empty">Scrivi una domanda e premi <strong>Cerca con AI</strong>. I risultati compariranno nella lista del Catalogo.</div>
+              : advancedPage?.total === 0 ? <SearchEmpty focusId="catalog-advanced-query" onReset={setFilter !== 'all' ? () => { setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde al filtro interpretato. Prova a precisare o ampliare la domanda.</SearchEmpty> : null
+          : searchFailed ? <div className="error-banner" role="status">Ricerca non disponibile. <button type="button" className="text-button" onClick={() => setRevision((value) => value + 1)}>Riprova</button></div>
+            : !page || pageLoading ? <LoadingSkeleton label="Ricerca nel catalogo…" /> : page.total === 0 ? <SearchEmpty focusId="catalog-query" onReset={query || setFilter !== 'all' ? () => { setQuery(''); setSetFilter('all'); setOffset(0) } : undefined}>Nessuna carta locale corrisponde alla ricerca.</SearchEmpty> : null}
+        {visible.length > 0 && <>
         <div className="catalog-list" aria-label="Risultati catalogo">
-          <p className="content-note">{page.total} risultati · {page.offset + 1}–{page.offset + visible.length}</p>{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`, { preservePosition: true })} aria-pressed={selected?.key === group.key}
+          <p className="content-note">{searchMode === 'advanced' ? advancedPage?.total : page?.total} risultati · {((searchMode === 'advanced' ? advancedPage?.offset : page?.offset) ?? 0) + 1}–{((searchMode === 'advanced' ? advancedPage?.offset : page?.offset) ?? 0) + visible.length}</p>{visible.map((group) => <button type="button" key={group.key} className={selected?.key === group.key ? 'active' : ''} onClick={() => searchMode === 'advanced'
+            ? setSelectedKey(group.key)
+            : nav.visit({ 'catalog.selected': group.key, 'catalog.focusConsumed': true }, `Catalogo · ${group.name}`, { preservePosition: true })} aria-pressed={selected?.key === group.key}
             {...preview({ name: group.name, identityId: group.key })}>
             <strong>{group.name}</strong><span>{group.printCount} {group.printCount === 1 ? 'stampa' : 'stampe'}{group.basis && group.basis !== 'unverified' ? '' : ' · equivalenza da verificare'}</span>
+            {isAdvancedMatch(group) && <><span className={group.assessment === 'possible' ? 'catalog-advanced-possible' : 'catalog-advanced-supported'}>{group.assessment === 'possible' ? 'Da valutare' : 'Corrispondenza'}</span><span>{group.reason}</span>{group.conditions && <span>{group.conditions}</span>}<span>Scheda locale: {group.sourcePrintId}</span></>}
           </button>)}
-          {page.total > 100 && <div className="catalog-page-controls">
-            <button type="button" className="secondary-button" disabled={page.offset === 0} onClick={() => setOffset(Math.max(0, page.offset - 100))}>Precedenti</button>
-            <button type="button" className="secondary-button" disabled={page.offset + 100 >= page.total} onClick={() => setOffset(page.offset + 100)}>Successivi</button>
+          {(searchMode === 'advanced' ? advancedPage?.total ?? 0 : page?.total ?? 0) > 100 && <div className="catalog-page-controls">
+            <button type="button" className="secondary-button" disabled={(searchMode === 'advanced' ? advancedPage?.offset ?? 0 : page?.offset ?? 0) === 0} onClick={() => setOffset(Math.max(0, offset - 100))}>Precedenti</button>
+            <button type="button" className="secondary-button" disabled={(searchMode === 'advanced' ? advancedPage?.offset ?? 0 : page?.offset ?? 0) + 100 >= (searchMode === 'advanced' ? advancedPage?.total ?? 0 : page?.total ?? 0)} onClick={() => setOffset(offset + 100)}>Successivi</button>
           </div>}
         </div>
         <div className="catalog-detail">
