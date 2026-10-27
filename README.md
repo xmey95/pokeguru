@@ -43,7 +43,7 @@ Scarica il pacchetto adatto dalla pagina delle [release](https://github.com/xmey
 
 I pacchetti includono la CLI Codex nativa: **non servono Node.js, npm o un'installazione separata di Codex** per usare l'app. Le funzioni AI richiedono connessione e accesso Codex, configurabile in **Impostazioni AI**.
 
-I DMG v0.2.1 non sono firmati né notarizzati da Apple; macOS può richiedere un'autorizzazione nelle impostazioni di sicurezza. L'installer Windows è senza firma Authenticode. La release include `SHA256SUMS.txt`, manifest di provenienza e attestazioni GitHub per verificare i pacchetti.
+**Problema noto della v0.2.1 su Apple Silicon:** un utente ha segnalato che il DMG si monta, ma macOS mostra «L’app è danneggiata e non può essere aperta» senza offrire «Apri comunque». Il pacchetto non è firmato né notarizzato da Apple; l'integrità della copia scaricata dall'utente non è ancora stata verificata. La versione Intel può richiedere un'autorizzazione nelle impostazioni di sicurezza. Consulta la [guida alla distribuzione](docs/DISTRIBUTION.md) prima di usare i pacchetti Mac. L'installer Windows è senza firma Authenticode. La release include `SHA256SUMS.txt`, manifest di provenienza e attestazioni GitHub per verificare i pacchetti.
 
 ## Primi passi
 

@@ -152,7 +152,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-143** | Piano Matchup in prosa naturale senza etichette ripetute | UI/AI | R-10, R-13 / feedback utente | P1 / S | APP-142 integrato in `dev` | Done |
 | **APP-144** | Ricerca avanzata AI come filtro della lista Catalogo | UI/AI | R-02, R-07 / richiesta utente | P1 / L | APP-093/115/116/118 completati; T-144 | Done |
 | **APP-145** | README di prodotto con installazione, primo utilizzo e limiti verificabili | Documentazione | R-01–R-13 / richiesta utente | P1 / S | Funzioni, pacchetti e workflow presenti nel repository | Done |
-| **APP-146** | Allineare la guida di distribuzione ai quattro pacchetti pubblicati | Documentazione | R-12 / manutenzione | P2 / S | APP-139/141; workflow Release corrente | Backlog |
+| **APP-146** | Allineare la guida di distribuzione ai quattro pacchetti pubblicati | Documentazione | R-12 / manutenzione | P2 / S | APP-139/141; workflow Release corrente | Done |
+| **APP-147** | Impedire release Mac non firmate e verificarle con Gatekeeper | Distribuzione | R-01, R-12 / difetto v0.2.1 | P0 / M | Apple Developer ID e notarizzazione da configurare; prova su Mac Apple Silicon | In progress |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1362,6 +1363,16 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 
 - **Origine:** durante APP-145 è emerso che `docs/DISTRIBUTION.md` descrive ancora due pacchetti e una pubblicazione da verificare, mentre v0.2.1 ne distribuisce quattro con verifiche registrate. Il README descrive già i quattro pacchetti attuali.
 - **Risultato da raffinare:** allineare guida, conteggio degli asset, firma macOS e procedura di verifica al workflow corrente, mantenendo distinte attestazioni e firme native. Attività fuori dal perimetro della revisione README, non avviata.
+
+- **Risultato:** la guida ora descrive i quattro pacchetti, i nove asset, la verifica dell'hash e delle attestazioni, il problema segnalato sulla v0.2.1 Apple Silicon e i secret necessari alla futura firma/notarizzazione. Aggiornamento autorizzato dal feedback di distribuzione del 27-10-2026. La verifica documentale è in APP-147.
+
+### APP-147 — Firma e Gatekeeper per release macOS
+
+- **Origine e perimetro:** il 27-10-2026 l'utente segnala che la v0.2.1 Apple Silicon si monta ma l'app copiata in Applicazioni è indicata come danneggiata senza «Apri comunque»; sul suo Mac Intel funziona dopo l'eccezione in Sicurezza. L'hash della copia sul Mac Apple Silicon non è ancora disponibile. `electron-builder.yml` della v0.2.1 usa `identity: null` e `hardenedRuntime: false`; il test CI avvia il binario nel DMG, senza valutare Gatekeeper. Preparare il percorso di release firmata/notarizzata e un gate misurabile, senza fingere una nuova release riuscita.
+- **Accettazione:** la release su `main` fallisce prima di pubblicare se mancano certificato Developer ID Application o credenziali Apple; il Codex nativo incluso è firmato; il DMG montato supera verifica della firma, ticket di notarizzazione e valutazione Gatekeeper. PR e release distinguono smoke applicativo da firma. Documentare il problema v0.2.1 e come verificare un download, senza suggerire di disattivare globalmente Gatekeeper.
+- **Lavoro locale:** rimossa la disabilitazione esplicita della firma, attivato Hardened Runtime e incluso il binario Codex tra quelli da firmare. Il workflow Release prepara la chiave API `.p8` temporanea e richiede secret Apple; il packaging Mac forza la firma e la notarizzazione. Lo smoke Release usa `hdiutil verify`, `codesign`, `stapler` e `spctl`; la CI delle PR continua a testare le build non firmate. README e guida alla distribuzione aggiornati; le [note pubbliche di v0.2.1](https://github.com/xmey95/pokeguru/releases/tag/v0.2.1) ora avvisano del problema Apple Silicon.
+- **Verifiche locali:** Node 24, build/typecheck e due test mirati sul preflight (secret mancanti, chiave `.p8` privata senza stampa delle credenziali) passati. YAML del builder e del workflow parsati con controllo del gate; `bash -n` dello smoke DMG passato. Un primo test in sandbox di Git Bash non ha potuto avviarsi per restrizione del processo; la stessa verifica è passata con esecuzione autorizzata. Restano la CI di PR e, soprattutto, firma/notarizzazione reale con credenziali non ancora presenti.
+- **Dipendenza esterna:** l'utente verificherà più tardi se dispone di Apple Developer Program e credenziali. Il digest del download sul Mac dell'amico e una prova Finder Apple Silicon non sono disponibili. Senza questi dati non si dichiara risolto il problema né si pubblica una nuova release Mac.
 
 ## Regola per i blocchi
 

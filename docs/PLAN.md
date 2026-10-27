@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata per Linux, Windows, macOS Intel e Apple Silicon; APP-143/144 integrati in `dev`. Incremento autorizzato: revisione del README di prodotto (APP-145). I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata; è segnalato un difetto di apertura del pacchetto Apple Silicon. APP-147 prepara firma, notarizzazione e controllo Gatekeeper della prossima release Mac. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-147 in corso (27-10-2026):** la v0.2.1 Apple Silicon è segnalata come «danneggiata» all'apertura da Finder, senza possibilità di «Apri comunque», mentre Intel si apre con eccezione manuale. La v0.2.1 non ha firma Developer ID né notarizzazione e la CI precedente non verificava Gatekeeper. Preparare una release che richieda credenziali Apple e superi firma/ticket/Gatekeeper prima della pubblicazione; integrare la preparazione in `dev`. L'utente controllerà in seguito l'account Apple e l'hash del DMG scaricato. Nessuna nuova release o dichiarazione di correzione finché non passano una build firmata reale e una prova dal Finder su Apple Silicon.
 
 - **APP-145 — README di prodotto:** consegna a `dev` nella [PR #70](https://github.com/xmey95/pokeguru/pull/70), con esito dei quattro check CI e commit di integrazione tracciati nella PR. Presentazione, installazione, primo utilizzo, dati, limiti e sviluppo riordinati in 118 righe; v0.2.1 distinta dalle novità di `dev`. Parsing Markdown, 15 riferimenti locali, script npm, confronto con codice/workflow, asset pubblicati verificati tramite GitHub CLI e `git diff --check` passati. Nessun codice applicativo modificato o test applicativo locale ripetuto. I4 e una nuova release restano fuori ambito. APP-146 registra separatamente l'aggiornamento futuro della guida di distribuzione. Nessuna decisione bloccante per questa consegna.
 
