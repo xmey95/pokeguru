@@ -230,6 +230,9 @@ jobs:
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited $($uninstall.ExitCode)" }
       - name: Package macOS DMG
         if: runner.os == 'macOS'
+        env:
+          # Firma ad hoc: non usa certificati o secret nei job delle PR.
+          CSC_FOR_PULL_REQUEST: 'true'
         run: npm run package:mac
       - name: Verify and smoke mounted macOS DMG
         if: runner.os == 'macOS'
