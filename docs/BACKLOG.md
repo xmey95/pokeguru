@@ -149,7 +149,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-140** | Vincoli solo nella Lista del progetto e proposta concreta nel Thread | UI/AI | R-05, R-07, R-08 / feedback utente | P1 / M | APP-129/130 integrati; validatore candidato esistente | Done |
 | **APP-141** | Pubblicare v0.2.1 da `dev` in `main` | Distribuzione | R-01, R-12 / richiesta utente | P0 / S | APP-140 in `dev`, workflow Release v0.2.0 | Done |
 | **APP-142** | Separare Piano, Fatti e Ipotesi nella guida Matchup | UI/leggibilità | R-10, R-13 / feedback utente | P1 / S | APP-135/136 integrati in `dev` | Done |
-| **APP-143** | Piano Matchup in prosa naturale senza etichette ripetute | UI/AI | R-10, R-13 / feedback utente | P1 / S | APP-142 integrato in `dev` | In progress |
+| **APP-143** | Piano Matchup in prosa naturale senza etichette ripetute | UI/AI | R-10, R-13 / feedback utente | P1 / S | APP-142 integrato in `dev` | Done |
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 
@@ -1329,7 +1329,7 @@ Le PR #8–10 già integrate in `dev` hanno assegnato APP-059–061 alle correzi
 - **Accettazione:** i nuovi prompt chiedono prosa tattica leggibile in Apertura/Sviluppo/Chiusura senza sottosezioni artificiali; guide e revisioni salvate con le vecchie etichette vengono mostrate come discorso continuo, senza mutare l'archivio o i collegamenti. Le guide già in prosa restano inalterate. Verificare UI corrente e storico, link, tab e layout compatto.
 - **Risultato locale:** i prompt di generazione e revisione chiedono uno o due paragrafi naturali per fase, senza le tre etichette, mantenendo osservazioni e inferenze riconoscibili nelle frasi. Le guide precedenti con etichette vengono mostrate come paragrafi senza intestazioni; una vecchia sezione «Ipotesi» conserva un breve avviso testuale prima del contenuto. Il report persistito, i link, le fasi e la sezione limiti non cambiano.
 - **Verifiche locali:** Node 24: build/typecheck e quattro test mirati passati. Smoke Electron con report fixture già salvato, fasi e storico senza etichette, testo archiviato invariato, tastiera, link e layout 1920/1440/1280/640 px passati; screenshot 1440 px ispezionato. Un'asserzione dello storico è stata allineata alla nuova frase di incertezza, poi lo smoke è passato. Generazione e revisione con Codex reale su contesto sintetico hanno prodotto tre fasi senza le vecchie etichette; la prova verifica il contratto e lo stile, non la qualità competitiva o l'acquisizione delle fonti.
-- **Integrazione:** PR verso `dev` e check CI da completare; `main` e release fuori ambito.
+- **Integrazione:** la [PR #66](https://github.com/xmey95/pokeguru/pull/66) è integrata in `dev` come `8ca3797` dopo quattro [check CI](https://github.com/xmey95/pokeguru/actions/runs/40504456603) verdi su Ubuntu, Windows, Mac Intel e Apple Silicon. Il checkout locale `dev` è aggiornato; `main` e la release v0.2.1 restano invariati.
 
 ## Regola per i blocchi
 
