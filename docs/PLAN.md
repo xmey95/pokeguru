@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata per Linux, Windows, macOS Intel e Apple Silicon; APP-143 in corso prima di I4. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 27 ottobre 2026. **Fase corrente:** I3 completato e v0.2.1 pubblicata per Linux, Windows, macOS Intel e Apple Silicon; APP-143/144 integrati in `dev`. Incremento autorizzato: revisione del README di prodotto (APP-145). I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-145 — README di prodotto:** consegna a `dev` nella [PR #70](https://github.com/xmey95/pokeguru/pull/70), con esito dei quattro check CI e commit di integrazione tracciati nella PR. Presentazione, installazione, primo utilizzo, dati, limiti e sviluppo riordinati in 118 righe; v0.2.1 distinta dalle novità di `dev`. Parsing Markdown, 15 riferimenti locali, script npm, confronto con codice/workflow, asset pubblicati verificati tramite GitHub CLI e `git diff --check` passati. Nessun codice applicativo modificato o test applicativo locale ripetuto. I4 e una nuova release restano fuori ambito. APP-146 registra separatamente l'aggiornamento futuro della guida di distribuzione. Nessuna decisione bloccante per questa consegna.
 
 - **APP-144 Done in `dev`:** [PR #68](https://github.com/xmey95/pokeguru/pull/68) integrata come `6b729c8` dopo quattro check CI verdi. La Ricerca avanzata AI è nella lista Catalogo; build, suite locale, prove Electron/Codex e scansione 5.000/10.000 stampe passano. L'app è aperta per la prova utente; raccogliere feedback sulle otto domande, sulla precisione tattica e sui tempi prima di pianificare miglioramenti. `main`, release e I4 restano fuori da questo incremento.
 
