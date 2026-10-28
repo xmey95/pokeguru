@@ -11,6 +11,7 @@ import {
   type CatalogSyncMode, type CatalogSyncStatus
 } from '../shared/catalog'
 import { extractCardGameplay, hasComparableGameplay } from '../shared/card-gameplay'
+import { supplementCatalogGameplay } from './catalog-gameplay-supplements'
 import { promoKey, PROMO_LEGALITY_SOURCE } from './promo-legality'
 import { loadPromoPackage } from './promo-package'
 import { OFFICIAL_SET_RELEASE_CHECKED_AT, OFFICIAL_SET_RELEASE_SOURCE,
@@ -512,6 +513,7 @@ export class CatalogStore {
   readonly dataDir: string
 
   private availableImage(print: CatalogPrint): CatalogPrint {
+    print = supplementCatalogGameplay(print)
     if (!print.thumbnail?.startsWith('pokeguru://cards/')) return print
     const extension = print.thumbnail === `pokeguru://cards/${print.id}.webp` ? 'webp'
       : print.thumbnail === `pokeguru://cards/${print.id}.png` ? 'png' : null

@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { evaluateBackend } from './backend-evaluate-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -15,7 +16,7 @@ const launch = () => electron.launch({ executablePath: require('electron'), args
 let application
 
 async function installSource(limitOnce = false) {
-  await application.evaluate((_electron, limit) => {
+  await evaluateBackend(application, (_electron, limit) => {
     const cards = Array.from({ length: 14 }, (_, index) => ({
       id: `sv05-${String(index + 1).padStart(3, '0')}`,
       localId: String(index + 1).padStart(3, '0'), name: `Carta ${index + 1}`
@@ -97,7 +98,7 @@ try {
   assert.equal(Number.isFinite(Date.parse(rotationCleanup.completedAt)), true)
   assert.deepEqual(completedProgress, { running: false, mode: 'new', state: 'done',
     phase: 'Aggiornamento terminato', expected: 16, acquired: 16, error: null, cooldownUntil: null })
-  assert.equal((await application.evaluate(() => globalThis.catalogAutoReads)).length, 16)
+  assert.equal((await evaluateBackend(application, () => globalThis.catalogAutoReads)).length, 16)
 
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
   await page.getByRole('button', { name: 'Gestisci catalogo' }).click()
@@ -128,12 +129,12 @@ try {
   await waitFor(page, 'done')
   assert.equal((await status(page)).acquired, 16)
   assert.equal((await status(page)).runId, fullRunId)
-  assert.equal((await application.evaluate(() => globalThis.catalogAutoReads)).length, 4)
+  assert.equal((await evaluateBackend(application, () => globalThis.catalogAutoReads)).length, 4)
 
-  await application.evaluate(() => { globalThis.catalogDetailDelay = 600 })
+  await evaluateBackend(application, () => { globalThis.catalogDetailDelay = 600 })
   assert.equal((await page.evaluate(() => window.projectsApi.syncStandardCatalog('full'))).ok, true)
   const detailDeadline = Date.now() + 10_000
-  while ((await application.evaluate(() => globalThis.catalogAutoReads.length)) <= 4) {
+  while ((await evaluateBackend(application, () => globalThis.catalogAutoReads.length)) <= 4) {
     if (Date.now() > detailDeadline) throw new Error('Full scan never reached a detail request')
     await page.waitForTimeout(50)
   }
@@ -168,17 +169,17 @@ try {
   await page.waitForTimeout(2_500)
   assert.equal((await status(page)).state, 'rate-limited')
   assert.equal((await status(page)).running, false)
-  assert.equal((await application.evaluate(() => globalThis.catalogAutoReads)).length, 0)
+  assert.equal((await evaluateBackend(application, () => globalThis.catalogAutoReads)).length, 0)
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
   await page.locator('.catalog-sync-status').getByRole('button', { name: 'Riprendi scansione', exact: true }).click()
   await waitFor(page, 'done')
   assert.equal((await status(page)).acquired, 16)
-  assert.equal((await application.evaluate(() => globalThis.catalogAutoReads)).length, 5)
+  assert.equal((await evaluateBackend(application, () => globalThis.catalogAutoReads)).length, 5)
 
-  await application.evaluate(() => { globalThis.catalogDetailDelay = 300 })
+  await evaluateBackend(application, () => { globalThis.catalogDetailDelay = 300 })
   assert.equal((await page.evaluate(() => window.projectsApi.syncStandardCatalog('full'))).ok, true)
   const interruptedDeadline = Date.now() + 10_000
-  while ((await application.evaluate(() => globalThis.catalogAutoReads.length)) <= 5) {
+  while ((await evaluateBackend(application, () => globalThis.catalogAutoReads.length)) <= 5) {
     if (Date.now() > interruptedDeadline) throw new Error('Full scan never started before shutdown')
     await page.waitForTimeout(50)
   }
@@ -189,12 +190,12 @@ try {
   page = await application.firstWindow()
   await page.waitForTimeout(2_500)
   assert.equal((await status(page)).state, 'interrupted')
-  assert.equal((await application.evaluate(() => globalThis.catalogAutoReads)).length, 0)
+  assert.equal((await evaluateBackend(application, () => globalThis.catalogAutoReads)).length, 0)
   await page.getByRole('button', { name: 'Catalogo', exact: true }).first().click()
   await page.locator('.catalog-sync-status').getByRole('button', { name: 'Riprendi scansione', exact: true }).click()
   await waitFor(page, 'done')
 
-  await application.evaluate(() => {
+  await evaluateBackend(application, () => {
     globalThis.catalogAutoReads = []
     globalThis.catalogMissingOnce = true
     globalThis.catalogDetailDelay = 100
@@ -212,13 +213,13 @@ try {
   assert.match(firstBlock.error, /sv05-001 non disponibile/)
   await waitFor(page, 'paused')
   assert.equal((await status(page)).acquired, 15)
-  const missingReads = await application.evaluate(() => globalThis.catalogAutoReads)
+  const missingReads = await evaluateBackend(application, () => globalThis.catalogAutoReads)
   assert.equal(missingReads.length, 16)
   assert.ok(missingReads.includes('sv05-014'))
   await page.locator('.diagnostics').filter({ hasText: /1 dettaglio TCGdex non disponibile/ }).waitFor()
   await page.locator('.catalog-sync-status').getByRole('button', { name: 'Riprendi scansione', exact: true }).click()
   await waitFor(page, 'done')
-  const recoveredReads = await application.evaluate(() => globalThis.catalogAutoReads)
+  const recoveredReads = await evaluateBackend(application, () => globalThis.catalogAutoReads)
   assert.equal(recoveredReads.filter((id) => id === 'sv05-001').length, 2)
   assert.equal(recoveredReads.filter((id) => id === 'sv05-014').length, 1)
   console.log('CATALOG AUTO SYNC OK: one click advances blocks; UI pause/cancel/resume, 429 and individual failures recover across restarts without scanning at startup.')

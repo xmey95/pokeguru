@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { DeleteThreadDialog } from './DeleteThreadDialog'
 import type { DeckThread, DeckThreadMessage, DeckThreadSummary, DeckVersion } from '../../shared/deck-threads'
 import type { DeckCandidate } from '../../shared/deck-threads'
 import type { AiModel, AiPreferences } from '../../shared/ai'
@@ -135,11 +136,13 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
   const base = versions.find((version) => version.id === thread.baseVersionId)
   const current = versions[0]
   const adopted = versions.find((version) => version.adoption?.candidateId === candidate.id)
-  const review = catalog ? reviewCandidate(thread.projectId, candidate, catalog, constraints,
-    localCalendarDate(), audit) : null
-  const comparisonDeck = review ? parseDeck(review.normalizedRawText) : candidate.parsed
+  const asOf = localCalendarDate()
+  const review = useMemo(() => catalog ? reviewCandidate(thread.projectId, candidate, catalog, constraints,
+    asOf, audit) : null, [thread.projectId, candidate, catalog, constraints, asOf, audit])
+  const comparisonDeck = useMemo(() => review ? parseDeck(review.normalizedRawText) : candidate.parsed,
+    [review, candidate.parsed])
   const reviewItems = review ? reviewSummary(review.toReview) : []
-  const diff = current ? compareDecks(current.parsed, comparisonDeck) : null
+  const diff = useMemo(() => current ? compareDecks(current.parsed, comparisonDeck) : null, [current, comparisonDeck])
   const added = diff?.byName.reduce((sum, item) => sum + Math.max(0, item.delta), 0) ?? 0
   const removed = diff?.byName.reduce((sum, item) => sum + Math.max(0, -item.delta), 0) ?? 0
   const blockers = adopted ? [] : [
@@ -264,6 +267,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const adoptionTrigger = useRef<HTMLElement | null>(null)
   const [versions, setVersions] = useState<DeckVersion[]>([])
   const [threads, setThreads] = useState<DeckThreadSummary[]>([])
+  const [deleteThread, setDeleteThread] = useState<DeckThreadSummary | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<DeckThread | null>(null)
   const [olderLoading, setOlderLoading] = useState(false)
   const olderRequest = useRef(false)
@@ -717,6 +721,9 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     {loading ? <LoadingSkeleton label="Caricamento thread…" rows={3} /> : <>
       <div className="threads-layout">
         <div className="threads-toolbar">
+          {selectedSummary && !creating && <button type="button" className="text-button thread-delete-trigger"
+            disabled={working || asking || currentAiJob?.status === 'running' || currentAiJob?.status === 'ready'}
+            onClick={() => setDeleteThread(selectedSummary)}>Elimina Thread</button>}
           <ThreadSwitcher threads={threads} selected={selectedSummary} versions={versions} disabled={working || creating}
             onSelect={selectThread} />
           <button ref={newThreadTrigger} id="new-thread-trigger" type="button" className="secondary-button" aria-expanded={creating}
@@ -863,5 +870,17 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
       <div className="dialog-actions"><button type="button" className="secondary-button" autoFocus onClick={() => setConfirmCandidate(null)}>Annulla</button>
         <button type="button" className="primary-button" disabled={working} onClick={() => void adopt(confirmCandidate)}>{working ? 'Adozione…' : 'Confermo: adotta l’intera lista'}</button></div>
     </div>
-  </div>}</>
+  </div>}{deleteThread && <DeleteThreadDialog thread={deleteThread} onClose={() => setDeleteThread(null)}
+    onDeleted={(id) => {
+      const remaining = threads.filter(thread => thread.id !== id)
+      setThreads(remaining)
+      setSelectedDetail(null)
+      setSelectedId(remaining[0]?.id ?? null)
+      setAiJob(null)
+      setError(null)
+      setDeleteThread(null)
+      for (const key of nav.drafts.keys()) if (key.includes(`:${projectId}:${id}`)) nav.drafts.delete(key)
+      nav.notify()
+      requestAnimationFrame(() => document.getElementById('thread-switcher-trigger')?.focus())
+    }} />}</>
 }

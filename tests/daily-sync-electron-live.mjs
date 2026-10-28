@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
+import { evaluateBackend } from './backend-evaluate-helper.mjs'
 
 const require = createRequire(import.meta.url)
 const workspace = resolve(import.meta.dirname, '..')
@@ -17,7 +18,7 @@ const launch = (automatic) => electron.launch({ executablePath: require('electro
 let application
 
 async function stubOffline() {
-  await application.evaluate(() => {
+  await evaluateBackend(application, () => {
     globalThis.dailyReads = []
     globalThis.fetch = async (input) => {
       globalThis.dailyReads.push(String(input))
@@ -26,7 +27,7 @@ async function stubOffline() {
   })
 }
 
-async function reads() { return application.evaluate(() => globalThis.dailyReads) }
+async function reads() { return evaluateBackend(application, () => globalThis.dailyReads) }
 async function waitForPlayOutcome(page, outcome) {
   const deadline = Date.now() + 15_000
   while (Date.now() < deadline) {

@@ -82,6 +82,8 @@ export interface CatalogPrint {
   /** Absent on archives created before gameplay extraction was introduced. */
   gameplaySchemaVersion?: number
   gameplay?: CardGameplay | null
+  /** Missing API fields transcribed from this exact printing's verified scan. */
+  gameplaySupplement?: { version: number; checkedAt: string; sourceUrl: string; fields: string[] }
   imageBase: string | null
   thumbnail: string | null
   highImageAvailable: boolean | null

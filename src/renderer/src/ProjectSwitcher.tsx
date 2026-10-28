@@ -15,7 +15,7 @@ export function ProjectSwitcher({ projects, archivedProjects, selected, loading,
 }) {
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
-  const panel = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDialogElement>(null)
   const search = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -25,33 +25,15 @@ export function ProjectSwitcher({ projects, archivedProjects, selected, loading,
 
   useLayoutEffect(() => {
     if (!open) return
-    const position = () => {
-      const anchor = trigger.current?.getBoundingClientRect()
-      if (!anchor || !panel.current) return
-      const width = Math.min(360, window.innerWidth - 32)
-      const height = Math.min(420, window.innerHeight - 32)
-      Object.assign(panel.current.style, {
-        width: width + 'px', maxHeight: height + 'px',
-        left: Math.max(16, Math.min(anchor.left, window.innerWidth - width - 16)) + 'px',
-        top: Math.max(16, Math.min(anchor.bottom + 8, window.innerHeight - height - 16)) + 'px'
-      })
-    }
-    position()
+    panel.current?.showModal()
     search.current?.focus()
-    window.addEventListener('resize', position)
-    window.addEventListener('scroll', position, true)
-    return () => {
-      window.removeEventListener('resize', position)
-      window.removeEventListener('scroll', position, true)
-    }
   }, [open])
 
   function close() {
-    panel.current?.hidePopover()
-    trigger.current?.focus()
+    panel.current?.close()
   }
 
-  function navigate(event: KeyboardEvent<HTMLDivElement>) {
+  function navigate(event: KeyboardEvent<HTMLDialogElement>) {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
     const buttons = Array.from(panel.current?.querySelectorAll<HTMLButtonElement>('[data-picker-action]') ?? [])
     const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
@@ -63,20 +45,24 @@ export function ProjectSwitcher({ projects, archivedProjects, selected, loading,
 
   return <>
     <button ref={trigger} id="project-switcher-trigger" type="button" className="project-switcher"
-      popoverTarget={id} aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
+      onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
       aria-label={selected ? `Cambia progetto: ${selected.name}` : 'Scegli progetto'}
       title={selected?.name ?? 'Scegli progetto'} disabled={loading}>
       <span className="project-switcher-icon"><Icon name="deck" /></span>
       <span className="project-switcher-label"><small>Progetto</small><strong>{loading ? 'Caricamento…' : selected?.name ?? 'Scegli progetto'}</strong></span>
       <span className="project-switcher-chevron"><Icon name="chevron" /></span>
     </button>
-    <div ref={panel} id={id} popover="auto" role="dialog" aria-label="Scegli progetto"
+    <dialog ref={panel} id={id} aria-modal="true" aria-label="Scegli progetto"
       className="project-picker" onKeyDown={navigate}
-      onToggle={(event) => { const next = event.newState === 'open'; setOpen(next); if (!next) setQuery('') }}
-      onBlur={(event) => {
-        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget) && event.relatedTarget !== trigger.current) panel.current?.hidePopover()
+      onClose={() => { setOpen(false); setQuery('') }}
+      onClick={(event) => {
+        if (event.target !== event.currentTarget) return
+        const rect = event.currentTarget.getBoundingClientRect()
+        if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close()
       }}>
-      <div className="project-picker-head"><h2>{showArchived ? 'Progetti archiviati' : 'Progetti'}</h2><span>{visible.length}</span></div>
+      <div className="project-picker-head"><div><span className="eyebrow">Il tuo spazio di gioco</span>
+        <h2>{showArchived ? 'Progetti archiviati' : 'I tuoi progetti'}</h2></div>
+        <button type="button" className="text-button" onClick={close} aria-label="Chiudi selettore progetti">Chiudi</button></div>
       <div className="project-picker-tabs" role="group" aria-label="Stato dei progetti">
         <button type="button" aria-pressed={!showArchived} onClick={() => { setShowArchived(false); setQuery('') }}>Attivi ({projects.length})</button>
         <button type="button" aria-pressed={showArchived} onClick={() => { setShowArchived(true); setQuery('') }}>Archiviati ({archivedProjects.length})</button>
@@ -89,8 +75,8 @@ export function ProjectSwitcher({ projects, archivedProjects, selected, loading,
             <button type="button" className="project-option" data-picker-action
               data-testid={`project-${project.id}`} aria-current={selected?.id === project.id ? 'true' : undefined}
               onClick={() => { close(); onSelect(project.id) }}>
-              <span><strong>{project.name}</strong><small>{project.cardTotal === null ? 'Senza lista' : `${project.cardTotal} carte`}</small></span>
-              {selected?.id === project.id && <span className="project-current">Attivo</span>}
+              <span><strong>{project.name}</strong><small>Standard · {project.cardTotal === null ? 'Senza lista' : `${project.cardTotal} carte`}</small></span>
+              {selected?.id === project.id && <span className="project-current">In uso</span>}
             </button>}
           <div className="project-row-actions">
             {showArchived ? <>
@@ -101,6 +87,6 @@ export function ProjectSwitcher({ projects, archivedProjects, selected, loading,
         ))}</ul> : <p role="status">{visible.length ? 'Nessun progetto trovato.' : showArchived ? 'Nessun progetto archiviato.' : 'Nessun progetto.'}</p>}
       </div>
       {!showArchived && <button type="button" className="project-picker-create" data-picker-action onClick={() => { close(); onCreate() }}><Icon name="plus" />Nuovo progetto</button>}
-    </div>
+    </dialog>
   </>
 }
