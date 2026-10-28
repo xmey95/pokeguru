@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import type { AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
+import type { AiJobActivityPage, AiJobActivityStep, AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
+import { readAiDiagnostics, type AiDiagnostics } from '../shared/ai-diagnostics'
 
 export interface AiJob extends AiJobSummary {
   request: unknown | null
@@ -28,7 +29,9 @@ function progress(row: { progress_json: string | null }): AiJobProgress | null {
       typeof step.detail === 'string' && typeof step.at === 'string').slice(-12)
       .map((step) => ({ phase: step.phase, detail: step.detail.slice(0, 180), at: step.at }))
     return { phase: value.phase!, detail: value.detail.slice(0, 180),
-      summary: value.summary?.slice(0, 900) ?? null, updatedAt: value.updatedAt, steps }
+      summary: value.summary?.slice(0, 900) ?? null, updatedAt: value.updatedAt,
+      sequence: Number.isSafeInteger(value.sequence) && value.sequence! >= 0 ? value.sequence : steps.length,
+      steps, diagnostics: readAiDiagnostics(value.diagnostics) }
   }
   catch { return null }
 }
@@ -65,9 +68,23 @@ export class AiJobStore {
     const columns = this.db.prepare('PRAGMA table_info(ai_jobs)').all() as { name: string }[]
     if (!columns.some((column) => column.name === 'progress_json'))
       this.db.exec('ALTER TABLE ai_jobs ADD COLUMN progress_json TEXT')
+    this.db.exec(`CREATE TABLE IF NOT EXISTS ai_job_activity (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id TEXT NOT NULL REFERENCES ai_jobs(id) ON DELETE CASCADE,
+      phase TEXT NOT NULL,
+      detail TEXT NOT NULL,
+      summary TEXT,
+      at TEXT NOT NULL
+    ) STRICT;
+    CREATE INDEX IF NOT EXISTS ai_job_activity_page ON ai_job_activity(job_id, id DESC);`)
   }
 
   start(kind: AiJobKind, projectId: string, resourceId: string): AiJob {
+    const paused = this.db.prepare(`SELECT progress_json FROM ai_jobs
+      WHERE project_id = ? AND resource_id = ? AND status = 'interrupted'`).all(projectId, resourceId) as
+      { progress_json: string | null }[]
+    if (paused.some((row) => progress(row)?.diagnostics?.resumable))
+      throw new Error('Riprendi o annulla prima l’analisi in pausa.')
     const id = randomUUID()
     const now = new Date().toISOString()
     this.db.prepare(`INSERT INTO ai_jobs (id, kind, project_id, resource_id, status,
@@ -84,7 +101,8 @@ export class AiJobStore {
   }
 
   active(projectId: string, resourceId: string): AiJobSummary | null {
-    const row = this.db.prepare(`SELECT * FROM ai_jobs WHERE project_id = ? AND resource_id = ?
+    const row = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
+      FROM ai_jobs WHERE project_id = ? AND resource_id = ?
       AND status IN ('running', 'ready') LIMIT 1`).get(projectId, resourceId) as JobRow | undefined
     if (!row) return null
     return { id: row.id, kind: row.kind, projectId: row.project_id, resourceId: row.resource_id,
@@ -93,7 +111,8 @@ export class AiJobStore {
   }
 
   latest(projectId: string, resourceId: string): AiJobSummary | null {
-    const row = this.db.prepare(`SELECT * FROM ai_jobs WHERE project_id = ? AND resource_id = ?
+    const row = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
+      FROM ai_jobs WHERE project_id = ? AND resource_id = ?
       ORDER BY created_at DESC, rowid DESC LIMIT 1`).get(projectId, resourceId) as JobRow | undefined
     return row ? { id: row.id, kind: row.kind, projectId: row.project_id, resourceId: row.resource_id,
       status: row.status, createdAt: row.created_at, updatedAt: row.updated_at, error: row.error,
@@ -101,11 +120,11 @@ export class AiJobStore {
   }
 
   recent(limit = 30): AiJobSummary[] {
-    const rows = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error
+    const rows = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
       FROM ai_jobs ORDER BY rowid DESC LIMIT ?`).all(limit) as unknown as JobRow[]
     return rows.map((row) => ({ id: row.id, kind: row.kind, projectId: row.project_id,
       resourceId: row.resource_id, status: row.status, createdAt: row.created_at,
-      updatedAt: row.updated_at, error: row.error }))
+      updatedAt: row.updated_at, error: row.error, progress: progress(row) }))
   }
 
   updateProgress(id: string, phase: AiJobPhase, detail: string, summary?: string): void {
@@ -114,19 +133,106 @@ export class AiJobStore {
     if (!current || current.status !== 'running') return
     const at = new Date().toISOString()
     const cleanDetail = detail.trim().slice(0, 180)
+    const cleanSummary = summary?.trim().slice(0, 900) || null
     const previous = progress(current)
-    const next: AiJobProgress = { phase, detail: cleanDetail,
-      summary: summary === undefined ? (previous?.phase === phase ? previous.summary : null) :
-        summary.trim().slice(0, 900) || null,
-      updatedAt: at, steps: [...(previous?.steps ?? []),
+    const next: AiJobProgress = { phase, detail: cleanDetail, diagnostics: previous?.diagnostics,
+      summary: summary === undefined ? (previous?.phase === phase ? previous.summary : null) : cleanSummary,
+      updatedAt: at, sequence: (previous?.sequence ?? 0) + 1,
+      steps: [...(previous?.steps ?? []),
         { phase, detail: cleanDetail, at }].slice(-12) }
-    this.db.prepare(`UPDATE ai_jobs SET progress_json = ?, updated_at = ?
-      WHERE id = ? AND status = 'running'`).run(JSON.stringify(next), at, id)
+    this.transaction(() => {
+      this.ensureActivity(id, previous)
+      this.db.prepare(`UPDATE ai_jobs SET progress_json = ?, updated_at = ?
+        WHERE id = ? AND status = 'running'`).run(JSON.stringify(next), at, id)
+      this.db.prepare(`INSERT INTO ai_job_activity (job_id, phase, detail, summary, at)
+        VALUES (?, ?, ?, ?, ?)`).run(id, phase, cleanDetail, cleanSummary, at)
+    })
+  }
+
+  private transaction<T>(action: () => T): T {
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const result = action()
+      this.db.exec('COMMIT')
+      return result
+    }
+    catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  private ensureActivity(id: string, previous: AiJobProgress | null): void {
+    const existing = this.db.prepare('SELECT 1 FROM ai_job_activity WHERE job_id = ? LIMIT 1').get(id)
+    if (existing || !previous?.steps.length) return
+    const insert = this.db.prepare(`INSERT INTO ai_job_activity (job_id, phase, detail, summary, at)
+      VALUES (?, ?, ?, ?, ?)`)
+    previous.steps.forEach((step, index) => insert.run(id, step.phase, step.detail,
+      index === previous.steps.length - 1 ? previous.summary : null, step.at))
+  }
+
+  activity(projectId: string, resourceId: string, jobId: string,
+    before?: number, limit = 25): AiJobActivityPage | null {
+    if (!/^[a-f0-9-]{36}$/i.test(jobId) ||
+      before !== undefined && (!Number.isSafeInteger(before) || before < 1) ||
+      !Number.isSafeInteger(limit) || limit < 1 || limit > 50) return null
+    const row = this.db.prepare(`SELECT progress_json FROM ai_jobs
+      WHERE id = ? AND project_id = ? AND resource_id = ?`).get(jobId, projectId, resourceId) as
+      { progress_json: string | null } | undefined
+    if (!row) return null
+    const legacy = progress(row)
+    if (legacy?.steps.length && !this.db.prepare('SELECT 1 FROM ai_job_activity WHERE job_id = ? LIMIT 1').get(jobId))
+      this.transaction(() => this.ensureActivity(jobId, legacy))
+    const entries = this.db.prepare(`SELECT id, phase, detail, summary, at FROM ai_job_activity
+      WHERE job_id = ? AND (? IS NULL OR id < ?)
+      ORDER BY id DESC LIMIT ?`).all(jobId, before ?? null, before ?? null, limit + 1) as unknown as
+      AiJobActivityStep[]
+    return { steps: entries.slice(0, limit).reverse(), hasMore: entries.length > limit }
   }
 
   recoverable(): AiJob[] {
     return (this.db.prepare(`SELECT * FROM ai_jobs WHERE status IN ('running', 'ready')
       ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)
+  }
+
+  recordDiagnostics(id: string, change: AiDiagnostics): void {
+    const current = this.db.prepare('SELECT status, progress_json FROM ai_jobs WHERE id = ?')
+      .get(id) as { status: AiJobStatus; progress_json: string | null } | undefined
+    if (!current || !['running', 'ready', 'cancelled'].includes(current.status)) return
+    const at = new Date().toISOString()
+    const prior = progress(current) ?? { phase: 'preparing' as const, detail: 'Preparazione',
+      summary: null, updatedAt: at, steps: [] }
+    this.db.prepare('UPDATE ai_jobs SET progress_json = ? WHERE id = ?')
+      .run(JSON.stringify({ ...prior, diagnostics: readAiDiagnostics({ ...prior.diagnostics, ...change }) }), id)
+  }
+
+  diagnostics(id: string): AiDiagnostics | undefined {
+    const row = this.db.prepare('SELECT progress_json FROM ai_jobs WHERE id = ?')
+      .get(id) as { progress_json: string | null } | undefined
+    return row ? progress(row)?.diagnostics : undefined
+  }
+
+  runtimeFacts(id: string): { requestPrepared: boolean; validatedDraft: boolean | null; resultPrepared: boolean } {
+    const row = this.db.prepare(`SELECT request_json IS NOT NULL AS requestPrepared,
+      CASE WHEN json_valid(request_json) THEN json_extract(request_json, '$.validatedDraft') END AS validatedDraft,
+      result_json IS NOT NULL AS resultPrepared FROM ai_jobs WHERE id = ?`).get(id) as
+      { requestPrepared: number; validatedDraft: number | null; resultPrepared: number }
+    return { requestPrepared: !!row?.requestPrepared, resultPrepared: !!row?.resultPrepared,
+      validatedDraft: row?.validatedDraft === 1 ? true : row?.validatedDraft === 0 ? false : null }
+  }
+
+  suspend(id: string, error: string): void {
+    this.recordDiagnostics(id, { resumable: true })
+    this.db.prepare(`UPDATE ai_jobs SET status = 'interrupted', error = ?, updated_at = ?
+      WHERE id = ? AND status = 'running'`).run(error, new Date().toISOString(), id)
+  }
+
+  resume(id: string): AiJob {
+    const result = this.db.prepare(`UPDATE ai_jobs SET status = 'running', error = NULL, updated_at = ?
+      WHERE id = ? AND status = 'interrupted'`).run(new Date().toISOString(), id)
+    if (result.changes !== 1) throw new Error('Analisi non riprendibile.')
+    this.recordDiagnostics(id, { resumable: false, failureCode: undefined })
+    return this.get(id)!
   }
 
   prepare(id: string, request: unknown): void {
@@ -145,8 +251,8 @@ export class AiJobStore {
     error: string | null = null): void {
     this.db.prepare(`UPDATE ai_jobs SET status = ?, error = ?, updated_at = ?,
       request_json = NULL, result_json = NULL
-      WHERE id = ? AND status IN ('running', 'ready')`)
-      .run(status, error, new Date().toISOString(), id)
+      WHERE id = ? AND (status IN ('running', 'ready') OR (status = 'interrupted' AND ? = 'cancelled'))`)
+      .run(status, error, new Date().toISOString(), id, status)
   }
 
   noteError(id: string, error: string): void {

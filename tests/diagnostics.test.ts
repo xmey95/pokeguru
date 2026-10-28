@@ -32,6 +32,36 @@ function input(): DiagnosticInput {
 }
 
 describe('diagnostic export', () => {
+  it('exports persistent failure and batch metrics with live executor state, never raw payloads', () => {
+    const value = input()
+    value.jobs![0].progress!.diagnostics = {
+      failureCode: 'evidence-incomplete', targets: 90, supplied: 87, notSupplied: 3,
+      evidenceBytes: 700_000, planningRounds: 3, batchesCompleted: 9, batchesTotal: 10,
+      model: 'gpt-test', reasoningEffort: 'high', resumable: true,
+      calls: [{ kind: 'batch', startedAt: '2026-10-28T10:00:00.000Z', endedAt: '2026-10-28T10:01:00.000Z',
+        inputBytes: 60_000, status: 'failed', failureCode: 'timeout', privateText: secret } as never],
+      privateText: secret
+    } as never
+    value.jobRuntime = { [secret]: { controllerActive: false, callActive: false, abortRequested: false,
+      requestPrepared: false, validatedDraft: null, resultPrepared: false, resultFilePresent: true } }
+    const report = buildDiagnosticReport(value)
+    expect(report.ai.recentJobs![0]).toMatchObject({ diagnostics: { failureCode: 'evidence-incomplete',
+      targets: 90, notSupplied: 3, batchesCompleted: 9 }, execution: { controllerActive: false, resultFilePresent: true } })
+    expect(JSON.stringify(report)).not.toContain(secret)
+  })
+  it('measures active jobs until export and keeps final durations fixed', () => {
+    const value = input()
+    value.jobs = ['running', 'ready', 'applied', 'failed', 'interrupted', 'cancelled'].map((status) => ({
+      ...value.jobs![0], status: status as NonNullable<DiagnosticInput['jobs']>[number]['status']
+    }))
+    const jobs = buildDiagnosticReport(value).ai.recentJobs!
+    expect(jobs.map((job) => job.elapsedMs)).toEqual([7_200_000, 7_200_000, 120_000, 120_000, 120_000, 120_000])
+    expect(jobs[0]).toMatchObject({ sinceLastUpdateMs: 7_080_000,
+      progress: { phase: 'analysis', updatedAt: '2026-10-28T10:01:00.000Z',
+        steps: [{ phase: 'analysis', at: '2026-10-28T10:01:00.000Z' }] } })
+    expect(JSON.stringify(jobs)).not.toContain(secret)
+  })
+
   it('keeps useful status and timing fields while excluding private content and raw errors', () => {
     const report = buildDiagnosticReport(input())
     expect(report.catalog?.prints).toBe(3303)

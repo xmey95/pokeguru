@@ -103,6 +103,7 @@ try {
     assert.equal(result.ok, true)
     assert.equal(result.value.every((thread) => thread.aiSessionRef === null && thread.messages.length === 0), true)
     assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Valuta questa idea')
+    await page.getByRole('button', { name: 'Annulla analisi', exact: true }).click()
     await page.getByLabel('Scrivi nel thread').fill('Migliora la consistenza')
     await page.getByRole('button', { name: 'Vedi dati inviati a Codex' }).last().click()
     await page.getByText('Anteprima dei dati locali').waitFor()
@@ -126,6 +127,19 @@ try {
         .find((thread) => thread.title === name).id])
       assert.equal(activeJob.ok, true)
       assert.ok(activeJob.value?.progress?.steps.length > 0)
+      if (name === 'Thread A' && process.argv.includes('--resume')) {
+        await page.getByRole('button', { name: 'Pausa', exact: true }).click()
+        await page.getByRole('button', { name: 'Riprendi analisi', exact: true }).waitFor({ timeout: 30000 })
+        await application.close()
+        application = await launch()
+        page = await application.firstWindow()
+        await openThread(page, 'Thread A')
+        const paused = await page.evaluate(([projectId, threadId]) =>
+          window.projectsApi.getAiJobStatus(projectId, threadId), [project.id, activeJob.value.resourceId])
+        assert.equal(paused.value.id, activeJob.value.id)
+        assert.equal(paused.value.status, 'interrupted')
+        await page.getByRole('button', { name: 'Riprendi analisi', exact: true }).click()
+      }
       if (name === 'Thread A' && activeJob.value.status === 'running') {
         const navigation = page.getByRole('navigation', { name: 'Aree del progetto' })
         await navigation.getByRole('button', { name: 'Lista', exact: true }).click()

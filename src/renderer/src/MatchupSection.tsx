@@ -50,7 +50,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useBusyState(`matchup:${projectId}:${selectedId}`)
   const [aiJob, setAiJob] = useState<AiJobSummary | null>(null)
-  const aiBusy = aiJob?.status === 'running' || aiJob?.status === 'ready'
+  const aiBusy = aiJob?.status === 'running' || aiJob?.status === 'ready' ||
+    aiJob?.status === 'interrupted' && aiJob.progress?.diagnostics?.resumable === true
   const startedAt = useBusyStartedAt(`matchup:${projectId}:${selectedId}`)
   const revisionKey = `matchup.revision:${projectId}:${selectedId}`
   const revisionErrorKey = `matchup.revision-error:${projectId}:${selectedId}:${activeDiscussionId}`
@@ -201,7 +202,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     const resourceId = `matchup:${projectId}`
     const refresh = async () => {
       const result = await window.projectsApi.getAiJobStatus(projectId, resourceId)
-      if (active && result.ok) setAiJob(result.value)
+      if (active && result.ok) setAiJob((current) => current?.id === result.value?.id &&
+        current?.status === result.value?.status && current?.error === result.value?.error &&
+        current?.progress?.updatedAt === result.value?.progress?.updatedAt &&
+        current?.progress?.sequence === result.value?.progress?.sequence ? current : result.value)
     }
     void refresh()
     const timer = window.setInterval(() => { void refresh() }, 1500)
@@ -220,6 +224,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     const result = await window.projectsApi.cancelAiJob(projectId, `matchup:${projectId}`)
     if (!result.ok) setError(result.error)
     else setAiJob((current) => current ? { ...current, status: 'cancelled' } : null)
+  }
+
+  async function pauseOrResumeAi(resume: boolean): Promise<void> {
+    const result = await window.projectsApi[resume ? 'resumeAiJob' : 'pauseAiJob'](projectId, `matchup:${projectId}`)
+    if (!result.ok) setError(result.error)
+    const status = await window.projectsApi.getAiJobStatus(projectId, `matchup:${projectId}`)
+    if (status.ok) setAiJob(status.value)
   }
 
   async function recoverAi(): Promise<void> {
@@ -338,11 +349,16 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const report = discussion ? [...discussion.turns].reverse().find((turn) => turn.report)?.report :
     currentReports.find((item) => item.opponentId === selectedId)
   const pendingTurn = discussion?.turns.find((turn) => !turn.report)
-  const standard = baseline ? evaluateStandardDeck(baseline, catalog,
-    localCalendarDate(), ruleAudit) : null
-  const deckContext = baseline && reconciliation ? matchupDeckContext(baseline, reconciliation, catalog, standard) : null
-  const ourCatalogCards = baseline && (!discussion || discussion.current) ? buildDeckCards(baseline, catalog, reconciliation)
-    .filter((card) => card.status === 'recognized' && card.identityId) : []
+  const asOf = localCalendarDate()
+  const standard = useMemo(() => baseline ? evaluateStandardDeck(baseline, catalog,
+    asOf, ruleAudit) : null, [baseline, catalog, asOf, ruleAudit])
+  const deckContext = useMemo(() => baseline && reconciliation
+    ? matchupDeckContext(baseline, reconciliation, catalog, standard) : null,
+  [baseline, reconciliation, catalog, standard])
+  const ourCatalogCards = useMemo(() => baseline && (!discussion || discussion.current)
+    ? buildDeckCards(baseline, catalog, reconciliation)
+      .filter((card) => card.status === 'recognized' && card.identityId) : [],
+  [baseline, catalog, reconciliation, discussion?.current])
   const cardTargets = useMemo(() => catalogCardTargets(catalog), [catalog])
   const guideReferences: GuideReference[] = report ? [
     ...reportGuideReferences(report, cardTargets),
@@ -384,15 +400,21 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     {aiJob && (aiJob.status === 'running' || aiJob.status === 'ready') &&
       <div className="content-note">{aiJob.status === 'ready' && <span role="status">La guida è pronta, ma non è stata salvata.</span>}
         <button type="button" className="text-button" onClick={() => void cancelAi()}>{aiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
+        {aiJob.status === 'running' && aiJob.progress?.diagnostics?.workflow &&
+          <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Pausa</button>}
         {aiJob.status === 'ready' &&
           <button type="button" className="text-button" onClick={() => void recoverAi()}>Completa salvataggio</button>}
       </div>}
     {aiJob && (aiJob.status === 'interrupted' || aiJob.status === 'failed' || aiJob.status === 'cancelled') &&
       <p className="content-note" role="status">{aiJob.status === 'cancelled'
-        ? 'Preparazione annullata.' : 'La guida non è stata aggiornata. Puoi riprovare.'}</p>}
+        ? 'Preparazione annullata.' : aiJob.error ?? 'La guida non è stata aggiornata. Puoi riprovare.'}
+        {aiJob.status === 'interrupted' && aiJob.progress?.diagnostics?.resumable && <>
+          <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>
+          <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla analisi</button>
+        </>}</p>}
     {loading && !snapshot ? <LoadingSkeleton label="Caricamento del metagame Limitless…" rows={3} /> : snapshot && <>
       <div className="meta-layout">
-        <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading || generating} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
+        <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
         <div className="meta-analysis">
           {selected && <>
             {discussion && !discussion.current && <p className="matchup-freshness stale">Guida precedente · {versionLabel(report?.deckVersionId)}. Lista attuale: {versionLabel(baseline?.versionId)}. Il metagame o le corrispondenze delle carte possono essere cambiati.</p>}

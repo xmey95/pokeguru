@@ -754,9 +754,11 @@ button > .loading-spinner { width: 14px; height: 14px; flex-basis: 14px; margin-
 .ai-job-summary strong { font-size: var(--text-sm); }
 .ai-job-summary p { margin: 6px 0 0; line-height: 1.55; overflow-wrap: anywhere; }
 .ai-job-trace { margin-top: 12px; font-size: var(--text-sm); }
-.ai-job-trace summary { cursor: pointer; color: var(--accent); }
+.ai-job-trace > strong { display: block; color: var(--accent); }
 .ai-job-trace ol { display: grid; gap: 5px; padding-left: 20px; color: var(--ink-secondary); }
 .ai-job-trace time { font-variant-numeric: tabular-nums; }
+.ai-job-trace li p { margin: 4px 0 2px; overflow-wrap: anywhere; line-height: 1.5; }
+.ai-job-trace-scroll { max-height: 220px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 @media (max-width: 800px) { .ai-job-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @keyframes loading-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {

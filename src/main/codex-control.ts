@@ -228,7 +228,7 @@ export class CodexControl {
         let stderr = ''
         let timedOut = false
         let captureError = false
-        const timer = setTimeout(() => { timedOut = true; child.kill() }, 240_000)
+        const timer = setTimeout(() => { timedOut = true; child.kill() }, 600_000)
         child.stdout.setEncoding('utf8')
         child.stdout.on('data', (chunk: string) => {
           stdout += chunk
@@ -270,7 +270,7 @@ export class CodexControl {
           options.signal?.removeEventListener('abort', abort)
           if (captureError) return reject(new Error('Impossibile conservare la sessione Codex.'))
           if (options.signal?.aborted) return reject(new Error('Operazione Codex annullata.'))
-          if (timedOut) return reject(new Error('Codex non ha completato il turno entro quattro minuti.'))
+          if (timedOut) return reject(new Error('Codex ha superato il tempo massimo di dieci minuti per questa chiamata. Puoi riprendere l’analisi.'))
           if (code !== 0) return reject(new Error(stderr.includes('Not logged in')
             ? 'Accedi a Codex prima di generare le analisi.'
             : 'Codex non ha completato la risposta nel profilo isolato. Controlla supporto sandbox, connessione e modello.'))

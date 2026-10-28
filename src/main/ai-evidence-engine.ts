@@ -55,7 +55,7 @@ function parseQuery(input: unknown, window: { from: string; to: string }): AiEvi
     if (!strings(value.terms, 8, 80) || !strings(value.printIds, 20, 40) ||
       !strings(value.identityIds, 20, 100) ||
       ![undefined, 'any', 'all'].includes(value.mode as string | undefined) ||
-      page(value.offset, 0, 1000) === null || page(value.limit, 12, 20) === null ||
+      page(value.offset, 0, 1_000_000) === null || page(value.limit, 12, 20) === null ||
       page(value.limit, 12, 20) === 0 ||
       ![value.terms, value.printIds, value.identityIds].some((items) =>
         Array.isArray(items) && items.length > 0)) throw new Error('Argomenti Catalogo non validi.')
@@ -63,7 +63,7 @@ function parseQuery(input: unknown, window: { from: string; to: string }): AiEvi
       printIds: value.printIds as string[] | undefined,
       identityIds: value.identityIds as string[] | undefined,
       mode: value.mode as 'any' | 'all' | undefined,
-      offset: page(value.offset, 0, 1000)!, limit: page(value.limit, 12, 20)! }
+      offset: page(value.offset, 0, 1_000_000)!, limit: page(value.limit, 12, 20)! }
   }
   if (value.operation === 'events.search') {
     if (Object.keys(value).some((key) => !['operation', 'deckName', 'cardName', 'from',
@@ -74,11 +74,11 @@ function parseQuery(input: unknown, window: { from: string; to: string }): AiEvi
       value.deckName !== undefined && !boundedString(value.deckName, 100) ||
       value.cardName !== undefined && !boundedString(value.cardName, 100) ||
       !date(from) || !date(to) || from > to || from < window.from || to > window.to ||
-      page(value.offset, 0, 1000) === null || page(value.limit, 3, 4) === null ||
+      page(value.offset, 0, 1_000_000) === null || page(value.limit, 3, 4) === null ||
       page(value.limit, 3, 4) === 0) throw new Error('Argomenti Eventi non validi.')
     return { operation: 'events.search', deckName: value.deckName as string | undefined,
       cardName: value.cardName as string | undefined, from, to,
-      offset: page(value.offset, 0, 1000)!, limit: page(value.limit, 3, 4)! }
+      offset: page(value.offset, 0, 1_000_000)!, limit: page(value.limit, 3, 4)! }
   }
   throw new Error('Operazione non consentita.')
 }
@@ -91,6 +91,18 @@ function normalized(value: string): string {
 type EventRow = { id: string; snapshotId: string; name: string; date: string;
   kind: 'online' | 'in-person'; url: string; participants: number; completeLists: number;
   deck: string; placing: number | null; listUrl: string; cards: string[] }
+
+function deckKey(cards: string[]): string {
+  const copies = new Map<string, number>()
+  for (const line of cards) {
+    const match = /^(\d+)\s+(.+)$/.exec(line.trim())
+    if (!match) return fingerprint(cards)
+    const card = match[2].normalize('NFKC').toLocaleLowerCase('en').replace(/\s+/g, ' ')
+    copies.set(card, (copies.get(card) ?? 0) + Number(match[1]))
+  }
+  // Print codes/numbers stay in the key: similar decks are never merged.
+  return fingerprint([...copies].sort(([a], [b]) => a.localeCompare(b)))
+}
 
 function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[]): EventRow[] {
   const rows: EventRow[] = []
@@ -140,6 +152,8 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
   const decks = new Map(rows.filter((row) => normalized(row.deck).length >= 5)
     .map((row) => [normalized(row.deck), row.deck]))
   const sortedDecks = [...decks.keys()].sort((a, b) => b.length - a.length)
+  const eventSearches = new Map<string, { matchingLists: number;
+    groups: (EventRow & { occurrences: Omit<EventRow, 'cards'>[] })[] }>()
   return {
     describe: () => ({ operations: ['catalog.search', 'events.search'],
       catalog: { syncedAt: catalog.syncedAt, expected: scope.expected,
@@ -201,15 +215,32 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
       }
       const deck = query.deckName ? normalized(query.deckName) : null
       const card = query.cardName ? normalized(query.cardName) : null
-      const matching = rows.filter((row) => row.date >= query.from! && row.date <= query.to! &&
-        (!deck || normalized(row.deck).includes(deck)) &&
-        (!card || row.cards.some((line) => normalized(line).includes(card))))
-        .sort((a, b) => b.date.localeCompare(a.date) ||
-          (a.placing ?? Infinity) - (b.placing ?? Infinity))
-      const selected = matching.slice(query.offset, query.offset! + query.limit!)
+      const searchKey = fingerprint({ deck, card, from: query.from, to: query.to })
+      let search = eventSearches.get(searchKey)
+      if (!search) {
+        const matching = rows.filter((row) => row.date >= query.from! && row.date <= query.to! &&
+          (!deck || normalized(row.deck).includes(deck)) &&
+          (!card || row.cards.some((line) => normalized(line).includes(card))))
+          .sort((a, b) => b.date.localeCompare(a.date) ||
+            (a.placing ?? Infinity) - (b.placing ?? Infinity))
+        const grouped = new Map<string, EventRow & { occurrences: Omit<EventRow, 'cards'>[] }>()
+        for (const row of matching) {
+          const key = deckKey(row.cards)
+          const { cards: _cards, ...occurrence } = row
+          const existing = grouped.get(key)
+          if (existing) existing.occurrences.push(occurrence)
+          else grouped.set(key, { ...row, occurrences: [occurrence] })
+        }
+        search = { matchingLists: matching.length, groups: [...grouped.values()] }
+        if (eventSearches.size >= 32) eventSearches.delete(eventSearches.keys().next().value!)
+        eventSearches.set(searchKey, search)
+      }
+      const { groups, matchingLists } = search
+      const selected = groups.slice(query.offset, query.offset! + query.limit!)
       const data = { scope: { from: query.from, to: query.to, listsInspected: rows.length,
-        matchingLists: matching.length }, offset: query.offset, remaining: Math.max(0,
-        matching.length - query.offset! - selected.length), lists: selected }
+        matchingLists, distinctDecks: groups.length,
+        duplicateLists: matchingLists - groups.length }, offset: query.offset, remaining: Math.max(0,
+        groups.length - query.offset! - selected.length), lists: selected }
       const sourceIds = selected.map((item) => `list:${fingerprint(item.listUrl).slice(0, 16)}`)
       return { query, status: 'ok', data, sourceIds,
         fingerprint: fingerprint({ query, data }) }

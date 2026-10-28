@@ -65,6 +65,8 @@ Per ogni fonte e sincronizzazione registrare circuito coperto, espansioni e seri
 
 La **Ricerca avanzata** del Catalogo interpreta una domanda naturale e filtra la stessa lista locale usata dalla ricerca rapida, mantenendo dettaglio, paginazione e filtro espansione. I criteri verificabili, come PS e ritirata, sono applicati alle stampe prima del raggruppamento; effetti e interazioni sono valutazioni AI motivate, con risultati incerti distinti in fondo. La vista mostra copertura dell'inventario, schede confrontabili e limiti della valutazione: nessun filtro tattico garantisce tutte le carte utili. Il mazzo corrente entra nel contesto soltanto se la domanda lo cita esplicitamente; le liste Evento, quando disponibili localmente, restano campioni e non dimostrano winrate.
 
+- **Analisi estese APP-159 (R-07/R-13/R-14):** le ricerche percorrono le pagine disponibili e raggruppano solo liste identiche, conservando tutte le occorrenze e i piazzamenti. I contesti grandi vengono analizzati in lotti con checkpoint persistenti e sintesi successive; pausa, annullamento e ripresa esplicita dopo riavvio. Nessun obbligo di risposta rapida e nessuna analisi non verificata salvata come definitiva. L'export diagnostico distingue stato persistito ed esecutore attivo e conserva codici tecnici, tempi, dimensioni e conteggi senza testi privati. L'utente autorizza questo anticipo circoscritto della ripresa di I4, non l'intero percorso da zero.
+
 ## Requisiti derivati proposti
 
 | ID | Proposta | Motivo e verifica |

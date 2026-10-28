@@ -8,6 +8,7 @@ import { CODEX_ISOLATION_ARGS } from './codex-isolation'
 import { codexLauncher } from './codex-setup'
 import { AI_QUERY_PLAN_SCHEMA } from './ai-evidence-queries'
 import { codexReasoningSummary } from './codex-progress'
+import { AiFailure } from './ai-failure'
 
 /** An isolated, ephemeral structured call. The app validates the result before using it. */
 export async function runStructuredCodex(prompt: string, config: AiRunConfig,
@@ -31,7 +32,8 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
         stdio: ['pipe', 'pipe', 'pipe'] })
       const abort = () => child.kill()
       signal?.addEventListener('abort', abort, { once: true })
-      const timer = setTimeout(() => child.kill(), 180_000)
+      let timedOut = false
+      const timer = setTimeout(() => { timedOut = true; child.kill() }, 600_000)
       let stderr = ''
       let stdout = ''
       let usage: AiTokenUsage | null = null
@@ -64,6 +66,7 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
         clearTimeout(timer)
         signal?.removeEventListener('abort', abort)
         if (signal?.aborted) return reject(new Error('Operazione Codex annullata.'))
+        if (timedOut) return reject(new AiFailure('timeout', 'Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati.'))
         if (code !== 0) return reject(new Error(stderr.includes('Not logged in')
           ? 'Accedi a Codex prima della ricerca AI.'
           : 'Codex non ha completato la richiesta.'))

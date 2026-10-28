@@ -71,6 +71,16 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Novità della v0.3.4
+
+La cronologia delle attività AI conserva tutte le nuove voci e sintesi, carica le precedenti quando scorri verso l'alto e mantiene navigabili Thread e Matchup durante il lavoro.
+
+Thread e Matchup possono svolgere analisi estese in background mentre consulti l'app. Ogni ricerca locale acquisisce tutte le pagine disponibili; le liste identiche vengono raggruppate conservando occorrenze, piazzamenti e provenienza. Quando il contesto cresce, Codex analizza i dati in lotti salvati e ne costruisce una sintesi, con verifica delle carte citate prima della risposta finale.
+
+**Pausa** conserva il lavoro completato. Dopo la riapertura usa **Riprendi analisi**: i lotti con gli stessi dati e la stessa configurazione vengono riutilizzati. L'app chiusa non continua a elaborare; la ripresa richiede un'azione esplicita. **Annulla analisi** scarta il lavoro in sospeso e libera il Thread. Un errore di verifica diventa visibile e non lascia più un'attesa senza esecutore. La diagnostica esportabile aggiunge cause tecniche, tempi delle chiamate, dimensioni, copertura e avanzamento dei lotti, senza contenuti privati.
+
+Le analisi grandi possono richiedere più chiamate e consumare più quota Codex. Non c'è una scadenza complessiva breve: il limite di dieci minuti riguarda la singola chiamata, che può essere riprovata conservando i lotti precedenti. Restano limiti espliciti sull'archivio di una ricerca (64 MB), sulle pagine e sui passaggi di pianificazione; le sintesi sono interpretazioni AI e non sostituiscono gli originali conservati. La copertura dipende dai dati locali e dalle ricerche scelte per la domanda.
+
 ### Novità della v0.3.3
 
 Durante le analisi lunghe di Thread e Matchup, Pokéguru mostra le fasi del job Codex e le sintesi disponibili, conservando lo stato durante navigazione e riavvio. Da **Impostazioni AI → Assistenza e diagnostica → Esporta diagnostica…** puoi salvare un JSON per segnalare bug e rallentamenti. Il file include stati tecnici, tempi dei blocchi UI e incidenti del renderer; esclude liste, conversazioni e credenziali. Controllalo prima di condividerlo.

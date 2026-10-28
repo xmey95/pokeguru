@@ -308,7 +308,8 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const [openingErrors, setOpeningErrors] = useState<Record<string, string>>({})
   const [aiJob, setAiJob] = useState<AiJobSummary | null>(null)
   const currentAiJob = aiJob?.projectId === projectId && aiJob?.resourceId === selectedId ? aiJob : null
-  const aiBusy = currentAiJob?.status === 'running' || currentAiJob?.status === 'ready'
+  const aiBusy = currentAiJob?.status === 'running' || currentAiJob?.status === 'ready' ||
+    currentAiJob?.status === 'interrupted' && currentAiJob.progress?.diagnostics?.resumable === true
   const [confirmCandidate, setConfirmCandidate] = useState<DeckCandidate | null>(null)
   useEffect(() => {
     if (creating) focusInWorkspace(newThreadTitle.current)
@@ -451,7 +452,10 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     let active = true
     const refresh = async () => {
       const result = await window.projectsApi.getAiJobStatus(projectId, selectedId)
-      if (active && result.ok) setAiJob(result.value)
+      if (active && result.ok) setAiJob((current) => current?.id === result.value?.id &&
+        current?.status === result.value?.status && current?.error === result.value?.error &&
+        current?.progress?.updatedAt === result.value?.progress?.updatedAt &&
+        current?.progress?.sequence === result.value?.progress?.sequence ? current : result.value)
     }
     void refresh()
     const timer = window.setInterval(() => { void refresh() }, 1500)
@@ -472,6 +476,14 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     const result = await window.projectsApi.cancelAiJob(projectId, selectedId)
     if (!result.ok) setComposerError(result.error)
     else setAiJob((current) => current ? { ...current, status: 'cancelled' } : null)
+  }
+
+  async function pauseOrResumeAi(resume: boolean): Promise<void> {
+    if (!selectedId) return
+    const result = await window.projectsApi[resume ? 'resumeAiJob' : 'pauseAiJob'](projectId, selectedId)
+    if (!result.ok) setComposerError(result.error)
+    const status = await window.projectsApi.getAiJobStatus(projectId, selectedId)
+    if (status.ok) setAiJob(status.value)
   }
 
   async function recoverAi(): Promise<void> {
@@ -558,6 +570,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
       await refreshSummaries()
       closeCreate()
       selectThread(result.value, '#new-thread-trigger')
+      setWorking(false)
       if (startWithAi && result.value.openingAiMessageId) {
         const response = await window.projectsApi.askDeckThread(projectId, result.value.id,
           openingNote.trim(), null, result.value.openingAiMessageId)
@@ -570,7 +583,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   }
 
   async function continueFrom(candidate: DeckCandidate): Promise<void> {
-    if (!selected || working || !selected.stale) return
+    if (!selected || working || asking || aiBusy || !selected.stale) return
     setWorking(true); setError(null)
     try {
       const title = `${selected.title} · nuova base`.slice(0, 120)
@@ -585,8 +598,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   }
 
   async function retryOpeningMessage(): Promise<void> {
-    if (!selected || !openingAiMessage || working || aiBusy) return
-    setWorking(true)
+    if (!selected || !openingAiMessage || working || asking || aiBusy) return
     setAsking(true)
     setComposerError(null)
     setOpeningErrors((current) => { const next = { ...current }; delete next[selected.id]; return next })
@@ -601,11 +613,11 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
         cause instanceof Error ? cause.message : 'Risposta Codex non completata.' }))
       const latest = await window.projectsApi.getDeckThreadWindow(projectId, selected.id)
       if (latest.ok) showDetail(latest.value)
-    } finally { setWorking(false); setAsking(false) }
+    } finally { setAsking(false) }
   }
 
   async function addMessage(): Promise<void> {
-    if (!selected || working || !message.trim()) return
+    if (!selected || working || asking || aiBusy || !message.trim()) return
     setWorking(true)
     setComposerError(null)
     invalidatePreview()
@@ -622,21 +634,21 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
 
   async function ask(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!selected || working || composerSubmitting.current.has(selected.id) || aiBusy || openingAiPending || !message.trim()) return
+    if (!selected || working || asking || composerSubmitting.current.has(selected.id) || aiBusy || openingAiPending || !message.trim()) return
     const threadId = selected.id
+    const submittedMessage = message
     composerSubmitting.current.add(threadId)
-    setWorking(true)
     setAsking(true)
     setComposerError(null)
     invalidatePreview()
     let succeeded = false
     try {
-      const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
+      const result = await window.projectsApi.askDeckThread(projectId, selected.id, submittedMessage,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
       showDetail(result.value)
       await refreshSummaries()
-      setMessage('')
+      setMessage((current) => current === submittedMessage ? '' : current)
       setPreview(null)
       succeeded = true
     } catch (cause) {
@@ -647,7 +659,6 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     }
     finally {
       composerSubmitting.current.delete(threadId)
-      setWorking(false)
       setAsking(false)
       if (succeeded) restoreComposerFocus(threadId)
       else if (keyboardSubmissionFocus.current?.threadId === threadId) keyboardSubmissionFocus.current = null
@@ -679,7 +690,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   }
 
   async function adopt(candidate: DeckCandidate): Promise<void> {
-    if (!selected || !selected.currentVersionId || working) return
+    if (!selected || !selected.currentVersionId || working || asking || aiBusy) return
     setWorking(true)
     setError(null)
     try {
@@ -731,7 +742,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
         </form>}
         <div className="thread-detail">
           {detailLoading && !selected ? <LoadingSkeleton label="Caricamento dettaglio thread…" rows={3} /> : selected ? <>
-            {openingAiPending && <div className="content-note" role="status">{aiBusy
+            {openingAiPending && <div className="content-note" role="status">{currentAiJob?.status === 'running'
               ? 'Codex sta rispondendo al primo messaggio.'
               : 'Il primo messaggio è salvato. La risposta Codex è ancora da completare.'}
               {(openingErrors[selected.id] || currentAiJob?.error) &&
@@ -743,18 +754,26 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               <div className="content-note" role="status">{currentAiJob.status === 'running'
                 ? (asking ? '' : 'Codex sta rispondendo…') : 'La risposta è pronta, ma non è stata salvata.'}
                 <button type="button" className="text-button" onClick={() => void cancelAi()}>{currentAiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
+                {currentAiJob.status === 'running' && currentAiJob.progress?.diagnostics?.workflow &&
+                  <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Pausa</button>}
                 {currentAiJob.status === 'ready' && <button type="button" className="text-button" onClick={() => void recoverAi()}>Completa salvataggio</button>}
               </div>}
             {currentAiJob && (currentAiJob.status === 'interrupted' || currentAiJob.status === 'failed' || currentAiJob.status === 'cancelled') &&
               <p className="content-note" role="status">{currentAiJob.status === 'cancelled'
-                ? 'Risposta annullata.' : 'La risposta non è stata completata. Puoi inviare di nuovo la richiesta.'}
-                {currentAiJob.error ? ` ${currentAiJob.error}` : ''}</p>}
+                ? 'Risposta annullata.' : currentAiJob.progress?.diagnostics?.resumable
+                  ? 'L’analisi è sospesa; il lavoro completato è conservato.'
+                  : 'La risposta non è stata completata. Puoi inviare di nuovo la richiesta.'}
+                {currentAiJob.error ? ` ${currentAiJob.error}` : ''}
+                {currentAiJob.status === 'interrupted' && currentAiJob.progress?.diagnostics?.resumable && <>
+                  <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>
+                  <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla analisi</button>
+                </>}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Questo thread usa una lista precedente. Apri un nuovo thread dalla lista attuale.</p>}
             {selected.parentThreadId && <div className="content-note">Thread collegato a un percorso precedente. La candidata scelta è conservata come contesto per Codex; descrivi nella conversazione le modifiche che vuoi valutare. Il thread originale resta nello storico.
               {selected.seedCandidateText && <details className="seed-candidate"><summary>Mostra la candidata di partenza</summary><pre>{selected.seedCandidateText}</pre></details>}
             </div>}
             {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
-              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)}
+              catalog={catalog} constraints={constraints} audit={ruleAudit} working={working || asking || aiBusy} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)}
               onReturn={returnPoint ? returnToConversation : undefined} />
               : <p className="thread-no-candidate">Nessuna proposta salvata.</p>}
             {featuredCandidate && <div className="candidate-access">
@@ -766,7 +785,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
                 Mostra {Math.min(TIMELINE_PAGE_SIZE, hiddenTimelineCount)} precedenti ({hiddenTimelineCount} nascosti)
               </button>}
               {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
-                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)} />)}
+                catalog={catalog} constraints={constraints} audit={ruleAudit} working={working || asking || aiBusy} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)} />)}
             </div>
             {(asking || currentAiJob?.status === 'running') && <AiJobActivity
               className="thread-ai-activity" startedAt={startedAt} job={currentAiJob}
@@ -782,10 +801,10 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
                 : 'Puoi discutere un’idea con Codex. Per salvare una lista candidata, importa prima una lista principale.'}</p>
               {composerError && <div ref={composerErrorElement} className="error-banner" role="alert" tabIndex={-1}>{composerError}</div>}
               <div className="composer-actions"><div className="thread-form-actions">
-                <button type="submit" className="primary-button" disabled={working || aiBusy || openingAiPending || !message.trim()}>
+                <button type="submit" className="primary-button" disabled={working || asking || aiBusy || openingAiPending || !message.trim()}>
                   {asking && <Spinner />}{asking ? 'Risposta in corso…' : 'Invia a Codex'}
                 </button>
-                <button type="button" className="secondary-button" disabled={working || !message.trim()}
+                <button type="button" className="secondary-button" disabled={working || asking || aiBusy || !message.trim()}
                   title="Salva il testo senza inviarlo a Codex" onClick={() => void addMessage()}>Salva osservazione</button>
               </div>
               <button type="button" className="text-button composer-preview" disabled={!message.trim() || previewLoading || working}

@@ -14,6 +14,7 @@ import { AiJobStore, type AiJob } from './ai-job-store'
 import { makeAiPromptAudit } from './ai-evidence-queries'
 import { readMatchupAnalysis } from './matchup-analysis'
 import { hasStrategyPhases } from '../shared/meta-matchups'
+import { aiFailureCode } from './ai-failure'
 
 interface ThreadRequest {
   schemaVersion?: number
@@ -30,6 +31,31 @@ interface ThreadResult {
   turnId: string
   value: unknown
   usage?: unknown
+}
+
+/** Finalize a failed invocation; true means its artifacts can be discarded. */
+export function settleFailedAiJob(jobs: AiJobStore, id: string, error: unknown,
+  aborted: boolean, hasResult: boolean): boolean {
+  const current = jobs.get(id)
+  if (!current || current.status === 'applied') return false
+  if (current.status === 'cancelled') return true
+  if (aborted) {
+    jobs.transition(id, 'cancelled')
+    return true
+  }
+  const message = error instanceof Error ? error.message : 'Operazione AI non completata.'
+  jobs.recordDiagnostics(id, { failureCode: aiFailureCode(error) })
+  const request = current.request as { validatedDraft?: boolean } | null
+  // A CLI file may be an internal draft, rejected by the evidence gate. Recovery
+  // refuses these drafts too; keeping one running cannot finish the user's turn.
+  const recoverableFile = current.status === 'running' && hasResult &&
+    request && request.validatedDraft !== false
+  if (recoverableFile || current.status === 'ready') {
+    jobs.noteError(id, message)
+    return false
+  }
+  jobs.transition(id, 'failed', message)
+  return true
 }
 
 function readResult(path: string): unknown {

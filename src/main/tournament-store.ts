@@ -22,6 +22,8 @@ const initialMainProgress: MainTournamentSyncProgress = {
 export class TournamentStore {
   private readonly db: DatabaseSync
   private readonly filePath: string
+  private playListCache: TournamentSnapshot[] | null = null
+  private mainListCache: MainTournamentSnapshot[] | null = null
 
   private assertCurrentEventDate(date: string): void {
     const period = this.db.prepare('SELECT rotation_start FROM tournament_rotation WHERE id = 1')
@@ -193,6 +195,8 @@ export class TournamentStore {
       this.saveMainProgress({ ...(reset ? initialMainProgress : this.mainProgress()),
         ...(reset ? { rotationStart: rotation.effectiveFrom } : {}), rotationCleanup: cleanup })
       this.db.exec('COMMIT')
+      this.playListCache = null
+      this.mainListCache = null
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
   }
 
@@ -201,6 +205,7 @@ export class TournamentStore {
     this.db.prepare(`INSERT OR IGNORE INTO tournament_snapshots
       (id, event_id, fetched_at, payload) VALUES (?, ?, ?, ?)`)
       .run(snapshot.id, snapshot.eventId, snapshot.fetchedAt, JSON.stringify(snapshot))
+    this.playListCache = null
     return snapshot
   }
 
@@ -211,10 +216,11 @@ export class TournamentStore {
   }
 
   list(): TournamentSnapshot[] {
+    if (this.playListCache) return this.playListCache
     const rows = this.db.prepare(`SELECT payload FROM tournament_snapshots
       WHERE rowid IN (SELECT MAX(rowid) FROM tournament_snapshots GROUP BY event_id)`)
       .all() as { payload: string }[]
-    return rows.map((row) => ({ ...JSON.parse(row.payload) as TournamentSnapshot, cached: true }))
+    return this.playListCache = rows.map((row) => ({ ...JSON.parse(row.payload) as TournamentSnapshot, cached: true }))
       .sort((a, b) => b.date.localeCompare(a.date) || a.eventId.localeCompare(b.eventId))
   }
 
@@ -271,6 +277,7 @@ export class TournamentStore {
       if (completed) this.db.prepare(`INSERT OR IGNORE INTO main_tournament_snapshot_pins (id)
         VALUES (?)`).run(snapshot.id)
       this.db.exec('COMMIT')
+      this.mainListCache = null
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
     return snapshot
   }
@@ -291,6 +298,7 @@ export class TournamentStore {
         if (!row.pinned && !referencedIds.has(row.id)) { remove.run(row.id); removed.push(row.id) }
       }
       this.db.exec('COMMIT')
+      if (removed.length) this.mainListCache = null
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
     return removed.length
   }
@@ -302,10 +310,11 @@ export class TournamentStore {
   }
 
   listMain(): MainTournamentSnapshot[] {
+    if (this.mainListCache) return this.mainListCache
     const rows = this.db.prepare(`SELECT payload FROM main_tournament_snapshots
       WHERE rowid IN (SELECT MAX(rowid) FROM main_tournament_snapshots GROUP BY event_id)`)
       .all() as { payload: string }[]
-    return rows.map((row) => ({ ...JSON.parse(row.payload) as MainTournamentSnapshot, cached: true }))
+    return this.mainListCache = rows.map((row) => ({ ...JSON.parse(row.payload) as MainTournamentSnapshot, cached: true }))
       .sort((a, b) => b.date.localeCompare(a.date) || a.eventId.localeCompare(b.eventId))
   }
 
