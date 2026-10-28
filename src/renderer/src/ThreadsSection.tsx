@@ -766,7 +766,9 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
                   : 'La risposta non è stata completata. Puoi inviare di nuovo la richiesta.'}
                 {currentAiJob.error ? ` ${currentAiJob.error}` : ''}
                 {currentAiJob.status === 'interrupted' && currentAiJob.progress?.diagnostics?.resumable && <>
-                  {canResumeAiJob(currentAiJob) && <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>}
+                  {currentAiJob.progress?.diagnostics?.suspensionReason === 'shutdown'
+                    ? <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Metti in pausa</button>
+                    : canResumeAiJob(currentAiJob) && <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>}
                   <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla analisi</button>
                 </>}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Questo thread usa una lista precedente. Apri un nuovo thread dalla lista attuale.</p>}

@@ -64,7 +64,8 @@ it('collects more than 64 MB through the application query path while keeping hi
     expect(f.executions).toBe(70)
     expect(f.work.archive.readRecord<{ name: string }>('card:p69')?.name).toBe('Card 69')
   } finally { f.close() }
-}, 30_000)
+// This exercises 70 MB of durable SQLite writes, compression and replay on native CI runners.
+}, 90_000)
 
 it('resumes query and batch checkpoints, retains lineage and delivers original focused cards', async () => {
   const f = fixture(30, 8000)

@@ -75,7 +75,7 @@ it.skipIf(process.env.POKEGURU_LIFECYCLE_E2E !== '1')('resumes on Electron reope
     }
     let seeds: Awaited<ReturnType<typeof seed>>[]
     try { seeds = [await seed('crashed', 'running'), await seed('closed', 'shutdown', other.id),
-      await seed('paused', 'user'), await seed('legacy', 'legacy'), await seed('waiting', 'wait')] }
+      await seed('paused', 'user'), await seed('legacy', 'legacy'), await seed('waiting', 'wait'), await seed('queued-pause', 'shutdown')] }
     finally { jobs.close(); catalog.close(); projects.close() }
     // Removing all temporary files must not remove the durable work or call cache.
     for (const item of seeds) rmSync(item.directory, { recursive: true, force: true })
@@ -94,6 +94,9 @@ it.skipIf(process.env.POKEGURU_LIFECYCLE_E2E !== '1')('resumes on Electron reope
     const waiting = seeds[4]
     await expect.poll(async () => (await status(page, waiting.project, waiting.thread))?.progress?.diagnostics?.automaticWait,
       { timeout: 30_000 }).toBe(true)
+    const queued = seeds[5]
+    expect((await page.evaluate(([owner, resource]) => window.projectsApi.pauseAiJob(owner, resource), [queued.project, queued.thread])).ok).toBe(true)
+    expect((await status(page, queued.project, queued.thread))?.progress?.diagnostics?.suspensionReason).toBe('user')
     const closed = application!.waitForEvent('close', { timeout: 15_000 })
     await page.close()
     await closed
@@ -116,6 +119,8 @@ it.skipIf(process.env.POKEGURU_LIFECYCLE_E2E !== '1')('resumes on Electron reope
       expect(reopened.callState(waiting.id, waiting.key)).toMatchObject({ failures: 1, nextAttemptAt: deadline })
       for (const item of seeds.slice(0, 2)) expect(savedProjects.getDeckThread(item.project, item.thread)?.messages).toHaveLength(2)
       expect(savedProjects.getDeckThread(other.id, seeds[0].thread)).toBeNull()
+      expect(savedProjects.getDeckThread(queued.project, queued.thread)?.messages).toHaveLength(0)
+      expect(reopened.get(queued.id)?.progress?.diagnostics?.suspensionReason).toBe('user')
     } finally { reopened.close(); savedProjects.close() }
     const created = await page.evaluate((owner) => window.projectsApi.createDeckThread({ projectId: owner, title: 'Storage failure' }), project.id)
     if (!created.ok) throw new Error(created.error)

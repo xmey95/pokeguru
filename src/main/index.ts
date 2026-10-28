@@ -1322,7 +1322,11 @@ function registerProjectHandlers(): void {
   ipcMain.handle('ai:pause-job', (event, projectId: unknown, resourceId: unknown) => {
     if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
       return { ok: false, error: 'Analisi non disponibile.' }
-    const job = aiJobStore.active(projectId, resourceId as string)
+    const job = aiJobStore.active(projectId, resourceId as string) ?? aiJobStore.latest(projectId, resourceId as string)
+    if (job?.status === 'interrupted' && job.progress?.diagnostics?.suspensionReason === 'shutdown') {
+      aiJobStore.suspend(job.id, 'Analisi in pausa su tua richiesta.', 'user')
+      return { ok: true, value: true }
+    }
     const controller = job && activeAiControllers.get(job.id)
     if (!job || !controller || !activeAiWork.has(job.id)) return { ok: false, error: 'Analisi non sospendibile.' }
     aiJobStore.recordDiagnostics(job.id, { suspensionReason: 'user' })

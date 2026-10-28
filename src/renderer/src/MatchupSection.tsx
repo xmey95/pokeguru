@@ -411,7 +411,9 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       <p className="content-note" role="status">{aiJob.status === 'cancelled'
         ? 'Preparazione annullata.' : `${aiJobInterruptionText(aiJob)} ${aiJob.error ?? ''}`}
         {aiJob.status === 'interrupted' && aiJob.progress?.diagnostics?.resumable && <>
-          {canResumeAiJob(aiJob) && <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>}
+          {aiJob.progress?.diagnostics?.suspensionReason === 'shutdown'
+            ? <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Metti in pausa</button>
+            : canResumeAiJob(aiJob) && <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>}
           <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla analisi</button>
         </>}</p>}
     {loading && !snapshot ? <LoadingSkeleton label="Caricamento del metagame Limitless…" rows={3} /> : snapshot && <>
