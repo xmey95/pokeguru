@@ -751,14 +751,20 @@ button > .loading-spinner { width: 14px; height: 14px; flex-basis: 14px; margin-
 .ai-job-stages li[data-state="current"] span { background: var(--accent); color: white; }
 .ai-job-stages li[data-state="done"] span { background: var(--success); color: white; }
 .ai-job-summary { margin-top: 16px; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface-subtle); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-.ai-job-summary strong { font-size: var(--text-sm); }
+.ai-job-summary > strong { font-size: var(--text-sm); }
 .ai-job-summary p { margin: 6px 0 0; line-height: 1.55; overflow-wrap: anywhere; }
 .ai-job-trace { margin-top: 12px; font-size: var(--text-sm); }
 .ai-job-trace > strong { display: block; color: var(--accent); }
-.ai-job-trace ol { display: grid; gap: 5px; padding-left: 20px; color: var(--ink-secondary); }
+.ai-job-trace > ol { display: grid; gap: 5px; padding-left: 20px; color: var(--ink-secondary); }
 .ai-job-trace time { font-variant-numeric: tabular-nums; }
 .ai-job-trace li p { margin: 4px 0 2px; overflow-wrap: anywhere; line-height: 1.5; }
 .ai-job-trace-scroll { max-height: 220px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.ai-activity-summary-text { min-width: 0; margin-top: 6px; line-height: 1.55; overflow-wrap: anywhere; }
+.ai-activity-summary-text > :first-child { margin-top: 0; }
+.ai-activity-summary-text > :last-child { margin-bottom: 0; }
+.ai-activity-summary-text ul, .ai-activity-summary-text ol { margin: 4px 0; padding-left: 22px; }
+.ai-activity-summary-text pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-activity-summary-text blockquote { margin: 4px 0; padding-left: 12px; border-left: 2px solid var(--line-strong); }
 @media (max-width: 800px) { .ai-job-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @keyframes loading-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {

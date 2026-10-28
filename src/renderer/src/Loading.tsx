@@ -1,5 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { AiJobActivityStep, AiJobPhase, AiJobSummary } from '../../shared/ai-job'
+import { aiActivityDetail } from './ai-activity-text'
+import { AiActivitySummary } from './AiActivitySummary'
 
 export function Spinner() {
   return <span className="loading-spinner" aria-hidden="true" />
@@ -57,10 +59,10 @@ export function ActivityStatus({ title, detail, state = 'working', startedAt, pr
 }
 
 const aiStages: { label: string; phases: AiJobPhase[] }[] = [
-  { label: 'Raccolta dati', phases: ['preparing', 'catalog', 'events'] },
+  { label: 'Carte e tornei', phases: ['preparing', 'catalog', 'events'] },
   { label: 'Ricerche', phases: ['planning'] },
-  { label: 'Analisi Codex', phases: ['analysis'] },
-  { label: 'Verifica e salvataggio', phases: ['verification', 'saving'] }
+  { label: 'Risposta', phases: ['analysis'] },
+  { label: 'Controllo finale', phases: ['verification', 'saving'] }
 ]
 
 function AiJobTrace({ job }: { job: AiJobSummary }) {
@@ -145,9 +147,9 @@ function AiJobTrace({ job }: { job: AiJobSummary }) {
   }
 
   return <section className="ai-job-trace" aria-label="Attività svolte">
-    <strong>Attività svolte{activeSteps.length ? ` · ${activeSteps.length} caricate` : ''}</strong>
+    <strong>Attività svolte{activeSteps.length ? ` · ${activeSteps.length} visibili` : ''}</strong>
     {hasMore && <button type="button" className="text-button" disabled={loadingOlder}
-      onClick={() => void loadOlder()}>{loadingOlder ? 'Caricamento…' : 'Carica attività precedenti'}</button>}
+      onClick={() => void loadOlder()}>{loadingOlder ? 'Caricamento…' : 'Mostra attività precedenti'}</button>}
     {error && <p className="diagnostics" role="status">{error}</p>}
     <ol ref={scroller} className="ai-job-trace-scroll" aria-label="Cronologia attività Codex"
       onScroll={(event) => {
@@ -157,8 +159,8 @@ function AiJobTrace({ job }: { job: AiJobSummary }) {
           void loadOlder()
       }}>
       {activeSteps.map((step) => <li key={step.id}>
-        <time dateTime={step.at}>{new Date(step.at).toLocaleTimeString('it-IT')}</time> · {step.detail}
-        {step.summary && <p>{step.summary}</p>}
+        <time dateTime={step.at}>{new Date(step.at).toLocaleTimeString('it-IT')}</time> · {aiActivityDetail(step.detail)}
+        {step.summary && <AiActivitySummary text={step.summary} />}
       </li>)}
     </ol>
   </section>
@@ -172,7 +174,8 @@ export function AiJobActivity({ job, title, startedAt, className = '' }: {
 }) {
   const phase = job?.progress?.phase ?? 'preparing'
   const activeIndex = aiStages.findIndex((stage) => stage.phases.includes(phase))
-  return <ActivityStatus title={title} detail={job?.progress?.detail ?? 'Preparazione del lavoro Codex…'}
+  return <ActivityStatus title={title} detail={job?.progress?.detail
+    ? aiActivityDetail(job.progress.detail) : 'Preparo la tua richiesta…'}
     startedAt={startedAt ?? (job ? Date.parse(job.createdAt) : null)} className={`ai-job-activity ${className}`}>
     <ol className="ai-job-stages" aria-label="Fasi dell’elaborazione">
       {aiStages.map((stage, index) => <li key={stage.label} data-state={index < activeIndex ? 'done' : index === activeIndex ? 'current' : 'waiting'}>
@@ -180,7 +183,7 @@ export function AiJobActivity({ job, title, startedAt, className = '' }: {
       </li>)}
     </ol>
     {job?.progress?.summary && <div className="ai-job-summary">
-      <strong>Sintesi fornita da Codex</strong><p>{job.progress.summary}</p>
+      <strong>Sintesi di Codex</strong><AiActivitySummary text={job.progress.summary} />
     </div>}
     {job && <AiJobTrace job={job} />}
   </ActivityStatus>
