@@ -17,7 +17,19 @@ interface JobRow {
 
 function progress(row: { progress_json: string | null }): AiJobProgress | null {
   if (!row.progress_json) return null
-  try { return JSON.parse(row.progress_json) as AiJobProgress }
+  try {
+    const value = JSON.parse(row.progress_json) as Partial<AiJobProgress>
+    const phases: AiJobPhase[] = ['preparing', 'catalog', 'events', 'planning',
+      'analysis', 'verification', 'saving']
+    if (!value || !phases.includes(value.phase!) || typeof value.detail !== 'string' ||
+      (value.summary !== null && typeof value.summary !== 'string') ||
+      typeof value.updatedAt !== 'string' || !Array.isArray(value.steps)) return null
+    const steps = value.steps.filter((step) => step && phases.includes(step.phase) &&
+      typeof step.detail === 'string' && typeof step.at === 'string').slice(-12)
+      .map((step) => ({ phase: step.phase, detail: step.detail.slice(0, 180), at: step.at }))
+    return { phase: value.phase!, detail: value.detail.slice(0, 180),
+      summary: value.summary?.slice(0, 900) ?? null, updatedAt: value.updatedAt, steps }
+  }
   catch { return null }
 }
 

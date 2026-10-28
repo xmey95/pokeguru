@@ -35,6 +35,10 @@ it('persists one active AI job per resource and retains a ready result through r
     expect(jobs.recent()).toMatchObject([{ id: started.id, status: 'applied',
       projectId: project.id, resourceId: thread.id }])
     expect('request' in jobs.recent()[0]).toBe(false)
+    const damaged = new DatabaseSync(path)
+    damaged.prepare('UPDATE ai_jobs SET progress_json = ? WHERE id = ?').run('{"phase":"analysis"}', started.id)
+    damaged.close()
+    expect(jobs.latest(project.id, thread.id)?.progress).toBeNull()
     const next = jobs.start('thread-propose', project.id, thread.id)
     jobs.updateProgress(next.id, 'planning', 'Ricerche in corso')
     jobs.transition(next.id, 'cancelled')

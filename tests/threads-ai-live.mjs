@@ -126,6 +126,18 @@ try {
         .find((thread) => thread.title === name).id])
       assert.equal(activeJob.ok, true)
       assert.ok(activeJob.value?.progress?.steps.length > 0)
+      if (name === 'Thread A' && activeJob.value.status === 'running') {
+        const navigation = page.getByRole('navigation', { name: 'Aree del progetto' })
+        await navigation.getByRole('button', { name: 'Lista', exact: true }).click()
+        await navigation.getByRole('button', { name: 'Thread', exact: true }).click()
+        await switchThread(page, /Thread A/)
+        const resumed = await page.evaluate(([projectId, threadId]) =>
+          window.projectsApi.getAiJobStatus(projectId, threadId), [project.id, activeJob.value.resourceId])
+        assert.equal(resumed.ok, true)
+        assert.equal(resumed.value.id, activeJob.value.id)
+        assert.ok(resumed.value.progress?.steps.length > 0)
+        if (resumed.value.status === 'running') await page.locator('.ai-job-activity').waitFor({ timeout: 10000 })
+      }
       try {
         await page.locator('.thread-message')
           .filter({ has: page.locator('small', { hasText: 'Codex' }) })
