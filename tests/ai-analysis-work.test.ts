@@ -85,10 +85,12 @@ it('does not cache invalid citations and separates jobs and changed model inputs
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-batch-sources-'))
   const projects = new ProjectStore(join(folder, 'data.sqlite'))
   const jobs = new AiJobStore(join(folder, 'data.sqlite'))
+  const opened: AiAnalysisWork[] = []
   try {
     const project = projects.create({ name: 'Sources', format: 'STANDARD' })
     const job = jobs.start('thread-ask', project.id, 'thread')
     const work = new AiAnalysisWork(join(folder, job.id), jobs, job.id, new AbortController().signal)
+    opened.push(work)
     await expect(analyzeLargeEvidence(trace(), 'Tutto', config, work,
       async () => ({ summary: 'Inventata', limitations: '', sourceIds: ['foreign-source'] })))
       .rejects.toThrow('non verificabile')
@@ -100,11 +102,13 @@ it('does not cache invalid citations and separates jobs and changed model inputs
     expect(calls).toBeGreaterThan(1)
     const other = jobs.start('thread-ask', project.id, 'other-thread')
     const isolated = new AiAnalysisWork(join(folder, other.id), jobs, other.id, new AbortController().signal)
+    opened.push(isolated)
     expect(await isolated.run('planning', 'same', config, async () => 1)).toBe(1)
     expect(await work.run('planning', 'same', config, async () => 2)).toBe(2)
     expect(await work.run('planning', 'same', { ...config, model: 'gpt-test' }, async () => 3)).toBe(3)
-  } finally { jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
-})
+  } finally { opened.forEach((work) => work.close()); jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+  // Invalid-output retry plus durable synthesis/cache isolation can exceed 15s on Windows CI disks.
+}, 45_000)
 
 it('adapts oversized records and context errors, reuses database calls after losing temporary files, and preserves exact fragments', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-adaptive-')), path = join(folder, 'data.sqlite')
