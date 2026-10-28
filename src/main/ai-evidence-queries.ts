@@ -38,7 +38,7 @@ export const AI_QUERY_PLAN_SCHEMA = {
 } as const
 
 export function aiQueryPlanningPrompt(request: string, initialEvidence: unknown,
-  engine: AiEvidenceEngine, previous: AiEvidenceQueryTrace['requests'] = []): string {
+  engine: AiEvidenceEngine, previous: AiEvidenceQueryTrace['requests'] = [], findings?: unknown): string {
   return [
     'Scegli automaticamente le interrogazioni necessarie al motore locale di Pokéguru per rispondere alla richiesta.',
     'Il motore offre solo catalog.search (termini letterali inglesi, ID stampa o identità) ed events.search (nome archetipo o carta nelle liste complete locali).',
@@ -47,13 +47,30 @@ export function aiQueryPlanningPrompt(request: string, initialEvidence: unknown,
     'Se la richiesta implica una modifica concreta del mazzo, cerca le stampe delle carte da aggiungere e le alternative pertinenti prima della risposta finale: la proposta completa deve poter arrivare nello stesso turno anche senza la formula «dammi la candidatura».',
     'Gli eventi sono campioni, non winrate; rispetta la finestra del motore. Tutte le pagine di ogni query vengono acquisite automaticamente: non ripetere la stessa query per paginarla. I mazzi identici sono raggruppati con tutte le occorrenze e i piazzamenti. Il riepilogo qui serve a pianificare: i testi completi sono conservati e analizzati a lotti prima della risposta.',
     'Query vuote solo se i dati già ricevuti bastano. Imposta continueAfterResults=true se devi esplorare altri aspetti dopo i risultati. Non restringere arbitrariamente il campo solo per accelerare: usa criteri pertinenti alla domanda.',
+    'Esamina i risultati e la sintesi globale: se una contraddizione o una lacuna decisiva è risolvibile con altre prove locali, richiedi le carte o liste specifiche. Confronta poi le nuove prove con tutti i risultati precedenti. Se le ricerche sono già esaurite, conserva esplicitamente il limite nella conclusione; non ripetere query identiche.',
     'Limiti: fino a 8 termini, 20 ID, 20 risultati Catalogo; fino a 4 liste Eventi per query. Includi tutti i campi dello schema e usa null per quelli non necessari.',
     `MOTORE: ${JSON.stringify(engine.describe())}`,
-    `RICHIESTA: ${JSON.stringify(request.slice(0, 5000))}`,
+    `RICHIESTA: ${JSON.stringify(request)}`,
     `EVIDENZE GIÀ DISPONIBILI: ${JSON.stringify(initialEvidence)}`,
     ...(previous.length ? [`RISULTATI DELLE QUERY PRECEDENTI (indice; originali conservati): ${JSON.stringify(planningIndex(previous))}`] : []),
+    ...(findings ? [`RISULTATI PER LA PIANIFICAZIONE: ${JSON.stringify(findings)}`] : []),
     'Restituisci solo il piano JSON richiesto.'
   ].join('\n\n')
+}
+
+function planningFindings(trace: AiEvidenceQueryTrace): unknown {
+  const archive = evidenceArchive(trace)
+  if (!archive) return undefined
+  if (trace.analysis) return { coverage: archive.counts(), analysis: trace.analysis }
+  const records: unknown[] = []
+  let bytes = 0
+  for (const record of archive.records()) {
+    bytes += Buffer.byteLength(JSON.stringify(record))
+    if (bytes > 80_000) return { coverage: archive.counts(),
+      note: 'Gli originali superano il contesto di pianificazione e richiedono analisi a lotti prima di altre inferenze.' }
+    records.push(record)
+  }
+  return { coverage: archive.counts(), records }
 }
 
 function planningIndex(previous: AiEvidenceQueryTrace['requests']): unknown {
@@ -149,6 +166,7 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
   engine: AiEvidenceEngine, plan: (prompt: string) => Promise<unknown>,
   options: { contextTexts?: string[]; eventContextTexts?: string[];
     archive?: AiEvidenceArchive;
+    summarize?: (trace: AiEvidenceQueryTrace) => Promise<void>;
     onRound?: (round: number, queries: number) => void;
     onTrace?: (trace: AiEvidenceQueryTrace) => void; signal?: AbortSignal } = {}):
   Promise<AiEvidenceQueryTrace> {
@@ -198,9 +216,19 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
   let cachedInputTokens = 0
   let outputTokens = 0
   let usageSeen = false
-  for (let round = 0; round < MAX_PLANNING_ROUNDS && !trace.exhausted; round++) {
+  let stagnant = 0
+  const recordCount = () => {
+    const counts = options.archive?.counts()
+    return counts ? counts.cards + counts.decks + counts.occurrences + counts.pairings : 0
+  }
+  for (let round = 0; (options.archive || round < MAX_PLANNING_ROUNDS) && !trace.exhausted; round++) {
+    if (options.signal?.aborted) throw new AiFailure(options.signal.reason === 'pause' ? 'paused' : 'cancelled', 'Analisi interrotta.')
     const prior = options.archive?.value<unknown>('planning', String(round))
-    const raw = prior ?? await plan(aiQueryPlanningPrompt(request, initialEvidence, engine, trace.requests))
+    const baseline = options.archive?.value<number>('planning-baseline', String(round))
+    const before = baseline ?? recordCount()
+    if (baseline === undefined) options.archive?.saveValue('planning-baseline', String(round), before)
+    if (prior === undefined) await options.summarize?.(trace)
+    const raw = prior ?? await plan(aiQueryPlanningPrompt(request, initialEvidence, engine, trace.requests, planningFindings(trace)))
     const value = raw && typeof raw === 'object' && !Array.isArray(raw)
       ? raw as { queries?: unknown; continueAfterResults?: unknown; __usage?: unknown } : null
     const usage = readAiTokenUsage(value?.__usage)
@@ -213,20 +241,34 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
     const queries = value?.queries
     if (!Array.isArray(queries) || queries.length > 4 ||
       typeof value?.continueAfterResults !== 'boolean')
-      throw new Error('Piano delle query Codex non valido.')
+      throw new AiFailure('invalid-plan', 'Piano delle query Codex non valido.')
     if (options.archive && prior === undefined) options.archive.saveValue('planning', String(round), raw)
     trace.planningRounds++
     options.onRound?.(trace.planningRounds, queries.length)
+    let newEvidence = false
     for (const query of queries) {
       const normalized = query && typeof query === 'object' && !Array.isArray(query)
         ? Object.fromEntries(Object.entries(query).filter(([, item]) => item !== null)) : query
       await collectPages(normalized)
     }
+    if (options.archive) {
+      const saved = options.archive.value<boolean>('planning-progress', String(round))
+      const progressed = saved ?? (recordCount() > before || prior !== undefined && baseline === undefined)
+      newEvidence = progressed
+      if (saved === undefined) options.archive.saveValue('planning-progress', String(round), progressed)
+      stagnant = progressed ? 0 : stagnant + 1
+      if (value.continueAfterResults && (stagnant >= 3 || queries.length === 0))
+        throw new AiFailure('no-progress', 'La pianificazione non trova nuove prove. I risultati sono salvati; la ricerca non è dichiarata completa.')
+    }
     if (value.continueAfterResults && queries.length === 0) trace.exhausted = true
+    // A plan made before collection cannot review the results it has not seen.
+    // Give the planner the global synthesis once new records arrive, so it can
+    // request precise evidence for contradictions before declaring completion.
+    if (options.archive && newEvidence && queries.length) continue
     if (!value.continueAfterResults || trace.exhausted || queries.length === 0) {
       break
     }
-    if (round === MAX_PLANNING_ROUNDS - 1) trace.exhausted = true
+    if (!options.archive && round === MAX_PLANNING_ROUNDS - 1) trace.exhausted = true
   }
   trace.durationMs = Math.round(performance.now() - started)
   trace.plannerUsage = usageSeen ? { inputTokens, cachedInputTokens, outputTokens } : null
@@ -236,7 +278,7 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
 
 export function aiEvidenceForPrompt(trace: AiEvidenceQueryTrace): unknown {
   const archive = evidenceArchive(trace)
-  if (!trace.analysis) return archive ? { ...trace, requests: [...archive.pages()] } : trace
+  if (!trace.analysis) return archive ? { ...trace, durationMs: 0, requests: [...archive.pages()] } : trace
   const focused = new Set(trace.focusedPrintIds ?? [])
   const cards = new Map<string, CatalogEvidenceSearch['matches'][number]>()
   for (const card of evidenceCards(trace)) if (focused.has(card.printId)) cards.set(card.printId, card)

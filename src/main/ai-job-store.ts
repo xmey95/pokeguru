@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import type { AiJobActivityPage, AiJobActivityStep, AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
 import { readAiDiagnostics, type AiDiagnostics } from '../shared/ai-diagnostics'
 import { AI_EVIDENCE_ARCHIVE_SCHEMA } from './ai-evidence-archive'
+import type { AiCallState } from './ai-call-retry'
 
 export interface AiJob extends AiJobSummary {
   request: unknown | null
@@ -79,6 +80,14 @@ export class AiJobStore {
     ) STRICT;
     CREATE INDEX IF NOT EXISTS ai_job_activity_page ON ai_job_activity(job_id, id DESC);`)
     this.db.exec(AI_EVIDENCE_ARCHIVE_SCHEMA)
+    this.db.exec(`CREATE TABLE IF NOT EXISTS ai_call_state (
+      job_id TEXT NOT NULL REFERENCES ai_jobs(id) ON DELETE CASCADE,
+      key TEXT NOT NULL, state_json TEXT NOT NULL, PRIMARY KEY (job_id, key)
+    ) STRICT;
+    CREATE TABLE IF NOT EXISTS ai_call_cache (
+      job_id TEXT NOT NULL REFERENCES ai_jobs(id) ON DELETE CASCADE,
+      key TEXT NOT NULL, result_json TEXT NOT NULL, PRIMARY KEY (job_id, key)
+    ) STRICT;`)
   }
 
   start(kind: AiJobKind, projectId: string, resourceId: string): AiJob {
@@ -212,6 +221,24 @@ export class AiJobStore {
     const row = this.db.prepare('SELECT progress_json FROM ai_jobs WHERE id = ?')
       .get(id) as { progress_json: string | null } | undefined
     return row ? progress(row)?.diagnostics : undefined
+  }
+
+  callState(id: string, key: string): AiCallState | undefined {
+    const row = this.db.prepare('SELECT state_json FROM ai_call_state WHERE job_id = ? AND key = ?').get(id, key) as
+      { state_json: string } | undefined
+    return row ? JSON.parse(row.state_json) as AiCallState : undefined
+  }
+  saveCallState(id: string, key: string, state: AiCallState): void {
+    this.db.prepare(`INSERT INTO ai_call_state VALUES (?, ?, ?) ON CONFLICT(job_id, key)
+      DO UPDATE SET state_json = excluded.state_json`).run(id, key, JSON.stringify(state))
+  }
+  callResult<T>(id: string, key: string): { value: T } | undefined {
+    const row = this.db.prepare('SELECT result_json FROM ai_call_cache WHERE job_id = ? AND key = ?').get(id, key) as
+      { result_json: string } | undefined
+    return row ? { value: JSON.parse(row.result_json) as T } : undefined
+  }
+  saveCallResult(id: string, key: string, result: unknown): void {
+    this.db.prepare('INSERT OR IGNORE INTO ai_call_cache VALUES (?, ?, ?)').run(id, key, JSON.stringify(result))
   }
 
   runtimeFacts(id: string): { requestPrepared: boolean; validatedDraft: boolean | null; resultPrepared: boolean } {

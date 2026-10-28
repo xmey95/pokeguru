@@ -86,7 +86,7 @@ it('resumes query and batch checkpoints, retains lineage and delivers original f
     await expect(analyzeLargeEvidence(trace, 'Valuta tutte le carte', config, f.work, async (prompt) => {
       if (++calls === 2) { f.pause(); throw new Error('interruzione controllata') }
       return answer(prompt)
-    })).rejects.toThrow('interruzione')
+    })).rejects.toThrow('in pausa')
     expect(completed.size).toBeGreaterThan(0)
     f.reopen()
     trace = await runAiEvidenceQueries('Valuta tutte le carte', {}, f.engine,
@@ -115,5 +115,49 @@ it('includes originals in a small final prompt while persisting only the compact
     expect(aiEvidenceForPrompt(trace)).toMatchObject({ requests: [
       { data: { matches: [{ printId: 'p0', name: 'Card 0' }] } }] })
     expect(trace.references).toEqual([expect.objectContaining({ id: 'card:p0', label: 'Card 0' })])
+  } finally { f.close() }
+})
+
+it('plans from actual discoveries beyond 24 productive rounds and replays the persisted progress', async () => {
+  const f = fixture(30, 10)
+  try {
+    f.engine.execute = (input) => {
+      const id = (input as { printIds: string[] }).printIds[0]
+      const data = { totalMatches: 1, offset: 0, remaining: 0,
+        matches: [{ printId: id, name: `Discover ${id}`, comparableGameplay: true }] }
+      return { query: input, data, status: 'ok', sourceIds: [`card:${id}`], fingerprint: evidenceHash(data) }
+    }
+    let calls = 0
+    const trace = await runAiEvidenceQueries('Esamina tutti gli aspetti', {}, f.engine, async (prompt) => {
+      if (calls) expect(prompt).toContain(`Discover p${calls - 1}`)
+      if (calls === 30) { calls++; return { queries: [], continueAfterResults: false } }
+      const query = { operation: 'catalog.search', printIds: [`p${calls++}`] }
+      return { queries: [query], continueAfterResults: calls < 30 }
+    }, { archive: f.work.archive })
+    expect(trace.planningRounds).toBe(31)
+    expect(trace.archive?.cards).toBe(30)
+    expect(trace.exhausted).toBe(false)
+    f.reopen()
+    const resumed = await runAiEvidenceQueries('Esamina tutti gli aspetti', {}, f.engine,
+      async () => { throw new Error('Do not replan') }, { archive: f.work.archive })
+    expect(resumed.planningRounds).toBe(31)
+    expect(calls).toBe(31)
+  } finally { f.close() }
+})
+
+it('stops repeated planning without new evidence and keeps that finding across reopen', async () => {
+  const f = fixture(1, 10)
+  let calls = 0
+  const repeat = async () => { calls++; return { queries: [{ operation: 'catalog.search', printIds: ['p0'] }], continueAfterResults: true } }
+  try {
+    await expect(runAiEvidenceQueries('Valuta', {}, f.engine, repeat, { archive: f.work.archive }))
+      .rejects.toMatchObject({ code: 'no-progress' })
+    expect(calls).toBe(4)
+    expect(f.executions).toBe(1)
+    f.reopen()
+    await expect(runAiEvidenceQueries('Valuta', {}, f.engine, repeat, { archive: f.work.archive }))
+      .rejects.toMatchObject({ code: 'no-progress' })
+    expect(calls).toBe(4)
+    expect(f.work.archive.counts().cards).toBe(1)
   } finally { f.close() }
 })

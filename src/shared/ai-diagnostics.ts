@@ -1,6 +1,6 @@
 export const aiFailureCodes = ['unknown', 'cancelled', 'paused', 'timeout', 'auth', 'network',
   'storage', 'invalid-plan', 'invalid-response', 'evidence-incomplete', 'draft-limit',
-  'batch-too-large', 'query-limit', 'cli-unavailable'] as const
+  'batch-too-large', 'query-limit', 'cli-unavailable', 'context-limit', 'quota', 'storage-full', 'no-progress'] as const
 export type AiFailureCode = typeof aiFailureCodes[number]
 
 export interface AiDiagnostics {
@@ -21,6 +21,9 @@ export interface AiDiagnostics {
   batchesCompleted?: number
   batchesTotal?: number
   cacheHits?: number
+  retryAttempt?: number
+  nextRetryAt?: string
+  automaticWait?: boolean
   calls?: { kind: 'planning' | 'batch' | 'synthesis' | 'analysis'; startedAt: string;
     endedAt: string | null; status: 'running' | 'succeeded' | 'failed'; inputBytes: number;
     failureCode?: AiFailureCode }[]
@@ -32,10 +35,10 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
   const data = value as Record<string, unknown>
   const result: AiDiagnostics = {}
   if (aiFailureCodes.includes(data.failureCode as AiFailureCode)) result.failureCode = data.failureCode as AiFailureCode
-  for (const key of ['resumable', 'workflow', 'evidenceExhausted'] as const)
+  for (const key of ['resumable', 'workflow', 'evidenceExhausted', 'automaticWait'] as const)
     if (typeof data[key] === 'boolean') result[key] = data[key]
   for (const key of ['planningRounds', 'queryCount', 'rejectedQueries', 'evidenceBytes', 'targets',
-    'supplied', 'missingGameplay', 'notSupplied', 'batchesCompleted', 'batchesTotal', 'cacheHits'] as const)
+    'supplied', 'missingGameplay', 'notSupplied', 'batchesCompleted', 'batchesTotal', 'cacheHits', 'retryAttempt'] as const)
     if (Number.isSafeInteger(data[key]) && Number(data[key]) >= 0) result[key] = Number(data[key])
   if (data.model === null || typeof data.model === 'string' && /^gpt-[a-z0-9.-]{1,80}$/.test(data.model))
     result.model = data.model as string | null
@@ -43,6 +46,7 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
     result.reasoningEffort = data.reasoningEffort as string | null
   const timestamp = (input: unknown): input is string => typeof input === 'string' &&
     /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(input) && Number.isFinite(Date.parse(input))
+  if (timestamp(data.nextRetryAt)) result.nextRetryAt = data.nextRetryAt
   if (Array.isArray(data.calls)) result.calls = data.calls.slice(-40).flatMap((entry) => {
     if (!entry || typeof entry !== 'object' ||
       !['planning', 'batch', 'synthesis', 'analysis'].includes(entry.kind) ||

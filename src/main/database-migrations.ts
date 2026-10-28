@@ -7,8 +7,9 @@ import { backup, DatabaseSync } from 'node:sqlite'
  * 4 project archives, 5 Catalog cooldowns, 6 Catalog job run IDs,
  * 7 rotation history, 8 daily sync outcomes, 9 deck version context and restoration,
  * 10 persisted AI job progress, 11 paged AI activity history,
- * 12 durable evidence originals, query cursors and immutable source snapshots. */
-export const CURRENT_SCHEMA_VERSION = 12
+ * 12 durable evidence originals, query cursors and immutable source snapshots,
+ * 13 bounded call retries and completed-call checkpoints in the database. */
+export const CURRENT_SCHEMA_VERSION = 13
 
 export interface MigrationPreparation {
   fromVersion: number

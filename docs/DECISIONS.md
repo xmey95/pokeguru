@@ -10,7 +10,9 @@ APP-161 congela separatamente le fasi della preparazione Matchup e i dati necess
 
 APP-162 è ora in corso: i limiti devono operare sulla singola chiamata e produrre partizioni verificabili, non una riduzione del perimetro. Errori di contesto richiedono un input diverso; errori transitori hanno tentativi e attese persistenti; spazio esaurito, autenticazione o mancanza di progresso devono produrre una causa operativa distinta.
 
-### T-161 — Archivio delle prove e raccolta durevole (in corso)
+Il procedimento adaptive-v2 conserva frammenti JSON esatti con chiave originale e posizioni; un frammento non vale una nuova partecipazione. I lotti partono da 60.000 byte e si riducono dopo un errore di contesto; le sintesi occupano al massimo un quarto del budget del livello e devono convergere. Originali, contatori deterministici e riferimenti tra livelli restano verificabili. Una risposta non verificabile non diventa checkpoint. I tentativi e la scadenza di attesa sono salvati prima del nuovo tentativo: chiudere e riaprire non azzera il limite. Gli errori Codex vengono classificati senza registrare il testo grezzo del fornitore.
+
+### T-161 — Archivio delle prove e raccolta durevole
 
 Il completamento automatico delle ricerche estese è autorizzato il 28-10-2026, fino alla release main. APP-161–164 sostituiscono la ripresa sempre esplicita di T-159: chiusura e riapertura riprendono il lavoro prima attivo; una pausa volontaria resta tale. Nessun avvio dell'intero I4.
 
@@ -20,7 +22,7 @@ Il raggruppamento conserva quantità e identificativi di stampa; non usa somigli
 
 Il secondo checkpoint collega l'archivio al workflow: schema 12 con backup verificato, snapshot delle sorgenti sigillato in transazione e pagine Eventi per partecipazione, senza array illimitati per un mazzo diffuso. La cronologia salva un riferimento al job e indici compatti; gli originali si leggono a pagine da una connessione di sola lettura, dopo verifica di progetto/risorsa/job. I lettori dei lotti usano pagine per chiave e chiudono i cursori SQLite prima di qualsiasi attesa: una prova integrata aveva rilevato un lock tra lettura e salvataggio delle diagnostiche su connessioni diverse. Le sintesi conservano i collegamenti ai record di ingresso separatamente dalle citazioni narrative.
 
-Build/typecheck, suite locale (283 passati, 33 esclusi), successivi sette test pipeline/snapshot e due percorsi Electron isolati passati. I dati oltre 64 MB attraversano ora la raccolta applicativa mantenendo un indice storico piccolo; ciò non certifica ancora l'intera analisi reale. APP-161 resta aperto per preparazione/finalizzazione Matchup coerenti e compatibilità dei checkpoint precedenti. Adattamento, ripresa automatica e release appartengono ai successivi APP-162–164.
+Build/typecheck, suite locale (283 passati, 33 esclusi), successivi sette test pipeline/snapshot e due percorsi Electron isolati passati. I dati oltre 64 MB attraversano ora la raccolta applicativa mantenendo un indice storico piccolo; ciò non certifica ancora l'intera analisi reale. APP-161 è stato chiuso con il successivo checkpoint T-162 sulla preparazione/finalizzazione coerente e la lettura dei checkpoint precedenti. Adattamento, ripresa automatica e release appartengono ai successivi APP-162–164.
 
 | ID | Stato | Decisione e motivo | Alternative / condizione di revisione |
 | --- | --- | --- | --- |

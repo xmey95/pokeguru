@@ -420,6 +420,7 @@ async function matchupAiQueries(request: string, deckContext: string,
     },
     { archive: work.archive, contextTexts: [stableInitial.deckContext, stableInitial.sample.cards.join('\n'), stableInitial.history ?? ''],
       signal, onTrace: (value) => work?.evidence(value),
+      summarize: (trace) => analyzeLargeEvidence(trace, request, config, work),
       onRound: (round, queries) => { if (job) jobProgress(job, 'planning',
         `Ricerca ${round}: ${queries} interrogazioni locali completate.`) } })
   if (work) await analyzeLargeEvidence(trace, request, config, work)
@@ -1388,6 +1389,7 @@ function registerProjectHandlers(): void {
           base?.rawText ?? '', thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? ''],
         eventContextTexts: thread.messages.slice(-2).map((item) => item.text),
         signal: controller.signal, onTrace: (trace) => work.evidence(trace),
+        summarize: (trace) => analyzeLargeEvidence(trace, message.trim(), config, work),
         onRound: (round, queries) => jobProgress(job, 'planning',
           `Ricerca ${round}: ${queries} interrogazioni locali completate.`) })
       await analyzeLargeEvidence(queryTrace, message.trim(), config, work)
@@ -1670,13 +1672,14 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
           'Codex costruisce la guida usando lista, schede e tornei.')
-        generated = await work.run('analysis', '', config, () => generateMatchup(projectId, hash, deckContext, snapshot, opponent,
+        generated = await work.run('analysis', JSON.stringify(['generate-v2', projectId, hash, deckContext, snapshot,
+          opponent, sample, evidence, { ...aiQueries, durationMs: 0 }]), config, () => generateMatchup(projectId, hash, deckContext, snapshot, opponent,
           sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
             onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
                 base: { ...base, promptAudit: audit } }) },
-            onSummary: jobSummary(job, 'analysis', 'Codex costruisce la guida usando le prove raccolte.') }), false)
+            onSummary: jobSummary(job, 'analysis', 'Codex costruisce la guida usando le prove raccolte.') }))
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, generated)
         work.evidence(aiQueries)
         if (!added) break
@@ -1756,14 +1759,15 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la revisione con nuove schede (${attempt + 1}/4).` :
           'Codex rivede la guida alla luce del tuo commento.')
-        revised = await work.run('analysis', '', config, () => reviseMatchup(context!, target.feedback!, deckContext, snapshot,
+        revised = await work.run('analysis', JSON.stringify(['revise-v2', context, target.feedback, deckContext, snapshot,
+          opponent, sample, evidence, { ...aiQueries, durationMs: 0 }]), config, () => reviseMatchup(context!, target.feedback!, deckContext, snapshot,
           opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
             onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
                 base: { ...base, promptAudit: audit },
                 discussionId: discussion.id, turnId: target.id }) },
-            onSummary: jobSummary(job, 'analysis', 'Codex rivede la guida alla luce del tuo commento.') }), false)
+            onSummary: jobSummary(job, 'analysis', 'Codex rivede la guida alla luce del tuo commento.') }))
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, revised.report, revised.changeSummary)
         work.evidence(aiQueries)
         if (!added) break
@@ -1848,13 +1852,14 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
           'Codex aggiorna la guida sulla nuova base.')
-        generated = await work.run('analysis', '', config, () => generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
+        generated = await work.run('analysis', JSON.stringify(['continue-v2', parent.projectId, hash, deckContext, snapshot,
+          opponent, sample, evidence, matchupHistoryContext(context!), { ...aiQueries, durationMs: 0 }]), config, () => generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
           config, evidence, matchupHistoryContext(context!), { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
             onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
                 base: { ...base, promptAudit: audit }, parentId: parent.id }) },
-            onSummary: jobSummary(job, 'analysis', 'Codex aggiorna la guida sulla nuova base.') }), false)
+            onSummary: jobSummary(job, 'analysis', 'Codex aggiorna la guida sulla nuova base.') }))
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, generated)
         work.evidence(aiQueries)
         if (!added) break

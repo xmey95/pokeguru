@@ -16,7 +16,7 @@ non riceve accesso diretto a SQLite, filesystem, rete o API arbitrarie.
 
 ## Contratto di copertura
 
-Nel ramo di sviluppo APP-161 le nuove query Thread/Matchup salvano gli originali in SQLite, mantenendo nella cronologia un indice e un riferimento al job. Catalogo e finestra Eventi sono congelati prima delle query; le pagine Eventi sono limitate per partecipazioni, mentre il raggruppamento globale conserva mazzi esatti, occorrenze, record e abbinamenti. Le sintesi leggono i record progressivamente e conservano i collegamenti ai lotti. Le pagine originali rimangono consultabili in Diagnostica AI. Questo incremento non è ancora rilasciato: preparazione completa Matchup, adattamento dei lotti e ripresa automatica sono ancora in lavorazione; stato e verifiche in APP-161–164 del backlog.
+Nel ramo di sviluppo APP-161/162 le nuove query Thread/Matchup salvano gli originali in SQLite, mantenendo nella cronologia un indice e un riferimento al job. Catalogo e finestra Eventi sono congelati prima delle query; le pagine Eventi sono limitate per partecipazioni, mentre il raggruppamento globale conserva mazzi esatti, occorrenze, record e abbinamenti. Le sintesi leggono i record progressivamente e conservano i collegamenti ai lotti. Le pagine originali rimangono consultabili in Diagnostica AI. Preparazione Matchup/Thread, configurazione e input sono congelati per fase nel database. I record troppo grandi vengono suddivisi conservando l’esatto testo JSON, la chiave originale e le posizioni; i frammenti non sono osservazioni aggiuntive. Un errore di contesto riduce il lotto, mentre i risultati già validati restano riutilizzabili. Questo incremento non è ancora rilasciato: ripresa automatica e ciclo finale sono in APP-163/164; stato e verifiche nel backlog.
 
 Ogni turno distingue:
 
@@ -36,8 +36,7 @@ con scheda e varianti nella risposta; ricerca nelle liste ed eventi già acquisi
 Il controllo Standard deterministico della lista resta nel contesto iniziale
 quando disponibile. L'app valida nome dell'operazione,
 argomenti, progetto, periodo e dimensione della risposta. Il modello può
-chiedere altre query dopo aver visto i primi risultati, entro un budget fissato
-di turni e risultati; se il limite si esaurisce, la risposta dichiara la lacuna.
+chiedere altre query dopo aver visto risultati e sintesi globale, anche per risolvere contraddizioni con prove mirate. Nel percorso persistente non ci sono tetti di 64 MB o 24 passaggi: tre passaggi consecutivi senza nuove prove fermano il lavoro con una causa esplicita, senza presentarlo come completo.
 Nessuna query avvia autonomamente download, modifica liste o progetti, oppure
 aggira l'isolamento della CLI Codex.
 
@@ -52,8 +51,7 @@ La preview precedente all'invio mostra i dati iniziali e il perimetro delle
 query possibili; non può anticipare quali ricerche il modello sceglierà. Dopo
 la risposta, l'interfaccia mostra chiamate effettive, risultati, fonti e il
 prompt esatto conservato con impronta, byte, durata e token quando disponibili.
-La scelta delle query richiede un turno Codex aggiuntivo, fino a due se il
-modello chiede un approfondimento: la latenza e i token sono costi reali.
+La scelta delle query e le sintesi possono richiedere più chiamate Codex: latenza e token sono costi reali. Le risposte valide sono salvate nel database e riusate per input/configurazione/procedimento uguali. Rete, timeout e quota hanno al massimo tre tentativi automatici, con deadline persistente; due per risposte non valide. Spazio esaurito, accesso mancante e assenza di progresso richiedono intervento e non vengono confusi con il limite di contesto.
 
 Il numero di schede nel contesto non viene presentato come copertura del
 Catalogo. La frequenza di una carta nelle liste pubbliche non prova un
