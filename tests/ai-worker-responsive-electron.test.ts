@@ -45,6 +45,10 @@ it.skipIf(process.env.POKEGURU_WORKER_E2E !== '1')('keeps the window and rendere
     work.close(); events.close(); jobs.close(); projects.close()
     const page = await launch()
     await page.getByTestId('selected-project-name').waitFor()
+    await application!.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      window.show(); window.focus()
+    })
     await application!.evaluate(() => {
       const sample = { last: performance.now(), max: 0, ticks: 0 }
       ;(globalThis as any).workerSample = sample
@@ -53,10 +57,15 @@ it.skipIf(process.env.POKEGURU_WORKER_E2E !== '1')('keeps the window and rendere
       }, 20)
     })
     await page.evaluate(([projectId, threadId]) => {
-      const sample = { last: performance.now(), max: 0, ticks: 0 }
+      // Timers measure the JS event loop; rAF also includes compositor/display
+      // scheduling (notably on hosted macOS). Retain both for diagnosis.
+      const sample = { last: performance.now(), max: 0, ticks: 0,
+        frameLast: performance.now(), frameMax: 0, longTasks: [] as number[], visibility: document.visibilityState }
       ;(window as any).workerSample = sample
-      const tick = () => { const now = performance.now(); sample.max = Math.max(sample.max, now - sample.last); sample.last = now; sample.ticks++; requestAnimationFrame(tick) }
-      requestAnimationFrame(tick)
+      setInterval(() => { const now = performance.now(); sample.max = Math.max(sample.max, now - sample.last); sample.last = now; sample.ticks++ }, 20)
+      new PerformanceObserver(list => sample.longTasks.push(...list.getEntries().map(entry => entry.duration))).observe({ entryTypes: ['longtask'] })
+      const frame = () => { const now = performance.now(); sample.frameMax = Math.max(sample.frameMax, now - sample.frameLast); sample.frameLast = now; requestAnimationFrame(frame) }
+      requestAnimationFrame(frame)
       void window.projectsApi.resumeAiJob(projectId, threadId).then(value => { (window as any).resumeResult = value })
     }, [project.id, thread.id])
     await page.locator('#project-switcher-trigger').click()
@@ -73,7 +82,9 @@ it.skipIf(process.env.POKEGURU_WORKER_E2E !== '1')('keeps the window and rendere
     console.log('Worker capture responsiveness', { main, renderer })
     expect(main.ticks).toBeGreaterThan(10)
     expect(main.max).toBeLessThan(750)
+    expect(renderer.ticks).toBeGreaterThan(10)
     expect(renderer.max).toBeLessThan(750)
+    expect(Math.max(0, ...renderer.longTasks)).toBeLessThan(750)
     const archive = new AiEvidenceArchive(file, job)
     try { expect(archive.eventPage({ from: now.slice(0, 10), to: now.slice(0, 10), deck: '', card: '', offset: 0, limit: 1 }).matchingLists).toBe(12000) }
     finally { archive.close() }
