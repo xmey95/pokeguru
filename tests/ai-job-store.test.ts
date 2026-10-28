@@ -33,7 +33,7 @@ it('persists one active AI job per resource and retains a ready result through r
     expect(jobs.active(project.id, thread.id)).toBeNull()
     expect(jobs.get(started.id)).toMatchObject({ status: 'applied', request: null, result: null })
     expect(jobs.recent()).toMatchObject([{ id: started.id, status: 'applied',
-      projectId: project.id, resourceId: thread.id }])
+      projectId: project.id, resourceId: thread.id, progress: { phase: 'analysis' } }])
     expect('request' in jobs.recent()[0]).toBe(false)
     const damaged = new DatabaseSync(path)
     damaged.prepare('UPDATE ai_jobs SET progress_json = ? WHERE id = ?').run('{"phase":"analysis"}', started.id)

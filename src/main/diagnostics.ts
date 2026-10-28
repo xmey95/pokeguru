@@ -3,6 +3,7 @@ import type { CatalogSyncStatus } from '../shared/catalog'
 import type { DailySyncState } from '../shared/daily-sync'
 import type { MainTournamentSyncProgress } from '../shared/main-tournament'
 import type { TournamentSyncProgress } from '../shared/tournament'
+import { readAiDiagnostics } from '../shared/ai-diagnostics'
 
 export type UiLongTask = { at: string; durationMs: number }
 export type RuntimeIncident = { at: string; kind: 'unresponsive' | 'renderer-gone'; reason?: string }
@@ -31,6 +32,9 @@ export interface DiagnosticInput {
   mainSync: MainTournamentSyncProgress | null
   daily: DailyStates
   jobs: AiJobSummary[] | null
+  jobRuntime?: Record<string, { controllerActive: boolean; callActive: boolean;
+    abortRequested: boolean; resultFilePresent: boolean; requestPrepared: boolean;
+    validatedDraft: boolean | null; resultPrepared: boolean }>
   uiLongTasks: UiLongTask[]
   incidents: RuntimeIncident[]
   collectionMs: number
@@ -52,16 +56,33 @@ function daily(value: DailySyncState | null) {
     errorCategory: errorCategory(value.error) } : null
 }
 
+function duration(start: string, end: string): number | null {
+  const milliseconds = Date.parse(end) - Date.parse(start)
+  return Number.isFinite(milliseconds) ? Math.max(0, milliseconds) : null
+}
+
 /** Explicit allowlist: never serialize store objects, raw error text, deck data or AI content. */
 export function buildDiagnosticReport(input: DiagnosticInput) {
   const tasks = input.uiLongTasks.slice(-50)
   const recentJobs = input.jobs?.slice(0, 30).map((job) => ({ kind: job.kind, status: job.status,
     createdAt: job.createdAt, updatedAt: job.updatedAt,
-    elapsedMs: Number.isFinite(Date.parse(job.updatedAt) - Date.parse(job.createdAt))
-      ? Math.max(0, Date.parse(job.updatedAt) - Date.parse(job.createdAt)) : null,
+    elapsedMs: duration(job.createdAt,
+      job.status === 'running' || job.status === 'ready' ? input.generatedAt : job.updatedAt),
+    sinceLastUpdateMs: duration(job.updatedAt, input.generatedAt),
+    progress: job.progress ? { phase: job.progress.phase, updatedAt: job.progress.updatedAt,
+      steps: job.progress.steps.slice(-12).map((step) => ({ phase: step.phase, at: step.at })) } : null,
+    diagnostics: readAiDiagnostics(job.progress?.diagnostics),
+    execution: input.jobRuntime?.[job.id] ? {
+      controllerActive: input.jobRuntime[job.id].controllerActive,
+      callActive: input.jobRuntime[job.id].callActive,
+      abortRequested: input.jobRuntime[job.id].abortRequested,
+      resultFilePresent: input.jobRuntime[job.id].resultFilePresent,
+      requestPrepared: input.jobRuntime[job.id].requestPrepared,
+      validatedDraft: input.jobRuntime[job.id].validatedDraft,
+      resultPrepared: input.jobRuntime[job.id].resultPrepared } : null,
     errorCategory: errorCategory(job.error) })) ?? null
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     generatedAt: input.generatedAt,
     privacy: { contentExcluded: ['nomi e liste dei progetti', 'messaggi e risposte AI',
       'identificativi dei job', 'URL e percorsi locali', 'credenziali e token', 'testi degli errori'],

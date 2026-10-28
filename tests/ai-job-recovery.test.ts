@@ -5,7 +5,7 @@ import { expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { CatalogStore } from '../src/main/catalog'
 import { AiJobStore } from '../src/main/ai-job-store'
-import { recoverMatchupJob, recoverThreadJob } from '../src/main/ai-job-recovery'
+import { recoverMatchupJob, recoverThreadJob, settleFailedAiJob } from '../src/main/ai-job-recovery'
 import type { ThreadEvidencePacket } from '../src/shared/thread-evidence'
 import type { AiRunConfig } from '../src/shared/ai'
 
@@ -14,6 +14,61 @@ const evidence: ThreadEvidencePacket = { schemaVersion: 1, capturedAt: '2026-10-
   baseVersionId: null, candidateId: null, catalogSyncedAt: null,
   cardCoverage: { selected: 0, withGameplay: 0, omitted: 0 }, cards: [], events: [], sources: [],
   change: { updated: [], added: [], removed: [] } }
+
+it('finishes a failed unvalidated draft even when the CLI left a result, allowing retry in the same thread', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-draft-failure-'))
+  const path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path)
+  const jobs = new AiJobStore(path)
+  try {
+    const project = projects.create({ name: 'Failure', format: 'STANDARD' })
+    const thread = projects.createDeckThread({ projectId: project.id, title: 'Turn' })
+    const other = projects.create({ name: 'Other', format: 'STANDARD' })
+    const otherThread = projects.createDeckThread({ projectId: other.id, title: 'Other' })
+    const untouched = jobs.start('thread-ask', other.id, otherThread.id)
+    for (const kind of ['thread-ask', 'matchup-generate'] as const) {
+      const resource = kind === 'thread-ask' ? thread.id : `matchup:${project.id}`
+      const started = jobs.start(kind, project.id, resource)
+      jobs.prepare(started.id, { validatedDraft: false })
+      jobs.updateProgress(started.id, 'verification', 'Verifico le carte citate e la risposta strutturata.')
+      const error = new Error('Le schede nominate non sono state tutte consegnate a Codex. Riprova l’analisi.')
+      expect(settleFailedAiJob(jobs, started.id, error, false, true)).toBe(true)
+      expect(jobs.get(started.id)).toMatchObject({ status: 'failed', error: error.message,
+        request: null, result: null, progress: { phase: 'verification' } })
+      expect(jobs.active(project.id, resource)).toBeNull()
+      const retry = jobs.start(kind, project.id, resource)
+      jobs.transition(retry.id, 'cancelled')
+    }
+    expect(jobs.get(untouched.id)?.status).toBe('running')
+    expect(projects.getDeckThread(project.id, thread.id)?.messages).toHaveLength(0)
+    expect(projects.getDeckThread(project.id, thread.id)?.candidates).toHaveLength(0)
+    const reopened = new AiJobStore(path)
+    try { expect(reopened.latest(project.id, thread.id)?.status).toBe('cancelled') }
+    finally { reopened.close() }
+  } finally { jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+})
+
+it('preserves recoverable validated results and records their failure without discarding them', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-validated-failure-'))
+  const path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path)
+  const jobs = new AiJobStore(path)
+  try {
+    const project = projects.create({ name: 'Validated', format: 'STANDARD' })
+    const error = new Error('Salvataggio temporaneamente non disponibile.')
+    for (const status of ['running', 'ready'] as const) {
+      const started = jobs.start('thread-ask', project.id, status)
+      jobs.prepare(started.id, { validatedDraft: true, message: 'Preserve this request' })
+      if (status === 'ready') jobs.ready(started.id, { value: 'Preserve this result' })
+      expect(settleFailedAiJob(jobs, started.id, error, false, true)).toBe(false)
+      expect(jobs.get(started.id)).toMatchObject({ status, error: error.message,
+        request: { validatedDraft: true } })
+      if (status === 'ready') expect(jobs.get(started.id)?.result).toEqual({ value: 'Preserve this result' })
+      expect(settleFailedAiJob(jobs, started.id, error, true, true)).toBe(true)
+      expect(jobs.get(started.id)?.status).toBe('cancelled')
+    }
+  } finally { jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+})
 
 it('recovers a completed CLI file after interruption and never duplicates the turn', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-ai-recovery-'))

@@ -56,7 +56,9 @@ import { DatabaseIntegrityError, completeDatabaseMigration, prepareDatabaseMigra
 import { AiJobStore } from './ai-job-store'
 import type { AiJob } from './ai-job-store'
 import type { AiJobPhase, AiJobSummary } from '../shared/ai-job'
-import { recoverMatchupJob, recoverThreadJob } from './ai-job-recovery'
+import { recoverMatchupJob, recoverThreadJob, settleFailedAiJob } from './ai-job-recovery'
+import { AiAnalysisWork, analyzeLargeEvidence, readAiWorkflow } from './ai-analysis-work'
+import { aiFailureCode } from './ai-failure'
 import { fetchRecentWesternTournament } from './limitless-event'
 import { syncTournamentBlock } from './tournament-sync'
 import { syncMainTournamentBlock } from './main-tournament-sync'
@@ -102,6 +104,15 @@ const codexSetup = new CodexSetup(() => app.getPath('userData'))
 const generatingProjects = new Set<string>()
 const generatingDeckThreads = new Set<string>()
 const activeAiControllers = new Map<string, AbortController>()
+const activeAiWork = new Map<string, AiAnalysisWork>()
+const resumeRunners = new Map<AiJob['kind'], (job: AiJob, args: unknown[]) => Promise<unknown>>()
+
+function beginAiWork(job: AiJob, controller: AbortController, args: unknown[]): AiAnalysisWork {
+  const work = new AiAnalysisWork(aiArtifactDirectory(job.id), aiJobStore!, job.id,
+    controller.signal, { kind: job.kind, args })
+  activeAiWork.set(job.id, work)
+  return work
+}
 
 function jobProgress(job: AiJob, phase: AiJobPhase, detail: string, summary?: string): void {
   aiJobStore?.updateProgress(job.id, phase, detail, summary)
@@ -127,20 +138,20 @@ function clearAiArtifacts(jobId: string): void {
 function finishAiJob(job: AiJob, error: unknown): void {
   if (!aiJobStore) return
   const current = aiJobStore.get(job.id)
-  if (!current || current.status === 'applied') return
-  if (current.status === 'cancelled') {
-    clearAiArtifacts(job.id)
-    return
+  if (current?.status === 'running' && activeAiWork.has(job.id)) {
+    const controller = activeAiControllers.get(job.id)
+    if (!controller?.signal.aborted || controller.signal.reason === 'pause') {
+      aiJobStore.recordDiagnostics(job.id, { failureCode: controller?.signal.reason === 'pause'
+        ? 'paused' : aiFailureCode(error) })
+      aiJobStore.suspend(job.id, controller?.signal.reason === 'pause'
+        ? 'Analisi in pausa. Riprendi per continuare dai lotti salvati.'
+        : error instanceof Error ? error.message : 'Analisi interrotta. Puoi riprenderla.')
+      return
+    }
   }
-  if (activeAiControllers.get(job.id)?.signal.aborted) {
-    aiJobStore.transition(job.id, 'cancelled')
-    clearAiArtifacts(job.id)
-  } else if (current.status === 'running' && existsSync(join(aiArtifactDirectory(job.id), 'result.json'))) {
-    // The completed CLI output is retained for recovery after a downstream failure.
-  } else if (current.status === 'ready') {
-    // A validated response is awaiting its project transaction; keep it recoverable.
-  } else {
-    aiJobStore.transition(job.id, 'failed', error instanceof Error ? error.message : 'Operazione AI non completata.')
+  if (settleFailedAiJob(aiJobStore, job.id, error,
+    activeAiControllers.get(job.id)?.signal.aborted ?? false,
+    existsSync(join(aiArtifactDirectory(job.id), 'result.json')))) {
     clearAiArtifacts(job.id)
   }
 }
@@ -152,13 +163,21 @@ async function recoverAiJobs(): Promise<void> {
     for (const job of aiJobStore.recoverable()) {
       if (activeAiControllers.has(job.id)) continue
       try {
+        if (job.status === 'running' && readAiWorkflow(aiArtifactDirectory(job.id)) &&
+          (job.request as { validatedDraft?: boolean } | null)?.validatedDraft !== true) {
+          aiJobStore.suspend(job.id, 'Analisi sospesa alla chiusura dell’app. Riprendi dai lotti salvati.')
+          continue
+        }
         const outcome = job.kind === 'thread-ask' || job.kind === 'thread-propose'
           ? await recoverThreadJob(job, aiJobStore, projectStore, catalogStore,
             codexControl, aiArtifactDirectory(job.id))
           : recoverMatchupJob(job, aiJobStore, projectStore, aiArtifactDirectory(job.id))
         if (outcome === 'applied' || outcome === 'interrupted') clearAiArtifacts(job.id)
       } catch (error) {
-        aiJobStore.noteError(job.id, error instanceof Error ? error.message : 'Recupero Codex non riuscito.')
+        const message = error instanceof Error ? error.message : 'Recupero Codex non riuscito.'
+        aiJobStore.recordDiagnostics(job.id, { failureCode: aiFailureCode(error) })
+        if (aiJobStore.get(job.id)?.status === 'running') aiJobStore.transition(job.id, 'interrupted', message)
+        else aiJobStore.noteError(job.id, message)
       }
     }
   } finally { recoveringAiJobs = false }
@@ -344,13 +363,21 @@ async function matchupAiQueries(request: string, deckContext: string,
   const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
     tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog, 31))
   if (job) jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla guida.')
-  const trace = await runAiEvidenceQueries(request, { deckContext, sample, evidence,
-    history }, engine,
-    (prompt) => planEvidenceQueriesWithCodex(prompt, config, signal,
-      job ? jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.') : undefined),
+  const work = job ? activeAiWork.get(job.id) : undefined
+  const initial = { deckContext, sample, evidence, history }
+  const stableInitial = work?.snapshot('matchup-initial', [request, catalog.syncedAt, deckContext,
+    sample.cards, history], () => initial) ?? initial
+  const trace = await runAiEvidenceQueries(request, stableInitial, engine,
+    (prompt) => {
+      const execute = () => planEvidenceQueriesWithCodex(prompt, config, signal,
+        job ? jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.') : undefined)
+      return work ? work.run('planning', prompt, config, execute) : execute()
+    },
     { contextTexts: [deckContext, sample.cards.join('\n'), history ?? ''],
+      signal, onTrace: (value) => work?.evidence(value),
       onRound: (round, queries) => { if (job) jobProgress(job, 'planning',
         `Ricerca ${round}: ${queries} interrogazioni locali completate.`) } })
+  if (work) await analyzeLargeEvidence(trace, request, config, work)
   return { trace, engine }
 }
 
@@ -363,7 +390,12 @@ function matchupDraftText(report: MatchupReport, changeSummary = ''): string {
 function extendMatchupDraftEvidence(trace: AiEvidenceQueryTrace, engine: AiEvidenceEngine,
   report: MatchupReport,
   changeSummary = ''): number {
-  return extendAiEvidenceForText(trace, engine, matchupDraftText(report, changeSummary))
+  const text = matchupDraftText(report, changeSummary)
+  const added = extendAiEvidenceForText(trace, engine, text)
+  const focus = engine.cardTargets(text).flatMap((target) => target.printIds)
+  const needsFocus = !!trace.analysis && focus.some((id) => !trace.focusedPrintIds?.includes(id))
+  trace.focusedPrintIds = [...new Set([...(trace.focusedPrintIds ?? []), ...focus])]
+  return added || (needsFocus ? 1 : 0)
 }
 
 function requireNamedEvidence(trace: AiEvidenceQueryTrace): void {
@@ -548,7 +580,14 @@ function registerProjectHandlers(): void {
         daily: { catalog: collect('dailyCatalog', () => dailySyncStore?.read('catalog') ?? null),
           play: collect('dailyPlay', () => dailySyncStore?.read('play') ?? null),
           main: collect('dailyMain', () => dailySyncStore?.read('main') ?? null) },
-        jobs, uiLongTasks, incidents: runtimeIncidents,
+        jobs, jobRuntime: Object.fromEntries((jobs ?? []).map((job) => {
+          const controller = activeAiControllers.get(job.id)
+          return [job.id, { controllerActive: !!controller,
+            callActive: !!controller && job.progress?.diagnostics?.calls?.at(-1)?.status === 'running',
+            abortRequested: controller?.signal.aborted ?? false,
+            resultFilePresent: existsSync(join(aiArtifactDirectory(job.id), 'result.json')),
+            ...aiJobStore!.runtimeFacts(job.id) }]
+        })), uiLongTasks, incidents: runtimeIncidents,
         collectionMs: performance.now() - start, unavailableSections
       })
       await writeFile(choice.filePath, JSON.stringify(report, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 })
@@ -1131,7 +1170,9 @@ function registerProjectHandlers(): void {
   ipcMain.handle('ai:cancel-job', (event, projectId: unknown, resourceId: unknown) => {
     if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
       return { ok: false, error: 'Job AI non disponibile.' }
-    const job = aiJobStore.active(projectId, resourceId as string)
+    const latest = aiJobStore.latest(projectId, resourceId as string)
+    const job = aiJobStore.active(projectId, resourceId as string) ??
+      (latest?.status === 'interrupted' && latest.progress?.diagnostics?.resumable ? latest : null)
     if (!job) return { ok: false, error: 'Nessun job AI da annullare.' }
     aiJobStore.transition(job.id, 'cancelled')
     const controller = activeAiControllers.get(job.id)
@@ -1142,6 +1183,40 @@ function registerProjectHandlers(): void {
       clearAiArtifacts(job.id)
     }
     return { ok: true, value: true }
+  })
+
+  ipcMain.handle('ai:pause-job', (event, projectId: unknown, resourceId: unknown) => {
+    if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
+      return { ok: false, error: 'Analisi non disponibile.' }
+    const job = aiJobStore.active(projectId, resourceId as string)
+    const controller = job && activeAiControllers.get(job.id)
+    if (!job || !controller || !activeAiWork.has(job.id)) return { ok: false, error: 'Analisi non sospendibile.' }
+    controller.abort('pause')
+    return { ok: true, value: true }
+  })
+
+  ipcMain.handle('ai:resume-job', async (event, projectId: unknown, resourceId: unknown) => {
+    if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId))
+      return { ok: false, error: 'Analisi non disponibile.' }
+    const summary = aiJobStore.latest(projectId, resourceId as string)
+    const job = summary && aiJobStore.get(summary.id)
+    if (!job || job.status !== 'interrupted' || !job.progress?.diagnostics?.resumable)
+      return { ok: false, error: 'Nessuna analisi da riprendere.' }
+    try {
+      const input = readAiWorkflow(aiArtifactDirectory(job.id))
+      const runner = input && input.kind === job.kind ? resumeRunners.get(job.kind) : null
+      if (!runner || !input) return { ok: false, error: 'Contesto di ripresa non disponibile.' }
+      const targetProject = job.kind === 'thread-ask' || job.kind === 'matchup-generate'
+        ? input.args[0] : typeof input.args[0] === 'string'
+          ? projectStore?.getMatchupDiscussion(input.args[0])?.projectId : null
+      const targetResource = job.kind === 'thread-ask' ? input.args[1] : `matchup:${targetProject}`
+      if (targetProject !== job.projectId || targetResource !== job.resourceId)
+        return { ok: false, error: 'Contesto di ripresa non appartenente al progetto.' }
+      const pending = runner(job, input.args)
+      if (!activeAiControllers.has(job.id)) return await pending
+      void pending.catch((error) => finishAiJob(job, error))
+      return { ok: true, value: true }
+    } catch { return { ok: false, error: 'Contesto di ripresa non leggibile.' } }
   })
 
   ipcMain.handle('ai:recover-jobs', async (event) => {
@@ -1188,9 +1263,9 @@ function registerProjectHandlers(): void {
     })
   })
 
-  ipcMain.handle('deck:ask-thread', async (event, projectId: unknown, threadId: unknown,
-    message: unknown, override: unknown, existingUserMessageId: unknown): Promise<OperationResult<DeckThread>> => {
-    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+  async function askThread(projectId: unknown, threadId: unknown,
+    message: unknown, override: unknown, existingUserMessageId: unknown,
+    resumedJob?: AiJob): Promise<OperationResult<DeckThread>> {
     if (!projectStore || !catalogStore || !aiJobStore || typeof projectId !== 'string' || typeof threadId !== 'string' ||
       typeof message !== 'string' || !message.trim() || message.trim().length > 5000 || message.includes('\0'))
       return { ok: false, error: 'Scrivi una domanda da 1 a 5.000 caratteri.' }
@@ -1207,35 +1282,41 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Primo messaggio Codex non recuperabile.' }
     if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questo thread.' }
     let job: AiJob
-    try { job = aiJobStore.start('thread-ask', projectId, threadId) }
+    try { job = resumedJob ? aiJobStore.resume(resumedJob.id) : aiJobStore.start('thread-ask', projectId, threadId) }
     catch { return { ok: false, error: 'Esiste già un job Codex per questo thread.' } }
     const controller = new AbortController()
     activeAiControllers.set(job.id, controller)
     generatingDeckThreads.add(threadId)
     try {
       jobProgress(job, 'preparing', 'Preparo il turno e le preferenze Codex.')
+      const work = beginAiWork(job, controller, [projectId, threadId, message, override, existingUserMessageId])
       const config = await runConfig(override)
       const base = thread.baseVersionId
         ? projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null
         : null
       const catalog = catalogStore.view()
       jobProgress(job, 'catalog', 'Raccolgo la lista e le schede del Catalogo.')
-      const initialEvidence = buildThreadEvidence(thread, base, message.trim(),
-        projectStore.listConstraints(projectId), catalog,
-        tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
+      const initialEvidence = work.snapshot('initial-evidence', [thread.messages, base?.id,
+        catalog.syncedAt, projectStore.listConstraints(projectId), tournamentStore?.summaries(), tournamentStore?.mainSummaries()],
+        () => buildThreadEvidence(thread, base, message.trim(),
+        projectStore!.listConstraints(projectId), catalog,
+        tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? []))
       const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
         tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog))
       jobProgress(job, 'events', 'Collego le liste e i risultati degli Eventi pertinenti.')
       jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla domanda.')
       const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
-        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal,
-          jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.')),
+        engine, (prompt) => work.run('planning', prompt, config,
+          () => planEvidenceQueriesWithCodex(prompt, config, controller.signal,
+            jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.'))),
         { contextTexts: [thread.title, ...thread.messages.slice(-12).map((item) => item.text),
           base?.rawText ?? '', thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? ''],
         eventContextTexts: thread.messages.slice(-2).map((item) => item.text),
+        signal: controller.signal, onTrace: (trace) => work.evidence(trace),
         onRound: (round, queries) => jobProgress(job, 'planning',
           `Ricerca ${round}: ${queries} interrogazioni locali completate.`) })
       let evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
+      await analyzeLargeEvidence(queryTrace, message.trim(), config, work)
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
       let context = deckThreadPrompt(thread, base, message.trim(),
@@ -1250,21 +1331,26 @@ function registerProjectHandlers(): void {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la risposta con nuove schede (${attempt + 1}/4).` :
           'Codex elabora la risposta con le prove raccolte.')
         const answerStarted = Date.now()
-        result = await codexControl.jsonTurn(sessionRef, cwd, context.prompt, config,
+        result = await work.run('analysis', context.prompt, config, () => codexControl.jsonTurn(sessionRef, cwd, context.prompt, config,
           DECK_THREAD_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal,
             onSummary: jobSummary(job, 'analysis', 'Codex elabora la risposta con le prove raccolte.'),
             onSessionStarted: (id) => {
               if (!sessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
               sessionRef = id
-            } })
+            } }), false)
         sessionRef = result.sessionId
         evidence.promptAudit = makeAiPromptAudit(context.prompt, Date.now() - answerStarted, result.usage)
         const draft = result.value as { reply?: unknown; rawText?: unknown }
         const added = extendAiEvidenceForText(queryTrace, engine,
           [draft.reply, draft.rawText].filter((part): part is string => typeof part === 'string').join('\n'))
-        if (!added) break
+        const focus = engine.cardTargets([draft.reply, draft.rawText].filter((part): part is string => typeof part === 'string').join('\n')).flatMap((target) => target.printIds)
+        const needsFocus = !!queryTrace.analysis && focus.some((id) => !queryTrace.focusedPrintIds?.includes(id))
+        queryTrace.focusedPrintIds = [...new Set([...(queryTrace.focusedPrintIds ?? []), ...focus])]
+        work.evidence(queryTrace)
+        if (!added && !needsFocus) break
         if (attempt === 3) throw new Error('La risposta ha introdotto altre carte: completa il recupero delle prove e riprova.')
+        await analyzeLargeEvidence(queryTrace, message.trim(), config, work)
         evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
         context = deckThreadPrompt(thread, base, message.trim(),
           projectStore.listConstraints(projectId), catalog, evidence)
@@ -1277,14 +1363,14 @@ function registerProjectHandlers(): void {
       jobProgress(job, 'verification', 'Verifico le carte citate e la risposta strutturata.')
       if (!result || queryTrace.cardTargets?.some((target) => target.status === 'not-supplied'))
         throw new Error('Le schede nominate non sono state tutte consegnate a Codex. Riprova l’analisi.')
+      const turn = readDeckThreadTurn(result.value, projectId, base, catalog,
+        projectStore.listConstraints(projectId), evidence, context.sources)
       aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: true,
         message: message.trim(), config, evidence, sources: context.sources, existingUserMessageId })
       jobProgress(job, 'saving', 'Salvo la risposta e la candidata nel Thread.')
       aiJobStore.ready(job.id, result)
       const sessionId = result.sessionId
       if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
-      const turn = readDeckThreadTurn(result.value, projectId, base, catalog,
-        projectStore.listConstraints(projectId), evidence, context.sources)
       const saved = projectStore.saveDeckAiExchange(projectId, threadId, sessionId,
         message.trim(), turn.answer, result.turnId, config, turn.proposal, evidence, turn.citedSourceIds,
         typeof existingUserMessageId === 'string' ? existingUserMessageId : undefined)
@@ -1297,8 +1383,13 @@ function registerProjectHandlers(): void {
     } finally {
       generatingDeckThreads.delete(threadId)
       activeAiControllers.delete(job.id)
+      activeAiWork.delete(job.id)
     }
-  })
+  }
+  ipcMain.handle('deck:ask-thread', (event, projectId, threadId, message, override, existingUserMessageId) =>
+    isMainFrame(event) ? askThread(projectId, threadId, message, override, existingUserMessageId)
+      : { ok: false, error: 'Richiesta non autorizzata.' })
+  resumeRunners.set('thread-ask', (job, args) => askThread(args[0], args[1], args[2], args[3], args[4] ?? undefined, job))
 
   ipcMain.handle('deck:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
     if (!isMainFrame(event) || typeof input !== 'string' || input.length > 300)
@@ -1469,8 +1560,8 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.listHistoricalMatchupOpponents(projectId as string))
   })
 
-  ipcMain.handle('matchups:generate', async (event, projectId: unknown, metaId: unknown, opponentId: unknown, override: unknown): Promise<OperationResult<MatchupReport>> => {
-    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+  async function generateGuide(projectId: unknown, metaId: unknown, opponentId: unknown,
+    override: unknown, resumedJob?: AiJob): Promise<OperationResult<MatchupReport>> {
     if (!projectStore || !aiJobStore) return { ok: false, error: unavailableMessage() }
     if (typeof projectId !== 'string' || typeof metaId !== 'string' || typeof opponentId !== 'string' ||
       !/^\d+$/.test(opponentId) || generatingProjects.has(projectId)) {
@@ -1486,13 +1577,14 @@ function registerProjectHandlers(): void {
     const hash = projectStore.getCurrentDeckHash(projectId)!
     const deckVersion = projectStore.getCurrentDeckContext(projectId)
     let job: AiJob
-    try { job = aiJobStore.start('matchup-generate', projectId, `matchup:${projectId}`) }
+    try { job = resumedJob ? aiJobStore.resume(resumedJob.id) : aiJobStore.start('matchup-generate', projectId, `matchup:${projectId}`) }
     catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
     const controller = new AbortController()
     activeAiControllers.set(job.id, controller)
     generatingProjects.add(projectId)
     try {
       jobProgress(job, 'preparing', 'Preparo l’avversario e le preferenze Codex.')
+      const work = beginAiWork(job, controller, [projectId, metaId, opponentId, override])
       const config = await runConfig(override)
       const sampleDeck = await fetchOpponentSample(opponent)
       jobProgress(job, 'catalog', 'Raccolgo le schede delle due liste dal Catalogo.')
@@ -1510,15 +1602,17 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
           'Codex costruisce la guida usando lista, schede e tornei.')
-        generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
+        generated = await work.run('analysis', '', config, () => generateMatchup(projectId, hash, deckContext, snapshot, opponent,
           sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
-            onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
-                base: { ...base, promptAudit: audit } }),
-            onSummary: jobSummary(job, 'analysis', 'Codex costruisce la guida usando le prove raccolte.') })
+                base: { ...base, promptAudit: audit } }) },
+            onSummary: jobSummary(job, 'analysis', 'Codex costruisce la guida usando le prove raccolte.') }), false)
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, generated)
+        work.evidence(aiQueries)
         if (!added) break
+        await analyzeLargeEvidence(aiQueries, `Analizza ${opponent.name} contro la nostra lista`, config, work)
         if (attempt === 3) throw new Error('La guida ha introdotto altre carte: completa il recupero delle prove e riprova.')
       }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
@@ -1541,16 +1635,21 @@ function registerProjectHandlers(): void {
     } finally {
       generatingProjects.delete(projectId)
       activeAiControllers.delete(job.id)
+      activeAiWork.delete(job.id)
     }
-  })
+  }
+  ipcMain.handle('matchups:generate', (event, projectId, metaId, opponentId, override) =>
+    isMainFrame(event) ? generateGuide(projectId, metaId, opponentId, override)
+      : { ok: false, error: 'Richiesta non autorizzata.' })
+  resumeRunners.set('matchup-generate', (job, args) => generateGuide(args[0], args[1], args[2], args[3], job))
 
   async function runRevision(discussionId: unknown, turnId: unknown, feedback: unknown,
-    override: unknown): Promise<OperationResult<MatchupDiscussion>> {
+    override: unknown, resumedJob?: AiJob): Promise<OperationResult<MatchupDiscussion>> {
     if (!projectStore || !aiJobStore || typeof discussionId !== 'string') return { ok: false, error: 'Discussione Matchup non valida.' }
     const discussion = projectStore.getMatchupDiscussion(discussionId)
     if (!discussion || generatingProjects.has(discussion.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
     let job: AiJob
-    try { job = aiJobStore.start('matchup-revise', discussion.projectId,
+    try { job = resumedJob ? aiJobStore.resume(resumedJob.id) : aiJobStore.start('matchup-revise', discussion.projectId,
       `matchup:${discussion.projectId}`) }
     catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
     const controller = new AbortController()
@@ -1565,6 +1664,7 @@ function registerProjectHandlers(): void {
         (turnId === null ? pending.turns.at(-1) : undefined)
       if (!target || !target.feedback || target.report || target !== pending.turns.at(-1))
         throw new Error('Commento Matchup in attesa non trovato.')
+      const work = beginAiWork(job, controller, [discussionId, target.id, null, override])
       const project = projectStore.get(discussion.projectId)
       const baseline = projectStore.getBaseline(discussion.projectId)
       const snapshot = projectStore.getLatestMetaSnapshot()
@@ -1598,16 +1698,18 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la revisione con nuove schede (${attempt + 1}/4).` :
           'Codex rivede la guida alla luce del tuo commento.')
-        revised = await reviseMatchup(context, target.feedback, deckContext, snapshot,
+        revised = await work.run('analysis', '', config, () => reviseMatchup(context, target.feedback!, deckContext, snapshot,
           opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
-            onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
                 base: { ...base, promptAudit: audit },
-                discussionId: discussion.id, turnId: target.id }),
-            onSummary: jobSummary(job, 'analysis', 'Codex rivede la guida alla luce del tuo commento.') })
+                discussionId: discussion.id, turnId: target.id }) },
+            onSummary: jobSummary(job, 'analysis', 'Codex rivede la guida alla luce del tuo commento.') }), false)
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, revised.report, revised.changeSummary)
+        work.evidence(aiQueries)
         if (!added) break
+        await analyzeLargeEvidence(aiQueries, target.feedback, config, work)
         if (attempt === 3) throw new Error('La revisione ha introdotto altre carte: completa il recupero delle prove e riprova.')
       }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
@@ -1632,8 +1734,10 @@ function registerProjectHandlers(): void {
     } finally {
       generatingProjects.delete(discussion.projectId)
       activeAiControllers.delete(job.id)
+      activeAiWork.delete(job.id)
     }
   }
+  resumeRunners.set('matchup-revise', (job, args) => runRevision(args[0], args[1], args[2], args[3], job))
 
   ipcMain.handle('matchups:revise', (event, discussionId: unknown, feedback: unknown, override: unknown): Promise<OperationResult<MatchupDiscussion>> => {
     if (!isMainFrame(event)) return Promise.resolve({ ok: false, error: 'Richiesta non autorizzata.' })
@@ -1645,21 +1749,21 @@ function registerProjectHandlers(): void {
     return runRevision(discussionId, turnId, null, override)
   })
 
-  ipcMain.handle('matchups:continue', async (event, discussionId: unknown, metaId: unknown,
-    override: unknown): Promise<OperationResult<MatchupDiscussion>> => {
-    if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
+  async function continueGuide(discussionId: unknown, metaId: unknown,
+    override: unknown, resumedJob?: AiJob): Promise<OperationResult<MatchupDiscussion>> {
     if (!projectStore || !aiJobStore || typeof discussionId !== 'string' || typeof metaId !== 'string')
       return { ok: false, error: 'Discussione Matchup non valida.' }
     const parent = projectStore.getMatchupDiscussion(discussionId)
     if (!parent || generatingProjects.has(parent.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
     let job: AiJob
-    try { job = aiJobStore.start('matchup-continue', parent.projectId, `matchup:${parent.projectId}`) }
+    try { job = resumedJob ? aiJobStore.resume(resumedJob.id) : aiJobStore.start('matchup-continue', parent.projectId, `matchup:${parent.projectId}`) }
     catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
     const controller = new AbortController()
     activeAiControllers.set(job.id, controller)
     generatingProjects.add(parent.projectId)
     try {
       jobProgress(job, 'preparing', 'Preparo la nuova base della discussione.')
+      const work = beginAiWork(job, controller, [discussionId, metaId, override])
       const project = projectStore.get(parent.projectId)
       const baseline = projectStore.getBaseline(parent.projectId)
       const snapshot = projectStore.getLatestMetaSnapshot()
@@ -1696,15 +1800,17 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
           'Codex aggiorna la guida sulla nuova base.')
-        generated = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
+        generated = await work.run('analysis', '', config, () => generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
           config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
-            onPrompt: (audit) => aiJobStore!.prepare(job.id,
+            onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
-                base: { ...base, promptAudit: audit }, parentId: parent.id }),
-            onSummary: jobSummary(job, 'analysis', 'Codex aggiorna la guida sulla nuova base.') })
+                base: { ...base, promptAudit: audit }, parentId: parent.id }) },
+            onSummary: jobSummary(job, 'analysis', 'Codex aggiorna la guida sulla nuova base.') }), false)
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, generated)
+        work.evidence(aiQueries)
         if (!added) break
+        await analyzeLargeEvidence(aiQueries, `Analizza ${opponent.name} contro la nostra lista`, config, work)
         if (attempt === 3) throw new Error('La guida ha introdotto altre carte: completa il recupero delle prove e riprova.')
       }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
@@ -1727,8 +1833,13 @@ function registerProjectHandlers(): void {
     } finally {
       generatingProjects.delete(parent.projectId)
       activeAiControllers.delete(job.id)
+      activeAiWork.delete(job.id)
     }
-  })
+  }
+  ipcMain.handle('matchups:continue', (event, discussionId, metaId, override) =>
+    isMainFrame(event) ? continueGuide(discussionId, metaId, override)
+      : { ok: false, error: 'Richiesta non autorizzata.' })
+  resumeRunners.set('matchup-continue', (job, args) => continueGuide(args[0], args[1], args[2], job))
 
   ipcMain.handle('matchups:open-source', async (event, input: unknown): Promise<OperationResult<boolean>> => {
     if (!isMainFrame(event) || typeof input !== 'string' || input.length > 500) return { ok: false, error: 'URL non valido.' }
@@ -1907,6 +2018,11 @@ app.whenReady().then(async () => {
 })
 
 app.on('before-quit', () => {
+  for (const [id, work] of activeAiWork) {
+    work.close()
+    aiJobStore?.suspend(id, 'Analisi sospesa alla chiusura dell’app. Riprendi dai lotti salvati.')
+    activeAiControllers.get(id)?.abort('pause')
+  }
   catalogShuttingDown = true
   if (startupSyncTimer) clearTimeout(startupSyncTimer)
   playTournamentJob?.shutdown()

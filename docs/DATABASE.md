@@ -2,6 +2,10 @@
 
 Pokéguru conserva progetti, versioni, Thread, candidate, evidenze AI, Catalogo ed Eventi in `data/pokeguru.sqlite` sotto la cartella dati dell'app. Le preferenze AI sono in un file separato e non fanno parte del backup SQLite.
 
+## Analisi AI in sospeso
+
+Da v0.3.4 lo stato del job è in SQLite e il workflow con i lotti completati è in `data/ai-jobs/<id>`. Questi file contengono dati privati del progetto: includili nel backup dell'intera cartella dati se vuoi conservare anche la possibilità di riprendere un'analisi. La sola copia SQLite non include i checkpoint. L'app riaperta mostra la ripresa disponibile ma non avvia chiamate Codex automaticamente; i checkpoint vengono rimossi dopo applicazione o annullamento dell'analisi.
+
 ## Upgrade dello schema
 
 La versione corrente è `PRAGMA user_version = 9`. La versione 0 indica l'archivio precedente alla registrazione esplicita delle migrazioni; la versione 1 precede il registro dei job Codex, la versione 2 precede il collegamento persistente del primo messaggio AI del Thread (APP-109), la versione 3 precede l'archiviazione dei progetti (APP-106), la versione 4 precede l'attesa persistente dei job Catalogo (APP-104), la versione 5 precede gli ID delle corse Catalogo (APP-121), la versione 6 precede le tabelle di rotazione (APP-123), la versione 7 precede l'aggiornamento giornaliero (APP-120) e la versione 8 precede lo storico strutturato delle liste (APP-125). Prima di aprire gli store con una versione precedente, l'app crea con l'API backup di SQLite una copia consistente in `data/backups/pokeguru-pre-v<versione>-*.sqlite`. Un file accanto con suffisso `.verified` indica che, al momento della creazione, la copia ha superato `integrity_check` e `foreign_key_check`. I nomi sono univoci: una nuova prova dopo un'interruzione non sovrascrive il primo backup.

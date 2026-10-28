@@ -34,6 +34,9 @@ export interface AiEvidenceQueryResult {
 }
 
 export interface AiEvidenceQueryTrace {
+  analysis?: { schemaVersion: 1; records: number; batches: number; sourceCount: number;
+    summary: string; limitations: string; sourceIds: string[] }
+  focusedPrintIds?: string[]
   schemaVersion: 1
   engine: { operations: string[]; catalog: { syncedAt: string | null;
     expected: number; indexed: number; gameplay: number };

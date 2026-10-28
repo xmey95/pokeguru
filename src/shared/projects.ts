@@ -83,6 +83,8 @@ export interface ProjectsApi {
   getAiJobStatus(projectId: string, resourceId: string): Promise<OperationResult<AiJobSummary | null>>
   listRecentAiJobs(): Promise<OperationResult<AiJobSummary[]>>
   cancelAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
+  pauseAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
+  resumeAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
   recoverAiJobs(): Promise<OperationResult<boolean>>
   createDeckThread(input: CreateDeckThreadInput): Promise<OperationResult<DeckThread>>
   continueDeckThread(input: ContinueDeckThreadInput): Promise<OperationResult<DeckThread>>

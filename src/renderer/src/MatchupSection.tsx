@@ -50,7 +50,8 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useBusyState(`matchup:${projectId}:${selectedId}`)
   const [aiJob, setAiJob] = useState<AiJobSummary | null>(null)
-  const aiBusy = aiJob?.status === 'running' || aiJob?.status === 'ready'
+  const aiBusy = aiJob?.status === 'running' || aiJob?.status === 'ready' ||
+    aiJob?.status === 'interrupted' && aiJob.progress?.diagnostics?.resumable === true
   const startedAt = useBusyStartedAt(`matchup:${projectId}:${selectedId}`)
   const revisionKey = `matchup.revision:${projectId}:${selectedId}`
   const revisionErrorKey = `matchup.revision-error:${projectId}:${selectedId}:${activeDiscussionId}`
@@ -222,6 +223,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     else setAiJob((current) => current ? { ...current, status: 'cancelled' } : null)
   }
 
+  async function pauseOrResumeAi(resume: boolean): Promise<void> {
+    const result = await window.projectsApi[resume ? 'resumeAiJob' : 'pauseAiJob'](projectId, `matchup:${projectId}`)
+    if (!result.ok) setError(result.error)
+    const status = await window.projectsApi.getAiJobStatus(projectId, `matchup:${projectId}`)
+    if (status.ok) setAiJob(status.value)
+  }
+
   async function recoverAi(): Promise<void> {
     const result = await window.projectsApi.recoverAiJobs()
     if (!result.ok) { setError(result.error); return }
@@ -384,12 +392,18 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     {aiJob && (aiJob.status === 'running' || aiJob.status === 'ready') &&
       <div className="content-note">{aiJob.status === 'ready' && <span role="status">La guida è pronta, ma non è stata salvata.</span>}
         <button type="button" className="text-button" onClick={() => void cancelAi()}>{aiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
+        {aiJob.status === 'running' && aiJob.progress?.diagnostics?.workflow &&
+          <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Pausa</button>}
         {aiJob.status === 'ready' &&
           <button type="button" className="text-button" onClick={() => void recoverAi()}>Completa salvataggio</button>}
       </div>}
     {aiJob && (aiJob.status === 'interrupted' || aiJob.status === 'failed' || aiJob.status === 'cancelled') &&
       <p className="content-note" role="status">{aiJob.status === 'cancelled'
-        ? 'Preparazione annullata.' : 'La guida non è stata aggiornata. Puoi riprovare.'}</p>}
+        ? 'Preparazione annullata.' : aiJob.error ?? 'La guida non è stata aggiornata. Puoi riprovare.'}
+        {aiJob.status === 'interrupted' && aiJob.progress?.diagnostics?.resumable && <>
+          <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>
+          <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla analisi</button>
+        </>}</p>}
     {loading && !snapshot ? <LoadingSkeleton label="Caricamento del metagame Limitless…" rows={3} /> : snapshot && <>
       <div className="meta-layout">
         <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading || generating} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
