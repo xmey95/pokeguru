@@ -12,7 +12,7 @@ import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } fr
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from './main-tournament'
 import type { StandardRuleAudit } from './standard-rule-audit'
 import type { ThreadEvidencePacket } from './thread-evidence'
-import type { AiJobSummary } from './ai-job'
+import type { AiJobActivityPage, AiJobSummary } from './ai-job'
 import type { CardPreviewData, CardPreviewLookup } from './card-preview'
 
 export type ProjectFormat = 'STANDARD'
@@ -81,6 +81,8 @@ export interface ProjectsApi {
   getDeckThreadMessagesBefore(projectId: string, threadId: string,
     cursor: DeckThreadMessageCursor): Promise<OperationResult<DeckThreadMessagePage>>
   getAiJobStatus(projectId: string, resourceId: string): Promise<OperationResult<AiJobSummary | null>>
+  getAiJobActivity(projectId: string, resourceId: string, jobId: string,
+    before?: number): Promise<OperationResult<AiJobActivityPage>>
   listRecentAiJobs(): Promise<OperationResult<AiJobSummary[]>>
   cancelAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
   pauseAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>

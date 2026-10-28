@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import type { AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
+import type { AiJobActivityPage, AiJobActivityStep, AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
 import { readAiDiagnostics, type AiDiagnostics } from '../shared/ai-diagnostics'
 
 export interface AiJob extends AiJobSummary {
@@ -29,8 +29,9 @@ function progress(row: { progress_json: string | null }): AiJobProgress | null {
       typeof step.detail === 'string' && typeof step.at === 'string').slice(-12)
       .map((step) => ({ phase: step.phase, detail: step.detail.slice(0, 180), at: step.at }))
     return { phase: value.phase!, detail: value.detail.slice(0, 180),
-      summary: value.summary?.slice(0, 900) ?? null, updatedAt: value.updatedAt, steps,
-      diagnostics: readAiDiagnostics(value.diagnostics) }
+      summary: value.summary?.slice(0, 900) ?? null, updatedAt: value.updatedAt,
+      sequence: Number.isSafeInteger(value.sequence) && value.sequence! >= 0 ? value.sequence : steps.length,
+      steps, diagnostics: readAiDiagnostics(value.diagnostics) }
   }
   catch { return null }
 }
@@ -67,6 +68,15 @@ export class AiJobStore {
     const columns = this.db.prepare('PRAGMA table_info(ai_jobs)').all() as { name: string }[]
     if (!columns.some((column) => column.name === 'progress_json'))
       this.db.exec('ALTER TABLE ai_jobs ADD COLUMN progress_json TEXT')
+    this.db.exec(`CREATE TABLE IF NOT EXISTS ai_job_activity (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id TEXT NOT NULL REFERENCES ai_jobs(id) ON DELETE CASCADE,
+      phase TEXT NOT NULL,
+      detail TEXT NOT NULL,
+      summary TEXT,
+      at TEXT NOT NULL
+    ) STRICT;
+    CREATE INDEX IF NOT EXISTS ai_job_activity_page ON ai_job_activity(job_id, id DESC);`)
   }
 
   start(kind: AiJobKind, projectId: string, resourceId: string): AiJob {
@@ -123,14 +133,61 @@ export class AiJobStore {
     if (!current || current.status !== 'running') return
     const at = new Date().toISOString()
     const cleanDetail = detail.trim().slice(0, 180)
+    const cleanSummary = summary?.trim().slice(0, 900) || null
     const previous = progress(current)
     const next: AiJobProgress = { phase, detail: cleanDetail, diagnostics: previous?.diagnostics,
-      summary: summary === undefined ? (previous?.phase === phase ? previous.summary : null) :
-        summary.trim().slice(0, 900) || null,
-      updatedAt: at, steps: [...(previous?.steps ?? []),
+      summary: summary === undefined ? (previous?.phase === phase ? previous.summary : null) : cleanSummary,
+      updatedAt: at, sequence: (previous?.sequence ?? 0) + 1,
+      steps: [...(previous?.steps ?? []),
         { phase, detail: cleanDetail, at }].slice(-12) }
-    this.db.prepare(`UPDATE ai_jobs SET progress_json = ?, updated_at = ?
-      WHERE id = ? AND status = 'running'`).run(JSON.stringify(next), at, id)
+    this.transaction(() => {
+      this.ensureActivity(id, previous)
+      this.db.prepare(`UPDATE ai_jobs SET progress_json = ?, updated_at = ?
+        WHERE id = ? AND status = 'running'`).run(JSON.stringify(next), at, id)
+      this.db.prepare(`INSERT INTO ai_job_activity (job_id, phase, detail, summary, at)
+        VALUES (?, ?, ?, ?, ?)`).run(id, phase, cleanDetail, cleanSummary, at)
+    })
+  }
+
+  private transaction<T>(action: () => T): T {
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const result = action()
+      this.db.exec('COMMIT')
+      return result
+    }
+    catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  private ensureActivity(id: string, previous: AiJobProgress | null): void {
+    const existing = this.db.prepare('SELECT 1 FROM ai_job_activity WHERE job_id = ? LIMIT 1').get(id)
+    if (existing || !previous?.steps.length) return
+    const insert = this.db.prepare(`INSERT INTO ai_job_activity (job_id, phase, detail, summary, at)
+      VALUES (?, ?, ?, ?, ?)`)
+    previous.steps.forEach((step, index) => insert.run(id, step.phase, step.detail,
+      index === previous.steps.length - 1 ? previous.summary : null, step.at))
+  }
+
+  activity(projectId: string, resourceId: string, jobId: string,
+    before?: number, limit = 25): AiJobActivityPage | null {
+    if (!/^[a-f0-9-]{36}$/i.test(jobId) ||
+      before !== undefined && (!Number.isSafeInteger(before) || before < 1) ||
+      !Number.isSafeInteger(limit) || limit < 1 || limit > 50) return null
+    const row = this.db.prepare(`SELECT progress_json FROM ai_jobs
+      WHERE id = ? AND project_id = ? AND resource_id = ?`).get(jobId, projectId, resourceId) as
+      { progress_json: string | null } | undefined
+    if (!row) return null
+    const legacy = progress(row)
+    if (legacy?.steps.length && !this.db.prepare('SELECT 1 FROM ai_job_activity WHERE job_id = ? LIMIT 1').get(jobId))
+      this.transaction(() => this.ensureActivity(jobId, legacy))
+    const entries = this.db.prepare(`SELECT id, phase, detail, summary, at FROM ai_job_activity
+      WHERE job_id = ? AND (? IS NULL OR id < ?)
+      ORDER BY id DESC LIMIT ?`).all(jobId, before ?? null, before ?? null, limit + 1) as unknown as
+      AiJobActivityStep[]
+    return { steps: entries.slice(0, limit).reverse(), hasMore: entries.length > limit }
   }
 
   recoverable(): AiJob[] {

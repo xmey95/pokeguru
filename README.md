@@ -73,6 +73,8 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 
 ### Novità della v0.3.4
 
+La cronologia delle attività AI conserva tutte le nuove voci e sintesi, carica le precedenti quando scorri verso l'alto e mantiene navigabili Thread e Matchup durante il lavoro.
+
 Thread e Matchup possono svolgere analisi estese in background mentre consulti l'app. Ogni ricerca locale acquisisce tutte le pagine disponibili; le liste identiche vengono raggruppate conservando occorrenze, piazzamenti e provenienza. Quando il contesto cresce, Codex analizza i dati in lotti salvati e ne costruisce una sintesi, con verifica delle carte citate prima della risposta finale.
 
 **Pausa** conserva il lavoro completato. Dopo la riapertura usa **Riprendi analisi**: i lotti con gli stessi dati e la stessa configurazione vengono riutilizzati. L'app chiusa non continua a elaborare; la ripresa richiede un'azione esplicita. **Annulla analisi** scarta il lavoro in sospeso e libera il Thread. Un errore di verifica diventa visibile e non lascia più un'attesa senza esecutore. La diagnostica esportabile aggiunge cause tecniche, tempi delle chiamate, dimensioni, copertura e avanzamento dei lotti, senza contenuti privati.

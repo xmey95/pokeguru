@@ -121,6 +121,11 @@ function jobProgress(job: AiJob, phase: AiJobPhase, detail: string, summary?: st
 function jobSummary(job: AiJob, phase: AiJobPhase, detail: string): (summary: string) => void {
   return (summary) => jobProgress(job, phase, detail, summary)
 }
+
+async function yieldAiPreparation(signal: AbortSignal): Promise<void> {
+  await new Promise<void>((resolve) => setImmediate(resolve))
+  if (signal.aborted) throw new Error('Operazione Codex annullata.')
+}
 const catalogAdvancedResults = new Map<string, CatalogAdvancedExecution>()
 let activeCatalogAdvancedSearch: AbortController | null = null
 let recoveringAiJobs = false
@@ -359,9 +364,14 @@ async function matchupAiQueries(request: string, deckContext: string,
   evidence: MatchupTournamentEvidence, config: AiRunConfig,
   signal: AbortSignal, history?: string, job?: AiJob) {
   if (!catalogStore) throw new Error('Catalogo non disponibile per le query AI.')
+  await yieldAiPreparation(signal)
   const catalog = catalogStore.view()
-  const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
-    tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog, 31))
+  await yieldAiPreparation(signal)
+  const play = tournamentStore?.list() ?? []
+  await yieldAiPreparation(signal)
+  const main = tournamentStore?.listMain() ?? []
+  await yieldAiPreparation(signal)
+  const engine = createAiEvidenceEngine(catalog, play, main, currentAiEventWindow(catalog, 31))
   if (job) jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla guida.')
   const work = job ? activeAiWork.get(job.id) : undefined
   const initial = { deckContext, sample, evidence, history }
@@ -1160,6 +1170,15 @@ function registerProjectHandlers(): void {
     return { ok: true, value: aiJobStore.latest(projectId, resourceId as string) }
   })
 
+  ipcMain.handle('ai:job-activity', (event, projectId: unknown, resourceId: unknown,
+    jobId: unknown, before: unknown) => {
+    if (!isMainFrame(event) || !aiJobStore || !validAiResource(projectId, resourceId) ||
+      typeof jobId !== 'string' || before !== undefined && typeof before !== 'number')
+      return { ok: false, error: 'Attività Codex non disponibile.' }
+    const page = aiJobStore.activity(projectId, resourceId as string, jobId, before as number | undefined)
+    return page ? { ok: true, value: page } : { ok: false, error: 'Attività Codex non disponibile.' }
+  })
+
   ipcMain.handle('ai:recent-jobs', (event): OperationResult<AiJobSummary[]> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
     if (!aiJobStore) return { ok: false, error: unavailableMessage() }
@@ -1295,14 +1314,19 @@ function registerProjectHandlers(): void {
         ? projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null
         : null
       const catalog = catalogStore.view()
+      await yieldAiPreparation(controller.signal)
       jobProgress(job, 'catalog', 'Raccolgo la lista e le schede del Catalogo.')
+      const play = tournamentStore?.list() ?? []
+      await yieldAiPreparation(controller.signal)
+      const main = tournamentStore?.listMain() ?? []
+      await yieldAiPreparation(controller.signal)
       const initialEvidence = work.snapshot('initial-evidence', [thread.messages, base?.id,
         catalog.syncedAt, projectStore.listConstraints(projectId), tournamentStore?.summaries(), tournamentStore?.mainSummaries()],
         () => buildThreadEvidence(thread, base, message.trim(),
-        projectStore!.listConstraints(projectId), catalog,
-        tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? []))
-      const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
-        tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog))
+          projectStore!.listConstraints(projectId), catalog, play, main))
+      await yieldAiPreparation(controller.signal)
+      const engine = createAiEvidenceEngine(catalog, play, main, currentAiEventWindow(catalog))
+      await yieldAiPreparation(controller.signal)
       jobProgress(job, 'events', 'Collego le liste e i risultati degli Eventi pertinenti.')
       jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla domanda.')
       const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
@@ -1591,8 +1615,10 @@ function registerProjectHandlers(): void {
       await enrichMatchupDeck(projectId, baseline)
       await enrichOpponentCards(snapshot, opponent)
       jobProgress(job, 'events', 'Collego le liste e i risultati dei tornei.')
+      await yieldAiPreparation(controller.signal)
       const evidence = currentMatchupEvidence(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
+      await yieldAiPreparation(controller.signal)
       const deckContext = currentMatchupDeckContext(projectId, baseline)
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
         deckContext, sample, evidence, config, controller.signal, undefined, job)
@@ -1677,16 +1703,17 @@ function registerProjectHandlers(): void {
       const config = await runConfig(override)
       const context = await prepareMatchupHistory(pending, config, controller.signal)
       const previousReport = [...context.turns].reverse().find((turn) => turn.report)?.report
+      await yieldAiPreparation(controller.signal)
+      const evidence = previousReport?.tournamentEvidence ?? currentMatchupEvidence(snapshot, opponent)
       const sample = previousReport?.sampleDeckCards
         ? { url: previousReport.sampleDeckUrl, cards: previousReport.sampleDeckCards,
           mechanics: previousReport.sampleDeckMechanics ?? [] }
         : await opponentSampleWithMechanics(await fetchOpponentSample(opponent),
-          currentMatchupEvidence(snapshot, opponent))
+          evidence)
       jobProgress(job, 'catalog', 'Aggiorno le schede della lista corrente.')
       await enrichMatchupDeck(discussion.projectId, baseline)
+      await yieldAiPreparation(controller.signal)
       const deckContext = currentMatchupDeckContext(discussion.projectId, baseline)
-      const evidence = previousReport?.tournamentEvidence ??
-        currentMatchupEvidence(snapshot, opponent)
       jobProgress(job, 'events', 'Ricollego le evidenze dei tornei alla revisione.')
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(target.feedback, deckContext,
         sample, evidence, config, controller.signal, matchupHistoryContext(context), job)
@@ -1788,8 +1815,10 @@ function registerProjectHandlers(): void {
       await enrichMatchupDeck(parent.projectId, baseline)
       await enrichOpponentCards(snapshot, opponent)
       jobProgress(job, 'events', 'Collego i tornei della nuova base.')
+      await yieldAiPreparation(controller.signal)
       const evidence = currentMatchupEvidence(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
+      await yieldAiPreparation(controller.signal)
       const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Continua l'analisi di ${opponent.name} sulla nuova lista e sul nuovo metagame`,
         deckContext, sample, evidence, config, controller.signal,

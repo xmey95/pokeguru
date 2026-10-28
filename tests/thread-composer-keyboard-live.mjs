@@ -65,7 +65,9 @@ try {
   assert.equal((await calls()).length, 0, 'Il flag nativo IME non invia')
 
   await input.press('Enter')
-  await page.waitForFunction(() => document.querySelector('#thread-message')?.disabled)
+  await page.getByRole('button', { name: 'Risposta in corso…' }).waitFor()
+  assert.equal(await input.isEnabled(), true)
+  assert.equal(await page.getByRole('button', { name: 'Risposta in corso…' }).isDisabled(), true)
   assert.deepEqual((await calls()).map(({ threadId, text }) => [threadId, text]), [[thread.id, 'Richiesta da tastiera']])
   await page.keyboard.press('Enter')
   assert.equal((await calls()).length, 1, 'Un secondo Enter durante il job non duplica il turno')
@@ -77,7 +79,7 @@ try {
 
   await input.fill('Errore da tastiera')
   await input.press('Enter')
-  await page.waitForFunction(() => document.querySelector('#thread-message')?.disabled)
+  await page.getByRole('button', { name: 'Risposta in corso…' }).waitFor()
   await resolveCall({ ok: false, error: 'Errore di prova' })
   await page.locator('.thread-composer').getByRole('alert').waitFor()
   await page.waitForFunction(() => document.activeElement?.classList.contains('error-banner'))

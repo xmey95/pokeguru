@@ -41,6 +41,7 @@ describe('global Limitless Play archive', () => {
     const folder = mkdtempSync(join(tmpdir(), 'pokeguru-sync-auto-'))
     try {
       const store = new TournamentStore(join(folder, 'data.sqlite'))
+      expect(store.list()).toBe(store.list())
       const network = source()
       const job = new TournamentSyncJob(() => store.progress(),
         (mode, shouldStop) => syncTournamentBlock(store, mode, network.fetcher, now, shouldStop), 0)
@@ -48,6 +49,8 @@ describe('global Limitless Play archive', () => {
       await vi.waitFor(() => expect(job.status()).toMatchObject({ status: 'complete', saved: 4, active: false }),
         { timeout: 3_000 })
       expect(store.summaries()).toHaveLength(4)
+      expect(store.list()).toHaveLength(4)
+      expect(store.list()).toBe(store.list())
       store.close()
     } finally { rmSync(folder, { recursive: true, force: true }) }
   })
