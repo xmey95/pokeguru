@@ -71,6 +71,14 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Novità della v0.3.7
+
+La preparazione delle analisi Codex viene eseguita in un worker separato, così puoi continuare a usare la finestra durante le operazioni sui dati. Il Catalogo integra da scansioni verificate le 19 schede incomplete individuate su Windows: 16 costi di attacco gratuiti e tre effetti Trainer omessi dalla fonte, con provenienza visibile.
+
+Puoi eliminare un Thread con conferma, conservando le liste già adottate e la base dei Thread derivati; i lavori attivi devono prima essere fermati. I Matchup mostrano un'attesa durante il caricamento e distinguono gli errori dall'assenza di analisi. Il selettore dei progetti si apre in una modale con ricerca, progetti attivi/archiviati e sfondo sfocato.
+
+L'aggiornamento porta l'archivio allo schema 14, con backup verificato prima della migrazione. Le integrazioni del Catalogo valgono per le stampe e i dati esatti controllati; non riparano un database già corrotto. La cancellazione locale di un Thread non elimina i backup preesistenti o la cronologia remota Codex.
+
 ### Correzione della v0.3.6
 
 Le analisi distinguono i partecipanti dello stesso torneo anche quando condividono l'URL della lista. Questo corregge il blocco `UNIQUE constraint failed: ai_evidence_event_index.job_id, ai_evidence_event_index.key`. Dopo l'aggiornamento usa **Riprendi analisi** sul lavoro interrotto: messaggio iniziale e input già salvati vengono conservati. Non occorre annullare il Thread o azzerare il database.
