@@ -167,6 +167,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 
 ### APP-159 — Analisi estese riprendibili, diagnostica e release v0.3.4
 
+- **Gate sviluppo superato:** [PR #94](https://github.com/xmey95/pokeguru/pull/94) unita in `dev` al commit `33d499a`, con quattro check verdi sul commit `291087c` ([CI #40701144703](https://github.com/xmey95/pokeguru/actions/runs/40701144703)). Il job Apple Silicon inizialmente non acquisito per capacità GitHub è passato al tentativo successivo. Aperta [PR #96](https://github.com/xmey95/pokeguru/pull/96) da `dev` a `main`; la protezione strict richiede di portare il precedente merge di `main` in `dev` tramite PR. Riallineamento senza cambi applicativi, prima di rieseguire il gate di rilascio.
+
 - **Correzione CI:** lo smoke del primo messaggio assumeva `failed` e il vecchio comando Riprova; aggiornato a sospensione/ripresa del medesimo job, riapertura e annullamento seguito da nuova richiesta, verificando che il messaggio iniziale resti unico. Prova Electron locale passata; microcopy del primo messaggio corretto per non indicare esecuzione durante una pausa.
 
 - **Integrazione finale:** APP-158 è arrivato in `dev` tramite PR #93 durante la preparazione; integrato preservando cronologia, diagnostica e checkpoint. Typecheck/build e 355 test passati (43 live esclusi); prove Electron di ripresa/isolation/cancellazione e 127 attività con burst di 60 passate sulla build combinata. Anche il flusso Matchup reale ha completato guida, due revisioni e prosecuzione sulla nuova lista. PR #94 aperta; attesa CI sul merge finale prima di `main`.

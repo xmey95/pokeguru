@@ -109,6 +109,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
+- **Consegna APP-159:** PR #94 in `dev` (`33d499a`) con quattro check verdi, inclusa ripresa del solo runner Apple Silicon dopo indisponibilità. PR #96 `dev`→`main` aperta per v0.3.4. Serve il riallineamento di `dev` con il precedente merge di `main` mediante una PR di soli documenti/ascendenza, poi CI di rilascio e verifica dei nove asset. Il codice applicativo non cambia rispetto ai 355 test e alle prove reali già eseguite.
+
 - **Stato operativo APP-159:** PR #94 verso `dev`, preparazione v0.3.4. Integrata la PR #93 di APP-158 già unita in `dev`: cronologia completa e reattività convivono con checkpoint/diagnostica. Build, 355 test, ripresa Electron e cronologia di 127 eventi passati; Thread con pausa/riavvio e Matchup reale con due revisioni/prosecuzione verificati. Restano CI finale, PR `dev`→`main`, pubblicazione e verifica asset. Le note sotto registrano i passaggi precedenti.
 
 - **APP-159 in corso (28-10-2026):** nuova release con diagnostica completa e analisi grandi asincrone autorizzate dall'utente. Implementati tutte le pagine delle query, raggruppamento delle sole liste identiche con occorrenze complete, lotti/sintesi, checkpoint e pausa/ripresa esplicita dopo chiusura per Thread/Matchup. Test unitari, recupero Electron offline e tre lotti più sintesi con Codex reale passati; completare prova Thread con riavvio, controlli finali, PR/CI e pubblicazione v0.3.4. Ramo `task/app-159-ai-diagnostics-release`; APP-158 lavora separatamente. Anticipo circoscritto della ripresa APP-013, non avvio dell'intero I4.
