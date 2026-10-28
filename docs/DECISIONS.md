@@ -4,6 +4,16 @@
 
 ## Decisioni
 
+### T-161 — Archivio delle prove e raccolta durevole (in corso)
+
+Il completamento automatico delle ricerche estese è autorizzato il 28-10-2026, fino alla release main. APP-161–164 sostituiscono la ripresa sempre esplicita di T-159: chiusura e riapertura riprendono il lavoro prima attivo; una pausa volontaria resta tale. Nessun avvio dell'intero I4.
+
+L'archivio delle prove usa tabelle nello stesso SQLite dei progetti, con originali immutabili indirizzati per hash e compressi in blocchi da 128 KiB. Le appartenenze alle ricerche sono separate dai contenuti: una partecipazione trovata due volte conta una volta, mantenendo entrambi i percorsi di ricerca. Pagina, originali e cursore vengono confermati in una transazione. Il contesto congelato deve precedere l'elaborazione; la ripresa non deve mescolare gli aggiornamenti delle fonti con il lavoro già svolto.
+
+Il raggruppamento conserva quantità e identificativi di stampa; non usa somiglianza o solo il nome. Frequenze, record contro il campo e piazzamenti si calcolano sui record unici, senza affidare somme alle sintesi AI; gli abbinamenti mantengono la propria identità. Un record contro il campo non diventa il winrate del mazzo dell'utente. I contenuti condivisi sono leggibili solo attraverso l'appartenenza al job/progetto/risorsa. Gli originali necessari a lavori sospesi o risposte storiche restano referenziati; si raccolgono esclusivamente oggetti privi di riferimenti, senza cancellazioni per età o quote.
+
+Prima verifica dei moduli: typecheck e 23 test mirati passati, inclusa fixture oltre 64 MB. Integrazione workflow, incremento di schema con backup verificato, snapshot e consultazione storica ancora da completare in APP-161. Non dichiarare questo checkpoint come soluzione già attiva nell'app.
+
 | ID | Stato | Decisione e motivo | Alternative / condizione di revisione |
 | --- | --- | --- | --- |
 | **T-151** | APP-151, corruzione locale osservata 27-10-2026 | Verificare integrità SQLite e relazioni prima di aprire qualsiasi connessione scrivibile anche quando lo schema è già corrente. Su corruzione riconosciuta, mostrare un errore specifico e non programmare sincronizzazioni o riprese AI. La copia forense dimostra un'incoerenza fra pagine dello schema, ma non identifica il fattore che l'ha causata; l'utente non desidera un ripristino. | Un controllo all'avvio limita la propagazione di un danno preesistente, senza prevenire guasti durante la sessione o problemi esterni di filesystem/I/O. Non riparare né sostituire automaticamente il database. Rivedere la strategia se si riproduce un meccanismo causale preciso. |

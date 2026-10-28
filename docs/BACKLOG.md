@@ -165,6 +165,36 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-158** | Cronologia scorrevole delle attività AI e UI reattiva durante Codex | UI/affidabilità AI | R-07, R-10, R-13 / feedback utente 28-10-2026 | P1 / M | APP-154; migrazione archivio e verifica Electron | Done |
 | **APP-159** | Analisi estese riprendibili, diagnostica e release v0.3.4 | Funzionalità/affidabilità/distribuzione | R-07, R-12, R-13, R-14 / richiesta utente | P0 / L | APP-157; query locali, CI e release esistenti | Done |
 | **APP-160** | Attività AI comprensibili per un giocatore e sintesi formattate | UI | R-07, R-10, R-13 / feedback utente 28-10-2026 | P1 / S | APP-154/158; renderer Markdown esistente | Done |
+| **APP-161** | Archivio incrementale e raccolta persistente delle analisi | Dati/affidabilità | R-06, R-07, R-13, R-14 / obiettivo utente 28-10-2026 | P0 / L | APP-159; perimetro concordato | In progress |
+| **APP-162** | Analisi adattiva e sintesi verificabile con recupero automatico | AI/affidabilità | R-07, R-08, R-10, R-13 | P0 / L | APP-161 | Backlog |
+| **APP-163** | Ripresa automatica e stati operativi delle analisi | Affidabilità/UI | R-01, R-07, R-13, R-14 | P0 / M | APP-161/162; APP-160 preservato | Backlog |
+| **APP-164** | Verifica integrata e release delle analisi automatiche | Verifica/distribuzione | R-07, R-12, R-14 | P0 / M | APP-161–163; CI e release | Backlog |
+
+### APP-161 — Archivio incrementale e raccolta persistente
+
+- **Autorizzazione e Ready (28-10-2026):** dopo la discussione l'utente autorizza il completamento dell'incremento e una release su main. Parte circoscritta di APP-013, senza costruzione da zero o altre parti I4. Ramo isolato `task/app-161-adaptive-analysis`, base APP-160 locale `dc28cf2`; i file del suo renderer e parser non vengono duplicati o riscritti.
+- **Accettazione:** risultati oltre 64 MB raccolti senza unico payload in memoria; originali immutabili deduplicati, query e pagine con cursori persistenti, ripresa sullo stesso snapshot; liste realmente identiche con tutte le partecipazioni, frequenze, piazzamenti, record e abbinamenti disponibili. Query sovrapposte non duplicano conteggi. Riferimenti storici, isolamento progetto e backup restano validi.
+- **Verifica prevista:** fixture oltre 64 MB, pagine sovrapposte, riapertura, interruzione transazionale, dati cambiati e accesso da altro progetto. Nessun profilo personale modificato.
+- **Prima verifica locale (28-10-2026):** introdotti archivio SQLite di originali in blocchi compressi da 128 KiB, riferimenti di appartenenza e cursori transazionali; conteggi deterministici delle partecipazioni e dei record, abbinamenti deduplicati, controllo integrità e raccolta dei soli oggetti non più referenziati. Le query Eventi trasportano ora record e abbinamenti disponibili. Typecheck e 23 test su archivio/raccolta/motore/checkpoint passano con Node 24.18.0: 70 pagine oltre 64 MB riaperte integralmente, rollback simulato via trigger SQLite, query sovrapposte, isolamento e recupero dal cursore senza rieseguire pagine completate. Sono prove locali, non nuove integrazioni Codex reali.
+- **Ripresa:** l'archivio e il collettore sono ancora moduli da collegare al workflow applicativo. Restano snapshot congelato con indice Eventi paginato, collegamento a query/analisi senza ricostruire il registro JSON completo, riferimenti storici e migrazione/backup, letture UI mirate. Il vecchio limite 64 MB è ancora attivo nel percorso esistente finché questa integrazione non è completata. Proseguire APP-161 prima di APP-162–164; nessuna release o modifica al profilo personale.
+
+### APP-162 — Analisi adattiva e sintesi verificabile
+
+- **Ambito autorizzato:** pianificazione e partizioni adattive mantenendo la domanda; limiti separati per memoria, singola chiamata e disco; ogni prova conserva riferimenti agli originali. Conteggi deterministici, confronto globale e recupero mirato di contraddizioni. Riuso per dipendenze, input, configurazione e versione del procedimento.
+- **Accettazione:** un blocco troppo grande viene diviso senza ripetizione identica; errori transitori con tentativi limitati e attese persistenti; ripianificazione senza progresso fermata con causa; nessuna sintesi incompleta presentata come esaustiva. Controlli finali su carte e candidate mantenuti.
+- **Verifica prevista:** record grandi, saturazione contesto, timeout/rete/quota, citazioni errate, assenza di progresso, riuso e invalidazione mirata; confronto numerico senza doppi conteggi e prova Codex reale.
+
+### APP-163 — Ripresa automatica e stati operativi
+
+- **Preferenza confermata:** l'app chiusa non elabora; riaprire riprende automaticamente il lavoro in corso. Una pausa volontaria resta tale. Attesa automatica, pausa utente, problema che richiede intervento e completamento sono distinguibili.
+- **Accettazione:** salvataggio finale idempotente, ripresa dopo interruzioni in ogni fase, versione/snapshot/configurazione coerenti, conteggi e motivo dell'attesa comprensibili. Nessun ciclo identico a 64 MB; nessuna duplicazione del lavoro di linguaggio/Markdown APP-160.
+- **Verifica prevista:** Electron con arresto/riapertura, pause, annullamento, due progetti, risultati già prodotti e cambio dati; diagnostica priva di contenuti privati.
+
+### APP-164 — Verifica integrata e release
+
+- **Ambito autorizzato:** completare APP-161–163, integrare APP-160 disponibile, aggiornare documenti, PR verso dev e poi main dopo controlli verdi; pubblicare e verificare nuova release.
+- **Accettazione:** build/typecheck e suite pertinenti, prove reali Thread e Matchup su profili temporanei, percorso oltre 64 MB e recupero senza perdita; CI sulle quattro piattaforme. Tag sul merge main, pacchetti, manifest e checksum coerenti.
+- **Limite esplicito:** un esito sintetico non certifica le integrazioni reali; completamento dell'obiettivo solo dopo verifica effettiva della release.
 
 ### APP-160 — Attività AI comprensibili e sintesi formattate
 

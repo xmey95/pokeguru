@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto'
 import type { CatalogView } from '../shared/catalog'
-import type { TournamentSnapshot } from '../shared/tournament'
+import type { TournamentPairing, TournamentSnapshot } from '../shared/tournament'
 import type { MainTournamentSnapshot } from '../shared/main-tournament'
 import type { AiEvidenceQueryResult } from '../shared/ai-evidence'
 import { searchCatalogEvidence } from './catalog-evidence-search'
+import { exactDeckIdentity } from './ai-evidence-archive'
 
 export type AiEvidenceQuery =
   | { operation: 'catalog.search'; terms?: string[]; printIds?: string[];
@@ -90,24 +91,22 @@ function normalized(value: string): string {
 
 type EventRow = { id: string; snapshotId: string; name: string; date: string;
   kind: 'online' | 'in-person'; url: string; participants: number; completeLists: number;
-  deck: string; placing: number | null; listUrl: string; cards: string[] }
-
-function deckKey(cards: string[]): string {
-  const copies = new Map<string, number>()
-  for (const line of cards) {
-    const match = /^(\d+)\s+(.+)$/.exec(line.trim())
-    if (!match) return fingerprint(cards)
-    const card = match[2].normalize('NFKC').toLocaleLowerCase('en').replace(/\s+/g, ' ')
-    copies.set(card, (copies.get(card) ?? 0) + Number(match[1]))
-  }
-  // Print codes/numbers stay in the key: similar decks are never merged.
-  return fingerprint([...copies].sort(([a], [b]) => a.localeCompare(b)))
-}
+  deck: string; placing: number | null; listUrl: string; cards: string[];
+  playerId: string | null; record: { wins: number; losses: number; ties: number } | null;
+  pairings: TournamentPairing[] }
 
 function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[]): EventRow[] {
   const rows: EventRow[] = []
   for (const event of play) {
     if (event.circuit !== 'WESTERN' || event.format !== 'STANDARD') continue
+    const pairings = new Map<string, TournamentPairing[]>()
+    for (const pairing of event.pairings ?? []) {
+      for (const player of new Set([pairing.player1, pairing.player2].filter((id): id is string => !!id))) {
+        const matches = pairings.get(player) ?? []
+        matches.push(pairing)
+        pairings.set(player, matches)
+      }
+    }
     for (const item of event.participations) {
       if (item.listStatus !== 'available' || item.cardTotal !== 60) continue
       rows.push({ id: `play:${event.eventId}`, snapshotId: event.id, name: event.name,
@@ -115,6 +114,7 @@ function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[]): 
         participants: event.coverage.returnedParticipants,
         completeLists: event.coverage.complete60Lists, deck: item.deck?.name ?? '',
         placing: item.placing, listUrl: `${event.publicUrl}/player/${encodeURIComponent(item.playerId)}/decklist`,
+        playerId: item.playerId, record: item.record, pairings: pairings.get(item.playerId) ?? [],
         cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) })
     }
   }
@@ -127,6 +127,7 @@ function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[]): 
         participants: event.coverage.returnedParticipants,
         completeLists: event.coverage.complete60Lists, deck: item.deckName ?? '',
         placing: item.placing, listUrl: item.listUrl,
+        playerId: null, record: null, pairings: [],
         cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) })
     }
   }
@@ -225,7 +226,7 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
             (a.placing ?? Infinity) - (b.placing ?? Infinity))
         const grouped = new Map<string, EventRow & { occurrences: Omit<EventRow, 'cards'>[] }>()
         for (const row of matching) {
-          const key = deckKey(row.cards)
+          const key = exactDeckIdentity(row.cards)
           const { cards: _cards, ...occurrence } = row
           const existing = grouped.get(key)
           if (existing) existing.occurrences.push(occurrence)

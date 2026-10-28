@@ -70,6 +70,8 @@ La **Ricerca avanzata** del Catalogo interpreta una domanda naturale e filtra la
 
 ## Requisiti derivati proposti
 
+**Incremento autorizzato APP-161–164 (28-10-2026, R-01/R-06/R-07/R-08/R-10/R-13/R-14):** una ricerca ampia mantiene la domanda e il perimetro mentre l'app suddivide automaticamente raccolta e analisi. Conservare originali, partecipazioni, frequenze, provenienza, piazzamenti, record e abbinamenti disponibili; deduplicare solo identità verificate senza fondere mazzi simili. Archivio incrementale, coda persistente, contesto limitato per chiamata, conteggi deterministici, sintesi globale con prove riapribili e controlli finali. Riusare lavoro compatibile; errori transitori con tentativi limitati e attesa, errori strutturali con adattamento senza cicli identici. Lo spazio realmente esaurito o una scelta che cambia l'obiettivo possono richiedere intervento. La riapertura riprende automaticamente un lavoro prima attivo; una pausa volontaria resta in pausa. Questa preferenza sostituisce la ripresa sempre esplicita di APP-159. Nessuna adozione automatica di candidate.
+
 | ID | Proposta | Motivo e verifica |
 | --- | --- | --- |
 | **D-01** | Versionare circuito, formato, data, regole di legalità e fonte usati per ogni validazione; ricalcolare automaticamente dopo una rotazione o un aggiornamento verificato. | Una lista rivalutata in futuro deve spiegare eventuale cambio d'esito senza richiedere modifiche manuali alla lista. |
