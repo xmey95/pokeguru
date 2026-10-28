@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 28 ottobre 2026. **Fase corrente:** I3 completato e v0.3.2 pubblicata su `main`; APP-153 ha corretto il recupero delle prove AI prima di I4. Il pacchetto Apple Silicon ha una firma ad hoc gratuita, senza notarizzazione; l'apertura da Finder dopo il download resta da provare sul Mac che ha segnalato il problema v0.2.1. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 28 ottobre 2026. **Fase corrente:** I3 completato e v0.3.3 pubblicata su `main`; APP-154 mostra il progresso Codex e APP-155 aggiunge l'export diagnostico. Il pacchetto Apple Silicon ha una firma ad hoc gratuita, senza notarizzazione; l'apertura da Finder dopo il download resta da provare sul Mac che ha segnalato il problema v0.2.1. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -109,7 +109,7 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 
 ## Ripresa
 
-- **APP-156 In progress (28-10-2026):** l'utente ha chiesto una nuova release in `main`; preparare v0.3.3 da `dev` con APP-154 e APP-155, verificare PR e quattro piattaforme, poi pubblicazione, tag, quattro pacchetti, manifest, checksum e attestazioni. APP-147 resta aperto per la prova Finder su Mac Apple Silicon esterno alla CI.
+- **APP-156 Done — v0.3.3 pubblicata (28-10-2026):** [PR #90](https://github.com/xmey95/pokeguru/pull/90) in `dev` e [PR #91](https://github.com/xmey95/pokeguru/pull/91) in `main` con quattro check CI verdi ciascuna; [workflow Release #40678893189](https://github.com/xmey95/pokeguru/actions/runs/40678893189) verde per pacchetti, smoke, attestazione e pubblicazione. [v0.3.3](https://github.com/xmey95/pokeguru/releases/tag/v0.3.3) ha tag sul merge `d1c7ad0` di `main`, quattro pacchetti, quattro manifest e otto checksum verificati. APP-147 resta aperto per la prova Finder sul Mac Apple Silicon esterno alla CI; I4 non è avviato.
 - **APP-155 Done in `dev` (28-10-2026):** Impostazioni AI → Assistenza e diagnostica contiene un export JSON discreto e solo locale. Il report riepiloga versione, piattaforma, archivio, Catalogo/Eventi, sincronizzazioni, job, blocchi UI e incidenti renderer, con campi privati esclusi. Build, 344 test, smoke Electron con salvataggio reale e prova su archivio SQLite danneggiato riusciti. [PR #89](https://github.com/xmey95/pokeguru/pull/89) integrata in `dev` al merge `f9ca6dc`, con quattro check CI verdi. Le release v0.3.2 non includono la funzione.
 
 - **APP-154 Done in `dev` (28-10-2026):** il pannello mostra le fasi reali dei job Codex e le sintesi disponibili in Thread e Matchup, con stato persistito e isolato. Build/typecheck, 252 test, migrazione v9→v10 con backup, smoke Electron offline, navigazione e riavvio di un Thread reale, guida iniziale, due revisioni e continuazione Matchup reali sono riusciti. [PR #88](https://github.com/xmey95/pokeguru/pull/88) ha quattro check CI verdi su Ubuntu, Windows e due macOS; il commit documentale finale viene verificato prima del merge. Le sintesi possono arrivare a blocchi o mancare in un turno; le fasi restano visibili. `main`, release e I4 non sono stati avviati.
