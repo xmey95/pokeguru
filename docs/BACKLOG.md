@@ -1,6 +1,6 @@
 # Backlog di sviluppo
 
-**Fonte autorevole degli stati.** Aggiornato il 27 ottobre 2026. Kanban: `Backlog` = individuato, da raffinare; `Ready` = definito, dipendenze risolte; `In progress` = in esecuzione; `Blocked` = causa, impatto e sblocco annotati; `Done` = risultato e verifica registrati. `Ready` **non autorizza** l'implementazione: l'utente ha chiesto di avanzare al prossimo percorso provabile. Massimo un task principale `In progress`.
+**Fonte autorevole degli stati.** Aggiornato il 28 ottobre 2026. Kanban: `Backlog` = individuato, da raffinare; `Ready` = definito, dipendenze risolte; `In progress` = in esecuzione; `Blocked` = causa, impatto e sblocco annotati; `Done` = risultato e verifica registrati. `Ready` **non autorizza** l'implementazione: l'utente ha chiesto di avanzare al prossimo percorso provabile. Massimo un task principale `In progress`.
 
 Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prima di `Ready`. Priorità: **P0** per percorso corrente o rischio decisivo, **P1** successiva, **P2** estensione. Gli ID restano stabili anche se l'ordine cambia. Le verifiche previste non sono prove già eseguite.
 
@@ -175,14 +175,18 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-168** | Distinguere caricamento e assenza delle guide Matchup | UI | R-10, R-13 | P1 / S | Guide e discussioni persistite | Done |
 | **APP-169** | Selettore progetti in modale con sfondo sfocato | UI | R-03 | P1 / S | Archivio e gestione progetti esistenti | Done |
 | **APP-170** | Distinguere partecipazioni con URL lista condiviso e recuperare le analisi v0.3.5 | Affidabilità/distribuzione | R-01, R-06, R-07, R-13, R-14 | P0 / M | APP-164; difetto riprodotto su schema 13 nuovo | Done |
-| **APP-171** | Pubblicare in main la release v0.3.7 del feedback desktop | Distribuzione | R-01, R-12 / I3 | P0 / S | APP-165–170 integrati in dev | In progress |
+| **APP-171** | Pubblicare in main la release v0.3.7 del feedback desktop | Distribuzione | R-01, R-12 / I3 | P0 / S | APP-165–170 integrati in dev | Done |
 
 ### APP-171 — Release v0.3.7 del feedback desktop
 
-- **Autorizzazione e Ready (28-10-2026):** l'utente richiede una nuova release in `main` dopo il merge della PR #104 in `dev` (`e78a6c7`). La versione pubblica precedente è v0.3.6. Preparare 0.3.7 senza altre modifiche applicative; APP-171 è l'unica attività principale in corso.
+- **Autorizzazione e Ready (28-10-2026):** l'utente richiede una nuova release in `main` dopo il merge della PR #104 in `dev` (`e78a6c7`). La versione pubblica precedente è v0.3.6. Preparare 0.3.7 senza altre modifiche applicative; APP-171 è stata l'unica attività principale di questo incremento.
 - **Accettazione:** versione coerente in package e lockfile, note sui cinque interventi e sulla migrazione allo schema 14; PR di preparazione in dev e PR di rilascio in main con quattro check verdi. Workflow Release riuscito, tag sul commit main, quattro pacchetti nativi, quattro manifest e checksum verificati dopo la pubblicazione.
 - **Preparazione locale:** versione `0.3.7` coerente nelle tre occorrenze package/lockfile; README aggiornato con novità e limiti. Build/typecheck Node 24.18.0 e `git diff --check` passati. Nessuna dipendenza o logica applicativa modificata.
 - **Verifica prevista:** build/typecheck locale e coerenza versione; CI completa su Linux, Windows, macOS Intel e Apple Silicon; package/smoke, attestazioni, confronto hash/commit/versione/run degli asset pubblicati. Base funzionale già verificata da [CI #40761261959](https://github.com/xmey95/pokeguru/actions/runs/40761261959) su PR #104 (311 test canonici e prove Electron). Nessuna modifica al profilo personale; restano i limiti macOS documentati e APP-147.
+
+- **Consegna verificata (28-10-2026):** [v0.3.7 pubblicata](https://github.com/xmey95/pokeguru/releases/tag/v0.3.7) sul merge main `6df3ab34f1deaafb552d4db9437643f57da5851d`. [PR #106](https://github.com/xmey95/pokeguru/pull/106) in dev e [PR #107](https://github.com/xmey95/pokeguru/pull/107) in main con quattro check verdi ([CI #40764144481](https://github.com/xmey95/pokeguru/actions/runs/40764144481), [CI #40766088859](https://github.com/xmey95/pokeguru/actions/runs/40766088859)). [Release #40768706944](https://github.com/xmey95/pokeguru/actions/runs/40768706944) ha superato quattro package/smoke, attestazione e pubblicazione. Verificati tag/commit, nove asset, otto checksum rispetto ai digest GitHub, hash dei quattro manifest scaricati e del file checksum, versione/commit/run/dimensione dei pacchetti. SHA-256 installer Windows: `1b6bf20de2c79401fdd92e5702c9070bccf025420a71747e72f875a0f28c671d`; DMG Apple Silicon: `a8d91272391775290329496139992c81ee9cea88b10ce682a929b85156828832`. APP-165–169 inclusi; migrazione allo schema 14 con backup verificato. Nessuna modifica al profilo personale. Limiti di firma macOS e prova Finder esterna invariati.
+- **Nota CI:** il primo tentativo Linux della PR #107 è terminato con errore nativo Electron `Invoke in DisallowJavascriptExecutionScope` mentre la fixture collegava l'inspector al worker, prima delle asserzioni di sincronizzazione. Ripetuto una sola volta il solo job Linux, sullo stesso commit e senza cambiamenti: tutte le prove sono passate. Windows e i due Mac sono passati al primo tentativo. Il crash non si è ripresentato; la verifica non ne dimostra la rimozione dall'infrastruttura di test.
+- **Chiusura documentale:** PLAN, PRODUCT e DISTRIBUTION allineati alla release verificata; ramo di verifica da main per riportarne anche l'ascendenza in dev. Nessuna ulteriore modifica applicativa.
 
 ### APP-170 — Partecipazioni distinte e ripresa dopo errore UNIQUE
 
