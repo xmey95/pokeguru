@@ -4,6 +4,10 @@
 
 ## Decisioni
 
+### T-164 — Release verificata dell'incremento automatico
+
+APP-161–164 e APP-160 sono nella [v0.3.5](https://github.com/xmey95/pokeguru/releases/tag/v0.3.5), sul commit `df61ca4192b7acd82df2001a87cfa7b4dac60945` di `main`. PR #99 e #100 con quattro check verdi; [Release #40745083391](https://github.com/xmey95/pokeguru/actions/runs/40745083391) con package/smoke nativi, manifest, attestazioni e nove asset verificati dopo la pubblicazione. Thread e Matchup sono stati provati con Codex reale in profili temporanei; il ciclo di riapertura usa risposte sintetiche per verificare persistenza e idempotenza sulle quattro piattaforme. La fixture oltre 64 MB verifica la pipeline locale, senza attribuirle una prova del modello su quel volume. Lo spazio esaurito è verificato tramite rifiuto SQLite delle scritture, senza riempimento fisico del disco. I dettagli e i limiti sono registrati in APP-164 e `DISTRIBUTION.md`; nessuna estensione all'intero I4.
+
 ### T-163 — Arresto, ripresa e risultati storici
 
 I nuovi workflow registrano separatamente pausa utente, chiusura, errore e incompatibilità precedente. Solo i lavori fermati alla chiusura entrano nella coda automatica alla riapertura; la coda avvia un lavoro alla volta. Un arresto improvviso con workflow versione 2 ripercorre le fasi riusando il database. La chiusura dell’ultima finestra termina l’app su tutte le piattaforme. Pause e budget di tentativi persistono; il rinnovo di un budget transitorio esaurito richiede una ripresa esplicita dopo intervento. Gli input strutturalmente non validi non vengono ripetuti.
