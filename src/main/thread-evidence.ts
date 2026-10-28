@@ -81,10 +81,18 @@ interface ListRow {
   score: number
 }
 
-function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[], query: string,
+function eventRows(play: Iterable<TournamentSnapshot>, main: Iterable<MainTournamentSnapshot>, query: string,
   ownPokemon: Set<string>): ListRow[] {
   const words = tokens(query)
-  const rows: ListRow[] = []
+  const perEvent = new Map<string, ListRow[]>()
+  const compare = (a: ListRow, b: ListRow) => b.score - a.score || b.eventDate.localeCompare(a.eventDate) ||
+    (a.placing ?? Infinity) - (b.placing ?? Infinity)
+  const add = (row: ListRow) => {
+    const rows = perEvent.get(row.eventId) ?? []
+    rows.push(row)
+    rows.sort(compare)
+    perEvent.set(row.eventId, rows.slice(0, 2))
+  }
   const score = (deck: string, cards: TournamentCard[]): number => {
     const deckParts = normal(deck).split(' ')
     const cardParts: string[] = []
@@ -99,11 +107,12 @@ function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[], q
     const overlap = matchingPokemon.size
     return queryMatches * 10 + cardMatches * 4 + overlap * 2
   }
-  for (const event of play.filter((item) => item.circuit === 'WESTERN' && item.format === 'STANDARD')) {
+  for (const event of play) {
+    if (event.circuit !== 'WESTERN' || event.format !== 'STANDARD') continue
     for (const item of event.participations.filter((entry) => entry.listStatus === 'available' && entry.cardTotal === 60)) {
       const rank = score(item.deck?.name ?? '', item.cards)
       if (rank < 2) continue
-      rows.push({ eventId: `play:${event.eventId}`, snapshotId: event.id, eventName: event.name,
+      add({ eventId: `play:${event.eventId}`, snapshotId: event.id, eventName: event.name,
         eventDate: event.date, eventUrl: event.publicUrl, kind: 'online',
         participants: event.coverage.returnedParticipants, completeLists: event.coverage.complete60Lists,
         deck: item.deck?.name ?? 'Archetipo non classificato', placing: item.placing,
@@ -111,25 +120,25 @@ function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[], q
         cards: item.cards, score: rank })
     }
   }
-  for (const event of main.filter((item) => item.circuit === 'WESTERN' && item.format === 'STANDARD')) {
+  for (const event of main) {
+    if (event.circuit !== 'WESTERN' || event.format !== 'STANDARD') continue
     for (const item of event.participants.filter((entry) => entry.cardTotal === 60 && entry.cards && entry.listUrl)) {
       const rank = score(item.deckName ?? '', item.cards!)
       if (rank < 2) continue
-      rows.push({ eventId: `main:${event.eventId}`, snapshotId: event.id, eventName: event.name,
+      add({ eventId: `main:${event.eventId}`, snapshotId: event.id, eventName: event.name,
         eventDate: event.date, eventUrl: event.url, kind: 'in-person',
         participants: event.coverage.returnedParticipants, completeLists: event.coverage.complete60Lists,
         deck: item.deckName ?? 'Archetipo non classificato', placing: item.placing,
         url: item.listUrl!, cards: item.cards!, score: rank })
     }
   }
-  return rows.sort((a, b) => b.score - a.score || b.eventDate.localeCompare(a.eventDate) ||
-    (a.placing ?? Infinity) - (b.placing ?? Infinity))
+  return [...perEvent.values()].flat().sort(compare)
 }
 
 /** A bounded, immutable copy of the local facts supplied to one Codex turn. */
 export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null, question: string,
-  constraints: DeckConstraint[], catalog: CatalogView, play: TournamentSnapshot[],
-  main: MainTournamentSnapshot[]): ThreadEvidencePacket {
+  constraints: DeckConstraint[], catalog: CatalogView, play: Iterable<TournamentSnapshot>,
+  main: Iterable<MainTournamentSnapshot>): ThreadEvidencePacket {
   const candidate = thread.candidates.at(-1) ?? null
   const byPrintName = new Map<string, CatalogPrint[]>()
   const byPrintId = new Map<string, CatalogPrint>()

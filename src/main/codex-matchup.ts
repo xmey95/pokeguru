@@ -1,3 +1,4 @@
+import { codexErrorEvent, codexFailure } from './codex-failure'
 import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -88,7 +89,8 @@ function runCodex(prompt: string, config: AiRunConfig, test = false,
       stdout = lines.pop() ?? ''
       for (const line of lines) {
         try {
-          const summary = codexReasoningSummary(line)
+          stderr = (stderr + codexErrorEvent(line)).slice(-4000)
+              const summary = codexReasoningSummary(line)
           if (summary) options.onSummary?.(summary)
           const event = JSON.parse(line) as { type?: string; usage?: unknown }
           if (event.type === 'turn.completed') usage = readAiTokenUsage(event.usage)
@@ -110,7 +112,7 @@ function runCodex(prompt: string, config: AiRunConfig, test = false,
       try {
         if (options.signal?.aborted) throw new Error('Operazione Codex annullata.')
         if (timedOut) throw new Error('Codex ha superato il tempo massimo di dieci minuti per questa chiamata. Puoi riprendere l’analisi.')
-        if (code !== 0) throw new Error(stderr.includes('Not logged in') ? 'Accedi a Codex prima di generare le analisi.' : 'Codex non ha completato l’analisi. Controlla connessione, modello e accesso, poi riprova.')
+        if (code !== 0) throw codexFailure(stderr)
         const parsed = JSON.parse(readFileSync(resultPath, 'utf8')) as Record<string, unknown>
         if (requestedFields.some((field) => typeof parsed[field] !== 'string' || (parsed[field] as string).length > (field === 'summary' ? 8000 : 5000)) ||
           (test && parsed.strategy !== 'POKEGURU_OK')) {

@@ -35,7 +35,7 @@ try {
   })
   await application.close()
   application = null
-  // Simulate abrupt process termination with a durable job and completed checkpoint.
+  // A pre-snapshot workflow cannot be automatically reconstructed with newer data.
   mkdirSync(directory, { recursive: true })
   const workflow = { kind: 'thread-ask', args: [fixture.projectId, fixture.threadId, 'Valuta questa idea', null, null] }
   writeFileSync(join(directory, 'workflow.json'), JSON.stringify(workflow))
@@ -53,12 +53,14 @@ try {
   await switchProject(page, /Ripresa analisi/)
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
   await switchThread(page, /Analisi lunga/)
-  await page.getByRole('button', { name: 'Riprendi analisi', exact: true }).waitFor()
+  await page.getByText('Analisi precedente senza tutti gli input salvati.', { exact: false }).waitFor()
+  assert.equal(await page.getByRole('button', { name: 'Riprendi analisi', exact: true }).count(), 0)
   const status = () => page.evaluate(async ({ projectId, threadId }) =>
     (await window.projectsApi.getAiJobStatus(projectId, threadId)).value, fixture)
   let job = await status()
   assert.equal(job.id, jobId)
   assert.equal(job.status, 'interrupted')
+  assert.equal(job.progress.diagnostics.suspensionReason, 'legacy')
   assert.equal(job.progress.diagnostics.batchesCompleted, 2)
   assert.equal(job.progress.diagnostics.calls, undefined, 'restart must not spend an AI call')
   assert.equal(existsSync(join(directory, 'checkpoint-preserved.json')), true)
@@ -72,9 +74,9 @@ try {
     window.projectsApi.resumeAiJob(projectId, threadId), fixture)
   assert.equal(mismatch.ok, false)
   writeFileSync(join(directory, 'workflow.json'), JSON.stringify(workflow))
-  await page.getByRole('button', { name: 'Riprendi analisi', exact: true }).click()
-  await page.getByText('Codex non disponibile.', { exact: false }).first().waitFor()
-  await page.getByRole('button', { name: 'Riprendi analisi', exact: true }).waitFor()
+  const legacy = await page.evaluate(async ({ projectId, threadId }) =>
+    window.projectsApi.resumeAiJob(projectId, threadId), fixture)
+  assert.equal(legacy.ok, false)
   job = await status()
   assert.equal(job.id, jobId)
   assert.equal(job.status, 'interrupted')
@@ -88,7 +90,7 @@ try {
   assert.equal((await status()).status, 'cancelled')
   assert.equal(existsSync(directory), false)
   assert.equal(await page.getByLabel('Scrivi nel thread').isEditable(), true)
-  console.log('E2E workflow OK: recovery, explicit resume, project isolation, error preservation, cancellation.')
+  console.log('E2E legacy workflow OK: missing snapshot recognized, project isolation, checkpoint preservation, cancellation.')
 } finally {
   if (application) await application.close()
   if (realpathSync(dirname(temporary)) !== realpathSync(tmpdir()) ||

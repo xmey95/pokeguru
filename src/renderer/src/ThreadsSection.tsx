@@ -11,6 +11,7 @@ import { reviewCandidate } from '../../shared/candidate-review'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import type { ThreadEvidencePacket } from '../../shared/thread-evidence'
 import type { AiJobSummary } from '../../shared/ai-job'
+import { aiJobInterruptionText, aiJobWaitingText, canResumeAiJob } from '../../shared/ai-job-lifecycle'
 import { localCalendarDate } from '../../shared/calendar-date'
 import { reviewSummary } from './review-summary'
 import { ThreadSwitcher } from './ThreadSwitcher'
@@ -752,7 +753,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
             </div>}
             {currentAiJob && (currentAiJob.status === 'running' || currentAiJob.status === 'ready') &&
               <div className="content-note" role="status">{currentAiJob.status === 'running'
-                ? (asking ? '' : 'Codex sta rispondendo…') : 'La risposta è pronta, ma non è stata salvata.'}
+                ? (aiJobWaitingText(currentAiJob) ?? (asking ? '' : 'Codex sta rispondendo…')) : 'La risposta è pronta, ma non è stata salvata.'}
                 <button type="button" className="text-button" onClick={() => void cancelAi()}>{currentAiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
                 {currentAiJob.status === 'running' && currentAiJob.progress?.diagnostics?.workflow &&
                   <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Pausa</button>}
@@ -761,11 +762,13 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
             {currentAiJob && (currentAiJob.status === 'interrupted' || currentAiJob.status === 'failed' || currentAiJob.status === 'cancelled') &&
               <p className="content-note" role="status">{currentAiJob.status === 'cancelled'
                 ? 'Risposta annullata.' : currentAiJob.progress?.diagnostics?.resumable
-                  ? 'L’analisi è sospesa; il lavoro completato è conservato.'
+                  ? aiJobInterruptionText(currentAiJob)
                   : 'La risposta non è stata completata. Puoi inviare di nuovo la richiesta.'}
                 {currentAiJob.error ? ` ${currentAiJob.error}` : ''}
                 {currentAiJob.status === 'interrupted' && currentAiJob.progress?.diagnostics?.resumable && <>
-                  <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>
+                  {currentAiJob.progress?.diagnostics?.suspensionReason === 'shutdown'
+                    ? <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Metti in pausa</button>
+                    : canResumeAiJob(currentAiJob) && <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>}
                   <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla analisi</button>
                 </>}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Questo thread usa una lista precedente. Apri un nuovo thread dalla lista attuale.</p>}

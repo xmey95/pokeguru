@@ -45,6 +45,8 @@ const api: ProjectsApi = {
   getAiJobActivity: (projectId, resourceId, jobId, before) =>
     ipcRenderer.invoke('ai:job-activity', projectId, resourceId, jobId, before),
   listRecentAiJobs: () => ipcRenderer.invoke('ai:recent-jobs'),
+  getAiEvidencePage: (projectId, resourceId, jobId, searchKey, sequence) =>
+    ipcRenderer.invoke('ai:evidence-page', projectId, resourceId, jobId, searchKey, sequence),
   cancelAiJob: (projectId, resourceId) => ipcRenderer.invoke('ai:cancel-job', projectId, resourceId),
   pauseAiJob: (projectId, resourceId) => ipcRenderer.invoke('ai:pause-job', projectId, resourceId),
   resumeAiJob: (projectId, resourceId) => ipcRenderer.invoke('ai:resume-job', projectId, resourceId),

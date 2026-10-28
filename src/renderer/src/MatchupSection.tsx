@@ -3,6 +3,7 @@ import type { DeckBaseline } from '../../shared/deck-import'
 import type { DeckVersion } from '../../shared/deck-threads'
 import type { AiConnection, AiPreferences } from '../../shared/ai'
 import type { AiJobSummary } from '../../shared/ai-job'
+import { aiJobInterruptionText, aiJobWaitingText, canResumeAiJob } from '../../shared/ai-job-lifecycle'
 import type { CatalogView } from '../../shared/catalog'
 import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
@@ -399,6 +400,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       title={revisionInFlight ? 'Codex sta aggiornando la guida…' : 'Preparazione della guida…'} />}
     {aiJob && (aiJob.status === 'running' || aiJob.status === 'ready') &&
       <div className="content-note">{aiJob.status === 'ready' && <span role="status">La guida è pronta, ma non è stata salvata.</span>}
+        {aiJobWaitingText(aiJob) && <span role="status">{aiJobWaitingText(aiJob)}</span>}
         <button type="button" className="text-button" onClick={() => void cancelAi()}>{aiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
         {aiJob.status === 'running' && aiJob.progress?.diagnostics?.workflow &&
           <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Pausa</button>}
@@ -407,9 +409,11 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
       </div>}
     {aiJob && (aiJob.status === 'interrupted' || aiJob.status === 'failed' || aiJob.status === 'cancelled') &&
       <p className="content-note" role="status">{aiJob.status === 'cancelled'
-        ? 'Preparazione annullata.' : aiJob.error ?? 'La guida non è stata aggiornata. Puoi riprovare.'}
+        ? 'Preparazione annullata.' : `${aiJobInterruptionText(aiJob)} ${aiJob.error ?? ''}`}
         {aiJob.status === 'interrupted' && aiJob.progress?.diagnostics?.resumable && <>
-          <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>
+          {aiJob.progress?.diagnostics?.suspensionReason === 'shutdown'
+            ? <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Metti in pausa</button>
+            : canResumeAiJob(aiJob) && <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>}
           <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla analisi</button>
         </>}</p>}
     {loading && !snapshot ? <LoadingSkeleton label="Caricamento del metagame Limitless…" rows={3} /> : snapshot && <>

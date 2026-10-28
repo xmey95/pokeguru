@@ -4,6 +4,32 @@
 
 ## Decisioni
 
+### T-163 — Arresto, ripresa e risultati storici
+
+I nuovi workflow registrano separatamente pausa utente, chiusura, errore e incompatibilità precedente. Solo i lavori fermati alla chiusura entrano nella coda automatica alla riapertura; la coda avvia un lavoro alla volta. Un arresto improvviso con workflow versione 2 ripercorre le fasi riusando il database. La chiusura dell’ultima finestra termina l’app su tutte le piattaforme. Pause e budget di tentativi persistono; il rinnovo di un budget transitorio esaurito richiede una ripresa esplicita dopo intervento. Gli input strutturalmente non validi non vengono ripetuti.
+
+Una guida completata dopo un cambio lista o metagame resta nella discussione della versione originale, verificata contro testo e correzioni salvati. Non sostituisce la guida della versione attuale. I risultati pronti e i turni già applicati vengono riconosciuti dal registro dei job. I vecchi workflow privi di snapshot completo richiedono una nuova analisi sui dati attuali; gli esiti storici restano consultabili. Prove: suite locale 302 passati/35 esclusi e ciclo Electron Windows su profilo temporaneo, senza chiamate al modello in questa verifica.
+
+### T-162 — Input immutabili e adattamento per chiamata
+
+APP-161 congela separatamente le fasi della preparazione Matchup e i dati necessari alla finalizzazione dei Thread; una fase incompleta non diventa un checkpoint. Il workflow versione 2 è nel database insieme alle prove, oltre alla copia temporanea per compatibilità. I file v0.3.4 restano leggibili, ma non possono fornire uno snapshot completo che quella versione non salvava: la ripresa automatica dei vecchi lavori dovrà riconoscere questo limite. Il salvataggio di una guida relativa a una base nel frattempo cambiata deve conservarne il carattere storico (APP-163), senza attribuirla alla nuova lista.
+
+Per APP-162 completato: i limiti devono operare sulla singola chiamata e produrre partizioni verificabili, non una riduzione del perimetro. Errori di contesto richiedono un input diverso; errori transitori hanno tentativi e attese persistenti; spazio esaurito, autenticazione o mancanza di progresso devono produrre una causa operativa distinta.
+
+Il procedimento adaptive-v2 conserva frammenti JSON esatti con chiave originale e posizioni; un frammento non vale una nuova partecipazione. I lotti partono da 60.000 byte e si riducono dopo un errore di contesto; le sintesi occupano al massimo un quarto del budget del livello e devono convergere. Originali, contatori deterministici e riferimenti tra livelli restano verificabili. Una risposta non verificabile non diventa checkpoint. I tentativi e la scadenza di attesa sono salvati prima del nuovo tentativo: chiudere e riaprire non azzera il limite. Gli errori Codex vengono classificati senza registrare il testo grezzo del fornitore.
+
+### T-161 — Archivio delle prove e raccolta durevole
+
+Il completamento automatico delle ricerche estese è autorizzato il 28-10-2026, fino alla release main. APP-161–164 sostituiscono la ripresa sempre esplicita di T-159: chiusura e riapertura riprendono il lavoro prima attivo; una pausa volontaria resta tale. Nessun avvio dell'intero I4.
+
+L'archivio delle prove usa tabelle nello stesso SQLite dei progetti, con originali immutabili indirizzati per hash e compressi in blocchi da 128 KiB. Le appartenenze alle ricerche sono separate dai contenuti: una partecipazione trovata due volte conta una volta, mantenendo entrambi i percorsi di ricerca. Pagina, originali e cursore vengono confermati in una transazione. Il contesto congelato deve precedere l'elaborazione; la ripresa non deve mescolare gli aggiornamenti delle fonti con il lavoro già svolto.
+
+Il raggruppamento conserva quantità e identificativi di stampa; non usa somiglianza o solo il nome. Frequenze, record contro il campo e piazzamenti si calcolano sui record unici, senza affidare somme alle sintesi AI; gli abbinamenti mantengono la propria identità. Un record contro il campo non diventa il winrate del mazzo dell'utente. I contenuti condivisi sono leggibili solo attraverso l'appartenenza al job/progetto/risorsa. Gli originali necessari a lavori sospesi o risposte storiche restano referenziati; si raccolgono esclusivamente oggetti privi di riferimenti, senza cancellazioni per età o quote.
+
+Il secondo checkpoint collega l'archivio al workflow: schema 12 con backup verificato, snapshot delle sorgenti sigillato in transazione e pagine Eventi per partecipazione, senza array illimitati per un mazzo diffuso. La cronologia salva un riferimento al job e indici compatti; gli originali si leggono a pagine da una connessione di sola lettura, dopo verifica di progetto/risorsa/job. I lettori dei lotti usano pagine per chiave e chiudono i cursori SQLite prima di qualsiasi attesa: una prova integrata aveva rilevato un lock tra lettura e salvataggio delle diagnostiche su connessioni diverse. Le sintesi conservano i collegamenti ai record di ingresso separatamente dalle citazioni narrative.
+
+Build/typecheck, suite locale (283 passati, 33 esclusi), successivi sette test pipeline/snapshot e due percorsi Electron isolati passati. I dati oltre 64 MB attraversano ora la raccolta applicativa mantenendo un indice storico piccolo; ciò non certifica ancora l'intera analisi reale. APP-161 è stato chiuso con il successivo checkpoint T-162 sulla preparazione/finalizzazione coerente e la lettura dei checkpoint precedenti. Adattamento, ripresa automatica e release appartengono ai successivi APP-162–164.
+
 | ID | Stato | Decisione e motivo | Alternative / condizione di revisione |
 | --- | --- | --- | --- |
 | **T-151** | APP-151, corruzione locale osservata 27-10-2026 | Verificare integrità SQLite e relazioni prima di aprire qualsiasi connessione scrivibile anche quando lo schema è già corrente. Su corruzione riconosciuta, mostrare un errore specifico e non programmare sincronizzazioni o riprese AI. La copia forense dimostra un'incoerenza fra pagine dello schema, ma non identifica il fattore che l'ha causata; l'utente non desidera un ripristino. | Un controllo all'avvio limita la propagazione di un danno preesistente, senza prevenire guasti durante la sessione o problemi esterni di filesystem/I/O. Non riparare né sostituire automaticamente il database. Rivedere la strategia se si riproduce un meccanismo causale preciso. |
@@ -478,6 +504,10 @@ La navigazione Thread e il selettore Matchup non devono attendere la risposta Co
 ### T-155 — Diagnostica locale a campi consentiti (APP-155)
 
 L'export è un JSON creato solo su richiesta, in una sezione richiudibile delle Impostazioni AI. Il processo principale raccoglie conteggi e stati già disponibili e sintetizza le categorie degli errori; non copia oggetti completi dell'archivio, log generici o stack trace. Il renderer invia soltanto durate dei blocchi superiori a 50 ms, conservate in un buffer massimo di 50 eventi. Gli incidenti del renderer sono limitati a 20 e persistiti in un piccolo file separato, così restano nel report dopo un riavvio. Il file esplicita le esclusioni e non viene trasmesso automaticamente. Questa scelta favorisce una prima diagnosi confrontabile delle release senza esporre mazzi, chat e segreti; per un difetto che richiede dati di contenuto si chiederà un campione specifico, scelto dall'utente.
+
+### T-160 — Linguaggio delle attività e sintesi leggibili (APP-160)
+
+Il renderer presenta le descrizioni applicative note in linguaggio rivolto ai giocatori, mantenendo conteggi e passaggi distinti anche per i job già salvati. Le descrizioni sconosciute rimangono integrali: non vengono sostituite da una fase generica che potrebbe nascondere informazioni. La sintesi del modello resta attribuita a Codex e nella lingua ricevuta; un componente Markdown ristretto rende enfasi, paragrafi ed elenchi, escludendo HTML, immagini e collegamenti attivi. Per le nuove sintesi il parser conserva gli a capo necessari agli elenchi, mantenendo il limite di 900 caratteri e il filtro sugli eventi consentiti. Gli originali nel database non vengono modificati. Nessuna nuova chiamata AI per tradurre o riscrivere il progresso. Il recupero automatico delle analisi oltre i limiti è una discussione separata.
 
 ### T-159 — Analisi estese con checkpoint locali (APP-159)
 

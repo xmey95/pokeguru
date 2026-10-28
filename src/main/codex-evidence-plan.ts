@@ -1,3 +1,4 @@
+import { codexErrorEvent, codexFailure } from './codex-failure'
 import { spawn } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -44,7 +45,8 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
         stdout = lines.pop() ?? ''
         for (const line of lines) {
           try {
-            const summary = codexReasoningSummary(line)
+            stderr = (stderr + codexErrorEvent(line)).slice(-4000)
+              const summary = codexReasoningSummary(line)
             if (summary) onSummary?.(summary)
             const event = JSON.parse(line) as { type?: string; usage?: unknown }
             if (event.type === 'turn.completed') usage = readAiTokenUsage(event.usage)
@@ -67,9 +69,7 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
         signal?.removeEventListener('abort', abort)
         if (signal?.aborted) return reject(new Error('Operazione Codex annullata.'))
         if (timedOut) return reject(new AiFailure('timeout', 'Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati.'))
-        if (code !== 0) return reject(new Error(stderr.includes('Not logged in')
-          ? 'Accedi a Codex prima della ricerca AI.'
-          : 'Codex non ha completato la richiesta.'))
+        if (code !== 0) return reject(codexFailure(stderr))
         try {
           const raw = readFileSync(resultPath, 'utf8')
           if (raw.length > 100_000) throw new Error('Risposta Codex troppo lunga.')

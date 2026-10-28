@@ -5,6 +5,7 @@ import { expect, it } from 'vitest'
 import { ProjectStore } from '../src/main/project-store'
 import { CatalogStore } from '../src/main/catalog'
 import { AiJobStore } from '../src/main/ai-job-store'
+import { AiEvidenceArchive } from '../src/main/ai-evidence-archive'
 import { recoverMatchupJob, recoverThreadJob, settleFailedAiJob } from '../src/main/ai-job-recovery'
 import type { ThreadEvidencePacket } from '../src/shared/thread-evidence'
 import type { AiRunConfig } from '../src/shared/ai'
@@ -14,6 +15,29 @@ const evidence: ThreadEvidencePacket = { schemaVersion: 1, capturedAt: '2026-10-
   baseVersionId: null, candidateId: null, catalogSyncedAt: null,
   cardCoverage: { selected: 0, withGameplay: 0, omitted: 0 }, cards: [], events: [], sources: [],
   change: { updated: [], added: [], removed: [] } }
+
+it('finalizes a validated archived Thread using its original catalog and constraints', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-frozen-recovery-')), path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path), jobs = new AiJobStore(path), catalog = new CatalogStore(path)
+  try {
+    const project = projects.create({ name: 'Frozen recovery', format: 'STANDARD' })
+    const thread = projects.createDeckThread({ projectId: project.id, title: 'Original context' })
+    const job = jobs.start('thread-ask', project.id, thread.id)
+    const archive = new AiEvidenceArchive(path, job)
+    try {
+      archive.saveValue('snapshot', 'sources', { catalog: catalog.view() })
+      archive.saveValue('input', 'constraints', [])
+      archive.saveValue('input', 'base', null)
+      archive.saveValue('input', 'reference-date', '2026-10-25')
+    } finally { archive.close() }
+    jobs.prepare(job.id, { schemaVersion: 2, validatedDraft: true, message: 'Original question', config, evidence, sources: [] })
+    jobs.ready(job.id, { sessionId: 'session', turnId: 'turn', value: {
+      kind: 'thought', reply: 'Original answer', rawText: '', sourceIds: [] } })
+    catalog.view = () => { throw new Error('Current catalog must not replace the original') }
+    expect(await recoverThreadJob(jobs.get(job.id)!, jobs, projects, catalog, {} as never, folder)).toBe('applied')
+    expect(projects.getDeckThread(project.id, thread.id)?.messages.at(-1)?.text).toBe('Original answer')
+  } finally { catalog.close(); jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+})
 
 it('finishes a failed unvalidated draft even when the CLI left a result, allowing retry in the same thread', () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-draft-failure-'))
