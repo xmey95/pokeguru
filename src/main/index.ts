@@ -60,6 +60,7 @@ import type { AiJob } from './ai-job-store'
 import type { AiJobPhase, AiJobSummary } from '../shared/ai-job'
 import { recoverMatchupJob, recoverThreadJob, settleFailedAiJob } from './ai-job-recovery'
 import { AiAnalysisWork, analyzeLargeEvidence, readAiWorkflow } from './ai-analysis-work'
+import { canResumeAiJob } from '../shared/ai-job-lifecycle'
 import { aiFailureCode } from './ai-failure'
 import { fetchRecentWesternTournament } from './limitless-event'
 import { syncTournamentBlock } from './tournament-sync'
@@ -138,6 +139,8 @@ async function yieldAiPreparation(signal: AbortSignal): Promise<void> {
 const catalogAdvancedResults = new Map<string, CatalogAdvancedExecution>()
 let activeCatalogAdvancedSearch: AbortController | null = null
 let recoveringAiJobs = false
+let drainingAiQueue = false
+let aiShuttingDown = false
 
 function aiArtifactDirectory(jobId: string): string {
   if (!/^[a-f0-9-]{36}$/i.test(jobId)) throw new Error('Identificativo job AI non valido.')
@@ -150,7 +153,7 @@ function clearAiArtifacts(jobId: string): void {
 }
 
 function finishAiJob(job: AiJob, error: unknown): void {
-  if (!aiJobStore) return
+  if (!aiJobStore || aiShuttingDown) return
   const current = aiJobStore.get(job.id)
   if (current?.status === 'running' && activeAiWork.has(job.id)) {
     const controller = activeAiControllers.get(job.id)
@@ -159,7 +162,8 @@ function finishAiJob(job: AiJob, error: unknown): void {
         ? 'paused' : aiFailureCode(error) })
       aiJobStore.suspend(job.id, controller?.signal.reason === 'pause'
         ? 'Analisi in pausa. Riprendi per continuare dai lotti salvati.'
-        : error instanceof Error ? error.message : 'Analisi interrotta. Puoi riprenderla.')
+        : error instanceof Error ? error.message : 'Analisi interrotta. Puoi riprenderla.',
+      controller?.signal.reason === 'pause' ? 'user' : 'failure')
       return
     }
   }
@@ -170,6 +174,48 @@ function finishAiJob(job: AiJob, error: unknown): void {
   }
 }
 
+function resumeSavedAiJob(job: AiJob, explicit: boolean): Promise<unknown> {
+  if (!aiJobStore || !projectStore || aiShuttingDown) throw new Error('Archivio non disponibile.')
+  if (!canResumeAiJob(job)) throw new Error('Questa analisi non può proseguire con gli stessi input. Avvia una nuova richiesta.')
+  const input = readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id)
+  const runner = input && input.kind === job.kind ? resumeRunners.get(job.kind) : null
+  if (!runner || !input) throw new Error('Contesto di ripresa non disponibile.')
+  if (input.schemaVersion !== 2) {
+    const message = 'Questa analisi proviene da una versione che non salvava tutti gli input. Gli esiti completati restano disponibili; annulla il lavoro e avvia una nuova analisi sui dati attuali.'
+    aiJobStore.suspend(job.id, message, 'legacy')
+    throw new Error(message)
+  }
+  const targetProject = job.kind === 'thread-ask' || job.kind === 'matchup-generate'
+    ? input.args[0] : typeof input.args[0] === 'string'
+      ? projectStore.getMatchupDiscussion(input.args[0])?.projectId : null
+  const targetResource = job.kind === 'thread-ask' ? input.args[1] : `matchup:${targetProject}`
+  if (targetProject !== job.projectId || targetResource !== job.resourceId)
+    throw new Error('Contesto di ripresa non appartenente al progetto.')
+  if (explicit) aiJobStore.retryAfterIntervention(job.id)
+  return runner(job, input.args)
+}
+
+async function drainAiQueue(): Promise<void> {
+  if (!aiJobStore || drainingAiQueue || aiShuttingDown) return
+  drainingAiQueue = true
+  try {
+    for (const queued of aiJobStore.automaticResumable()) {
+      if (aiShuttingDown || !aiJobStore) break
+      const job = aiJobStore.get(queued.id)
+      if (!job || job.status !== 'interrupted' || job.progress?.diagnostics?.suspensionReason !== 'shutdown' ||
+        activeAiControllers.has(job.id)) continue
+      try {
+        const result = await resumeSavedAiJob(job, false) as { ok?: boolean; error?: string }
+        if (result?.ok === false && aiJobStore?.get(job.id)?.progress?.diagnostics?.suspensionReason === 'shutdown')
+          aiJobStore.suspend(job.id, result.error ?? 'Ripresa non riuscita.', 'failure')
+      } catch (error) {
+        if (!aiShuttingDown && aiJobStore && aiJobStore.get(job.id)?.progress?.diagnostics?.suspensionReason !== 'legacy')
+          aiJobStore.suspend(job.id, error instanceof Error ? error.message : 'Ripresa non riuscita.', 'failure')
+      }
+    }
+  } finally { drainingAiQueue = false }
+}
+
 async function recoverAiJobs(): Promise<void> {
   if (!aiJobStore || !projectStore || !catalogStore || recoveringAiJobs) return
   recoveringAiJobs = true
@@ -177,9 +223,12 @@ async function recoverAiJobs(): Promise<void> {
     for (const job of aiJobStore.recoverable()) {
       if (activeAiControllers.has(job.id)) continue
       try {
-        if (job.status === 'running' && readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id) &&
-          (job.request as { validatedDraft?: boolean } | null)?.validatedDraft !== true) {
-          aiJobStore.suspend(job.id, 'Analisi sospesa alla chiusura dell’app. Riprendi dai lotti salvati.')
+        const workflow = job.status === 'running' ? readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id) : null
+        if (job.status === 'running' && workflow && (workflow.schemaVersion === 2 ||
+          (job.request as { validatedDraft?: boolean } | null)?.validatedDraft !== true)) {
+          const voluntary = job.progress?.diagnostics?.suspensionReason === 'user'
+          aiJobStore.suspend(job.id, voluntary ? 'Analisi in pausa su tua richiesta.'
+            : 'Ripresa automatica dai risultati salvati alla riapertura.', voluntary ? 'user' : 'shutdown')
           continue
         }
         const outcome = job.kind === 'thread-ask' || job.kind === 'thread-propose'
@@ -195,6 +244,7 @@ async function recoverAiJobs(): Promise<void> {
       }
     }
   } finally { recoveringAiJobs = false }
+  void drainAiQueue()
 }
 function hasRecoverableThreadJob(): boolean {
   return !!aiJobStore?.recoverable().some((job) =>
@@ -478,7 +528,7 @@ function matchupJobBase(jobId: string, projectId: string, deckHash: string,
   return { jobId, projectId, deckHash,
     deckVersionId: deckVersion?.versionId ?? null, deckResolutionId: deckVersion?.resolutionId ?? null,
     metaId: snapshot.id, opponentId: opponent.id,
-    generatedAt: new Date().toISOString(), sampleDeckUrl: sample.url,
+    generatedAt: aiJobStore?.get(jobId)?.createdAt ?? new Date().toISOString(), sampleDeckUrl: sample.url,
     sampleDeckCards: sample.cards, sampleDeckMechanics: sample.mechanics ?? [], ai: config,
     metaSourceUrl: snapshot.sourceUrl, metaPeriod: snapshot.period,
     metaFetchedAt: snapshot.fetchedAt, opponentSourceUrl: opponent.url,
@@ -1262,6 +1312,7 @@ function registerProjectHandlers(): void {
     const job = aiJobStore.active(projectId, resourceId as string)
     const controller = job && activeAiControllers.get(job.id)
     if (!job || !controller || !activeAiWork.has(job.id)) return { ok: false, error: 'Analisi non sospendibile.' }
+    aiJobStore.recordDiagnostics(job.id, { suspensionReason: 'user' })
     controller.abort('pause')
     return { ok: true, value: true }
   })
@@ -1274,20 +1325,11 @@ function registerProjectHandlers(): void {
     if (!job || job.status !== 'interrupted' || !job.progress?.diagnostics?.resumable)
       return { ok: false, error: 'Nessuna analisi da riprendere.' }
     try {
-      const input = readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id)
-      const runner = input && input.kind === job.kind ? resumeRunners.get(job.kind) : null
-      if (!runner || !input) return { ok: false, error: 'Contesto di ripresa non disponibile.' }
-      const targetProject = job.kind === 'thread-ask' || job.kind === 'matchup-generate'
-        ? input.args[0] : typeof input.args[0] === 'string'
-          ? projectStore?.getMatchupDiscussion(input.args[0])?.projectId : null
-      const targetResource = job.kind === 'thread-ask' ? input.args[1] : `matchup:${targetProject}`
-      if (targetProject !== job.projectId || targetResource !== job.resourceId)
-        return { ok: false, error: 'Contesto di ripresa non appartenente al progetto.' }
-      const pending = runner(job, input.args)
+      const pending = resumeSavedAiJob(job, true)
       if (!activeAiControllers.has(job.id)) return await pending
       void pending.catch((error) => finishAiJob(job, error))
       return { ok: true, value: true }
-    } catch { return { ok: false, error: 'Contesto di ripresa non leggibile.' } }
+    } catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Contesto di ripresa non leggibile.' } }
   })
 
   ipcMain.handle('ai:recover-jobs', async (event) => {
@@ -1415,7 +1457,7 @@ function registerProjectHandlers(): void {
             onSessionStarted: (id) => {
               if (!sessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
               sessionRef = id
-            } }), false)
+            } }))
         sessionRef = result.sessionId
         evidence.promptAudit = makeAiPromptAudit(context.prompt, Date.now() - answerStarted, result.usage)
         const draft = result.value as { reply?: unknown; rawText?: unknown }
@@ -2072,10 +2114,14 @@ app.whenReady().then(async () => {
 })
 
 app.on('before-quit', () => {
+  aiShuttingDown = true
   for (const [id, work] of activeAiWork) {
     work.close()
-    aiJobStore?.suspend(id, 'Analisi sospesa alla chiusura dell’app. Riprendi dai lotti salvati.')
-    activeAiControllers.get(id)?.abort('pause')
+    const controller = activeAiControllers.get(id)
+    const voluntary = controller?.signal.reason === 'pause' || aiJobStore?.diagnostics(id)?.suspensionReason === 'user'
+    aiJobStore?.suspend(id, voluntary ? 'Analisi in pausa su tua richiesta.'
+      : 'Analisi salvata alla chiusura. Riprenderà automaticamente alla riapertura.', voluntary ? 'user' : 'shutdown')
+    controller?.abort('shutdown')
   }
   catalogShuttingDown = true
   if (startupSyncTimer) clearTimeout(startupSyncTimer)
@@ -2095,5 +2141,7 @@ app.on('before-quit', () => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  // Closing Pokeguru stops analysis on every platform; reopening resumes only
+  // shutdown work. Keeping a hidden macOS process would violate that preference.
+  app.quit()
 })

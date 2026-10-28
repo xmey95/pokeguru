@@ -206,10 +206,27 @@ export class AiJobStore {
       ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)
   }
 
+  automaticResumable(): AiJob[] {
+    return (this.db.prepare(`SELECT * FROM ai_jobs WHERE status = 'interrupted'
+      AND json_extract(progress_json, '$.diagnostics.resumable') = 1
+      AND json_extract(progress_json, '$.diagnostics.suspensionReason') = 'shutdown'
+      ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)
+  }
+
+  /** Only an explicit retry after intervention renews a transient failure budget.
+   * Context, invalid content and no-progress failures keep their original state. */
+  retryAfterIntervention(id: string): void {
+    if (this.get(id)?.status !== 'interrupted') throw new Error('Analisi non riprendibile.')
+    this.db.prepare(`DELETE FROM ai_call_state WHERE job_id = ?
+      AND json_extract(state_json, '$.status') = 'blocked'
+      AND json_extract(state_json, '$.code') IN ('network', 'timeout', 'quota', 'auth',
+        'cli-unavailable', 'storage', 'storage-full')`).run(id)
+  }
+
   recordDiagnostics(id: string, change: AiDiagnostics): void {
     const current = this.db.prepare('SELECT status, progress_json FROM ai_jobs WHERE id = ?')
       .get(id) as { status: AiJobStatus; progress_json: string | null } | undefined
-    if (!current || !['running', 'ready', 'cancelled'].includes(current.status)) return
+    if (!current || !['running', 'ready', 'cancelled', 'interrupted'].includes(current.status)) return
     const at = new Date().toISOString()
     const prior = progress(current) ?? { phase: 'preparing' as const, detail: 'Preparazione',
       summary: null, updatedAt: at, steps: [] }
@@ -250,17 +267,17 @@ export class AiJobStore {
       validatedDraft: row?.validatedDraft === 1 ? true : row?.validatedDraft === 0 ? false : null }
   }
 
-  suspend(id: string, error: string): void {
-    this.recordDiagnostics(id, { resumable: true })
+  suspend(id: string, error: string, reason: NonNullable<AiDiagnostics['suspensionReason']> = 'failure'): void {
+    this.recordDiagnostics(id, { resumable: true, suspensionReason: reason })
     this.db.prepare(`UPDATE ai_jobs SET status = 'interrupted', error = ?, updated_at = ?
-      WHERE id = ? AND status = 'running'`).run(error, new Date().toISOString(), id)
+      WHERE id = ? AND status IN ('running', 'interrupted')`).run(error, new Date().toISOString(), id)
   }
 
   resume(id: string): AiJob {
     const result = this.db.prepare(`UPDATE ai_jobs SET status = 'running', error = NULL, updated_at = ?
       WHERE id = ? AND status = 'interrupted'`).run(new Date().toISOString(), id)
     if (result.changes !== 1) throw new Error('Analisi non riprendibile.')
-    this.recordDiagnostics(id, { resumable: false, failureCode: undefined })
+    this.recordDiagnostics(id, { resumable: false, failureCode: undefined, suspensionReason: undefined, automaticWait: false })
     return this.get(id)!
   }
 

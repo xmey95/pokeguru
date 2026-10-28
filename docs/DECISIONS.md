@@ -4,11 +4,17 @@
 
 ## Decisioni
 
+### T-163 — Arresto, ripresa e risultati storici
+
+I nuovi workflow registrano separatamente pausa utente, chiusura, errore e incompatibilità precedente. Solo i lavori fermati alla chiusura entrano nella coda automatica alla riapertura; la coda avvia un lavoro alla volta. Un arresto improvviso con workflow versione 2 ripercorre le fasi riusando il database. La chiusura dell’ultima finestra termina l’app su tutte le piattaforme. Pause e budget di tentativi persistono; il rinnovo di un budget transitorio esaurito richiede una ripresa esplicita dopo intervento. Gli input strutturalmente non validi non vengono ripetuti.
+
+Una guida completata dopo un cambio lista o metagame resta nella discussione della versione originale, verificata contro testo e correzioni salvati. Non sostituisce la guida della versione attuale. I risultati pronti e i turni già applicati vengono riconosciuti dal registro dei job. I vecchi workflow privi di snapshot completo richiedono una nuova analisi sui dati attuali; gli esiti storici restano consultabili. Prove: suite locale 302 passati/35 esclusi e ciclo Electron Windows su profilo temporaneo, senza chiamate al modello in questa verifica.
+
 ### T-162 — Input immutabili e adattamento per chiamata
 
 APP-161 congela separatamente le fasi della preparazione Matchup e i dati necessari alla finalizzazione dei Thread; una fase incompleta non diventa un checkpoint. Il workflow versione 2 è nel database insieme alle prove, oltre alla copia temporanea per compatibilità. I file v0.3.4 restano leggibili, ma non possono fornire uno snapshot completo che quella versione non salvava: la ripresa automatica dei vecchi lavori dovrà riconoscere questo limite. Il salvataggio di una guida relativa a una base nel frattempo cambiata deve conservarne il carattere storico (APP-163), senza attribuirla alla nuova lista.
 
-APP-162 è ora in corso: i limiti devono operare sulla singola chiamata e produrre partizioni verificabili, non una riduzione del perimetro. Errori di contesto richiedono un input diverso; errori transitori hanno tentativi e attese persistenti; spazio esaurito, autenticazione o mancanza di progresso devono produrre una causa operativa distinta.
+Per APP-162 completato: i limiti devono operare sulla singola chiamata e produrre partizioni verificabili, non una riduzione del perimetro. Errori di contesto richiedono un input diverso; errori transitori hanno tentativi e attese persistenti; spazio esaurito, autenticazione o mancanza di progresso devono produrre una causa operativa distinta.
 
 Il procedimento adaptive-v2 conserva frammenti JSON esatti con chiave originale e posizioni; un frammento non vale una nuova partecipazione. I lotti partono da 60.000 byte e si riducono dopo un errore di contesto; le sintesi occupano al massimo un quarto del budget del livello e devono convergere. Originali, contatori deterministici e riferimenti tra livelli restano verificabili. Una risposta non verificabile non diventa checkpoint. I tentativi e la scadenza di attesa sono salvati prima del nuovo tentativo: chiudere e riaprire non azzera il limite. Gli errori Codex vengono classificati senza registrare il testo grezzo del fornitore.
 

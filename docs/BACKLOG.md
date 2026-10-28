@@ -167,8 +167,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-160** | Attività AI comprensibili per un giocatore e sintesi formattate | UI | R-07, R-10, R-13 / feedback utente 28-10-2026 | P1 / S | APP-154/158; renderer Markdown esistente | Done |
 | **APP-161** | Archivio incrementale e raccolta persistente delle analisi | Dati/affidabilità | R-06, R-07, R-13, R-14 / obiettivo utente 28-10-2026 | P0 / L | APP-159; perimetro concordato | Done |
 | **APP-162** | Analisi adattiva e sintesi verificabile con recupero automatico | AI/affidabilità | R-07, R-08, R-10, R-13 | P0 / L | APP-161 | Done |
-| **APP-163** | Ripresa automatica e stati operativi delle analisi | Affidabilità/UI | R-01, R-07, R-13, R-14 | P0 / M | APP-161/162; APP-160 preservato | In progress |
-| **APP-164** | Verifica integrata e release delle analisi automatiche | Verifica/distribuzione | R-07, R-12, R-14 | P0 / M | APP-161–163; CI e release | Backlog |
+| **APP-163** | Ripresa automatica e stati operativi delle analisi | Affidabilità/UI | R-01, R-07, R-13, R-14 | P0 / M | APP-161/162; APP-160 preservato | Done |
+| **APP-164** | Verifica integrata e release delle analisi automatiche | Verifica/distribuzione | R-07, R-12, R-14 | P0 / M | APP-161–163; CI e release | In progress |
 
 ### APP-161 — Archivio incrementale e raccolta persistente
 
@@ -195,9 +195,11 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 
 - **Preferenza confermata:** l'app chiusa non elabora; riaprire riprende automaticamente il lavoro in corso. Una pausa volontaria resta tale. Attesa automatica, pausa utente, problema che richiede intervento e completamento sono distinguibili.
 - **Accettazione:** salvataggio finale idempotente, ripresa dopo interruzioni in ogni fase, versione/snapshot/configurazione coerenti, conteggi e motivo dell'attesa comprensibili. Nessun ciclo identico a 64 MB; nessuna duplicazione del lavoro di linguaggio/Markdown APP-160.
-- **Verifica prevista:** Electron con arresto/riapertura, pause, annullamento, due progetti, risultati già prodotti e cambio dati; diagnostica priva di contenuti privati.
+- **Verifica e chiusura (28-10-2026):** build/typecheck e suite 302 passati, 35 esclusi. Test Electron opt-in su profilo temporaneo passato: riapertura di un job interrotto senza chiusura ordinata e uno sospeso alla chiusura in due progetti, risultati recuperati dal database dopo eliminazione dei file temporanei, nessun duplicato dopo ulteriori riavvii, pausa volontaria conservata, deadline/contatore quota invariati, workflow versione 1 riconosciuto e fermato senza ricostruire input mancanti. Test di archivio verificano guide e revisioni storiche dopo cambio lista/meta, rifiuto di versioni estranee e hash errati. Attese automatiche, pause e problemi strutturali sono distinti; solo un intervento esplicito rinnova i tentativi transitori esauriti. Chiudere l’ultima finestra termina l’app anche su macOS. Nessuna nuova modifica a Loading, parser o stile Markdown APP-160. Le verifiche Electron usano risposte sintetiche; Codex reale del ciclo applicativo resta in APP-164.
 
 ### APP-164 — Verifica integrata e release
+
+- **Ready e avvio (28-10-2026):** APP-161–163 completati localmente; incremento/release autorizzati dall’obiettivo utente. Aggiungere il ciclo Electron alla CI, provare Thread/Matchup reali in profili isolati, preparare versione e note, poi PR dev/main e verifica della release.
 
 - **Ambito autorizzato:** completare APP-161–163, integrare APP-160 disponibile, aggiornare documenti, PR verso dev e poi main dopo controlli verdi; pubblicare e verificare nuova release.
 - **Accettazione:** build/typecheck e suite pertinenti, prove reali Thread e Matchup su profili temporanei, percorso oltre 64 MB e recupero senza perdita; CI sulle quattro piattaforme. Tag sul merge main, pacchetti, manifest e checksum coerenti.

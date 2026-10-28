@@ -1482,14 +1482,33 @@ export class ProjectStore {
       current.resolutionId === discussion.deckResolutionId
   }
 
+  /** A completed frozen run may belong to a previous deck version. Verify its
+   * exact saved text and resolution, never silently attach it to the current head. */
+  private reportMatchesSavedContext(report: MatchupReport): boolean {
+    if (!report.deckVersionId) return this.reportMatchesCurrentContext(report)
+    const version = this.db.prepare('SELECT raw_text FROM deck_versions WHERE id = ? AND project_id = ?')
+      .get(report.deckVersionId, report.projectId) as { raw_text: string } | undefined
+    if (!version) return false
+    if (!report.deckResolutionId) return deckHash(version.raw_text) === report.deckHash
+    const revision = this.db.prepare(`SELECT mappings_json FROM deck_resolution_revisions
+      WHERE id = ? AND project_id = ? AND version_id = ?`).get(report.deckResolutionId,
+      report.projectId, report.deckVersionId) as { mappings_json: string } | undefined
+    if (!revision) return false
+    const mappings = JSON.parse(revision.mappings_json) as { line_number: number; print_snapshot: string }[]
+    const choices = mappings.sort((a, b) => a.line_number - b.line_number)
+      .map((mapping) => [mapping.line_number, (JSON.parse(mapping.print_snapshot) as MappedPrint).identityId])
+    return deckHash(choices.length ? `${version.raw_text}\u0000${JSON.stringify(choices)}` : version.raw_text) === report.deckHash
+  }
+
   hasMatchupJobResult(jobId: string): boolean {
     return !!this.db.prepare(`SELECT 1 FROM matchup_turns
       WHERE json_extract(report_payload, '$.jobId') = ? LIMIT 1`).get(jobId)
   }
 
   saveMatchupReport(report: MatchupReport): void {
-    if (!this.reportMatchesCurrentContext(report))
-      throw new Error('La lista è cambiata durante l’analisi. Riprova sulla lista corrente.')
+    if (!this.reportMatchesSavedContext(report))
+      throw new Error(report.deckVersionId ? 'La base salvata della guida non è verificabile in questo progetto.'
+        : 'La lista è cambiata e questa guida non identifica una versione storica verificabile.')
     const snapshot = this.db.prepare('SELECT payload FROM meta_snapshots WHERE id = ?')
       .get(report.metaId) as { payload: string } | undefined
     if (!snapshot || !(JSON.parse(snapshot.payload) as MetaSnapshot).decks.some((deck) => deck.id === report.opponentId)) {
@@ -1513,6 +1532,7 @@ export class ProjectStore {
   }
 
   private writeLatestReport(report: MatchupReport): void {
+    if (!this.reportMatchesCurrentContext(report)) return
     this.db.prepare(`INSERT INTO matchup_reports
       (project_id, meta_id, opponent_id, deck_hash, generated_at, payload) VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(project_id, meta_id, opponent_id, deck_hash) DO UPDATE SET
@@ -1612,8 +1632,10 @@ export class ProjectStore {
       throw new Error('Commento Matchup in attesa non trovato.')
     if (discussion.projectId !== report.projectId || discussion.metaId !== report.metaId ||
       discussion.opponentId !== report.opponentId || discussion.deckHash !== report.deckHash ||
-      !this.discussionMatchesCurrentContext(discussion) || !this.reportMatchesCurrentContext(report) ||
-      this.getLatestMetaSnapshot()?.id !== report.metaId)
+      !this.reportMatchesSavedContext(report) ||
+      (report.deckVersionId ? discussion.deckVersionId !== report.deckVersionId ||
+        (discussion.deckResolutionId ?? null) !== (report.deckResolutionId ?? null)
+        : !this.discussionMatchesCurrentContext(discussion)))
       throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
     this.db.exec('BEGIN IMMEDIATE')
     try {
@@ -1633,8 +1655,8 @@ export class ProjectStore {
     const parent = this.getMatchupDiscussion(parentId)
     if (!parent || parent.projectId !== report.projectId || parent.opponentId !== report.opponentId)
       throw new Error('Discussione di origine non valida.')
-    if (!this.reportMatchesCurrentContext(report) || this.getLatestMetaSnapshot()?.id !== report.metaId)
-      throw new Error('La base dell’analisi è cambiata. Riprova.')
+    if (!this.reportMatchesSavedContext(report))
+      throw new Error('La base salvata della guida non è verificabile in questo progetto.')
     const current = this.listMatchupDiscussions(report.projectId, report.opponentId)
       .find((item) => item.metaId === report.metaId && item.deckHash === report.deckHash &&
         item.deckVersionId === report.deckVersionId && item.deckResolutionId === report.deckResolutionId)

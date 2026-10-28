@@ -24,6 +24,7 @@ export interface AiDiagnostics {
   retryAttempt?: number
   nextRetryAt?: string
   automaticWait?: boolean
+  suspensionReason?: 'user' | 'shutdown' | 'failure' | 'legacy'
   calls?: { kind: 'planning' | 'batch' | 'synthesis' | 'analysis'; startedAt: string;
     endedAt: string | null; status: 'running' | 'succeeded' | 'failed'; inputBytes: number;
     failureCode?: AiFailureCode }[]
@@ -34,6 +35,8 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   const data = value as Record<string, unknown>
   const result: AiDiagnostics = {}
+  if (['user', 'shutdown', 'failure', 'legacy'].includes(data.suspensionReason as string))
+    result.suspensionReason = data.suspensionReason as AiDiagnostics['suspensionReason']
   if (aiFailureCodes.includes(data.failureCode as AiFailureCode)) result.failureCode = data.failureCode as AiFailureCode
   for (const key of ['resumable', 'workflow', 'evidenceExhausted', 'automaticWait'] as const)
     if (typeof data[key] === 'boolean') result[key] = data[key]
