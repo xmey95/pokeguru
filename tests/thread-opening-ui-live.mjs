@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { _electron as electron } from 'playwright-core'
 import { createProjectFromStart } from './project-ui-helper.mjs'
@@ -69,33 +69,52 @@ try {
     assert.equal(reopened.threads.find((thread) => thread.id === second.id)?.messages.length, 2)
     console.log('Thread opening Codex real, two sessions, evidence, reopen: passed')
   } else {
-  await page.getByRole('button', { name: 'Riprova primo messaggio' }).waitFor()
+  await page.getByRole('button', { name: 'Riprendi analisi' }).waitFor()
   let state = await inspect(page)
   assert.equal(state.threads.length, 1)
   assert.equal(state.threads[0].messages.length, 1)
   assert.equal(state.threads[0].messages[0].text, 'Quale piano iniziale suggerisci?')
   assert.equal(state.threads[0].openingAiMessageId, state.threads[0].messages[0].id)
-  await page.getByRole('button', { name: 'Riprova primo messaggio' }).click()
-  await page.getByRole('button', { name: 'Riprova primo messaggio' }).waitFor()
+  const beforeResume = await page.evaluate((value) => window.projectsApi.getAiJobStatus(value.projectId,
+    value.threads[0].id), state)
+  await page.getByRole('button', { name: 'Riprendi analisi' }).click()
+  let resumed
+  for (let attempt = 0; attempt < 50; attempt++) {
+    resumed = await page.evaluate((value) => window.projectsApi.getAiJobStatus(value.projectId,
+      value.threads[0].id), state)
+    if (resumed.ok && resumed.value.status === 'interrupted' &&
+      resumed.value.updatedAt !== beforeResume.value.updatedAt) break
+    await page.waitForTimeout(100)
+  }
+  assert.notEqual(resumed.value.updatedAt, beforeResume.value.updatedAt)
   state = await inspect(page)
   assert.equal(state.threads[0].messages.length, 1)
   const job = await page.evaluate((value) => window.projectsApi.getAiJobStatus(value.projectId,
     value.threads[0].id), state)
   assert.equal(job.ok, true)
-  assert.equal(job.value.status, 'failed')
+  assert.equal(job.value.status, 'interrupted')
+  assert.equal(job.value.id, beforeResume.value.id)
+  assert.equal(job.value.progress.diagnostics.resumable, true)
   await application.close()
   application = undefined
 
   application = await launch()
   page = await application.firstWindow()
   await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await page.getByRole('button', { name: 'Riprova primo messaggio' }).waitFor()
+  await page.getByRole('button', { name: 'Riprendi analisi' }).waitFor()
   state = await inspect(page)
   assert.equal(state.threads[0].messages.length, 1)
   assert.equal(state.threads[0].openingAiMessageId, state.threads[0].messages[0].id)
+  await page.getByRole('button', { name: 'Annulla analisi' }).click()
+  await page.getByRole('button', { name: 'Riprova primo messaggio' }).click()
+  await page.getByRole('button', { name: 'Riprendi analisi' }).waitFor()
+  state = await inspect(page)
+  assert.equal(state.threads[0].messages.length, 1)
   console.log('Thread opening UI, retry, reopen: passed (Codex unavailable fixture)')
   }
 } finally {
   if (application) await application.close()
+  if (realpathSync(dirname(temporary)) !== realpathSync(tmpdir()) ||
+    !basename(temporary).startsWith('pokeguru-thread-opening-')) throw new Error('Unsafe cleanup path')
   rmSync(temporary, { recursive: true, force: true })
 }

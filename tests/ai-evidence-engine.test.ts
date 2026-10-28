@@ -101,6 +101,19 @@ describe('AI evidence engine', () => {
       ['card:me01-001'], ['card:me01-001']])
   })
 
+  it('keeps a huge result set out of the planning context without dropping its originals', () => {
+    const engine = createAiEvidenceEngine(catalog, [], [], { from: '2026-10-01', to: '2026-10-25' })
+    const lists = Array.from({ length: 300 }, (_, index) => ({ listUrl: `https://example.test/${index}`,
+      deck: `Deck ${index}`, cards: Array(60).fill('1 Illustrative Card MEG 001') }))
+    const previous = [{ query: { operation: 'events.search' }, status: 'ok' as const,
+      sourceIds: [], fingerprint: 'large', data: { lists } }]
+    const prompt = aiQueryPlanningPrompt('Esamina tutte le varianti', {}, engine, previous)
+    expect(Buffer.byteLength(prompt)).toBeLessThan(10_000)
+    expect(prompt).toContain('"distinctDeckCount":300')
+    expect(previous[0].data.lists).toHaveLength(300)
+    expect(previous[0].data.lists[299].cards).toHaveLength(60)
+  })
+
   it('recovers exact cards from assistant history and then from a draft without asking the user', async () => {
     const original = catalog.prints[0]
     const expanded: CatalogView = { ...catalog, prints: [original,
@@ -163,6 +176,32 @@ describe('AI evidence engine', () => {
         continueAfterResults: ++rounds < 4 }))
     expect(trace.planningRounds).toBe(4)
     expect(trace.exhausted).toBe(false)
+  })
+
+  it('collects every page while grouping identical lists and preserving every occurrence', async () => {
+    const sample = event()
+    const participant = sample.participations[0]
+    sample.participations = Array.from({ length: 22 }, (_, index) => {
+      const variant = Math.floor(index / 2)
+      const cards = [
+        { category: 'trainer' as const, count: variant + 1, name: 'Rare Candy', set: 'MEG', number: '001' },
+        { category: 'energy' as const, count: 59 - variant, name: 'Basic Energy', set: 'SVE', number: '001' }]
+      return { ...participant, playerId: `player-${index}`, placing: index + 1,
+        deck: { id: 'wide-deck', name: 'Wide Deck' }, cards: index % 2 ? cards.reverse() : cards }
+    })
+    const engine = createAiEvidenceEngine(catalog, [sample], [],
+      { from: '2026-10-01', to: '2026-10-25' })
+    const trace = await runAiEvidenceQueries('Confronta le varianti', {}, engine,
+      async () => ({ continueAfterResults: false,
+        queries: [{ operation: 'events.search', deckName: 'Wide Deck', limit: 4 }] }))
+    const pages = trace.requests.filter((request) => (request.query as { operation: string }).operation === 'events.search')
+    expect(pages).toHaveLength(3)
+    const lists = pages.flatMap((page) => (page.data as { lists: { cards: string[]; occurrences: { placing: number }[] }[] }).lists)
+    expect(lists).toHaveLength(11)
+    expect(lists.flatMap((list) => list.occurrences).map((item) => item.placing).sort((a, b) => a - b))
+      .toEqual(Array.from({ length: 22 }, (_, index) => index + 1))
+    expect(pages[0].data).toMatchObject({ scope: { matchingLists: 22, distinctDecks: 11, duplicateLists: 11 } })
+    expect(pages.at(-1)?.data).toMatchObject({ remaining: 0 })
   })
 
   it('distinguishes a delivered but incomplete local sheet from an unsent card', async () => {

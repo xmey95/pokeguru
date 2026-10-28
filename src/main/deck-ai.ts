@@ -11,6 +11,7 @@ import { evaluateSetAdmission } from '../shared/standard-admission'
 import { evaluatePromoAdmission } from '../shared/promo-admission'
 import { localCalendarDate } from '../shared/calendar-date'
 import type { DeckCandidate } from '../shared/deck-threads'
+import { aiEvidenceForPrompt } from './ai-evidence-queries'
 
 export function readDeckDiscussionReply(value: unknown): string {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Risposta Codex non valida.')
@@ -62,7 +63,17 @@ export function deckThreadPrompt(thread: DeckThread, base: DeckVersion | null, q
     catalog: { fetchedAt: catalog.syncedAt, coverage: catalog.standardCoverage
       ? { acquired: catalog.standardCoverage.acquired, expected: catalog.standardCoverage.expected,
         gameplayAcquired: catalog.standardCoverage.gameplayAcquired } : null },
-    evidence, question, allowedSourceIds: sources.map((source) => source.id)
+    evidence: evidence.aiQueries?.analysis ? { ...evidence,
+      aiQueries: aiEvidenceForPrompt(evidence.aiQueries), sources: evidence.sources.filter((source) =>
+        evidence.aiQueries!.analysis!.sourceIds.includes(source.id) ||
+        evidence.cards.some((card) => card.sourceId === source.id) ||
+        evidence.aiQueries!.focusedPrintIds?.some((id) => source.id === `card:${id}`)) } : evidence,
+    question, allowedSourceIds: evidence.aiQueries?.analysis
+      ? [...new Set([...evidence.aiQueries.analysis.sourceIds,
+        ...evidence.cards.flatMap((card) => card.sourceId ? [card.sourceId] : []),
+        ...(evidence.aiQueries.focusedPrintIds ?? []).map((id) => `card:${id}`),
+        ...sources.filter((source) => ['base', 'candidate', 'seed-candidate', 'constraints'].includes(source.id)).map((source) => source.id)])]
+      : sources.map((source) => source.id)
   }
   return { sources, prompt: [
     'Sei un assistente per discutere e migliorare un mazzo Pokémon TCG Standard occidentale. Rispondi in italiano alla richiesta naturale dell’utente.',

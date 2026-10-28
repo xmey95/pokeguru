@@ -242,3 +242,9 @@ jobs:
         env:
           POKEGURU_CODEX_LOGIN_LIVE: '1'
         run: npx vitest run tests/codex-login-live.test.ts
+      - name: Check durable AI workflow on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tests/ai-workflow-ui-live.mjs
+      - name: Check durable AI workflow on Windows
+        if: runner.os == 'Windows'
+        run: node tests/ai-workflow-ui-live.mjs

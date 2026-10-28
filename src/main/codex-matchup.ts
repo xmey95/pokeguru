@@ -73,7 +73,9 @@ function runCodex(prompt: string, config: AiRunConfig, test = false,
       ...(config.reasoningEffort ? ['--config', `model_reasoning_effort=${JSON.stringify(config.reasoningEffort)}`] : []),
       '--output-schema', schemaPath, '--output-last-message', resultPath, '-']
     const child = spawn(launcher.command, [...launcher.prefix, ...args],
-      { cwd: directory, windowsHide: true, timeout: 180_000, stdio: ['pipe', 'pipe', 'pipe'] })
+      { cwd: directory, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
+    let timedOut = false
+    const timer = setTimeout(() => { timedOut = true; child.kill() }, 600_000)
     const abort = () => child.kill()
     options.signal?.addEventListener('abort', abort, { once: true })
     let stderr = ''
@@ -98,13 +100,16 @@ function runCodex(prompt: string, config: AiRunConfig, test = false,
     child.stdin.on('error', () => undefined)
     child.stdin.end(prompt)
     child.on('error', (error) => {
+      clearTimeout(timer)
       options.signal?.removeEventListener('abort', abort)
       if (!options.jobDirectory) rmSync(directory, { recursive: true, force: true })
       reject(new Error(error.message.includes('ENOENT') ? 'Codex non disponibile. Verifica l’installazione di Pokéguru.' : 'Codex non è stato avviato.'))
     })
     child.on('close', (code) => {
+      clearTimeout(timer)
       try {
         if (options.signal?.aborted) throw new Error('Operazione Codex annullata.')
+        if (timedOut) throw new Error('Codex ha superato il tempo massimo di dieci minuti per questa chiamata. Puoi riprendere l’analisi.')
         if (code !== 0) throw new Error(stderr.includes('Not logged in') ? 'Accedi a Codex prima di generare le analisi.' : 'Codex non ha completato l’analisi. Controlla connessione, modello e accesso, poi riprova.')
         const parsed = JSON.parse(readFileSync(resultPath, 'utf8')) as Record<string, unknown>
         if (requestedFields.some((field) => typeof parsed[field] !== 'string' || (parsed[field] as string).length > (field === 'summary' ? 8000 : 5000)) ||

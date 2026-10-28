@@ -308,7 +308,8 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const [openingErrors, setOpeningErrors] = useState<Record<string, string>>({})
   const [aiJob, setAiJob] = useState<AiJobSummary | null>(null)
   const currentAiJob = aiJob?.projectId === projectId && aiJob?.resourceId === selectedId ? aiJob : null
-  const aiBusy = currentAiJob?.status === 'running' || currentAiJob?.status === 'ready'
+  const aiBusy = currentAiJob?.status === 'running' || currentAiJob?.status === 'ready' ||
+    currentAiJob?.status === 'interrupted' && currentAiJob.progress?.diagnostics?.resumable === true
   const [confirmCandidate, setConfirmCandidate] = useState<DeckCandidate | null>(null)
   useEffect(() => {
     if (creating) focusInWorkspace(newThreadTitle.current)
@@ -475,6 +476,14 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     const result = await window.projectsApi.cancelAiJob(projectId, selectedId)
     if (!result.ok) setComposerError(result.error)
     else setAiJob((current) => current ? { ...current, status: 'cancelled' } : null)
+  }
+
+  async function pauseOrResumeAi(resume: boolean): Promise<void> {
+    if (!selectedId) return
+    const result = await window.projectsApi[resume ? 'resumeAiJob' : 'pauseAiJob'](projectId, selectedId)
+    if (!result.ok) setComposerError(result.error)
+    const status = await window.projectsApi.getAiJobStatus(projectId, selectedId)
+    if (status.ok) setAiJob(status.value)
   }
 
   async function recoverAi(): Promise<void> {
@@ -733,7 +742,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
         </form>}
         <div className="thread-detail">
           {detailLoading && !selected ? <LoadingSkeleton label="Caricamento dettaglio thread…" rows={3} /> : selected ? <>
-            {openingAiPending && <div className="content-note" role="status">{aiBusy
+            {openingAiPending && <div className="content-note" role="status">{currentAiJob?.status === 'running'
               ? 'Codex sta rispondendo al primo messaggio.'
               : 'Il primo messaggio è salvato. La risposta Codex è ancora da completare.'}
               {(openingErrors[selected.id] || currentAiJob?.error) &&
@@ -745,12 +754,20 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               <div className="content-note" role="status">{currentAiJob.status === 'running'
                 ? (asking ? '' : 'Codex sta rispondendo…') : 'La risposta è pronta, ma non è stata salvata.'}
                 <button type="button" className="text-button" onClick={() => void cancelAi()}>{currentAiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
+                {currentAiJob.status === 'running' && currentAiJob.progress?.diagnostics?.workflow &&
+                  <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Pausa</button>}
                 {currentAiJob.status === 'ready' && <button type="button" className="text-button" onClick={() => void recoverAi()}>Completa salvataggio</button>}
               </div>}
             {currentAiJob && (currentAiJob.status === 'interrupted' || currentAiJob.status === 'failed' || currentAiJob.status === 'cancelled') &&
               <p className="content-note" role="status">{currentAiJob.status === 'cancelled'
-                ? 'Risposta annullata.' : 'La risposta non è stata completata. Puoi inviare di nuovo la richiesta.'}
-                {currentAiJob.error ? ` ${currentAiJob.error}` : ''}</p>}
+                ? 'Risposta annullata.' : currentAiJob.progress?.diagnostics?.resumable
+                  ? 'L’analisi è sospesa; il lavoro completato è conservato.'
+                  : 'La risposta non è stata completata. Puoi inviare di nuovo la richiesta.'}
+                {currentAiJob.error ? ` ${currentAiJob.error}` : ''}
+                {currentAiJob.status === 'interrupted' && currentAiJob.progress?.diagnostics?.resumable && <>
+                  <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(true)}>Riprendi analisi</button>
+                  <button type="button" className="text-button" onClick={() => void cancelAi()}>Annulla analisi</button>
+                </>}</p>}
             {!featuredCandidate && selected.stale && <p className="diagnostics">Questo thread usa una lista precedente. Apri un nuovo thread dalla lista attuale.</p>}
             {selected.parentThreadId && <div className="content-note">Thread collegato a un percorso precedente. La candidata scelta è conservata come contesto per Codex; descrivi nella conversazione le modifiche che vuoi valutare. Il thread originale resta nello storico.
               {selected.seedCandidateText && <details className="seed-candidate"><summary>Mostra la candidata di partenza</summary><pre>{selected.seedCandidateText}</pre></details>}

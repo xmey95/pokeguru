@@ -1,3 +1,5 @@
+import type { AiDiagnostics } from './ai-diagnostics'
+
 export type AiJobKind = 'thread-ask' | 'thread-propose' | 'matchup-generate' |
   'matchup-revise' | 'matchup-continue'
 export type AiJobStatus = 'running' | 'ready' | 'applied' | 'interrupted' | 'cancelled' | 'failed'
@@ -6,6 +8,7 @@ export type AiJobPhase = 'preparing' | 'catalog' | 'events' | 'planning' |
   'analysis' | 'verification' | 'saving'
 
 export interface AiJobProgress {
+  diagnostics?: AiDiagnostics
   phase: AiJobPhase
   detail: string
   summary: string | null

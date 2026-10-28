@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
+import { DatabaseSync } from 'node:sqlite'
 import { _electron as electron } from 'playwright-core'
 
 const require = createRequire(import.meta.url)
@@ -18,6 +19,17 @@ try {
   const page = await application.firstWindow()
   const created = await page.evaluate((name) => window.projectsApi.create({ name, format: 'STANDARD' }), privateName)
   assert.equal(created.ok, true)
+  const createdAt = new Date(Date.now() - 15 * 60_000).toISOString()
+  const updatedAt = new Date(Date.now() - 14 * 60_000).toISOString()
+  const db = new DatabaseSync(join(temporary, 'data', 'pokeguru.sqlite'))
+  try {
+    db.prepare(`INSERT INTO ai_jobs (id, kind, project_id, resource_id, status,
+      created_at, updated_at, progress_json) VALUES (?, 'thread-ask', ?, ?, 'running', ?, ?, ?)`)
+      .run('00000000-0000-4000-8000-000000000157', created.value.id, privateName,
+        createdAt, updatedAt, JSON.stringify({ phase: 'verification', detail: privateName,
+          summary: privateName, updatedAt,
+          steps: [{ phase: 'verification', detail: privateName, at: updatedAt }] }))
+  } finally { db.close() }
   await page.evaluate(() => window.projectsApi.recordUiLongTask(123.4))
   await application.evaluate(({ dialog }, path) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path })
@@ -31,8 +43,13 @@ try {
   assert.equal(existsSync(reportPath), true)
   const raw = readFileSync(reportPath, 'utf8')
   const report = JSON.parse(raw)
-  assert.equal(report.schemaVersion, 1)
+  assert.equal(report.schemaVersion, 3)
   assert.equal(report.projects.active, 1)
+  assert.equal(report.ai.recentJobs[0].elapsedMs, Date.parse(report.generatedAt) - Date.parse(createdAt))
+  assert.equal(report.ai.recentJobs[0].sinceLastUpdateMs, Date.parse(report.generatedAt) - Date.parse(updatedAt))
+  assert.deepEqual(report.ai.recentJobs[0].progress, { phase: 'verification', updatedAt,
+    steps: [{ phase: 'verification', at: updatedAt }] })
+  assert.equal(raw.includes('00000000-0000-4000-8000-000000000157'), false)
   assert.equal(report.performance.uiLongTaskMaxMs >= 123, true)
   assert.equal(raw.includes(privateName), false)
   await application.close()
