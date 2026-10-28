@@ -1,4 +1,36 @@
-import type { AiEvidenceQueryTrace } from '../../shared/ai-evidence'
+import { useState } from 'react'
+import type { AiEvidenceQueryResult, AiEvidenceQueryTrace } from '../../shared/ai-evidence'
+
+function ArchivedQuery({ trace, query }: { trace: AiEvidenceQueryTrace; query: AiEvidenceQueryResult }) {
+  const [page, setPage] = useState<number | null>(null)
+  const [content, setContent] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const count = (query.data as { pages?: number }).pages ?? 0
+  async function load(sequence: number) {
+    if (!trace.archive || loading) return
+    setLoading(true); setError('')
+    try {
+      const { projectId, resourceId, jobId } = trace.archive
+      const result = await window.projectsApi.getAiEvidencePage(projectId, resourceId, jobId, query.fingerprint, sequence)
+      if (!result.ok) throw new Error(result.error)
+      if (!result.value) throw new Error('Pagina delle prove non trovata.')
+      setContent(JSON.stringify(result.value, null, 2)); setPage(sequence)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Prove non disponibili.') }
+    finally { setLoading(false) }
+  }
+  if (!count) return null
+  return <details><summary>Dati originali archiviati · {count} pagine</summary>
+    {page === null ? <button type="button" disabled={loading} onClick={() => void load(0)}>
+      {loading ? 'Caricamento…' : 'Apri la prima pagina'}</button> : <>
+      <p>Pagina {page + 1} di {count} · dati conservati al momento della ricerca.</p>
+      <button type="button" disabled={loading || page === 0} onClick={() => void load(page - 1)}>Pagina precedente</button>
+      <button type="button" disabled={loading || page + 1 >= count} onClick={() => void load(page + 1)}>Pagina successiva</button>
+      <textarea aria-label="Dati originali della ricerca" readOnly rows={12} value={content} />
+    </>}
+    {error && <p role="alert">{error}</p>}
+  </details>
+}
 
 function queryLabel(value: unknown): string {
   if (!value || typeof value !== 'object') return String(value)
@@ -42,6 +74,7 @@ export function AiQueryTraceView({ trace }: { trace: AiEvidenceQueryTrace }) {
       <strong>{queryLabel(item.query)}</strong> · {item.status === 'rejected' ? 'rifiutata' : 'eseguita'}.
       <span> {resultLabel(item.data)}</span>
       {item.sourceIds.length > 0 && <small> Fonti ricevute: {item.sourceIds.join(', ')}.</small>}
+      {trace.archive && <ArchivedQuery trace={trace} query={item} />}
     </li>)}</ol>
   </details>
 }

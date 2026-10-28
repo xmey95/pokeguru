@@ -6,6 +6,10 @@ import type { ThreadEvidencePacket, ThreadEvidenceSource } from '../shared/threa
 import type { CatalogEvidenceSearch } from './catalog-evidence-search'
 import type { AiEvidenceEngine } from './ai-evidence-engine'
 import { AiFailure } from './ai-failure'
+import type { AiEvidenceArchive } from './ai-evidence-archive'
+import { collectArchivedEvidence } from './ai-evidence-collection'
+import { archiveReferences, bindEvidenceArchive, evidenceArchive, evidenceCards,
+  refreshEvidenceArchive } from './ai-evidence-access'
 
 // This is the local audit budget. Model contexts are separately analyzed in small batches.
 const MAX_RESPONSE_BYTES = 64_000_000
@@ -78,6 +82,17 @@ function planningIndex(previous: AiEvidenceQueryTrace['requests']): unknown {
 }
 
 function appendResult(trace: AiEvidenceQueryTrace, result: AiEvidenceQueryTrace['requests'][number]): void {
+  const archive = evidenceArchive(trace)
+  if (archive) {
+    const search = archive.search(result.query)
+    if (search.cursor !== null) {
+      if (result.status === 'ok' && (result.data as { remaining: number }).remaining !== 0)
+        throw new Error('La ricerca puntuale richiede altre pagine.')
+      archive.appendPage(search.key, search.cursor, result, null)
+    }
+    refreshEvidenceArchive(trace)
+    return
+  }
   if (trace.requests.some((existing) => existing.fingerprint === result.fingerprint)) return
   const size = Buffer.byteLength(JSON.stringify(result), 'utf8')
   if (trace.responseBytes + size > MAX_RESPONSE_BYTES) {
@@ -107,11 +122,7 @@ export function extendAiEvidenceForText(trace: AiEvidenceQueryTrace, engine: AiE
   for (const target of engine.cardTargets(text)) targets.set(target.name,
     { ...target, status: 'not-supplied' })
   const supplied = new Map<string, boolean>()
-  for (const result of trace.requests) {
-    if (result.status !== 'ok' || (result.query as { operation?: string }).operation !== 'catalog.search') continue
-    for (const card of (result.data as CatalogEvidenceSearch).matches)
-      supplied.set(card.printId, card.comparableGameplay)
-  }
+  for (const card of evidenceCards(trace)) supplied.set(card.printId, card.comparableGameplay)
   const pending = [...new Set([...targets.values()].flatMap((target) => target.printIds))]
     .filter((id) => !supplied.has(id))
   let added = 0
@@ -137,15 +148,29 @@ export function extendAiEvidenceForText(trace: AiEvidenceQueryTrace, engine: AiE
 export async function runAiEvidenceQueries(request: string, initialEvidence: unknown,
   engine: AiEvidenceEngine, plan: (prompt: string) => Promise<unknown>,
   options: { contextTexts?: string[]; eventContextTexts?: string[];
+    archive?: AiEvidenceArchive;
     onRound?: (round: number, queries: number) => void;
     onTrace?: (trace: AiEvidenceQueryTrace) => void; signal?: AbortSignal } = {}):
   Promise<AiEvidenceQueryTrace> {
   const started = performance.now()
   const trace: AiEvidenceQueryTrace = { schemaVersion: 1, engine: engine.describe(),
     requests: [], durationMs: 0, responseBytes: 0, planningRounds: 0, exhausted: false }
+  if (options.archive) bindEvidenceArchive(trace, options.archive)
   const fullContext = [request, ...(options.contextTexts ?? [])].join('\n')
   extendAiEvidenceForText(trace, engine, fullContext)
   async function collectPages(input: unknown): Promise<void> {
+    if (options.archive) {
+      await collectArchivedEvidence(input, engine, options.archive, { signal: options.signal,
+        onPage(result) {
+          refreshEvidenceArchive(trace)
+          if (result.status === 'ok') {
+            const lists = (result.data as { lists?: { cards: string[] }[] }).lists ?? []
+            extendAiEvidenceForText(trace, engine, lists.flatMap((list) => list.cards).join('\n'))
+          }
+          options.onTrace?.(trace)
+        } })
+      return
+    }
     let query = input
     for (let page = 0; page < 10_000; page++) {
       if (options.signal?.aborted) throw new AiFailure('cancelled', 'Operazione Codex annullata.')
@@ -160,6 +185,10 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
     }
     throw new AiFailure('query-limit', 'La ricerca supera 10.000 pagine. Le chiamate completate sono conservate; annulla e separa la ricerca per periodo o aspetto.')
   }
+  // A pause can occur just after a page commits and before its dependent card
+  // lookups. Recover those dependencies from distinct decks, even for finished searches.
+  if (options.archive) for (const record of options.archive.records('deck'))
+    extendAiEvidenceForText(trace, engine, (record.data as { cards: string[] }).cards.join('\n'))
   for (const deckName of engine.eventTargets([request,
     ...(options.eventContextTexts ?? [])].join('\n'))) {
     if (trace.exhausted) break
@@ -170,7 +199,8 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
   let outputTokens = 0
   let usageSeen = false
   for (let round = 0; round < MAX_PLANNING_ROUNDS && !trace.exhausted; round++) {
-    const raw = await plan(aiQueryPlanningPrompt(request, initialEvidence, engine, trace.requests))
+    const prior = options.archive?.value<unknown>('planning', String(round))
+    const raw = prior ?? await plan(aiQueryPlanningPrompt(request, initialEvidence, engine, trace.requests))
     const value = raw && typeof raw === 'object' && !Array.isArray(raw)
       ? raw as { queries?: unknown; continueAfterResults?: unknown; __usage?: unknown } : null
     const usage = readAiTokenUsage(value?.__usage)
@@ -184,6 +214,7 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
     if (!Array.isArray(queries) || queries.length > 4 ||
       typeof value?.continueAfterResults !== 'boolean')
       throw new Error('Piano delle query Codex non valido.')
+    if (options.archive && prior === undefined) options.archive.saveValue('planning', String(round), raw)
     trace.planningRounds++
     options.onRound?.(trace.planningRounds, queries.length)
     for (const query of queries) {
@@ -204,14 +235,13 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
 }
 
 export function aiEvidenceForPrompt(trace: AiEvidenceQueryTrace): unknown {
-  if (!trace.analysis) return trace
+  const archive = evidenceArchive(trace)
+  if (!trace.analysis) return archive ? { ...trace, requests: [...archive.pages()] } : trace
   const focused = new Set(trace.focusedPrintIds ?? [])
   const cards = new Map<string, CatalogEvidenceSearch['matches'][number]>()
-  for (const result of trace.requests) if (result.status === 'ok')
-    for (const card of (result.data as { matches?: CatalogEvidenceSearch['matches'] }).matches ?? [])
-      if (focused.has(card.printId)) cards.set(card.printId, card)
+  for (const card of evidenceCards(trace)) if (focused.has(card.printId)) cards.set(card.printId, card)
   return { schemaVersion: trace.schemaVersion, engine: trace.engine, analysis: trace.analysis,
-    originalRequests: trace.requests.length, originalBytes: trace.responseBytes,
+    originalRequests: trace.archive?.pages ?? trace.requests.length, originalBytes: trace.responseBytes,
     exhausted: trace.exhausted, focusedCards: [...cards.values()],
     cardTargets: trace.cardTargets?.filter((target) => target.printIds.some((id) => focused.has(id))),
     note: 'Tutti gli originali sono stati analizzati a lotti e conservati. La sintesi è un’elaborazione AI; le focusedCards sono schede originali per la verifica finale.' }
@@ -231,6 +261,10 @@ export function makeAiPromptAudit(text: string, durationMs: number | null = null
 export function threadEvidenceWithQueries(packet: ThreadEvidencePacket,
   trace: AiEvidenceQueryTrace): ThreadEvidencePacket {
   const sources = new Map(packet.sources.map((item) => [item.id, item]))
+  if (evidenceArchive(trace)) {
+    for (const source of archiveReferences(trace)) sources.set(source.id, source)
+    return { ...packet, sources: [...sources.values()], aiQueries: trace }
+  }
   const add = (id: string, label: string, url: string | null, value: unknown): void => {
     const fingerprint = createHash('sha256').update(JSON.stringify(value)).digest('hex')
     sources.set(id, { id, label, url, fingerprint } satisfies ThreadEvidenceSource)

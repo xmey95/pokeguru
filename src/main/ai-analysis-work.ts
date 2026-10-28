@@ -8,6 +8,8 @@ import type { AiJobKind } from '../shared/ai-job'
 import type { AiJobStore } from './ai-job-store'
 import { AiFailure, aiFailureCode } from './ai-failure'
 import { runStructuredCodex } from './codex-evidence-plan'
+import { AiEvidenceArchive } from './ai-evidence-archive'
+import { archiveReferences, evidenceArchive } from './ai-evidence-access'
 
 export interface AiWorkflowInput { kind: AiJobKind; args: unknown[] }
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -30,7 +32,16 @@ export function readAiWorkflow(directory: string): AiWorkflowInput | null {
 export class AiAnalysisWork {
   private activeCalls: AiDiagnostics['calls'] = []
   private closed = false
-  close(): void { this.closed = true }
+  private evidenceArchive?: AiEvidenceArchive
+  get archive(): AiEvidenceArchive {
+    if (this.closed) throw new Error('Analisi chiusa.')
+    return this.evidenceArchive ??= new AiEvidenceArchive(this.jobs.filePath, this.jobs.get(this.id)!)
+  }
+  close(): void {
+    if (this.closed) return
+    this.closed = true
+    this.evidenceArchive?.close()
+  }
   constructor(readonly directory: string, private readonly jobs: AiJobStore,
     readonly id: string, readonly signal: AbortSignal, input?: AiWorkflowInput) {
     mkdirSync(directory, { recursive: true })
@@ -43,12 +54,12 @@ export class AiAnalysisWork {
       this.signal.reason === 'pause' ? 'Analisi in pausa. I lotti completati sono conservati.' : 'Operazione Codex annullata.')
   }
 
-  snapshot<T>(name: string, input: unknown, create: () => T): T {
+  snapshot<T>(name: string, _input: unknown, create: () => T): T {
     this.check()
-    const path = join(this.directory, `checkpoint-${hash([name, input])}.json`)
-    if (existsSync(path)) return JSON.parse(readFileSync(path, 'utf8')) as T
+    const existing = this.archive.value<T>('input', name)
+    if (existing !== undefined) return existing
     const value = create()
-    save(path, value)
+    this.archive.saveValue('input', name, value)
     return value
   }
 
@@ -114,20 +125,31 @@ const summarySchema = { type: 'object', additionalProperties: false,
     summary: { type: 'string', maxLength: 8000 }, limitations: { type: 'string', maxLength: 4000 },
     sourceIds: { type: 'array', maxItems: 64, items: { type: 'string' } } } }
 interface BatchResult { summary: string; limitations: string; sourceIds: string[] }
-interface EvidenceRecord { sourceIds: string[]; data: unknown }
+interface EvidenceRecord { key?: string; sourceIds: string[]; data: unknown }
 
-function batches(records: EvidenceRecord[]): EvidenceRecord[][] {
-  const groups: EvidenceRecord[][] = []
+function* batches(records: Iterable<EvidenceRecord>): Generator<EvidenceRecord[]> {
   let current: EvidenceRecord[] = [], size = 0
   for (const record of records) {
     const bytes = Buffer.byteLength(JSON.stringify(record), 'utf8')
     if (bytes > BATCH_BYTES) throw new AiFailure('batch-too-large',
       'Un singolo record supera la dimensione di un lotto. I risultati completati sono conservati.')
-    if (size + bytes > BATCH_BYTES && current.length) { groups.push(current); current = []; size = 0 }
+    if (size + bytes > BATCH_BYTES && current.length) { yield current; current = []; size = 0 }
     current.push(record); size += bytes
   }
-  if (current.length) groups.push(current)
-  return groups
+  if (current.length) yield current
+}
+
+function* archivedRecords(archive: AiEvidenceArchive): Generator<EvidenceRecord> {
+  for (const record of archive.records()) yield { key: record.key, sourceIds: [record.sourceId],
+    data: { kind: record.kind, deckKey: record.deckKey, original: record.data } }
+  for (const statistic of archive.deckStatistics()) {
+    const deck = archive.readRecord<{ cards: string[] }>(`deck:${statistic.deckKey}`)
+    yield { key: `statistics:${statistic.deckKey}`, sourceIds: [], data: { ...statistic, cards: deck?.cards } }
+  }
+  for (const search of archive.searches()) {
+    const summary = archive.searchSummary(search)
+    yield { key: `search:${search.key}`, sourceIds: [], data: summary }
+  }
 }
 
 /** Full originals stay in the trace; every distinct record goes through a bounded model call. */
@@ -136,10 +158,11 @@ export async function analyzeLargeEvidence(trace: AiEvidenceQueryTrace, question
   analyze: (prompt: string) => Promise<unknown> = (prompt) => runStructuredCodex(prompt, config, summarySchema, work.signal)):
   Promise<void> {
   work.evidence(trace)
-  if (trace.responseBytes < 120_000) return
+  if (trace.responseBytes < 120_000) { archiveReferences(trace); return }
+  const archive = evidenceArchive(trace)
   const records: EvidenceRecord[] = []
   const seen = new Set<string>()
-  for (const result of trace.requests) {
+  for (const result of archive ? [] : trace.requests) {
     if (result.status !== 'ok') { records.push({ sourceIds: [], data: result }); continue }
     const data = result.data as { matches?: { printId: string }[];
       lists?: { occurrences?: unknown[]; [key: string]: unknown }[] }
@@ -159,13 +182,25 @@ export async function analyzeLargeEvidence(trace: AiEvidenceQueryTrace, question
           deckSourceId: result.sourceIds[index], occurrences: occurrences!.slice(offset, offset + 40) } })
     })
   }
-  const originalRecords = records.length
-  let pending = records, done = 0, total = batches(pending).length, depth = 0
+  const original = () => archive ? archivedRecords(archive) : records
+  let originalRecords = 0, initialBatches = 0
+  for (const group of batches(original())) { originalRecords += group.length; initialBatches++ }
+  if (!originalRecords) return
+  const generation = hash([question, config, trace.archive ?? trace.requests.map((r) => r.fingerprint)])
+  const stagePath = (depth: number, index: number) => join(work.directory, `stage-${generation}-${depth}-${index}.json`)
+  function* stage(depth: number, count: number): Generator<EvidenceRecord> {
+    for (let i = 0; i < count; i++) {
+      const summary = JSON.parse(readFileSync(stagePath(depth, i), 'utf8')) as BatchResult
+      yield { key: `summary:${generation}:${depth}:${i}`, sourceIds: summary.sourceIds, data: summary }
+    }
+  }
+  let pending: () => Iterable<EvidenceRecord> = original
+  let done = 0, total = initialBatches, depth = 0
   work.progress(done, total)
   while (true) {
-    const groups = batches(pending)
-    const summaries: BatchResult[] = []
-    for (const group of groups) {
+    let count = 0
+    let last: BatchResult | undefined
+    for (const group of batches(pending())) {
       work.check()
       const allowed = new Set(group.flatMap((record) => record.sourceIds))
       const prompt = [
@@ -187,17 +222,24 @@ export async function analyzeLargeEvidence(trace: AiEvidenceQueryTrace, question
       }
       const value = await work.run(depth ? 'synthesis' : 'batch', prompt, config,
         async () => validate(await analyze(prompt)))
-      summaries.push(validate(value))
+      last = validate(value)
+      save(stagePath(depth, count), last)
+      archive?.saveValue(`analysis:${generation}`, `${depth}:${count}`, {
+        inputRecords: group.map((record) => record.key), result: last })
+      count++
       work.progress(++done, total)
     }
-    if (summaries.length === 1) {
-      trace.analysis = { schemaVersion: 1, records: originalRecords, batches: done,
-        sourceCount: new Set(records.flatMap((r) => r.sourceIds)).size, ...summaries[0] }
+    if (count === 1 && last) {
+      trace.analysis = { schemaVersion: 1, ...(archive ? { generation } : {}), records: originalRecords, batches: done,
+        sourceCount: archive?.sourceCount() ?? new Set(records.flatMap((r) => r.sourceIds)).size, ...last }
+      archiveReferences(trace)
       return
     }
-    pending = summaries.map((summary) => ({ sourceIds: summary.sourceIds, data: summary }))
-    const next = batches(pending)
-    if (next.length >= groups.length) throw new AiFailure('batch-too-large', 'La sintesi non riduce il contesto. I lotti completati restano salvati.')
-    total += next.length; depth++
+    const previousDepth = depth
+    pending = () => stage(previousDepth, count)
+    let nextCount = 0
+    for (const _group of batches(pending())) nextCount++
+    if (nextCount >= count) throw new AiFailure('batch-too-large', 'La sintesi non riduce il contesto. I lotti completati restano salvati.')
+    total += nextCount; depth++
   }
 }

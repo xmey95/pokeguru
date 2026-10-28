@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { collectUnusedEvidence } from './ai-evidence-archive'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -574,6 +575,7 @@ export class ProjectStore {
       if (active) throw new Error('Attendi o annulla il job AI prima di cancellare il progetto.')
       const jobs = this.db.prepare('SELECT id FROM ai_jobs WHERE project_id = ?').all(id) as { id: string }[]
       this.db.prepare('DELETE FROM ai_jobs WHERE project_id = ?').run(id)
+      collectUnusedEvidence(this.db)
       const changed = this.db.prepare('DELETE FROM projects WHERE id = ? AND archived_at IS NOT NULL').run(id)
       if (changed.changes !== 1) throw new Error('Cancellazione non riuscita.')
       this.db.exec('COMMIT')

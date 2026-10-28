@@ -70,6 +70,7 @@ export function reportGuideReferences(report: MatchupReport, cardTargets: Readon
   for (const card of report.tournamentEvidence?.observedCards ?? []) add(card.name, card.cardSourceUrl)
   for (const event of report.tournamentEvidence?.events ?? []) add(event.name, event.url)
   if (report.tournamentEvidence?.eventName) add(report.tournamentEvidence.eventName, report.tournamentEvidence.eventUrl)
+  for (const reference of report.aiQueries?.references ?? []) add(reference.label, reference.url)
   for (const result of report.aiQueries?.requests ?? []) {
     if (result.status !== 'ok' || !result.data || typeof result.data !== 'object') continue
     const data = result.data as Record<string, unknown>

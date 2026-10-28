@@ -63,11 +63,11 @@ export function deckThreadPrompt(thread: DeckThread, base: DeckVersion | null, q
     catalog: { fetchedAt: catalog.syncedAt, coverage: catalog.standardCoverage
       ? { acquired: catalog.standardCoverage.acquired, expected: catalog.standardCoverage.expected,
         gameplayAcquired: catalog.standardCoverage.gameplayAcquired } : null },
-    evidence: evidence.aiQueries?.analysis ? { ...evidence,
-      aiQueries: aiEvidenceForPrompt(evidence.aiQueries), sources: evidence.sources.filter((source) =>
+    evidence: evidence.aiQueries ? { ...evidence,
+      aiQueries: aiEvidenceForPrompt(evidence.aiQueries), sources: evidence.aiQueries.analysis ? evidence.sources.filter((source) =>
         evidence.aiQueries!.analysis!.sourceIds.includes(source.id) ||
         evidence.cards.some((card) => card.sourceId === source.id) ||
-        evidence.aiQueries!.focusedPrintIds?.some((id) => source.id === `card:${id}`)) } : evidence,
+        evidence.aiQueries!.focusedPrintIds?.some((id) => source.id === `card:${id}`)) : evidence.sources } : evidence,
     question, allowedSourceIds: evidence.aiQueries?.analysis
       ? [...new Set([...evidence.aiQueries.analysis.sourceIds,
         ...evidence.cards.flatMap((card) => card.sourceId ? [card.sourceId] : []),

@@ -224,6 +224,13 @@ export class TournamentStore {
       .sort((a, b) => b.date.localeCompare(a.date) || a.eventId.localeCompare(b.eventId))
   }
 
+  *iterate(): Generator<TournamentSnapshot> {
+    for (const row of this.db.prepare(`SELECT payload FROM tournament_snapshots
+      WHERE rowid IN (SELECT MAX(rowid) FROM tournament_snapshots GROUP BY event_id)
+      ORDER BY json_extract(payload, '$.date') DESC, event_id`).iterate() as Iterable<{ payload: string }>)
+      yield { ...JSON.parse(row.payload) as TournamentSnapshot, cached: true }
+  }
+
   summaries(): TournamentSummary[] {
     const rows = this.db.prepare(`SELECT event_id, json_extract(payload, '$.name') AS name,
       json_extract(payload, '$.date') AS date, json_extract(payload, '$.circuit') AS circuit,
@@ -316,6 +323,13 @@ export class TournamentStore {
       .all() as { payload: string }[]
     return this.mainListCache = rows.map((row) => ({ ...JSON.parse(row.payload) as MainTournamentSnapshot, cached: true }))
       .sort((a, b) => b.date.localeCompare(a.date) || a.eventId.localeCompare(b.eventId))
+  }
+
+  *iterateMain(): Generator<MainTournamentSnapshot> {
+    for (const row of this.db.prepare(`SELECT payload FROM main_tournament_snapshots
+      WHERE rowid IN (SELECT MAX(rowid) FROM main_tournament_snapshots GROUP BY event_id)
+      ORDER BY json_extract(payload, '$.date') DESC, event_id`).iterate() as Iterable<{ payload: string }>)
+      yield { ...JSON.parse(row.payload) as MainTournamentSnapshot, cached: true }
   }
 
   mainSummaries(): MainTournamentSummary[] {

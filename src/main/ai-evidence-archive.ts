@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS ai_evidence_records (
 ) STRICT;
 CREATE INDEX IF NOT EXISTS ai_evidence_record_kind ON ai_evidence_records(job_id, kind, key);
 CREATE INDEX IF NOT EXISTS ai_evidence_record_deck ON ai_evidence_records(job_id, kind, deck_key);
+CREATE INDEX IF NOT EXISTS ai_evidence_record_source ON ai_evidence_records(job_id, source_id);
 CREATE TABLE IF NOT EXISTS ai_evidence_searches (
   job_id TEXT NOT NULL REFERENCES ai_evidence_runs(job_id) ON DELETE CASCADE,
   key TEXT NOT NULL, query_json TEXT NOT NULL, cursor_json TEXT,
@@ -52,6 +53,14 @@ CREATE TABLE IF NOT EXISTS ai_evidence_pages (
   PRIMARY KEY (job_id, search_key, cursor_key),
   FOREIGN KEY (job_id, search_key) REFERENCES ai_evidence_searches(job_id, key) ON DELETE CASCADE
 ) STRICT;
+CREATE TABLE IF NOT EXISTS ai_evidence_event_index (
+  job_id TEXT NOT NULL REFERENCES ai_evidence_runs(job_id) ON DELETE CASCADE,
+  key TEXT NOT NULL, deck_key TEXT NOT NULL, date TEXT NOT NULL, placing INTEGER,
+  deck_name TEXT NOT NULL, deck_text TEXT NOT NULL, cards_text TEXT NOT NULL,
+  object_hash TEXT NOT NULL REFERENCES ai_evidence_objects(hash),
+  PRIMARY KEY (job_id, key)
+) STRICT;
+CREATE INDEX IF NOT EXISTS ai_evidence_event_date ON ai_evidence_event_index(job_id, date DESC, placing, key);
 `
 
 const CHUNK_BYTES = 128 * 1024
@@ -101,23 +110,33 @@ export interface EvidenceDeckStatistics {
   placements: { placing: number; count: number }[]
   scope: 'observed-participations-against-event-field'
 }
+export interface EvidenceSnapshotRow {
+  key: string; deckKey: string; date: string; placing: number | null
+  deckName: string; deckText: string; cardsText: string; value: unknown
+}
 
 /** A capability bound to one existing job, project and resource. Object hashes are
  * never an authorization token: callers can only traverse this run's memberships. */
 export class AiEvidenceArchive {
   private readonly db: DatabaseSync
-  private readonly id: string
-  constructor(filePath: string, owner: { id: string; projectId: string; resourceId: string }) {
-    this.db = new DatabaseSync(filePath)
+  readonly id: string
+  readonly projectId: string
+  readonly resourceId: string
+  constructor(filePath: string, owner: { id: string; projectId: string; resourceId: string }, readOnly = false) {
+    this.db = new DatabaseSync(filePath, { readOnly })
     this.id = owner.id
+    this.projectId = owner.projectId
+    this.resourceId = owner.resourceId
     try {
       this.db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000')
       const job = this.db.prepare('SELECT project_id, resource_id FROM ai_jobs WHERE id = ?')
         .get(owner.id) as { project_id: string; resource_id: string } | undefined
       if (!job || job.project_id !== owner.projectId || job.resource_id !== owner.resourceId)
         throw new Error('Archivio delle prove non appartenente al progetto.')
-      this.db.exec(AI_EVIDENCE_ARCHIVE_SCHEMA)
-      this.db.prepare('INSERT OR IGNORE INTO ai_evidence_runs(job_id, version) VALUES (?, 1)').run(this.id)
+      if (!readOnly) {
+        this.db.exec(AI_EVIDENCE_ARCHIVE_SCHEMA)
+        this.db.prepare('INSERT OR IGNORE INTO ai_evidence_runs(job_id, version) VALUES (?, 1)').run(this.id)
+      }
     } catch (error) { this.db.close(); throw error }
   }
 
@@ -178,9 +197,45 @@ export class AiEvidenceArchive {
     })
   }
   *values<T>(role: string): Generator<{ key: string; value: T }> {
-    for (const row of this.db.prepare('SELECT key, object_hash FROM ai_evidence_values WHERE job_id = ? AND role = ? ORDER BY key')
-      .iterate(this.id, role) as Iterable<{ key: string; object_hash: string }>)
-      yield { key: row.key, value: this.get<T>(row.object_hash) }
+    let after: string | null = null
+    while (true) {
+      const rows = this.db.prepare(`SELECT key, object_hash FROM ai_evidence_values
+        WHERE job_id = ? AND role = ? AND (? IS NULL OR key > ?) ORDER BY key LIMIT 64`)
+        .all(this.id, role, after, after) as { key: string; object_hash: string }[]
+      if (!rows.length) return
+      for (const row of rows) { after = row.key; yield { key: row.key, value: this.get<T>(row.object_hash) } }
+    }
+  }
+
+  /** One transaction seals the source inventory before the first query. A failed
+   * capture leaves no partial snapshot, and reopening never reads newer sources. */
+  captureSources(metadata: unknown, rows: Iterable<EvidenceSnapshotRow>): void {
+    if (this.value('snapshot', 'sources') !== undefined) return
+    this.atomic(() => {
+      const insert = this.db.prepare('INSERT INTO ai_evidence_event_index VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      for (const row of rows) insert.run(this.id, row.key, row.deckKey, row.date, row.placing,
+        row.deckName, row.deckText, row.cardsText, this.put(row.value))
+      this.db.prepare('INSERT INTO ai_evidence_values VALUES (?, ?, ?, ?)')
+        .run(this.id, 'snapshot', 'sources', this.put(metadata))
+    })
+  }
+  *eventNames(): Generator<string> {
+    for (const row of this.db.prepare(`SELECT DISTINCT deck_name FROM ai_evidence_event_index
+      WHERE job_id = ? ORDER BY deck_name`).iterate(this.id) as Iterable<{ deck_name: string }>) yield row.deck_name
+  }
+  eventPage<T>(query: { from: string; to: string; deck: string; card: string; offset: number; limit: number }):
+    { rows: T[]; listsInspected: number; matchingLists: number; distinctDecks: number } {
+    const where = `job_id = ? AND date >= ? AND date <= ?
+      AND instr(deck_text, ?) > 0 AND instr(cards_text, ?) > 0`
+    const args = [this.id, query.from, query.to, query.deck, query.card]
+    const counts = this.db.prepare(`SELECT count(*) AS matchingLists, count(DISTINCT deck_key) AS distinctDecks
+      FROM ai_evidence_event_index WHERE ${where}`).get(...args) as { matchingLists: number; distinctDecks: number }
+    const { listsInspected } = this.db.prepare('SELECT count(*) AS listsInspected FROM ai_evidence_event_index WHERE job_id = ?')
+      .get(this.id) as { listsInspected: number }
+    const rows = (this.db.prepare(`SELECT object_hash FROM ai_evidence_event_index WHERE ${where}
+      ORDER BY date DESC, placing IS NULL, placing, key LIMIT ? OFFSET ?`)
+      .all(...args, query.limit, query.offset) as { object_hash: string }[]).map((row) => this.get<T>(row.object_hash))
+    return { ...counts, listsInspected, rows }
   }
 
   search(query: unknown): EvidenceSearch {
@@ -200,14 +255,37 @@ export class AiEvidenceArchive {
       pages: row.pages, responseBytes: row.response_bytes } : undefined
   }
   *searches(): Generator<EvidenceSearch> {
-    for (const row of this.db.prepare('SELECT key FROM ai_evidence_searches WHERE job_id = ? ORDER BY rowid')
-      .iterate(this.id) as Iterable<{ key: string }>) yield this.getSearch(row.key)!
+    let after = 0
+    while (true) {
+      const rows = this.db.prepare('SELECT rowid, key FROM ai_evidence_searches WHERE job_id = ? AND rowid > ? ORDER BY rowid LIMIT 64')
+        .all(this.id, after) as { rowid: number; key: string }[]
+      if (!rows.length) return
+      for (const row of rows) { after = row.rowid; yield this.getSearch(row.key)! }
+    }
   }
   lastPageMetadata(searchKey: string): { remaining?: number; offset?: number } | undefined {
     const row = this.db.prepare(`SELECT object_hash FROM ai_evidence_pages
       WHERE job_id = ? AND search_key = ? ORDER BY sequence DESC LIMIT 1`)
       .get(this.id, searchKey) as { object_hash: string } | undefined
     return row ? this.get<PageManifest>(row.object_hash).data : undefined
+  }
+  searchSummary(search: EvidenceSearch): AiEvidenceQueryResult {
+    const row = this.db.prepare(`SELECT object_hash FROM ai_evidence_pages
+      WHERE job_id = ? AND search_key = ? ORDER BY sequence DESC LIMIT 1`)
+      .get(this.id, search.key) as { object_hash: string } | undefined
+    const manifest = row ? this.get<PageManifest>(row.object_hash) : undefined
+    return { query: search.query, status: manifest?.envelope.status ?? 'ok', sourceIds: [],
+      fingerprint: search.key, data: { ...manifest?.data, pages: search.pages,
+        originalBytes: search.responseBytes, completed: search.cursor === null } }
+  }
+  readRecord<T>(key: string): T | undefined {
+    const row = this.db.prepare('SELECT object_hash FROM ai_evidence_records WHERE job_id = ? AND key = ?')
+      .get(this.id, key) as { object_hash: string } | undefined
+    return row ? this.get<T>(row.object_hash) : undefined
+  }
+  sourceCount(): number {
+    return (this.db.prepare('SELECT count(DISTINCT source_id) AS count FROM ai_evidence_records WHERE job_id = ?')
+      .get(this.id) as { count: number }).count
   }
 
   private record(key: string, kind: string, sourceId: string, data: unknown, deckKey: string | null = null): string {
@@ -290,30 +368,53 @@ export class AiEvidenceArchive {
   }
 
   *pages(searchKey?: string): Generator<AiEvidenceQueryResult> {
-    const statement = searchKey === undefined
-      ? this.db.prepare('SELECT object_hash FROM ai_evidence_pages WHERE job_id = ? ORDER BY rowid')
-      : this.db.prepare('SELECT object_hash FROM ai_evidence_pages WHERE job_id = ? AND search_key = ? ORDER BY sequence')
-    for (const row of statement.iterate(...(searchKey === undefined ? [this.id] : [this.id, searchKey])) as Iterable<{ object_hash: string }>) {
-      const manifest = this.get<PageManifest>(row.object_hash)
-      const data = { ...manifest.data }
-      if (manifest.cards) data.matches = manifest.cards.map((ref) => ({
-        ...this.get<Row>(ref.object),
-        ...(ref.reason === undefined ? {} : { reason: ref.reason }),
-        ...(ref.matchedTerms === undefined ? {} : { matchedTerms: ref.matchedTerms }) }))
-      if (manifest.lists) data.lists = manifest.lists.map((ref) => ({
-        ...ref.base, cards: this.get<string[]>(ref.cards),
-        ...(ref.occurrences ? { occurrences: ref.occurrences.map((hash) => this.get(hash)) } : {}) }))
-      yield { ...manifest.envelope, data }
+    let after = 0
+    while (true) {
+      const rows = this.db.prepare(`SELECT rowid, object_hash FROM ai_evidence_pages
+        WHERE job_id = ? AND rowid > ? AND (? IS NULL OR search_key = ?) ORDER BY rowid LIMIT 64`)
+        .all(this.id, after, searchKey ?? null, searchKey ?? null) as { rowid: number; object_hash: string }[]
+      if (!rows.length) return
+      for (const row of rows) {
+        after = row.rowid
+        yield this.expandPage(row.object_hash)
+      }
     }
   }
+  page(searchKey: string, sequence: number): AiEvidenceQueryResult | null {
+    if (!/^[a-f0-9]{64}$/.test(searchKey) || !Number.isSafeInteger(sequence) || sequence < 0)
+      throw new Error('Pagina delle prove non valida.')
+    const row = this.db.prepare(`SELECT object_hash FROM ai_evidence_pages
+      WHERE job_id = ? AND search_key = ? AND sequence = ?`).get(this.id, searchKey, sequence) as { object_hash: string } | undefined
+    return row ? this.expandPage(row.object_hash) : null
+  }
+  private expandPage(hash: string): AiEvidenceQueryResult {
+    const manifest = this.get<PageManifest>(hash)
+    const data = { ...manifest.data }
+    if (manifest.cards) data.matches = manifest.cards.map((ref) => ({ ...this.get<Row>(ref.object),
+      ...(ref.reason === undefined ? {} : { reason: ref.reason }),
+      ...(ref.matchedTerms === undefined ? {} : { matchedTerms: ref.matchedTerms }) }))
+    if (manifest.lists) data.lists = manifest.lists.map((ref) => ({ ...ref.base, cards: this.get<string[]>(ref.cards),
+      ...(ref.occurrences ? { occurrences: ref.occurrences.map((object) => this.get(object)) } : {}) }))
+    return { ...manifest.envelope, data }
+  }
 
-  *records(kind?: string): Generator<ArchivedEvidenceRecord> {
-    const statement = kind === undefined
-      ? this.db.prepare('SELECT * FROM ai_evidence_records WHERE job_id = ? ORDER BY key')
-      : this.db.prepare('SELECT * FROM ai_evidence_records WHERE job_id = ? AND kind = ? ORDER BY key')
-    for (const row of statement.iterate(...(kind === undefined ? [this.id] : [this.id, kind])) as Iterable<{
-      key: string; kind: string; source_id: string; deck_key: string | null; object_hash: string }>)
-      yield { key: row.key, kind: row.kind, sourceId: row.source_id, deckKey: row.deck_key, data: this.get(row.object_hash) }
+  *records(kind?: string, sourceIds?: string[]): Generator<ArchivedEvidenceRecord> {
+    if (sourceIds?.length === 0) return
+    let after: string | null = null
+    while (true) {
+      // Never keep a SQLite cursor open while an async consumer calls the model
+      // or updates diagnostics through another connection to this database.
+      const rows = this.db.prepare(`SELECT * FROM ai_evidence_records WHERE job_id = ?
+        AND (? IS NULL OR kind = ?) AND (? IS NULL OR key > ?)
+        ${sourceIds ? `AND source_id IN (${sourceIds.map(() => '?').join(',')})` : ''}
+        ORDER BY key LIMIT 64`).all(this.id, kind ?? null, kind ?? null, after, after, ...sourceIds ?? []) as {
+          key: string; kind: string; source_id: string; deck_key: string | null; object_hash: string }[]
+      if (!rows.length) return
+      for (const row of rows) {
+        after = row.key
+        yield { key: row.key, kind: row.kind, sourceId: row.source_id, deckKey: row.deck_key, data: this.get(row.object_hash) }
+      }
+    }
   }
   counts(): EvidenceArchiveCounts {
     const result = this.db.prepare(`SELECT count(*) AS searches,
@@ -330,34 +431,40 @@ export class AiEvidenceArchive {
   /** Exact counts over unique participation identities, not sums of query pages
    * or model summaries. A field record is never a winrate against the user's deck. */
   *deckStatistics(): Generator<EvidenceDeckStatistics> {
-    for (const row of this.db.prepare(`SELECT deck_key FROM ai_evidence_records
-      WHERE job_id = ? AND kind = 'occurrence' GROUP BY deck_key ORDER BY deck_key`)
-      .iterate(this.id) as Iterable<{ deck_key: string }>) {
-      const statistic: EvidenceDeckStatistics = { deckKey: row.deck_key, occurrences: 0, events: 0,
-        recordsAvailable: 0, fieldRecord: { wins: 0, losses: 0, ties: 0, denominator: 0 },
-        placements: [], scope: 'observed-participations-against-event-field' }
-      const events = new Set<string>(), placements = new Map<number, number>()
-      for (const record of this.db.prepare(`SELECT object_hash FROM ai_evidence_records
-        WHERE job_id = ? AND kind = 'occurrence' AND deck_key = ? ORDER BY key`)
-        .iterate(this.id, row.deck_key) as Iterable<{ object_hash: string }>) {
-        const item = this.get<{ id: string; placing?: number | null;
-          record?: { wins: number; losses: number; ties: number } | null }>(record.object_hash)
-        statistic.occurrences++
-        events.add(item.id)
-        if (Number.isSafeInteger(item.placing) && item.placing! > 0)
-          placements.set(item.placing!, (placements.get(item.placing!) ?? 0) + 1)
-        const score = item.record
-        if (score && [score.wins, score.losses, score.ties].every((n) => Number.isSafeInteger(n) && n >= 0)) {
-          statistic.recordsAvailable++
-          statistic.fieldRecord.wins += score.wins
-          statistic.fieldRecord.losses += score.losses
-          statistic.fieldRecord.ties += score.ties
+    let after = ''
+    while (true) {
+      const decks = this.db.prepare(`SELECT deck_key FROM ai_evidence_records
+        WHERE job_id = ? AND kind = 'occurrence' AND deck_key > ? GROUP BY deck_key ORDER BY deck_key LIMIT 64`)
+        .all(this.id, after) as { deck_key: string }[]
+      if (!decks.length) return
+      for (const row of decks) {
+        after = row.deck_key
+        const statistic: EvidenceDeckStatistics = { deckKey: row.deck_key, occurrences: 0, events: 0,
+          recordsAvailable: 0, fieldRecord: { wins: 0, losses: 0, ties: 0, denominator: 0 },
+          placements: [], scope: 'observed-participations-against-event-field' }
+        const events = new Set<string>(), placements = new Map<number, number>()
+        for (const record of this.db.prepare(`SELECT object_hash FROM ai_evidence_records
+          WHERE job_id = ? AND kind = 'occurrence' AND deck_key = ? ORDER BY key`)
+          .iterate(this.id, row.deck_key) as Iterable<{ object_hash: string }>) {
+          const item = this.get<{ id: string; placing?: number | null;
+            record?: { wins: number; losses: number; ties: number } | null }>(record.object_hash)
+          statistic.occurrences++
+          events.add(item.id)
+          if (Number.isSafeInteger(item.placing) && item.placing! > 0)
+            placements.set(item.placing!, (placements.get(item.placing!) ?? 0) + 1)
+          const score = item.record
+          if (score && [score.wins, score.losses, score.ties].every((n) => Number.isSafeInteger(n) && n >= 0)) {
+            statistic.recordsAvailable++
+            statistic.fieldRecord.wins += score.wins
+            statistic.fieldRecord.losses += score.losses
+            statistic.fieldRecord.ties += score.ties
+          }
         }
+        statistic.events = events.size
+        statistic.placements = [...placements].sort(([a], [b]) => a - b).map(([placing, count]) => ({ placing, count }))
+        statistic.fieldRecord.denominator = statistic.fieldRecord.wins + statistic.fieldRecord.losses + statistic.fieldRecord.ties
+        yield statistic
       }
-      statistic.events = events.size
-      statistic.placements = [...placements].sort(([a], [b]) => a - b).map(([placing, count]) => ({ placing, count }))
-      statistic.fieldRecord.denominator = statistic.fieldRecord.wins + statistic.fieldRecord.losses + statistic.fieldRecord.ties
-      yield statistic
     }
   }
   close(): void { this.db.close() }
@@ -371,6 +478,7 @@ export function collectUnusedEvidence(db: DatabaseSync): number {
     SELECT object_hash FROM ai_evidence_values
     UNION SELECT object_hash FROM ai_evidence_records
     UNION SELECT object_hash FROM ai_evidence_pages
+    UNION SELECT object_hash FROM ai_evidence_event_index
     UNION SELECT link.child_hash FROM ai_evidence_links link JOIN retained ON link.parent_hash = retained.hash
   ) DELETE FROM ai_evidence_objects WHERE hash NOT IN (SELECT hash FROM retained)`).run().changes)
 }

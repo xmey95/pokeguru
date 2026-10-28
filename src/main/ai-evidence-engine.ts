@@ -47,7 +47,7 @@ function page(value: unknown, fallback: number, max: number): number | null {
     Number(value) >= 0 && Number(value) <= max ? Number(value) : null
 }
 
-function parseQuery(input: unknown, window: { from: string; to: string }): AiEvidenceQuery {
+export function parseEvidenceQuery(input: unknown, window: { from: string; to: string }): AiEvidenceQuery {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Query non valida.')
   const value = input as Record<string, unknown>
   if (value.operation === 'catalog.search') {
@@ -56,7 +56,7 @@ function parseQuery(input: unknown, window: { from: string; to: string }): AiEvi
     if (!strings(value.terms, 8, 80) || !strings(value.printIds, 20, 40) ||
       !strings(value.identityIds, 20, 100) ||
       ![undefined, 'any', 'all'].includes(value.mode as string | undefined) ||
-      page(value.offset, 0, 1_000_000) === null || page(value.limit, 12, 20) === null ||
+      page(value.offset, 0, Number.MAX_SAFE_INTEGER) === null || page(value.limit, 12, 20) === null ||
       page(value.limit, 12, 20) === 0 ||
       ![value.terms, value.printIds, value.identityIds].some((items) =>
         Array.isArray(items) && items.length > 0)) throw new Error('Argomenti Catalogo non validi.')
@@ -64,7 +64,7 @@ function parseQuery(input: unknown, window: { from: string; to: string }): AiEvi
       printIds: value.printIds as string[] | undefined,
       identityIds: value.identityIds as string[] | undefined,
       mode: value.mode as 'any' | 'all' | undefined,
-      offset: page(value.offset, 0, 1_000_000)!, limit: page(value.limit, 12, 20)! }
+      offset: page(value.offset, 0, Number.MAX_SAFE_INTEGER)!, limit: page(value.limit, 12, 20)! }
   }
   if (value.operation === 'events.search') {
     if (Object.keys(value).some((key) => !['operation', 'deckName', 'cardName', 'from',
@@ -75,28 +75,30 @@ function parseQuery(input: unknown, window: { from: string; to: string }): AiEvi
       value.deckName !== undefined && !boundedString(value.deckName, 100) ||
       value.cardName !== undefined && !boundedString(value.cardName, 100) ||
       !date(from) || !date(to) || from > to || from < window.from || to > window.to ||
-      page(value.offset, 0, 1_000_000) === null || page(value.limit, 3, 4) === null ||
+      page(value.offset, 0, Number.MAX_SAFE_INTEGER) === null || page(value.limit, 3, 4) === null ||
       page(value.limit, 3, 4) === 0) throw new Error('Argomenti Eventi non validi.')
     return { operation: 'events.search', deckName: value.deckName as string | undefined,
       cardName: value.cardName as string | undefined, from, to,
-      offset: page(value.offset, 0, 1_000_000)!, limit: page(value.limit, 3, 4)! }
+      offset: page(value.offset, 0, Number.MAX_SAFE_INTEGER)!, limit: page(value.limit, 3, 4)! }
   }
   throw new Error('Operazione non consentita.')
 }
 
-function normalized(value: string): string {
+export function normalizedEvidenceText(value: string): string {
   return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase()
     .replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
-type EventRow = { id: string; snapshotId: string; name: string; date: string;
+const normalized = normalizedEvidenceText
+
+export type EvidenceEventRow = { id: string; snapshotId: string; name: string; date: string;
   kind: 'online' | 'in-person'; url: string; participants: number; completeLists: number;
   deck: string; placing: number | null; listUrl: string; cards: string[];
   playerId: string | null; record: { wins: number; losses: number; ties: number } | null;
   pairings: TournamentPairing[] }
 
-function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[]): EventRow[] {
-  const rows: EventRow[] = []
+export function* evidenceEventRows(play: Iterable<TournamentSnapshot>,
+  main: Iterable<MainTournamentSnapshot>): Generator<EvidenceEventRow> {
   for (const event of play) {
     if (event.circuit !== 'WESTERN' || event.format !== 'STANDARD') continue
     const pairings = new Map<string, TournamentPairing[]>()
@@ -109,37 +111,42 @@ function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[]): 
     }
     for (const item of event.participations) {
       if (item.listStatus !== 'available' || item.cardTotal !== 60) continue
-      rows.push({ id: `play:${event.eventId}`, snapshotId: event.id, name: event.name,
+      yield { id: `play:${event.eventId}`, snapshotId: event.id, name: event.name,
         date: event.date, kind: event.isOnline ? 'online' : 'in-person', url: event.publicUrl,
         participants: event.coverage.returnedParticipants,
         completeLists: event.coverage.complete60Lists, deck: item.deck?.name ?? '',
         placing: item.placing, listUrl: `${event.publicUrl}/player/${encodeURIComponent(item.playerId)}/decklist`,
         playerId: item.playerId, record: item.record, pairings: pairings.get(item.playerId) ?? [],
-        cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) })
+        cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) }
     }
   }
   for (const event of main) {
     if (event.circuit !== 'WESTERN' || event.format !== 'STANDARD') continue
     for (const item of event.participants) {
       if (item.cardTotal !== 60 || !item.cards || !item.listUrl) continue
-      rows.push({ id: `main:${event.eventId}`, snapshotId: event.id, name: event.name,
+      yield { id: `main:${event.eventId}`, snapshotId: event.id, name: event.name,
         date: event.date, kind: 'in-person', url: event.url,
         participants: event.coverage.returnedParticipants,
         completeLists: event.coverage.complete60Lists, deck: item.deckName ?? '',
         placing: item.placing, listUrl: item.listUrl,
         playerId: null, record: null, pairings: [],
-        cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) })
+        cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) }
     }
   }
-  return rows
+}
+
+export interface EvidenceEventSource {
+  names(): Iterable<string>
+  search(query: Extract<AiEvidenceQuery, { operation: 'events.search' }>): unknown
 }
 
 /** A read-only, bounded gateway from model-chosen queries to local app data. */
 export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSnapshot[],
-  main: MainTournamentSnapshot[], window: { from: string; to: string }): AiEvidenceEngine {
+  main: MainTournamentSnapshot[], window: { from: string; to: string },
+  events?: EvidenceEventSource): AiEvidenceEngine {
   if (!date(window.from) || !date(window.to) || window.from > window.to)
     throw new Error('Intervallo Eventi non valido.')
-  const rows = eventRows(play, main)
+  const rows = events ? [] : [...evidenceEventRows(play, main)]
   const scope = searchCatalogEvidence(catalog, { terms: ['pokemon'], limit: 1 }).scope
   const setCodes = new Map(catalog.sets.map((set) => [set.id,
     [set.id, set.abbreviation].filter((code): code is string => Boolean(code))]))
@@ -150,11 +157,11 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
     names.set(key, [...(names.get(key) ?? []), print])
   }
   const sortedNames = [...names.keys()].sort((a, b) => b.length - a.length)
-  const decks = new Map(rows.filter((row) => normalized(row.deck).length >= 5)
-    .map((row) => [normalized(row.deck), row.deck]))
+  const decks = new Map([...(events?.names() ?? rows.map((row) => row.deck))]
+    .filter((deck) => normalized(deck).length >= 5).map((deck) => [normalized(deck), deck]))
   const sortedDecks = [...decks.keys()].sort((a, b) => b.length - a.length)
   const eventSearches = new Map<string, { matchingLists: number;
-    groups: (EventRow & { occurrences: Omit<EventRow, 'cards'>[] })[] }>()
+    groups: (EvidenceEventRow & { occurrences: Omit<EvidenceEventRow, 'cards'>[] })[] }>()
   return {
     describe: () => ({ operations: ['catalog.search', 'events.search'],
       catalog: { syncedAt: catalog.syncedAt, expected: scope.expected,
@@ -200,7 +207,7 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
     },
     execute(input) {
       let query: AiEvidenceQuery
-      try { query = parseQuery(input, window) }
+      try { query = parseEvidenceQuery(input, window) }
       catch (error) {
         const rejected = { query: String(JSON.stringify(input) ?? input).slice(0, 1000),
           status: 'rejected' as const,
@@ -214,6 +221,11 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
         return { query, status: 'ok', data, sourceIds,
           fingerprint: fingerprint({ query, data }) }
       }
+      if (events) {
+        const data = events.search(query) as { lists: EvidenceEventRow[] }
+        const sourceIds = data.lists.map((item) => `list:${fingerprint(item.listUrl).slice(0, 16)}`)
+        return { query, status: 'ok', data, sourceIds, fingerprint: fingerprint({ query, data }) }
+      }
       const deck = query.deckName ? normalized(query.deckName) : null
       const card = query.cardName ? normalized(query.cardName) : null
       const searchKey = fingerprint({ deck, card, from: query.from, to: query.to })
@@ -224,7 +236,7 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
           (!card || row.cards.some((line) => normalized(line).includes(card))))
           .sort((a, b) => b.date.localeCompare(a.date) ||
             (a.placing ?? Infinity) - (b.placing ?? Infinity))
-        const grouped = new Map<string, EventRow & { occurrences: Omit<EventRow, 'cards'>[] }>()
+        const grouped = new Map<string, EvidenceEventRow & { occurrences: Omit<EvidenceEventRow, 'cards'>[] }>()
         for (const row of matching) {
           const key = exactDeckIdentity(row.cards)
           const { cards: _cards, ...occurrence } = row

@@ -4,6 +4,7 @@ import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import type { AiJobActivityPage, AiJobActivityStep, AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
 import { readAiDiagnostics, type AiDiagnostics } from '../shared/ai-diagnostics'
+import { AI_EVIDENCE_ARCHIVE_SCHEMA } from './ai-evidence-archive'
 
 export interface AiJob extends AiJobSummary {
   request: unknown | null
@@ -46,7 +47,7 @@ function job(row: JobRow): AiJob {
 export class AiJobStore {
   private readonly db: DatabaseSync
 
-  constructor(filePath: string) {
+  constructor(readonly filePath: string) {
     mkdirSync(dirname(filePath), { recursive: true })
     this.db = new DatabaseSync(filePath)
     this.db.exec('PRAGMA journal_mode = WAL')
@@ -77,6 +78,7 @@ export class AiJobStore {
       at TEXT NOT NULL
     ) STRICT;
     CREATE INDEX IF NOT EXISTS ai_job_activity_page ON ai_job_activity(job_id, id DESC);`)
+    this.db.exec(AI_EVIDENCE_ARCHIVE_SCHEMA)
   }
 
   start(kind: AiJobKind, projectId: string, resourceId: string): AiJob {

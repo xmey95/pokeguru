@@ -16,6 +16,8 @@ non riceve accesso diretto a SQLite, filesystem, rete o API arbitrarie.
 
 ## Contratto di copertura
 
+Nel ramo di sviluppo APP-161 le nuove query Thread/Matchup salvano gli originali in SQLite, mantenendo nella cronologia un indice e un riferimento al job. Catalogo e finestra Eventi sono congelati prima delle query; le pagine Eventi sono limitate per partecipazioni, mentre il raggruppamento globale conserva mazzi esatti, occorrenze, record e abbinamenti. Le sintesi leggono i record progressivamente e conservano i collegamenti ai lotti. Le pagine originali rimangono consultabili in Diagnostica AI. Questo incremento non è ancora rilasciato: preparazione completa Matchup, adattamento dei lotti e ripresa automatica sono ancora in lavorazione; stato e verifiche in APP-161–164 del backlog.
+
 Ogni turno distingue:
 
 1. **Inventario**: fonte, istante, filtro, stampe attese e set osservati.
