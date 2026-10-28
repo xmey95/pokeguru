@@ -1,6 +1,6 @@
 # Prodotto e requisiti iniziali
 
-**Versione:** 28 ottobre 2026. **Stato:** I1–I3 implementati; v0.3.2 pubblicata da `main` per Linux, Windows, macOS Intel e Apple Silicon. APP-153 ha migliorato la consegna verificabile delle prove AI. Il checkpoint di qualità Matchup prima di I4 è incluso: Catalogo Standard occidentale con meccaniche e codici set, archivio globale Play e Regional, guide Codex con più liste ed evidenze salvate. Una lista interamente coperta può ricevere esito conforme allo snapshot di regole incluso; casi fuori copertura restano da verificare.
+**Versione:** 28 ottobre 2026. **Stato:** I1–I3 implementati; v0.3.7 pubblicata da `main` per Linux, Windows, macOS Intel e Apple Silicon. Include analisi durevoli, correzione delle partecipazioni torneo e feedback desktop APP-165–169: worker dedicato, integrazioni Catalogo verificate, cancellazione Thread, caricamento Matchup e modale progetti. Catalogo Standard occidentale, archivio globale Play e Regional e guide Codex conservano fonti e limiti. Una lista interamente coperta può ricevere esito conforme allo snapshot di regole incluso; casi fuori copertura restano da verificare. I4 non avviato.
 
 ## Visione e confini
 
