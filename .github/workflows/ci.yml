@@ -53,6 +53,16 @@ jobs:
       - name: Install Linux display tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
+      - name: Verify automatic AI recovery on Linux
+        if: runner.os == 'Linux'
+        env:
+          POKEGURU_LIFECYCLE_E2E: '1'
+        run: xvfb-run -a npx vitest run tests/ai-lifecycle-electron.test.ts
+      - name: Verify automatic AI recovery on Windows and macOS
+        if: runner.os != 'Linux'
+        env:
+          POKEGURU_LIFECYCLE_E2E: '1'
+        run: npx vitest run tests/ai-lifecycle-electron.test.ts
       - name: Exercise TCG Live deck export on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/export-live.mjs

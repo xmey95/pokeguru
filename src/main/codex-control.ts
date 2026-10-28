@@ -1,3 +1,4 @@
+import { codexErrorEvent, codexFailure } from './codex-failure'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { createInterface, type Interface } from 'node:readline'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -236,6 +237,7 @@ export class CodexControl {
           stdout = lines.pop() ?? ''
           for (const line of lines) {
             try {
+              stderr = (stderr + codexErrorEvent(line)).slice(-4000)
               const summary = codexReasoningSummary(line)
               if (summary) options.onSummary?.(summary)
               const event = JSON.parse(line) as { type?: string; thread_id?: string; usage?: unknown }
@@ -271,9 +273,7 @@ export class CodexControl {
           if (captureError) return reject(new Error('Impossibile conservare la sessione Codex.'))
           if (options.signal?.aborted) return reject(new Error('Operazione Codex annullata.'))
           if (timedOut) return reject(new Error('Codex ha superato il tempo massimo di dieci minuti per questa chiamata. Puoi riprendere l’analisi.'))
-          if (code !== 0) return reject(new Error(stderr.includes('Not logged in')
-            ? 'Accedi a Codex prima di generare le analisi.'
-            : 'Codex non ha completato la risposta nel profilo isolato. Controlla supporto sandbox, connessione e modello.'))
+          if (code !== 0) return reject(codexFailure(stderr))
           if (!(observedSessionId ?? sessionId) ||
             (sessionId && observedSessionId && sessionId !== observedSessionId)) {
             return reject(new Error('Codex non ha restituito l’identificativo atteso della sessione.'))

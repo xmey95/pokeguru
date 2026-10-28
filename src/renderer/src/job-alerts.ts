@@ -69,7 +69,8 @@ export function aiObservations(jobs: AiJobSummary[]): ObservedJob[] {
   return jobs.map((job) => {
     const state: AlertState = job.status === 'applied' ? 'complete'
       : job.status === 'failed' ? 'failed' : job.status === 'cancelled' ? 'cancelled'
-        : job.status === 'interrupted' ? 'paused' : 'working'
+        : job.status === 'interrupted' ? ['failure', 'legacy'].includes(job.progress?.diagnostics?.suspensionReason ?? '')
+          ? 'failed' : 'paused' : 'working'
     const kind = job.kind.startsWith('thread') ? 'Thread' : 'Matchup'
     return { key: `ai:${job.id}`, source: 'ai', state, projectId: job.projectId,
       resourceId: job.resourceId, aiKind: job.kind,

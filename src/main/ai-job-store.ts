@@ -4,6 +4,8 @@ import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import type { AiJobActivityPage, AiJobActivityStep, AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
 import { readAiDiagnostics, type AiDiagnostics } from '../shared/ai-diagnostics'
+import { AI_EVIDENCE_ARCHIVE_SCHEMA } from './ai-evidence-archive'
+import type { AiCallState } from './ai-call-retry'
 
 export interface AiJob extends AiJobSummary {
   request: unknown | null
@@ -46,7 +48,7 @@ function job(row: JobRow): AiJob {
 export class AiJobStore {
   private readonly db: DatabaseSync
 
-  constructor(filePath: string) {
+  constructor(readonly filePath: string) {
     mkdirSync(dirname(filePath), { recursive: true })
     this.db = new DatabaseSync(filePath)
     this.db.exec('PRAGMA journal_mode = WAL')
@@ -77,6 +79,15 @@ export class AiJobStore {
       at TEXT NOT NULL
     ) STRICT;
     CREATE INDEX IF NOT EXISTS ai_job_activity_page ON ai_job_activity(job_id, id DESC);`)
+    this.db.exec(AI_EVIDENCE_ARCHIVE_SCHEMA)
+    this.db.exec(`CREATE TABLE IF NOT EXISTS ai_call_state (
+      job_id TEXT NOT NULL REFERENCES ai_jobs(id) ON DELETE CASCADE,
+      key TEXT NOT NULL, state_json TEXT NOT NULL, PRIMARY KEY (job_id, key)
+    ) STRICT;
+    CREATE TABLE IF NOT EXISTS ai_call_cache (
+      job_id TEXT NOT NULL REFERENCES ai_jobs(id) ON DELETE CASCADE,
+      key TEXT NOT NULL, result_json TEXT NOT NULL, PRIMARY KEY (job_id, key)
+    ) STRICT;`)
   }
 
   start(kind: AiJobKind, projectId: string, resourceId: string): AiJob {
@@ -195,10 +206,27 @@ export class AiJobStore {
       ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)
   }
 
+  automaticResumable(): AiJob[] {
+    return (this.db.prepare(`SELECT * FROM ai_jobs WHERE status = 'interrupted'
+      AND json_extract(progress_json, '$.diagnostics.resumable') = 1
+      AND json_extract(progress_json, '$.diagnostics.suspensionReason') = 'shutdown'
+      ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)
+  }
+
+  /** Only an explicit retry after intervention renews a transient failure budget.
+   * Context, invalid content and no-progress failures keep their original state. */
+  retryAfterIntervention(id: string): void {
+    if (this.get(id)?.status !== 'interrupted') throw new Error('Analisi non riprendibile.')
+    this.db.prepare(`DELETE FROM ai_call_state WHERE job_id = ?
+      AND json_extract(state_json, '$.status') = 'blocked'
+      AND json_extract(state_json, '$.code') IN ('network', 'timeout', 'quota', 'auth',
+        'cli-unavailable', 'storage', 'storage-full')`).run(id)
+  }
+
   recordDiagnostics(id: string, change: AiDiagnostics): void {
     const current = this.db.prepare('SELECT status, progress_json FROM ai_jobs WHERE id = ?')
       .get(id) as { status: AiJobStatus; progress_json: string | null } | undefined
-    if (!current || !['running', 'ready', 'cancelled'].includes(current.status)) return
+    if (!current || !['running', 'ready', 'cancelled', 'interrupted'].includes(current.status)) return
     const at = new Date().toISOString()
     const prior = progress(current) ?? { phase: 'preparing' as const, detail: 'Preparazione',
       summary: null, updatedAt: at, steps: [] }
@@ -212,6 +240,24 @@ export class AiJobStore {
     return row ? progress(row)?.diagnostics : undefined
   }
 
+  callState(id: string, key: string): AiCallState | undefined {
+    const row = this.db.prepare('SELECT state_json FROM ai_call_state WHERE job_id = ? AND key = ?').get(id, key) as
+      { state_json: string } | undefined
+    return row ? JSON.parse(row.state_json) as AiCallState : undefined
+  }
+  saveCallState(id: string, key: string, state: AiCallState): void {
+    this.db.prepare(`INSERT INTO ai_call_state VALUES (?, ?, ?) ON CONFLICT(job_id, key)
+      DO UPDATE SET state_json = excluded.state_json`).run(id, key, JSON.stringify(state))
+  }
+  callResult<T>(id: string, key: string): { value: T } | undefined {
+    const row = this.db.prepare('SELECT result_json FROM ai_call_cache WHERE job_id = ? AND key = ?').get(id, key) as
+      { result_json: string } | undefined
+    return row ? { value: JSON.parse(row.result_json) as T } : undefined
+  }
+  saveCallResult(id: string, key: string, result: unknown): void {
+    this.db.prepare('INSERT OR IGNORE INTO ai_call_cache VALUES (?, ?, ?)').run(id, key, JSON.stringify(result))
+  }
+
   runtimeFacts(id: string): { requestPrepared: boolean; validatedDraft: boolean | null; resultPrepared: boolean } {
     const row = this.db.prepare(`SELECT request_json IS NOT NULL AS requestPrepared,
       CASE WHEN json_valid(request_json) THEN json_extract(request_json, '$.validatedDraft') END AS validatedDraft,
@@ -221,17 +267,17 @@ export class AiJobStore {
       validatedDraft: row?.validatedDraft === 1 ? true : row?.validatedDraft === 0 ? false : null }
   }
 
-  suspend(id: string, error: string): void {
-    this.recordDiagnostics(id, { resumable: true })
+  suspend(id: string, error: string, reason: NonNullable<AiDiagnostics['suspensionReason']> = 'failure'): void {
+    this.recordDiagnostics(id, { resumable: true, suspensionReason: reason })
     this.db.prepare(`UPDATE ai_jobs SET status = 'interrupted', error = ?, updated_at = ?
-      WHERE id = ? AND status = 'running'`).run(error, new Date().toISOString(), id)
+      WHERE id = ? AND status IN ('running', 'interrupted')`).run(error, new Date().toISOString(), id)
   }
 
   resume(id: string): AiJob {
     const result = this.db.prepare(`UPDATE ai_jobs SET status = 'running', error = NULL, updated_at = ?
       WHERE id = ? AND status = 'interrupted'`).run(new Date().toISOString(), id)
     if (result.changes !== 1) throw new Error('Analisi non riprendibile.')
-    this.recordDiagnostics(id, { resumable: false, failureCode: undefined })
+    this.recordDiagnostics(id, { resumable: false, failureCode: undefined, suspensionReason: undefined, automaticWait: false })
     return this.get(id)!
   }
 

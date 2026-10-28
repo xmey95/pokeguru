@@ -71,15 +71,15 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
-### Novità della v0.3.4
+### Novità della v0.3.5
 
 La cronologia delle attività AI conserva tutte le nuove voci e sintesi, carica le precedenti quando scorri verso l'alto e mantiene navigabili Thread e Matchup durante il lavoro.
 
 Thread e Matchup possono svolgere analisi estese in background mentre consulti l'app. Ogni ricerca locale acquisisce tutte le pagine disponibili; le liste identiche vengono raggruppate conservando occorrenze, piazzamenti e provenienza. Quando il contesto cresce, Codex analizza i dati in lotti salvati e ne costruisce una sintesi, con verifica delle carte citate prima della risposta finale.
 
-**Pausa** conserva il lavoro completato. Dopo la riapertura usa **Riprendi analisi**: i lotti con gli stessi dati e la stessa configurazione vengono riutilizzati. L'app chiusa non continua a elaborare; la ripresa richiede un'azione esplicita. **Annulla analisi** scarta il lavoro in sospeso e libera il Thread. Un errore di verifica diventa visibile e non lascia più un'attesa senza esecutore. La diagnostica esportabile aggiunge cause tecniche, tempi delle chiamate, dimensioni, copertura e avanzamento dei lotti, senza contenuti privati.
+Chiudere l'app ferma l'elaborazione; alla riapertura riprendono automaticamente i lavori prima attivi. **Pausa** conserva il lavoro e resta tale anche dopo la riapertura: usa **Riprendi analisi** quando vuoi continuare. I lotti compatibili vengono riutilizzati. **Annulla analisi** interrompe il lavoro in sospeso e libera il Thread. Attese automatiche, pause volontarie e problemi che richiedono intervento sono distinti. Una guida terminata dopo un cambio lista resta legata alla versione originale. La diagnostica esportabile include cause tecniche, tempi, dimensioni, copertura e avanzamento senza contenuti privati. Per vecchie analisi che non salvavano tutti gli input occorre una nuova richiesta sui dati attuali.
 
-Le analisi grandi possono richiedere più chiamate e consumare più quota Codex. Non c'è una scadenza complessiva breve: il limite di dieci minuti riguarda la singola chiamata, che può essere riprovata conservando i lotti precedenti. Restano limiti espliciti sull'archivio di una ricerca (64 MB), sulle pagine e sui passaggi di pianificazione; le sintesi sono interpretazioni AI e non sostituiscono gli originali conservati. La copertura dipende dai dati locali e dalle ricerche scelte per la domanda.
+Le analisi grandi possono richiedere più chiamate e consumare più quota Codex. Non c'è una scadenza complessiva breve: il limite di dieci minuti riguarda la singola chiamata. L'archivio incrementale supera il precedente tetto di 64 MB; i lotti si dividono quando superano il contesto, senza restringere la ricerca. Errori temporanei di rete o quota hanno tentativi automatici limitati e attese visibili; la mancanza di progresso ferma il lavoro con una causa esplicita. Le sintesi sono interpretazioni AI e non sostituiscono gli originali consultabili dalla diagnostica. La copertura dipende dai dati locali e dalle ricerche scelte per la domanda.
 
 ### Novità della v0.3.3
 

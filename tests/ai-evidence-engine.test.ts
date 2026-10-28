@@ -215,4 +215,18 @@ describe('AI evidence engine', () => {
       printIds: ['me01-099'], status: 'missing-gameplay' }])
     expect(trace.exhausted).toBe(false)
   })
+
+  it('preserves available records and each participation pairing without inventing missing outcomes', () => {
+    const sample = event()
+    sample.participations[0].record = { wins: 4, losses: 1, ties: 1 }
+    sample.pairings = [{ phase: 1, round: 1, table: 3, match: null,
+      player1: 'p', player2: 'opponent', winner: 'p' },
+    { phase: 1, round: 2, table: null, match: null, player1: 'p', player2: null, winner: 'p' },
+    { phase: 1, round: 3, table: 2, match: null, player1: 'x', player2: 'y', winner: null }]
+    const engine = createAiEvidenceEngine(catalog, [sample], [], { from: '2026-10-01', to: '2026-10-25' })
+    const result = engine.execute({ operation: 'events.search', deckName: 'Gardevoir' })
+    const lists = (result.data as { lists: { occurrences: unknown[] }[] }).lists
+    expect(lists[0].occurrences).toEqual([expect.objectContaining({ playerId: 'p',
+      record: { wins: 4, losses: 1, ties: 1 }, pairings: sample.pairings.slice(0, 2) })])
+  })
 })

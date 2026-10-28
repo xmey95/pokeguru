@@ -45,7 +45,8 @@ export const DECK_THREAD_SCHEMA = {
 } as const
 
 export function deckThreadPrompt(thread: DeckThread, base: DeckVersion | null, question: string,
-  constraints: DeckConstraint[], catalog: CatalogView, evidence: ThreadEvidencePacket): DeckThreadContext {
+  constraints: DeckConstraint[], catalog: CatalogView, evidence: ThreadEvidencePacket,
+  referenceDate = localCalendarDate()): DeckThreadContext {
   const sources: DeckCandidate['sources'] = evidence.sources.map(({ id, label, url }) => ({ id, label, url }))
   let lastReply = -1
   thread.messages.forEach((message, index) => { if (message.author === 'assistant') lastReply = index })
@@ -53,7 +54,7 @@ export function deckThreadPrompt(thread: DeckThread, base: DeckVersion | null, q
     .filter((message) => message.author === 'user' && message.id !== thread.openingAiMessageId)
     .map((message) => message.text)
   const context = {
-    circuit: 'WESTERN', format: 'STANDARD', referenceDate: localCalendarDate(),
+    circuit: 'WESTERN', format: 'STANDARD', referenceDate,
     baseVersion: base?.sequence ?? null, baseList: base?.rawText ?? null,
     latestThreadCandidate: thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? null,
     discussion: thread.messages.slice(-12).map((message) => ({ author: message.author, text: message.text })),
@@ -63,11 +64,11 @@ export function deckThreadPrompt(thread: DeckThread, base: DeckVersion | null, q
     catalog: { fetchedAt: catalog.syncedAt, coverage: catalog.standardCoverage
       ? { acquired: catalog.standardCoverage.acquired, expected: catalog.standardCoverage.expected,
         gameplayAcquired: catalog.standardCoverage.gameplayAcquired } : null },
-    evidence: evidence.aiQueries?.analysis ? { ...evidence,
-      aiQueries: aiEvidenceForPrompt(evidence.aiQueries), sources: evidence.sources.filter((source) =>
+    evidence: evidence.aiQueries ? { ...evidence,
+      aiQueries: aiEvidenceForPrompt(evidence.aiQueries), sources: evidence.aiQueries.analysis ? evidence.sources.filter((source) =>
         evidence.aiQueries!.analysis!.sourceIds.includes(source.id) ||
         evidence.cards.some((card) => card.sourceId === source.id) ||
-        evidence.aiQueries!.focusedPrintIds?.some((id) => source.id === `card:${id}`)) } : evidence,
+        evidence.aiQueries!.focusedPrintIds?.some((id) => source.id === `card:${id}`)) : evidence.sources } : evidence,
     question, allowedSourceIds: evidence.aiQueries?.analysis
       ? [...new Set([...evidence.aiQueries.analysis.sourceIds,
         ...evidence.cards.flatMap((card) => card.sourceId ? [card.sourceId] : []),
@@ -97,7 +98,7 @@ export function deckThreadPrompt(thread: DeckThread, base: DeckVersion | null, q
 
 export function readDeckThreadTurn(value: unknown, projectId: string, base: DeckVersion | null,
   catalog: CatalogView, constraints: DeckConstraint[], evidence: ThreadEvidencePacket,
-  sources: DeckCandidate['sources']): { answer: string; citedSourceIds: string[];
+  sources: DeckCandidate['sources'], referenceDate = localCalendarDate()): { answer: string; citedSourceIds: string[];
     proposal?: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] } } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Risposta Codex non valida.')
   const data = value as Record<string, unknown>
@@ -114,7 +115,7 @@ export function readDeckThreadTurn(value: unknown, projectId: string, base: Deck
   try {
     if (!base) throw new Error('Manca una lista principale di partenza.')
     const checked = validateDeckProposal({ outcome: 'candidate', rawText: data.rawText,
-      rationale: answer, sourceIds: citedSourceIds }, projectId, catalog, constraints, sources)
+      rationale: answer, sourceIds: citedSourceIds }, projectId, catalog, constraints, sources, referenceDate)
     return { answer, citedSourceIds, proposal: { rawText: checked.rawText,
       note: checked.rationale, sources: checked.sources, checks: checked.checks } }
   } catch (error) {
@@ -130,7 +131,7 @@ export function readDeckThreadTurn(value: unknown, projectId: string, base: Deck
 }
 
 export function validateDeckProposal(value: unknown, projectId: string, catalog: CatalogView,
-  constraints: DeckConstraint[], sources: DeckCandidate['sources']): {
+  constraints: DeckConstraint[], sources: DeckCandidate['sources'], referenceDate = localCalendarDate()): {
     outcome: 'candidate' | 'no_change'; rawText: string; rationale: string;
     sources: DeckCandidate['sources']; checks: string[]
   } {
@@ -157,7 +158,6 @@ export function validateDeckProposal(value: unknown, projectId: string, catalog:
     throw new Error('La proposta Codex non contiene una lista completa di 60 carte.')
   if (!catalog.syncedAt) throw new Error('Sincronizza il Catalogo prima di salvare una proposta Codex.')
   const printSources = new Map<string, DeckCandidate['sources'][number]>()
-  const referenceDate = localCalendarDate()
   for (const line of parsed.lines.filter((item) => item.kind === 'card')) {
     const exact = suggestPrints(line, catalog).filter((candidate) => candidate.reason === 'same-print')
     if (exact.length !== 1) throw new Error(`Stampa non verificabile nel Catalogo alla riga ${line.lineNumber}.`)

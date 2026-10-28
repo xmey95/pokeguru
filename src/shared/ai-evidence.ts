@@ -34,7 +34,11 @@ export interface AiEvidenceQueryResult {
 }
 
 export interface AiEvidenceQueryTrace {
-  analysis?: { schemaVersion: 1; records: number; batches: number; sourceCount: number;
+  /** Originals are in the owning job's SQLite archive; requests is a compact index. */
+  archive?: { version: 1; jobId: string; projectId: string; resourceId: string; searches: number; completedSearches: number;
+    pages: number; responseBytes: number; cards: number; decks: number; occurrences: number; pairings: number }
+  references?: { id: string; label: string; url: string | null; fingerprint: string }[]
+  analysis?: { schemaVersion: 1; generation?: string; records: number; batches: number; sourceCount: number;
     summary: string; limitations: string; sourceIds: string[] }
   focusedPrintIds?: string[]
   schemaVersion: 1

@@ -13,6 +13,7 @@ import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncP
 import type { StandardRuleAudit } from './standard-rule-audit'
 import type { ThreadEvidencePacket } from './thread-evidence'
 import type { AiJobActivityPage, AiJobSummary } from './ai-job'
+import type { AiEvidenceQueryResult } from './ai-evidence'
 import type { CardPreviewData, CardPreviewLookup } from './card-preview'
 
 export type ProjectFormat = 'STANDARD'
@@ -84,6 +85,8 @@ export interface ProjectsApi {
   getAiJobActivity(projectId: string, resourceId: string, jobId: string,
     before?: number): Promise<OperationResult<AiJobActivityPage>>
   listRecentAiJobs(): Promise<OperationResult<AiJobSummary[]>>
+  getAiEvidencePage(projectId: string, resourceId: string, jobId: string,
+    searchKey: string, sequence: number): Promise<OperationResult<AiEvidenceQueryResult | null>>
   cancelAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
   pauseAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
   resumeAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>

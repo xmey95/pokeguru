@@ -66,12 +66,12 @@ try {
   assert.equal(result.ok, true)
   const message = result.value.find((thread) => thread.title === 'Interroga la stampa')?.messages[1]
   assert.ok(message?.evidence?.aiQueries)
-  assert.ok(message.evidence.aiQueries.requests.some((item) =>
-    item.status === 'ok' && item.sourceIds.includes('card:me01-114')),
+  assert.ok(message.evidence.aiQueries.archive
+    ? message.evidence.aiQueries.references.some((item) => item.id === 'card:me01-114')
+    : message.evidence.aiQueries.requests.some((item) => item.status === 'ok' && item.sourceIds.includes('card:me01-114')),
   `Codex non ha interrogato la stampa: ${JSON.stringify(message.evidence.aiQueries.requests.map((item) => item.query))}`)
   assert.match(message.evidence.promptAudit?.text ?? '', /card:me01-114/)
   assert.equal(message.evidence.promptAudit?.utf8Bytes > 0, true)
-  await page.locator('.thread-message').last().locator('.candidate-evidence > summary').click()
   await page.locator('.thread-message[data-author=assistant] .candidate-evidence > summary').last().click()
   await page.locator('.thread-message[data-author=assistant] .ai-diagnostics > summary').last().click()
   await page.locator('.ai-query-trace > summary').last().waitFor()

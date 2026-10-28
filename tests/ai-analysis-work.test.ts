@@ -8,6 +8,7 @@ import { ProjectStore } from '../src/main/project-store'
 import { aiEvidenceForPrompt } from '../src/main/ai-evidence-queries'
 import type { AiEvidenceQueryTrace } from '../src/shared/ai-evidence'
 import type { AiRunConfig } from '../src/shared/ai'
+import { AiFailure } from '../src/main/ai-failure'
 
 const config: AiRunConfig = { provider: 'codex', model: null, reasoningEffort: null, source: 'global' }
 function trace(): AiEvidenceQueryTrace {
@@ -49,12 +50,13 @@ it('analyzes every record beyond the former budget and resumes completed batches
       if (++calls === 3) { controller.abort('pause'); throw new Error('interruzione controllata') }
       for (const record of records(prompt)) if (record.data.printId) completed.add(record.data.printId)
       return answer(prompt)
-    })).rejects.toThrow('interruzione')
+    })).rejects.toThrow('in pausa')
     const before = new Set(completed)
     expect(before.size).toBeGreaterThan(0)
     expect(before.size).toBeLessThan(60)
     jobs.suspend(job.id, 'Pausa di prova')
     expect(() => jobs.start('thread-ask', project.id, 'thread')).toThrow(/Riprendi/)
+    work.close()
     jobs.close(); jobs = new AiJobStore(path)
     expect(jobs.get(job.id)?.progress?.diagnostics?.resumable).toBe(true)
     expect(readAiWorkflow(directory)?.args[2]).toBe('Domanda privata')
@@ -75,6 +77,7 @@ it('analyzes every record beyond the former budget and resumes completed batches
     expect(aiEvidenceForPrompt(input)).toMatchObject({ focusedCards: [{ printId: 'card-59' }] })
     expect(jobs.get(job.id)?.progress?.diagnostics?.cacheHits).toBe(2)
     expect(jobs.get(job.id)?.progress?.diagnostics?.batchesCompleted).toBe(input.analysis?.batches)
+    resumed.close()
   } finally { jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
 })
 
@@ -82,20 +85,71 @@ it('does not cache invalid citations and separates jobs and changed model inputs
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-batch-sources-'))
   const projects = new ProjectStore(join(folder, 'data.sqlite'))
   const jobs = new AiJobStore(join(folder, 'data.sqlite'))
+  const opened: AiAnalysisWork[] = []
   try {
     const project = projects.create({ name: 'Sources', format: 'STANDARD' })
     const job = jobs.start('thread-ask', project.id, 'thread')
     const work = new AiAnalysisWork(join(folder, job.id), jobs, job.id, new AbortController().signal)
+    opened.push(work)
     await expect(analyzeLargeEvidence(trace(), 'Tutto', config, work,
       async () => ({ summary: 'Inventata', limitations: '', sourceIds: ['foreign-source'] })))
       .rejects.toThrow('non verificabile')
     let calls = 0
-    await analyzeLargeEvidence(trace(), 'Tutto', config, work, async (prompt) => { calls++; return answer(prompt) })
+    await expect(analyzeLargeEvidence(trace(), 'Tutto', config, work, async (prompt) => { calls++; return answer(prompt) }))
+      .rejects.toThrow('non verificabile')
+    expect(calls).toBe(0)
+    await analyzeLargeEvidence(trace(), 'Tutto con riferimenti corretti', config, work, async (prompt) => { calls++; return answer(prompt) })
     expect(calls).toBeGreaterThan(1)
     const other = jobs.start('thread-ask', project.id, 'other-thread')
     const isolated = new AiAnalysisWork(join(folder, other.id), jobs, other.id, new AbortController().signal)
+    opened.push(isolated)
     expect(await isolated.run('planning', 'same', config, async () => 1)).toBe(1)
     expect(await work.run('planning', 'same', config, async () => 2)).toBe(2)
     expect(await work.run('planning', 'same', { ...config, model: 'gpt-test' }, async () => 3)).toBe(3)
-  } finally { jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+  } finally { opened.forEach((work) => work.close()); jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+  // Invalid-output retry plus durable synthesis/cache isolation can exceed 15s on Windows CI disks.
+}, 45_000)
+
+it('adapts oversized records and context errors, reuses database calls after losing temporary files, and preserves exact fragments', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-adaptive-')), path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path)
+  let jobs = new AiJobStore(path)
+  let work: AiAnalysisWork | undefined
+  try {
+    const project = projects.create({ name: 'Adaptive', format: 'STANDARD' })
+    const job = jobs.start('thread-ask', project.id, 'adaptive')
+    const directory = join(folder, job.id), controller = new AbortController()
+    work = new AiAnalysisWork(directory, jobs, job.id, controller.signal, { kind: 'thread-ask', args: [] })
+    const input = trace()
+    const original = { printId: 'huge', name: 'Originale', gameplay: { effect: '中文 🐉\n"'.repeat(15_000) }, last: 99 }
+    input.requests[0].data = { matches: [original] }
+    input.requests[0].sourceIds = ['card:huge']
+    input.responseBytes = Buffer.byteLength(JSON.stringify(input.requests))
+    const failures = new Set<string>(), fragments: { start: number; text: string }[] = []
+    let successes = 0, pause = true
+    const model = async (prompt: string) => {
+      const group = records(prompt)
+      if (Buffer.byteLength(JSON.stringify(group)) > 9000) {
+        expect(failures.has(prompt)).toBe(false)
+        failures.add(prompt)
+        throw new AiFailure('context-limit', 'context length exceeded')
+      }
+      if (pause && successes === 3) { controller.abort('pause'); throw new Error('pause') }
+      successes++
+      if (prompt.includes('LIVELLO: 0\n')) for (const record of group) fragments.push(record.data as unknown as { start: number; text: string })
+      return { summary: 'Unico record analizzato; campi parziali da ricomporre.', limitations: 'Nessun conteggio dai frammenti.', sourceIds: ['card:huge'] }
+    }
+    await expect(analyzeLargeEvidence(input, 'Tutti i campi', config, work, model)).rejects.toMatchObject({ code: 'paused' })
+    work.close(); jobs.suspend(job.id, 'Pausa test'); jobs.close()
+    rmSync(directory, { recursive: true, force: true })
+    jobs = new AiJobStore(path); jobs.resume(job.id)
+    work = new AiAnalysisWork(directory, jobs, job.id, new AbortController().signal)
+    pause = false
+    await analyzeLargeEvidence(input, 'Tutti i campi', config, work, model)
+    expect(input.analysis).toMatchObject({ records: 1, sourceCount: 1 })
+    expect(failures.size).toBeGreaterThan(1)
+    expect(jobs.diagnostics(job.id)?.cacheHits).toBeGreaterThanOrEqual(3)
+    expect(JSON.parse(fragments.sort((a, b) => a.start - b.start).map((part) => part.text).join(''))).toEqual(original)
+    expect(input.analysis!.batches).toBeLessThan(300)
+  } finally { work?.close(); jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
 })
