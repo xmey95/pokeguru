@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
+import { DatabaseSync } from 'node:sqlite'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -93,7 +94,10 @@ it.skipIf(process.env.POKEGURU_LIFECYCLE_E2E !== '1')('resumes on Electron reope
     const waiting = seeds[4]
     await expect.poll(async () => (await status(page, waiting.project, waiting.thread))?.progress?.diagnostics?.automaticWait,
       { timeout: 30_000 }).toBe(true)
-    await application!.close(); application = undefined
+    const closed = application!.waitForEvent('close', { timeout: 15_000 })
+    await page.close()
+    await closed
+    application = undefined
     const check = new AiJobStore(file)
     const deadline = check.callState(waiting.id, waiting.key)?.nextAttemptAt
     expect(check.get(waiting.id)?.progress?.diagnostics?.suspensionReason).toBe('shutdown')
@@ -113,5 +117,17 @@ it.skipIf(process.env.POKEGURU_LIFECYCLE_E2E !== '1')('resumes on Electron reope
       for (const item of seeds.slice(0, 2)) expect(savedProjects.getDeckThread(item.project, item.thread)?.messages).toHaveLength(2)
       expect(savedProjects.getDeckThread(other.id, seeds[0].thread)).toBeNull()
     } finally { reopened.close(); savedProjects.close() }
+    const created = await page.evaluate((owner) => window.projectsApi.createDeckThread({ projectId: owner, title: 'Storage failure' }), project.id)
+    if (!created.ok) throw new Error(created.error)
+    const fault = new DatabaseSync(file)
+    try {
+      // SQLite rejects both the progress write and the failure-status write.
+      // The IPC still reports disk exhaustion without making a model call.
+      fault.exec(`CREATE TRIGGER reject_job_progress BEFORE UPDATE OF progress_json ON ai_jobs
+        BEGIN SELECT RAISE(ABORT, 'SQLITE_FULL simulated storage failure'); END`)
+      const result = await page.evaluate(([owner, resource]) => window.projectsApi.askDeckThread(owner, resource, 'Test storage'),
+        [project.id, created.value.id])
+      expect(result).toMatchObject({ ok: false, error: expect.stringContaining('spazio su disco è esaurito') })
+    } finally { fault.exec('DROP TRIGGER reject_job_progress'); fault.close() }
   } finally { await application?.close(); rmSync(folder, { recursive: true, force: true }) }
 }, 180_000)

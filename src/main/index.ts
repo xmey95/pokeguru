@@ -152,7 +152,18 @@ function clearAiArtifacts(jobId: string): void {
   if (existsSync(directory)) rmSync(directory, { recursive: true, force: true })
 }
 
-function finishAiJob(job: AiJob, error: unknown): void {
+function finishAiJob(job: AiJob, error: unknown): unknown {
+  try { persistAiJobFailure(job, error) }
+  catch (storageError) {
+    // A full disk can prevent even the error status from being committed. Keep
+    // the prior checkpoint and return an actionable IPC error to the renderer.
+    if (['storage', 'storage-full'].includes(aiFailureCode(storageError))) return storageError
+    throw storageError
+  }
+  return error
+}
+
+function persistAiJobFailure(job: AiJob, error: unknown): void {
   if (!aiJobStore || aiShuttingDown) return
   const current = aiJobStore.get(job.id)
   if (current?.status === 'running' && activeAiWork.has(job.id)) {
@@ -362,6 +373,8 @@ async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRu
 }
 
 function aiError(error: unknown): string {
+  if (aiFailureCode(error) === 'storage-full')
+    return 'Lo spazio su disco è esaurito. I checkpoint già salvati restano disponibili; libera spazio e riapri Pokéguru per recuperarli.'
   return error instanceof Error ? error.message : 'Operazione Codex non riuscita.'
 }
 
@@ -1497,8 +1510,7 @@ function registerProjectHandlers(): void {
       clearAiArtifacts(job.id)
       return { ok: true, value: projectStore.getDeckThreadWindow(saved.projectId, saved.id)! }
     } catch (error) {
-      finishAiJob(job, error)
-      return { ok: false, error: aiError(error) }
+      return { ok: false, error: aiError(finishAiJob(job, error)) }
     } finally {
       generatingDeckThreads.delete(threadId)
       activeAiControllers.delete(job.id)
@@ -1743,8 +1755,7 @@ function registerProjectHandlers(): void {
       clearAiArtifacts(job.id)
       return { ok: true, value: report }
     } catch (error) {
-      finishAiJob(job, error)
-      return { ok: false, error: error instanceof Error ? error.message : 'Analisi non completata.' }
+      return { ok: false, error: aiError(finishAiJob(job, error)) }
     } finally {
       generatingProjects.delete(projectId)
       activeAiControllers.delete(job.id)
@@ -1833,8 +1844,7 @@ function registerProjectHandlers(): void {
       clearAiArtifacts(job.id)
       return { ok: true, value: saved }
     } catch (error) {
-      finishAiJob(job, error)
-      return { ok: false, error: aiError(error) }
+      return { ok: false, error: aiError(finishAiJob(job, error)) }
     } finally {
       generatingProjects.delete(discussion.projectId)
       activeAiControllers.delete(job.id)
@@ -1923,8 +1933,7 @@ function registerProjectHandlers(): void {
       clearAiArtifacts(job.id)
       return { ok: true, value: saved }
     } catch (error) {
-      finishAiJob(job, error)
-      return { ok: false, error: aiError(error) }
+      return { ok: false, error: aiError(finishAiJob(job, error)) }
     } finally {
       generatingProjects.delete(parent.projectId)
       activeAiControllers.delete(job.id)
@@ -2119,9 +2128,11 @@ app.on('before-quit', () => {
     work.close()
     const controller = activeAiControllers.get(id)
     const voluntary = controller?.signal.reason === 'pause' || aiJobStore?.diagnostics(id)?.suspensionReason === 'user'
-    aiJobStore?.suspend(id, voluntary ? 'Analisi in pausa su tua richiesta.'
-      : 'Analisi salvata alla chiusura. Riprenderà automaticamente alla riapertura.', voluntary ? 'user' : 'shutdown')
-    controller?.abort('shutdown')
+    try {
+      aiJobStore?.suspend(id, voluntary ? 'Analisi in pausa su tua richiesta.'
+        : 'Analisi salvata alla chiusura. Riprenderà automaticamente alla riapertura.', voluntary ? 'user' : 'shutdown')
+    } catch { /* Recover the last committed state if storage cannot accept the shutdown marker. */ }
+    finally { controller?.abort('shutdown') }
   }
   catalogShuttingDown = true
   if (startupSyncTimer) clearTimeout(startupSyncTimer)
