@@ -201,7 +201,7 @@ export class CodexControl {
       signal?: AbortSignal; onSessionStarted?: (sessionId: string) => void;
       onSummary?: (summary: string) => void } = {}): Promise<{ sessionId: string; turnId: string; value: unknown; usage: AiTokenUsage | null }> {
     const key = options.jobId ?? sessionId ?? `new:${randomUUID()}`
-    if (this.cliTurns.has(key)) throw new Error('Questo thread Codex è già in elaborazione.')
+    if (this.cliTurns.has(key)) throw new Error('Questa sessione Codex è già in elaborazione.')
     if (options.signal?.aborted) throw new Error('Operazione Codex annullata.')
     const directory = options.jobDirectory ?? mkdtempSync(join(tmpdir(), 'pokeguru-codex-turn-'))
     mkdirSync(directory, { recursive: true })

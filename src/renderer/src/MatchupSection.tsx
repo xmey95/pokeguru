@@ -345,7 +345,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const otherOpponents = knownHistory.filter((deck) => !snapshot?.decks.some((current) => current.id === deck.id))
   const allOpponents = [...(snapshot?.decks ?? []), ...otherOpponents]
   const selected = allOpponents.find((deck) => deck.id === selectedId)
-  useEffect(() => { if (selected) nav.entry.label = `Matchup · ${selected.name}` }, [selected?.id])
+  useEffect(() => { if (selected) nav.entry.label = `Guide matchup · ${selected.name}` }, [selected?.id])
   const selectedInCurrentMeta = !!snapshot?.decks.some((deck) => deck.id === selectedId)
   const currentReports = reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}` ? reports : []
   const reportsLoaded = !hasBaseline || reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}`
@@ -395,10 +395,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         ? 'Nessuna guida' : 'Disponibilità da verificare'
   }))
 
-  return <section className="matchup-section" aria-label="Matchup del progetto" data-nav-loading={!error && !guideError && (loading || !historyLoaded || !reportsLoaded || (!!selectedId && !!snapshot && discussionsKey !== `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`))}>
+  return <section className="matchup-section" aria-label="Guide matchup del progetto" data-nav-loading={!error && !guideError && (loading || !historyLoaded || !reportsLoaded || (!!selectedId && !!snapshot && discussionsKey !== `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`))}>
     {!loading && historyLoaded && selectedId && !selected && <p className="error-banner" role="alert">Questo avversario non è più disponibile. Scegline un altro oppure torna indietro.</p>}
     <div className="panel-heading">
-      <h2>Matchup</h2>
+      <h2>Guide matchup</h2>
       <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={loading || generating}>{loading && <Spinner />}Aggiorna Limitless</button>
     </div>
     {error && <div className="error-banner" role="alert">{error}</div>}
@@ -426,14 +426,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         </>}</p>}
     {loading && !snapshot ? <LoadingSkeleton label="Caricamento del metagame Limitless…" rows={3} /> : snapshot && <>
       <div className="meta-layout">
-        <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
+        <MatchupSwitcher opponents={opponentOptions} selectedId={selectedId} disabled={loading} onSelect={(id) => { if (id !== selectedId) nav.visit({ 'matchup.selected': id, 'matchup.discussion': null, 'nav.focus': '#matchup-switcher-trigger' }, `Guide matchup · ${allOpponents.find((item) => item.id === id)?.name ?? 'Avversario'}`) }} />
         <div className="meta-analysis">
           {selected && <>
             {discussion && !discussion.current && <p className="matchup-freshness stale">Guida precedente · {versionLabel(report?.deckVersionId)}. Lista attuale: {versionLabel(baseline?.versionId)}. Il metagame o le corrispondenze delle carte possono essere cambiati.</p>}
             {visibleDiscussions.length > 1 && <div className="discussion-switcher" aria-label="Discussioni Matchup">
               {visibleDiscussions.map((item, index) => <button type="button" key={item.id}
                 className={`secondary-button ${discussion?.id === item.id ? 'selected' : ''}`}
-                onClick={() => nav.visit({ 'matchup.discussion': item.id }, `Matchup · ${selected?.name ?? 'Guida'} · base ${date(item.createdAt)}`)}>
+                onClick={() => nav.visit({ 'matchup.discussion': item.id }, `Guide matchup · ${selected?.name ?? 'Guida'} · base ${date(item.createdAt)}`)}>
                 {item.current ? 'Base attuale' : `Storico ${index + 1}`}{item.parentId ? ' · collegata' : ''}
               </button>)}
             </div>}

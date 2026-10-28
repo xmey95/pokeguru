@@ -77,7 +77,7 @@ try {
   await page.getByLabel('Ricerca carta, set, stampa o rarità').fill('Mega Audino ex')
   assert.match(await page.locator('.catalog-detail').textContent(), /Ascended Heroes/)
   await page.screenshot({ path: join(temporary, 'catalog.png'), fullPage: true })
-  await page.getByRole('button', { name: 'Matchup' }).click()
+  await page.getByRole('button', { name: 'Guide matchup' }).click()
   await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
   assert.ok(await page.locator('.matchup-option').count() > 25, 'La prova attuale deve includere la seconda pagina Limitless')
   assert.equal(await page.getByLabel('Archetipo avversario').count(), 0)
@@ -92,7 +92,7 @@ try {
   await page.getByLabel('Ricerca carta, set, stampa o rarità').fill('Rare Candy')
   assert.match(await page.locator('.catalog-detail').textContent(), /Scarlet & Violet/)
   assert.match(await page.locator('.catalog-detail').textContent(), /Paldean Fates/)
-  await page.getByRole('button', { name: 'Matchup' }).click()
+  await page.getByRole('button', { name: 'Guide matchup' }).click()
   await page.getByText('Importa una lista nel progetto per generare').waitFor()
   }
   await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
@@ -123,7 +123,7 @@ try {
   assert.ok(await page.locator('.catalog-print img').count() >= 1)
   await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
   assert.equal(await page.locator('.original-text pre').textContent(), 'Pokémon: 2\n2 Mega Absol ex MEG 86\nTotal Cards: 60\nnota libera')
-  await page.getByRole('button', { name: 'Matchup' }).click()
+  await page.getByRole('button', { name: 'Guide matchup' }).click()
   await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
   assert.equal(await page.getByLabel('Archetipo avversario').count(), 0)
   }
@@ -134,7 +134,7 @@ try {
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '3 carte' }).waitFor()
   if (!offline) {
-  await page.getByRole('button', { name: 'Matchup' }).click()
+  await page.getByRole('button', { name: 'Guide matchup' }).click()
   await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
   assert.equal(await page.getByLabel('Archetipo avversario').count(), 0)
   }

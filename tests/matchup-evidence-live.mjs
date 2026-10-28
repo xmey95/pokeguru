@@ -24,7 +24,7 @@ try {
   const tournament = await page.evaluate(() => window.projectsApi.refreshTournament())
   assert.equal(tournament.ok, true, tournament.ok ? '' : tournament.error)
   await page.locator('.sidebar button').filter({ hasText: 'Prova fonti Matchup' }).click()
-  await page.getByRole('button', { name: 'Matchup', exact: true }).click()
+  await page.getByRole('button', { name: 'Guide matchup', exact: true }).click()
   const meta = await page.evaluate(() => window.projectsApi.getMeta())
   assert.equal(meta.ok, true, meta.ok ? '' : meta.error)
   const slug = (value) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')

@@ -341,7 +341,7 @@ try {
   }
   const navigation = {}
   const rendererProfiles = {}
-  for (const section of ['Catalogo', 'Lista', 'Thread', 'Eventi', 'Matchup']) {
+  for (const section of ['Catalogo', 'Lista', 'Strategie', 'Eventi', 'Matchup']) {
     const samples = []
     for (let index = 0; index < 3; index++) {
       const profiling = profileRenderer && index === 0 && ['Lista', 'Matchup'].includes(section)
@@ -384,7 +384,7 @@ try {
   }
   const scroll = {}
   for (const [section, ready, scrollSelector] of [['Catalogo', '.catalog-list', '.catalog-list'],
-    ['Thread', '#thread-switcher-trigger', '.main-content'],
+    ['Strategie', '#thread-switcher-trigger', '.main-content'],
     ['Matchup', '#matchup-switcher-trigger', '.main-content']]) {
     await page.getByRole('button', { name: section, exact: true }).first().click()
     await page.locator(ready).waitFor()
@@ -414,7 +414,7 @@ try {
   await page.locator('.catalog-list').waitFor()
   const threadHeapBefore = await heap()
   const threadStarted = performance.now()
-  await page.getByRole('button', { name: 'Thread', exact: true }).first().click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).first().click()
   await page.waitForFunction((expected) =>
     document.querySelectorAll('.threads-section .thread-message').length === expected,
   expectAllMessages ? longMessages : Math.min(longMessages, 50), { timeout: 30000 })

@@ -51,7 +51,7 @@ try {
   application = await launch()
   page = await application.firstWindow()
   await switchProject(page, /Ripresa analisi/)
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await switchThread(page, /Analisi lunga/)
   await page.getByText('Analisi precedente senza tutti gli input salvati.', { exact: false }).waitFor()
   assert.equal(await page.getByRole('button', { name: 'Riprendi analisi', exact: true }).count(), 0)
@@ -89,7 +89,7 @@ try {
   await page.getByText('Risposta annullata.', { exact: false }).waitFor()
   assert.equal((await status()).status, 'cancelled')
   assert.equal(existsSync(directory), false)
-  assert.equal(await page.getByLabel('Scrivi nel thread').isEditable(), true)
+  assert.equal(await page.getByLabel('Scrivi nella strategia').isEditable(), true)
   console.log('E2E legacy workflow OK: missing snapshot recognized, project isolation, checkpoint preservation, cancellation.')
 } finally {
   if (application) await application.close()

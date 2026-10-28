@@ -51,7 +51,7 @@ try {
         : `Attività ${index}`, index === 20 ? historicalSummary : null, now)
   } finally { database.close() }
 
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await switchThread(page, /Thread A/)
   const activity = page.locator('.ai-job-activity')
   await activity.waitFor()
@@ -65,7 +65,7 @@ try {
   assert.match(await activity.locator('.ai-job-stages [data-state="current"]').innerText(), /Ricerche/)
   assert.match(await rows.last().innerText(), /Attività 67/)
   assert.equal(await page.locator('#thread-switcher-trigger').isEnabled(), true)
-  assert.equal(await page.getByLabel('Scrivi nel thread').isEnabled(), true)
+  assert.equal(await page.getByLabel('Scrivi nella strategia').isEnabled(), true)
 
   const scroll = async () => trace.locator(':scope > ol').evaluate((element) => {
     element.scrollTop = 0
@@ -95,6 +95,51 @@ try {
     await page.screenshot({ path: join(workspace, 'node_modules', `ai-activity-${width}.png`), fullPage: true })
   }
 
+  // Wheel events exercise Chromium scroll chaining, not just the declared CSS value.
+  await page.setViewportSize({ width: 1280, height: 580 })
+  const scroller = trace.locator(':scope > ol')
+  await scroller.evaluate(element => {
+    element.scrollIntoView({ block: 'center' })
+    element.scrollTop = 80
+  })
+  const main = page.locator('#main-content')
+  const beforeInside = await main.evaluate(element => element.scrollTop)
+  let bounds = await scroller.boundingBox()
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+  await page.mouse.wheel(0, 80)
+  await page.waitForFunction(() => document.querySelector('.ai-job-trace-scroll').scrollTop > 100)
+  assert.equal(await main.evaluate(element => element.scrollTop), beforeInside, 'il registro scorre al suo interno')
+  await page.waitForTimeout(300)
+  await scroller.evaluate(element => { element.scrollTop = element.scrollHeight })
+  // The trace is the last block in this fixture; leave visible room below it for the page to move.
+  await main.evaluate(element => { element.scrollTop = Math.max(0, element.scrollTop - 80) })
+  await page.waitForTimeout(500)
+  bounds = await scroller.boundingBox()
+  const mainBounds = await main.boundingBox()
+  await page.mouse.move(bounds.x + bounds.width / 2,
+    (Math.max(bounds.y, mainBounds.y) + Math.min(bounds.y + bounds.height, mainBounds.y + mainBounds.height)) / 2)
+  const beforeBottom = await main.evaluate(element => element.scrollTop)
+  // A short wheel gesture also consumes any fractional pixel left at the inner boundary.
+  for (let step = 0; step < 3; step++) {
+    await page.mouse.wheel(0, 80)
+    await page.waitForTimeout(150)
+  }
+  await page.waitForFunction(before => document.querySelector('#main-content').scrollTop > before, beforeBottom, { timeout: 4000 })
+  await scroller.evaluate(element => {
+    element.scrollIntoView({ block: 'center' })
+    element.scrollTop = 0
+  })
+  await page.waitForTimeout(300)
+  bounds = await scroller.boundingBox()
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+  const beforeTop = await main.evaluate(element => element.scrollTop)
+  assert.ok(beforeTop > 0, 'pagina scorrevole sopra il registro')
+  for (let step = 0; step < 3; step++) {
+    await page.mouse.wheel(0, -80)
+    await page.waitForTimeout(150)
+  }
+  await page.waitForFunction(before => document.querySelector('#main-content').scrollTop < before, beforeTop)
+
   // A burst larger than one page must not leave a gap between the old and new entries.
   const burst = new DatabaseSync(join(profile, 'data', 'pokeguru.sqlite'))
   try {
@@ -116,13 +161,13 @@ try {
   } finally { saved.close() }
 
   await switchThread(page, /Thread B/)
-  assert.equal(await page.getByLabel('Scrivi nel thread').isEnabled(), true)
+  assert.equal(await page.getByLabel('Scrivi nella strategia').isEnabled(), true)
   await switchThread(page, /Thread A/)
   await activity.waitFor()
   await page.getByRole('navigation', { name: 'Aree del progetto' })
     .getByRole('button', { name: 'Lista', exact: true }).click()
   assert.equal(await page.getByRole('navigation', { name: 'Aree del progetto' })
-    .getByRole('button', { name: 'Thread', exact: true }).isEnabled(), true)
+    .getByRole('button', { name: 'Strategie', exact: true }).isEnabled(), true)
   console.log('LIVE OK: testi per giocatori, sintesi Markdown sicure a 1280/640 px, originali conservati, 127 attività, burst da 60 e navigazione attiva.')
 } finally {
   if (application) await application.close()

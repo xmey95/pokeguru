@@ -614,15 +614,15 @@ export class ProjectStore {
 
   deleteDeckThread(projectId: string, threadId: string, confirmationTitle: string): string[] {
     if (typeof projectId !== 'string' || typeof threadId !== 'string' || typeof confirmationTitle !== 'string' ||
-      !this.get(projectId)) throw new Error('Thread non trovato in questo progetto.')
+      !this.get(projectId)) throw new Error('Strategia non trovata in questo progetto.')
     this.db.exec('BEGIN IMMEDIATE')
     try {
       const thread = this.db.prepare('SELECT title FROM deck_threads WHERE id = ? AND project_id = ?')
         .get(threadId, projectId) as { title: string } | undefined
-      if (!thread) throw new Error('Thread non trovato in questo progetto.')
-      if (thread.title !== confirmationTitle) throw new Error('Il titolo di conferma non corrisponde al Thread.')
+      if (!thread) throw new Error('Strategia non trovata in questo progetto.')
+      if (thread.title !== confirmationTitle) throw new Error('Il titolo di conferma non corrisponde alla strategia.')
       if (this.db.prepare("SELECT 1 FROM ai_jobs WHERE project_id = ? AND resource_id = ? AND status IN ('running', 'ready')")
-        .get(projectId, threadId)) throw new Error('Attendi o annulla l’analisi prima di eliminare il Thread.')
+        .get(projectId, threadId)) throw new Error('Attendi o annulla l’analisi prima di eliminare la strategia.')
       const jobs = this.db.prepare('SELECT id FROM ai_jobs WHERE project_id = ? AND resource_id = ?')
         .all(projectId, threadId) as { id: string }[]
       // Child conversations keep their starting deck even after its source is removed.
@@ -805,13 +805,13 @@ export class ProjectStore {
         .get(input.projectId) as { version_id: string } | undefined
       const thread = this.db.prepare('SELECT base_version_id FROM deck_threads WHERE project_id = ? AND id = ?')
         .get(input.projectId, input.threadId) as { base_version_id: string | null } | undefined
-      if (!head || !thread) throw new Error('Lista principale o thread non trovato nel progetto.')
+      if (!head || !thread) throw new Error('Lista principale o strategia non trovata nel progetto.')
       if (head.version_id !== input.expectedHeadId || thread.base_version_id !== head.version_id)
         throw new Error('La lista principale è cambiata: confronta la candidata con la versione corrente prima di adottarla.')
       const candidate = this.db.prepare(`SELECT raw_text FROM deck_thread_candidates WHERE thread_id = ? AND id = ?
         UNION ALL SELECT raw_text FROM deck_ai_candidates WHERE thread_id = ? AND id = ?`)
         .get(input.threadId, input.candidateId, input.threadId, input.candidateId) as { raw_text: string } | undefined
-      if (!candidate) throw new Error('Candidata non trovata in questo thread.')
+      if (!candidate) throw new Error('Candidata non trovata in questa strategia.')
       const normalized = normalizeDeckCodes(candidate.raw_text)
       const parsed = parseDeck(normalized.rawText)
       if (parsed.interpretedTotal !== 60 || parsed.lines.some((line) => line.kind === 'unparsed') ||
@@ -924,7 +924,7 @@ export class ProjectStore {
 
   getDeckThreadMessagesBefore(projectId: string, threadId: string,
     cursor: DeckThreadMessageCursor): DeckThreadMessagePage {
-    if (!this.hasDeckThread(projectId, threadId)) throw new Error('Thread non trovato in questo progetto.')
+    if (!this.hasDeckThread(projectId, threadId)) throw new Error('Strategia non trovata in questo progetto.')
     if (!cursor || typeof cursor.createdAt !== 'string' || !Number.isSafeInteger(cursor.rowId) || cursor.rowId < 1)
       throw new Error('Cursore della cronologia non valido.')
     const rows = this.db.prepare(`SELECT rowid AS row_id, id, text, created_at, author, ai_config_json,
@@ -1045,7 +1045,7 @@ export class ProjectStore {
   continueDeckThread(input: ContinueDeckThreadInput): DeckThread {
     if (!input || !this.get(input.projectId) || typeof input.title !== 'string' ||
       !input.title.trim() || input.title.trim().length > 120 || input.title.includes('\0'))
-      throw new Error('Titolo del nuovo thread non valido.')
+      throw new Error('Titolo della nuova strategia non valido.')
     const now = new Date().toISOString()
     this.db.exec('BEGIN IMMEDIATE')
     try {
@@ -1054,11 +1054,11 @@ export class ProjectStore {
         { base_version_id: string | null } | undefined
       const head = this.getCurrentDeckContext(input.projectId)
       if (!source || !head || source.base_version_id === head.versionId)
-        throw new Error('Il thread deve avere una base precedente alla lista principale.')
+        throw new Error('La strategia deve avere una base precedente alla lista principale.')
       const candidate = this.db.prepare(`SELECT id FROM deck_thread_candidates WHERE id = ? AND thread_id = ?
         UNION ALL SELECT id FROM deck_ai_candidates WHERE id = ? AND thread_id = ?`)
         .get(input.candidateId, input.threadId, input.candidateId, input.threadId)
-      if (!candidate) throw new Error('Candidata non trovata nel thread di origine.')
+      if (!candidate) throw new Error('Candidata non trovata nella strategia di origine.')
       const id = randomUUID()
       this.db.prepare(`INSERT INTO deck_threads
         (id, project_id, title, base_version_id, base_resolution_id,
@@ -1073,7 +1073,7 @@ export class ProjectStore {
 
   addDeckThreadMessage(projectId: string, threadId: string, value: string, recent = false): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    if (!this.hasDeckThread(projectId, threadId)) throw new Error('Thread non trovato in questo progetto.')
+    if (!this.hasDeckThread(projectId, threadId)) throw new Error('Strategia non trovata in questo progetto.')
     const message = typeof value === 'string' ? value.trim() : ''
     if (!message || message.length > 5000 || message.includes('\0'))
       throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
@@ -1092,8 +1092,8 @@ export class ProjectStore {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     if (!sessionId || sessionId.length > 200) throw new Error('Sessione Codex non valida.')
     const thread = this.getDeckThread(projectId, threadId)
-    if (!thread) throw new Error('Thread non trovato in questo progetto.')
-    if (thread.aiSessionRef && thread.aiSessionRef !== sessionId) throw new Error('Il thread ha già una sessione Codex diversa.')
+    if (!thread) throw new Error('Strategia non trovata in questo progetto.')
+    if (thread.aiSessionRef && thread.aiSessionRef !== sessionId) throw new Error('La strategia ha già una sessione Codex diversa.')
     this.db.prepare(`UPDATE deck_threads SET ai_session_ref = ?, updated_at = ?
       WHERE id = ? AND project_id = ? AND (ai_session_ref IS NULL OR ai_session_ref = ?)`)
       .run(sessionId, new Date().toISOString(), threadId, projectId, sessionId)
@@ -1106,7 +1106,7 @@ export class ProjectStore {
     evidence?: ThreadEvidencePacket, citedSourceIds: string[] = [], existingUserMessageId?: string): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const thread = this.getDeckThread(projectId, threadId)
-    if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questo thread.')
+    if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questa strategia.')
     const userText = typeof question === 'string' ? question.trim() : ''
     const aiText = typeof answer === 'string' ? answer.trim() : ''
     if (!userText || userText.length > 5000 || userText.includes('\0')) throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
@@ -1171,7 +1171,7 @@ export class ProjectStore {
 
   saveDeckCandidate(input: SaveDeckCandidateInput, recent = false): DeckThread {
     if (!input || !this.get(input.projectId)) throw new Error('Progetto non trovato.')
-    if (!this.hasDeckThread(input.projectId, input.threadId)) throw new Error('Thread non trovato in questo progetto.')
+    if (!this.hasDeckThread(input.projectId, input.threadId)) throw new Error('Strategia non trovata in questo progetto.')
     if (typeof input.rawText !== 'string' || !input.rawText.trim() ||
       input.rawText.length > 200_000 || input.rawText.includes('\0'))
       throw new Error('Inserisci una lista di testo non vuota, fino a 200.000 caratteri.')

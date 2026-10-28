@@ -5,7 +5,7 @@ import type { DeckVersion } from '../../shared/deck-threads'
 
 function versionOrigin(version: DeckVersion): string {
   if (version.restoredFrom) return `Ripristino da v${version.restoredFrom.sequence}`
-  if (version.adoption) return 'Adottata da un Thread'
+  if (version.adoption) return 'Adottata da una strategia'
   return version.source === 'file' ? `File ${version.fileName ?? '.txt'}` : 'Testo incollato'
 }
 

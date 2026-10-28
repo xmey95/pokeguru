@@ -37,7 +37,7 @@ it('salva lo scambio AI nel solo thread associato e conserva la provenienza alla
   const a = store.createDeckThread({ projectId: first.id, title: 'A' })
   const b = store.createDeckThread({ projectId: first.id, title: 'B' })
   const foreign = store.createDeckThread({ projectId: second.id, title: 'Altro' })
-  expect(() => store.assignDeckAiSession(second.id, a.id, 'remote-a')).toThrow('Thread non trovato')
+  expect(() => store.assignDeckAiSession(second.id, a.id, 'remote-a')).toThrow('Strategia non trovata')
   store.assignDeckAiSession(first.id, a.id, 'remote-a')
   store.assignDeckAiSession(first.id, b.id, 'remote-b')
   expect(() => store.assignDeckAiSession(first.id, a.id, 'remote-b')).toThrow('sessione Codex diversa')

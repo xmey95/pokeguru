@@ -24,8 +24,8 @@ try {
     if (!result.ok) throw new Error(result.error)
     return result.value
   })
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  const input = page.getByLabel('Scrivi nel thread')
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
+  const input = page.getByLabel('Scrivi nella strategia')
   await input.waitFor()
   assert.match(await page.locator('#thread-composer-help').innerText(), /Enter.*Shift\+Enter/)
   assert.equal(await input.getAttribute('aria-keyshortcuts'), 'Enter')

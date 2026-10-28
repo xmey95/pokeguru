@@ -71,13 +71,13 @@ function readResult(path: string): unknown {
 export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: ProjectStore,
   catalog: CatalogStore, codex: Pick<CodexControl, 'latestTurnId'>,
   directory: string): Promise<'applied' | 'interrupted'> {
-  if (job.kind !== 'thread-ask' && job.kind !== 'thread-propose') throw new Error('Job Thread non valido.')
+  if (job.kind !== 'thread-ask' && job.kind !== 'thread-propose') throw new Error('Analisi della strategia non valida.')
   if (job.status === 'running' && !existsSync(join(directory, 'result.json'))) {
     jobs.transition(job.id, 'interrupted', 'Codex è stato interrotto prima di produrre il risultato.')
     return 'interrupted'
   }
   const thread = projects.getDeckThread(job.projectId, job.resourceId)
-  if (!thread) throw new Error('Thread del job non trovato nel progetto.')
+  if (!thread) throw new Error('Strategia dell’analisi non trovata nel progetto.')
   const request = job.request as ThreadRequest | null
   if (!request || typeof request.message !== 'string' || !request.config || !request.evidence)
     throw new Error('Contesto del job Codex incompleto.')
