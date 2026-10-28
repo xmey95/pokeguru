@@ -92,6 +92,7 @@ export function normalizedEvidenceText(value: string): string {
 const normalized = normalizedEvidenceText
 
 export type EvidenceEventRow = { id: string; snapshotId: string; name: string; date: string;
+  participationId?: string;
   kind: 'online' | 'in-person'; url: string; participants: number; completeLists: number;
   deck: string; placing: number | null; listUrl: string; cards: string[];
   playerId: string | null; record: { wins: number; losses: number; ties: number } | null;
@@ -109,9 +110,10 @@ export function* evidenceEventRows(play: Iterable<TournamentSnapshot>,
         pairings.set(player, matches)
       }
     }
-    for (const item of event.participations) {
+    for (const [index, item] of event.participations.entries()) {
       if (item.listStatus !== 'available' || item.cardTotal !== 60) continue
       yield { id: `play:${event.eventId}`, snapshotId: event.id, name: event.name,
+        participationId: item.playerId ? `player:${item.playerId}` : `row:${JSON.stringify([event.id, index])}`,
         date: event.date, kind: event.isOnline ? 'online' : 'in-person', url: event.publicUrl,
         participants: event.coverage.returnedParticipants,
         completeLists: event.coverage.complete60Lists, deck: item.deck?.name ?? '',
@@ -122,14 +124,15 @@ export function* evidenceEventRows(play: Iterable<TournamentSnapshot>,
   }
   for (const event of main) {
     if (event.circuit !== 'WESTERN' || event.format !== 'STANDARD') continue
-    for (const item of event.participants) {
+    for (const [index, item] of event.participants.entries()) {
       if (item.cardTotal !== 60 || !item.cards || !item.listUrl) continue
       yield { id: `main:${event.eventId}`, snapshotId: event.id, name: event.name,
+        participationId: item.playerId ? `player:${item.playerId}` : `row:${JSON.stringify([event.id, index])}`,
         date: event.date, kind: 'in-person', url: event.url,
         participants: event.coverage.returnedParticipants,
         completeLists: event.coverage.complete60Lists, deck: item.deckName ?? '',
         placing: item.placing, listUrl: item.listUrl,
-        playerId: null, record: null, pairings: [],
+        playerId: item.playerId, record: null, pairings: [],
         cards: item.cards.map((card) => `${card.count} ${card.name} ${card.set} ${card.number}`) }
     }
   }

@@ -169,6 +169,14 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-162** | Analisi adattiva e sintesi verificabile con recupero automatico | AI/affidabilità | R-07, R-08, R-10, R-13 | P0 / L | APP-161 | Done |
 | **APP-163** | Ripresa automatica e stati operativi delle analisi | Affidabilità/UI | R-01, R-07, R-13, R-14 | P0 / M | APP-161/162; APP-160 preservato | Done |
 | **APP-164** | Verifica integrata e release delle analisi automatiche | Verifica/distribuzione | R-07, R-12, R-14 | P0 / M | APP-161–163; CI e release | Done |
+| **APP-170** | Distinguere partecipazioni con URL lista condiviso e recuperare le analisi v0.3.5 | Affidabilità/distribuzione | R-01, R-06, R-07, R-13, R-14 | P0 / M | APP-164; difetto riprodotto su schema 13 nuovo | In progress |
+
+### APP-170 — Partecipazioni distinte e ripresa dopo errore UNIQUE
+
+- **Autorizzazione e Ready (28-10-2026):** l'utente richiede correzione e nuova release su main, con verifica della ripresa senza perdita. Errore v0.3.5 riprodotto su database nuovo: chiave evento/URL comune a due partecipanti. Ramo isolato `task/app-170-evidence-participation` da `origin/dev`; APP-165–169 appartengono al lavoro desktop separato e non vengono modificati.
+- **Accettazione:** indice e record delle partecipazioni distinguono giocatori con la stessa lista, mantengono frequenze/piazzamenti/provenienza e non contano due volte una query sovrapposta. Riapertura compatibile con snapshot già sigillati v0.3.5; la cattura fallita si ripete senza cancellare messaggio iniziale, input o altri progetti. PR dev/main con check verdi, release e asset verificati.
+- **Verifiche previste:** URL condivisi, identità mancanti, duplicati provati e conflitti, paginazione/ripresa e conteggi; regressione su snapshot v0.3.5; ciclo Electron della stessa analisi interrotta prima/dopo il fix in un profilo temporaneo, suite/build e CI. Il database personale non viene riparato o sostituito.
+- **Risultato locale (28-10-2026):** identità delle partecipazioni condivisa da indice e record, con ID del giocatore o posizione nello snapshot quando assente; URL lista conservato come provenienza. Duplicati identici ignorati, conflitti annullati atomicamente. Snapshot v0.3.5 sigillati riutilizzati con le chiavi precedenti. Build/typecheck e 13 test mirati passati. Prova Electron con la build v0.3.5 precedente e Codex reale passata in 28,62 s: errore UNIQUE riprodotto, ripresa dello stesso job con v0.3.6, primo messaggio e hash di tutti gli input preesistenti identici, quattro partecipazioni distinte, altro progetto invariato e risposta presente una volta sola dopo ulteriore riavvio. Profili app/Codex temporanei; nessun intervento sul database personale. Suite completa: 305 test passati, 36 opt-in esclusi. Versione 0.3.6 preparata; restano CI, integrazione e release.
 
 ### APP-161 — Archivio incrementale e raccolta persistente
 
