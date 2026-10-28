@@ -4,6 +4,12 @@
 
 ## Decisioni
 
+### T-170 — Identità delle partecipazioni e compatibilità degli snapshot
+
+L'URL di una lista identifica la fonte del mazzo, non necessariamente il partecipante. Dalla v0.3.6 l'indice e i record delle occorrenze condividono una chiave basata su evento e identificativo del giocatore; quando manca, si conserva la posizione della riga nello snapshot immutabile. Non si fondono partecipanti per nome, piazzamento o lista, e l'identificativo del giocatore Regional disponibile resta nella provenienza. Ripetizioni della stessa identità sono accettate solo con originale identico; dati discordanti causano rollback, senza sovrascrittura o scarto silenzioso.
+
+Gli snapshot v0.3.5 già sigillati conservano la chiave precedente e le pagine salvate; nessuna migrazione distruttiva o aumento dello schema 13. La cattura fallita per collisione non aveva sigillato gli Eventi: ripeterla con la correzione conserva il resto del workflow. Prova Electron di aggiornamento v0.3.5 → v0.3.6 con Codex reale passata: stesso job, primo messaggio e hash degli input invariati, quattro partecipazioni con URL comune, altro progetto intatto, nessuna risposta duplicata dopo un altro riavvio.
+
 ### T-164 — Release verificata dell'incremento automatico
 
 APP-161–164 e APP-160 sono nella [v0.3.5](https://github.com/xmey95/pokeguru/releases/tag/v0.3.5), sul commit `df61ca4192b7acd82df2001a87cfa7b4dac60945` di `main`. PR #99 e #100 con quattro check verdi; [Release #40745083391](https://github.com/xmey95/pokeguru/actions/runs/40745083391) con package/smoke nativi, manifest, attestazioni e nove asset verificati dopo la pubblicazione. Thread e Matchup sono stati provati con Codex reale in profili temporanei; il ciclo di riapertura usa risposte sintetiche per verificare persistenza e idempotenza sulle quattro piattaforme. La fixture oltre 64 MB verifica la pipeline locale, senza attribuirle una prova del modello su quel volume. Lo spazio esaurito è verificato tramite rifiuto SQLite delle scritture, senza riempimento fisico del disco. I dettagli e i limiti sono registrati in APP-164 e `DISTRIBUTION.md`; nessuna estensione all'intero I4.
