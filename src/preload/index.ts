@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { ProjectsApi } from '../shared/projects'
 
 const api: ProjectsApi = {
+  exportDiagnostics: () => ipcRenderer.invoke('diagnostics:export'),
+  recordUiLongTask: (durationMs) => ipcRenderer.invoke('diagnostics:ui-long-task', durationMs),
   getCatalog: () => ipcRenderer.invoke('catalog:get'),
   getCatalogBrowseOverview: () => ipcRenderer.invoke('catalog:browse-overview'),
   searchCatalog: (query, setId, offset) => ipcRenderer.invoke('catalog:search', query, setId, offset),

@@ -123,4 +123,6 @@ Lo stack usa Electron, React, TypeScript e SQLite. I rami `task/*` confluiscono 
 
 Per un problema o una proposta, apri una [issue su GitHub](https://github.com/xmey95/pokeguru/issues). Indica versione dell'app, sistema operativo e passaggi per riprodurre il comportamento; allega una lista di esempio quando utile, evitando credenziali e dati personali.
 
+Nelle versioni che includono APP-155, apri **Impostazioni AI → Assistenza e diagnostica → Esporta diagnostica…** e allega il JSON salvato. Il report contiene stati e misure tecniche, senza nomi dei progetti, liste, conversazioni o credenziali; controllalo prima di condividerlo. Non viene inviato automaticamente.
+
 Le carte e le immagini consultate mantengono l'attribuzione alle rispettive fonti e ai titolari dei diritti. Gli asset delle carte acquisiti dall'app restano nella cache locale e non sono inclusi nel repository o nei pacchetti.
