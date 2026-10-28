@@ -743,6 +743,21 @@ button > .loading-spinner { width: 14px; height: 14px; flex-basis: 14px; margin-
 .catalog-sync-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .discussion-pending > .activity-status { margin: 0; width: 100%; }
 .thread-ai-activity { margin-bottom: 0; }
+.ai-job-activity { border-color: var(--accent); background: var(--surface); }
+.ai-job-stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 0; margin: 16px 0 0; list-style: none; }
+.ai-job-stages li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-subtle); color: var(--ink-secondary); font-size: var(--text-sm); line-height: 1.35; }
+.ai-job-stages li span { display: grid; place-items: center; flex: 0 0 20px; height: 20px; border-radius: 50%; background: var(--line); color: var(--ink); font-size: 11px; font-weight: 700; }
+.ai-job-stages li[data-state="current"] { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+.ai-job-stages li[data-state="current"] span { background: var(--accent); color: white; }
+.ai-job-stages li[data-state="done"] span { background: var(--success); color: white; }
+.ai-job-summary { margin-top: 16px; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface-subtle); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.ai-job-summary strong { font-size: var(--text-sm); }
+.ai-job-summary p { margin: 6px 0 0; line-height: 1.55; overflow-wrap: anywhere; }
+.ai-job-trace { margin-top: 12px; font-size: var(--text-sm); }
+.ai-job-trace summary { cursor: pointer; color: var(--accent); }
+.ai-job-trace ol { display: grid; gap: 5px; padding-left: 20px; color: var(--ink-secondary); }
+.ai-job-trace time { font-variant-numeric: tabular-nums; }
+@media (max-width: 800px) { .ai-job-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @keyframes loading-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .loading-spinner { animation: none; }

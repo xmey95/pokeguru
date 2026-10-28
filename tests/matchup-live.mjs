@@ -20,7 +20,7 @@ try {
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '12 carte' }).waitFor()
-  await page.getByRole('button', { name: 'Matchup' }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Matchup', exact: true }).click()
   await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
   const deckCount = await page.locator('.matchup-option').count()
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
@@ -36,15 +36,24 @@ try {
   await page.getByRole('button', { name: 'Dati inviati', exact: true }).click()
   assert.match(await page.locator('.matchup-data-preview').textContent(), /Per generare una nuova guida/)
   await page.getByRole('button', { name: 'Genera analisi con Codex' }).click()
-  await Promise.race([
-    page.locator('.matchup-fields').getByText('Limiti dell’analisi').waitFor({ timeout: 200000 }),
-    page.getByRole('alert').waitFor({ timeout: 200000 }).then(async () => {
-      throw new Error(`Analisi non generata: ${await page.getByRole('alert').textContent()}`)
-    })
-  ])
+  await page.locator('.ai-job-activity').waitFor({ timeout: 30000 })
+  assert.equal(await page.locator('.ai-job-stages li').count(), 4)
+  try {
+    await Promise.race([
+      page.locator('.matchup-fields').getByText('Incertezze e limiti').waitFor({ timeout: 240000 }),
+      page.getByRole('alert').waitFor({ timeout: 240000 }).then(async () => {
+        throw new Error(`Analisi non generata: ${await page.getByRole('alert').textContent()}`)
+      })
+    ])
+  } catch (error) {
+    console.error('Matchup UI:', (await page.locator('body').innerText()).slice(-3500))
+    console.error('Matchup job:', await page.evaluate(async (id) =>
+      window.projectsApi.getAiJobStatus(id, `matchup:${id}`),
+    (await page.evaluate(() => window.projectsApi.list())).value[0].id))
+    throw error
+  }
   await page.locator('.guide-sources > summary').click()
-  await page.locator('.matchup-report-meta > summary').click()
-  assert.match(await page.locator('.meta-analysis').textContent(), /Analisi Codex generata/)
+  assert.match(await page.locator('.matchup-fields').textContent(), /Piano di gioco/)
   assert.match(await page.locator('.meta-analysis').textContent(), new RegExp(`Modello: ${model.id}`))
   const observations = [
     'Valuta come ipotesi se andare secondi possa essere utile; non darlo per certo senza risultati di partita.',
@@ -53,6 +62,7 @@ try {
   for (let index = 0; index < observations.length; index += 1) {
     await page.getByLabel('Aggiungi un’osservazione').fill(observations[index])
     await page.getByRole('button', { name: 'Aggiorna guida', exact: true }).click()
+    await page.locator('.ai-job-activity').waitFor({ timeout: 30000 })
     await Promise.race([
       page.waitForFunction((count) => document.querySelectorAll('.discussion-history-item').length === count &&
         !!document.querySelector('.discussion-latest .discussion-change') && !!document.querySelector('#matchup-feedback'),
@@ -69,9 +79,10 @@ try {
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').filter({ hasText: '13 carte' }).waitFor()
-  await page.getByRole('button', { name: 'Matchup' }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Matchup', exact: true }).click()
   await page.getByRole('button', { name: 'Continua sulla nuova base' }).waitFor({ timeout: 30000 })
   await page.getByRole('button', { name: 'Continua sulla nuova base' }).click()
+  await page.locator('.ai-job-activity').waitFor({ timeout: 30000 })
   await Promise.race([
     page.getByRole('button', { name: /Base attuale/ }).waitFor({ timeout: 200000 }),
     page.getByRole('alert').waitFor({ timeout: 200000 }).then(async () => {

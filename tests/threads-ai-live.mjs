@@ -118,6 +118,26 @@ try {
       await switchThread(page, new RegExp(name))
       await page.getByLabel('Scrivi nel thread').fill(`Rispondi brevemente includendo il codice ${code}.`)
       await page.getByRole('button', { name: 'Invia a Codex' }).click()
+      await page.locator('.ai-job-activity').waitFor({ timeout: 30000 })
+      assert.equal(await page.locator('.ai-job-stages li').count(), 4)
+      const activeJob = await page.evaluate(([projectId, threadId]) =>
+        window.projectsApi.getAiJobStatus(projectId, threadId),
+      [project.id, (await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)).value
+        .find((thread) => thread.title === name).id])
+      assert.equal(activeJob.ok, true)
+      assert.ok(activeJob.value?.progress?.steps.length > 0)
+      if (name === 'Thread A' && activeJob.value.status === 'running') {
+        const navigation = page.getByRole('navigation', { name: 'Aree del progetto' })
+        await navigation.getByRole('button', { name: 'Lista', exact: true }).click()
+        await navigation.getByRole('button', { name: 'Thread', exact: true }).click()
+        await switchThread(page, /Thread A/)
+        const resumed = await page.evaluate(([projectId, threadId]) =>
+          window.projectsApi.getAiJobStatus(projectId, threadId), [project.id, activeJob.value.resourceId])
+        assert.equal(resumed.ok, true)
+        assert.equal(resumed.value.id, activeJob.value.id)
+        assert.ok(resumed.value.progress?.steps.length > 0)
+        if (resumed.value.status === 'running') await page.locator('.ai-job-activity').waitFor({ timeout: 10000 })
+      }
       try {
         await page.locator('.thread-message')
           .filter({ has: page.locator('small', { hasText: 'Codex' }) })
@@ -146,6 +166,11 @@ try {
     application = await launch()
     page = await application.firstWindow()
     await openThread(page, 'Thread A')
+    const restoredJob = await page.evaluate(([projectId, threadId]) =>
+      window.projectsApi.getAiJobStatus(projectId, threadId), [project.id, a.id])
+    assert.equal(restoredJob.ok, true)
+    assert.equal(restoredJob.value.status, 'applied')
+    assert.ok(restoredJob.value.progress?.steps.some((step) => step.phase === 'saving'))
     await page.getByLabel('Scrivi nel thread').fill('Continua questa conversazione in una frase.')
     await page.getByRole('button', { name: 'Invia a Codex' }).click()
     await page.locator('.thread-message').nth(3).waitFor({ timeout: 180000 })

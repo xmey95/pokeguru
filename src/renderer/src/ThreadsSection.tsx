@@ -17,7 +17,7 @@ import { ThreadSwitcher } from './ThreadSwitcher'
 import { ThreadMarkdown } from './ThreadMarkdown'
 import { Icon } from './Icon'
 import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
-import { ActivityStatus, InlineLoading, LoadingSkeleton, Spinner } from './Loading'
+import { AiJobActivity, InlineLoading, LoadingSkeleton, Spinner } from './Loading'
 import { catalogCardTargets, guideSourceTarget, tcgdexCardPrintId } from './guide-links'
 import { useCardPreview } from './CardPreview'
 import { ExpandablePreviewDeck } from './PreviewDeckLines'
@@ -768,9 +768,9 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta del thread' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)} />)}
             </div>
-            {asking && currentAiJob?.status !== 'ready' && <ActivityStatus className="thread-ai-activity" startedAt={startedAt}
-              title="Codex sta rispondendo…"
-              detail="Una lista completa e verificata comparirà nel Thread come candidata. Puoi consultare la lista o cambiare sezione durante l’attesa." />}
+            {(asking || currentAiJob?.status === 'running') && <AiJobActivity
+              className="thread-ai-activity" startedAt={startedAt} job={currentAiJob}
+              title="Codex sta rispondendo…" />}
             <form className="thread-form thread-composer" onSubmit={(event) => void ask(event)}>
               <label htmlFor="thread-message">Scrivi nel thread</label>
               <textarea id="thread-message" value={message} maxLength={5000} disabled={working} aria-describedby="thread-composer-help" aria-keyshortcuts="Enter"

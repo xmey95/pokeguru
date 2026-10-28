@@ -163,7 +163,7 @@ try {
   mkdirSync(damagedData, { recursive: true })
   const damagedPath = join(damagedData, 'pokeguru.sqlite')
   const damagedDatabase = new DatabaseSync(damagedPath)
-  damagedDatabase.exec('CREATE TABLE sample (id TEXT PRIMARY KEY) STRICT; PRAGMA user_version = 9')
+  damagedDatabase.exec('CREATE TABLE sample (id TEXT PRIMARY KEY) STRICT; PRAGMA user_version = 10')
   damagedDatabase.close()
   const damagedBytes = readFileSync(damagedPath)
   damagedBytes[100] = 0
@@ -191,7 +191,7 @@ try {
   await application.close()
   application = undefined
   const upgraded = new DatabaseSync(join(legacyData, 'pokeguru.sqlite'), { readOnly: true })
-  try { assert.equal(upgraded.prepare('PRAGMA user_version').get().user_version, 9) }
+  try { assert.equal(upgraded.prepare('PRAGMA user_version').get().user_version, 10) }
   finally { upgraded.close() }
   const backupFiles = readdirSync(join(legacyData, 'backups'))
   assert.equal(backupFiles.filter((name) => name.endsWith('.sqlite')).length, 1)
