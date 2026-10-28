@@ -160,6 +160,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-153** | Recupero iterativo e verificabile delle prove AI per Thread e Matchup | Funzionalità/qualità AI | R-02, R-06, R-07, R-10, R-13 / feedback utente 27-10-2026 | P0 / L | APP-115/116/118/119; dati locali e test Codex reali | Done |
 | **APP-154** | Mostrare l’attività Codex durante i turni lunghi nei Thread e Matchup | UI/affidabilità AI | R-07, R-10, R-13 / richiesta utente 28-10-2026 | P1 / M | APP-153; job durevoli APP-097; CLI Codex isolata | Done |
 | **APP-155** | Esportare diagnostica locale discreta per bug, prestazioni e sicurezza | Affidabilità/UI | R-14 / richiesta utente 28-10-2026 | P1 / M | APP-151, APP-154; export da Impostazioni | Done |
+| **APP-156** | Pubblicare v0.3.3 con APP-154 e APP-155 | Distribuzione | R-01, R-07, R-12, R-14 / richiesta utente 28-10-2026 | P0 / S | APP-154/155 in `dev`, quattro check PR verdi | In progress |
+
+### APP-156 — Release v0.3.3
+
+- **Autorizzazione e ambito:** il 28-10-2026 l'utente chiede una nuova release in `main` dopo il merge di APP-155 in `dev`. Il delta da v0.3.2 comprende APP-154 (progresso Codex) e APP-155 (export diagnostico), più la chiusura documentale di APP-153. Nessun avvio di I4.
+- **Accettazione:** versione univoca `0.3.3` in manifest e lockfile; note utente coerenti; PR della preparazione su `dev` e PR da `dev` a `main` con quattro check verdi; workflow Release verde, tag sul merge di `main`, quattro pacchetti, quattro manifest, checksum e attestazioni verificati. Nessuna modifica al profilo dati personale; il limite della prova Finder su Mac Apple Silicon resta dichiarato.
+- **Verifica prevista:** build/typecheck, suite locale, controllo di manifest/versione e workflow, CI su quattro sistemi, smoke dei pacchetti e controllo di tag/asset/digest dopo la pubblicazione.
 
 ### APP-155 — Diagnostica esportabile
 
@@ -167,6 +174,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Accettazione:** comando secondario e richiudibile nelle Impostazioni AI; salvataggio JSON dopo scelta della destinazione; nessuna rete né telemetria. Versione/piattaforma, stato dell'archivio, conteggi Catalogo/Eventi, sincronizzazioni, job AI, tempi di blocco UI e incidenti renderer disponibili anche con archivio illeggibile. Allowlist dei campi: niente contenuto dei progetti o delle conversazioni, credenziali, URL, percorsi e testi grezzi degli errori. Il file dichiara cosa esclude.
 - **Verifica prevista:** test di esclusione dei dati sensibili e del caso archivio corrotto, build/typecheck, smoke Electron con export reale su profilo temporaneo e suite pertinente. Prima di integrare in `dev`, verificare che la UI rimanga discreta e che l'export non alteri i dati locali.
 - **Risultato e verifiche locali:** file JSON a campi consentiti, scelta della destinazione, avviso di salvataggio e sezione richiudibile. Incidenti renderer conservati fino a 20 anche dopo riavvio; blocchi UI conservati fino a 50 durante la sessione. Build/typecheck passati, suite locale Node 24 con Temp nel workspace: 344 test passati, 42 esclusi; smoke Electron con profilo temporaneo e nome progetto privato ha verificato export e assenza del nome nel file; secondo smoke con SQLite danneggiato ha salvato un report con `issue: integrity` senza modificare l'archivio. `git diff --check` passato. I blocchi UI sono disponibili soltanto se osservati nella sessione aperta; il report non sostituisce un audit di sicurezza o un profilo CPU completo. Consegnare in `dev` tramite PR e CI; nessuna release pubblicata da questo task.
+- **Integrazione verificata (28-10-2026):** [PR #89](https://github.com/xmey95/pokeguru/pull/89) integrata in `dev` al merge `f9ca6dc`, con quattro check CI verdi su Ubuntu, Windows, macOS Intel e Apple Silicon. APP-156 prepara la release che rende l'export disponibile nelle installazioni.
 
 ### APP-154 — Attività Codex visibile durante l’elaborazione
 
