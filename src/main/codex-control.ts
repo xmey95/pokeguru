@@ -8,6 +8,7 @@ import type { AiConnection, AiLoginProgress, AiLoginStart, AiModel, AiRunConfig 
 import { readAiTokenUsage, type AiTokenUsage } from '../shared/ai-evidence'
 import { CODEX_ISOLATION_ARGS } from './codex-isolation'
 import { codexLauncher } from './codex-setup'
+import { codexReasoningSummary } from './codex-progress'
 
 type RpcResponse = { id?: number; result?: unknown; error?: { message?: string }; method?: string;
   params?: { loginId?: string; success?: boolean; error?: string | null } }
@@ -196,7 +197,8 @@ export class CodexControl {
 
   async jsonTurn(sessionId: string | null, cwd: string, prompt: string, config: AiRunConfig,
     outputSchema: Record<string, unknown>, options: { jobId?: string; jobDirectory?: string;
-      signal?: AbortSignal; onSessionStarted?: (sessionId: string) => void } = {}): Promise<{ sessionId: string; turnId: string; value: unknown; usage: AiTokenUsage | null }> {
+      signal?: AbortSignal; onSessionStarted?: (sessionId: string) => void;
+      onSummary?: (summary: string) => void } = {}): Promise<{ sessionId: string; turnId: string; value: unknown; usage: AiTokenUsage | null }> {
     const key = options.jobId ?? sessionId ?? `new:${randomUUID()}`
     if (this.cliTurns.has(key)) throw new Error('Questo thread Codex è già in elaborazione.')
     if (options.signal?.aborted) throw new Error('Operazione Codex annullata.')
@@ -209,7 +211,7 @@ export class CodexControl {
       writeFileSync(schemaPath, JSON.stringify(outputSchema), 'utf8')
       const launcher = codexLauncher(this.dataDir())
       const args = ['-C', cwd, 'exec', '--json', ...(sessionId ? ['resume'] : []), ...CODEX_ISOLATION_ARGS,
-        '--config', 'approval_policy="never"', '--skip-git-repo-check',
+        '--config', 'approval_policy="never"', '--config', 'model_reasoning_summary="concise"', '--skip-git-repo-check',
         ...(config.model ? ['--model', config.model] : []),
         ...(config.reasoningEffort ? ['--config', `model_reasoning_effort=${JSON.stringify(config.reasoningEffort)}`] : []),
         '--output-schema', schemaPath, '--output-last-message', resultPath,
@@ -227,12 +229,15 @@ export class CodexControl {
         let timedOut = false
         let captureError = false
         const timer = setTimeout(() => { timedOut = true; child.kill() }, 240_000)
-        child.stdout.on('data', (chunk: Buffer) => {
-          stdout += chunk.toString()
+        child.stdout.setEncoding('utf8')
+        child.stdout.on('data', (chunk: string) => {
+          stdout += chunk
           const lines = stdout.split('\n')
           stdout = lines.pop() ?? ''
           for (const line of lines) {
             try {
+              const summary = codexReasoningSummary(line)
+              if (summary) options.onSummary?.(summary)
               const event = JSON.parse(line) as { type?: string; thread_id?: string; usage?: unknown }
               if (event.type === 'turn.completed') usage = readAiTokenUsage(event.usage)
               if (event.type === 'thread.started') {

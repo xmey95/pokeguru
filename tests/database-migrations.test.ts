@@ -17,6 +17,34 @@ function schemaVersion(path: string): number {
   finally { db.close() }
 }
 
+it('backs up schema 9 before adding persistent AI progress', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-progress-'))
+  const path = join(folder, 'pokeguru.sqlite')
+  try {
+    const projects = new ProjectStore(path)
+    const project = projects.create({ name: 'Progress', format: 'STANDARD' })
+    projects.close()
+    const legacy = new DatabaseSync(path)
+    legacy.exec(`CREATE TABLE ai_jobs (id TEXT PRIMARY KEY, kind TEXT NOT NULL,
+      project_id TEXT NOT NULL REFERENCES projects(id), resource_id TEXT NOT NULL,
+      status TEXT NOT NULL, request_json TEXT, result_json TEXT,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, error TEXT) STRICT;
+      PRAGMA user_version = 9`)
+    legacy.close()
+    const preparation = await prepareDatabaseMigration(path)
+    expect(preparation).toMatchObject({ fromVersion: 9, needsMigration: true })
+    expect(preparation.backupPath && existsSync(preparation.backupPath)).toBe(true)
+    const jobs = new AiJobStore(path)
+    const started = jobs.start('matchup-generate', project.id, `matchup:${project.id}`)
+    jobs.updateProgress(started.id, 'analysis', 'Codex elabora')
+    completeDatabaseMigration(path, preparation)
+    expect(jobs.latest(project.id, `matchup:${project.id}`)?.progress?.phase).toBe('analysis')
+    jobs.close()
+    expect(schemaVersion(path)).toBe(10)
+    verifyDatabase(path)
+  } finally { rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
+})
+
 it('versions a fresh archive and reopens it without another backup', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-new-'))
   const path = join(folder, 'data', 'pokeguru.sqlite')

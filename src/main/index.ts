@@ -1,5 +1,6 @@
-import { app, BrowserWindow, clipboard, ipcMain, Menu, protocol, shell } from 'electron'
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, shell } from 'electron'
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { dirname, join } from 'node:path'
@@ -54,7 +55,7 @@ import { TournamentStore } from './tournament-store'
 import { DatabaseIntegrityError, completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
 import { AiJobStore } from './ai-job-store'
 import type { AiJob } from './ai-job-store'
-import type { AiJobSummary } from '../shared/ai-job'
+import type { AiJobPhase, AiJobSummary } from '../shared/ai-job'
 import { recoverMatchupJob, recoverThreadJob } from './ai-job-recovery'
 import { fetchRecentWesternTournament } from './limitless-event'
 import { syncTournamentBlock } from './tournament-sync'
@@ -65,6 +66,8 @@ import type { DailySyncSource } from '../shared/daily-sync'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../shared/tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
 import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
+import { buildDiagnosticReport, type RuntimeIncident, type UiLongTask } from './diagnostics'
+import { readDiagnosticIncidents, writeDiagnosticIncidents } from './diagnostic-incidents'
 
 app.setName('Pokeguru')
 protocol.registerSchemesAsPrivileged([{
@@ -80,12 +83,33 @@ let dailySyncStore: DailySyncStore | null = null
 let playTournamentJob: TournamentSyncJob<TournamentSyncProgress> | null = null
 let mainTournamentJob: TournamentSyncJob<MainTournamentSyncProgress> | null = null
 let storageError: string | null = null
+let storageIssue: 'integrity' | 'unavailable' | null = null
+const uiLongTasks: UiLongTask[] = []
+const runtimeIncidents: RuntimeIncident[] = []
+let diagnosticIncidentsPath: string | null = null
+
+function recordRuntimeIncident(incident: RuntimeIncident): void {
+  runtimeIncidents.push(incident)
+  if (runtimeIncidents.length > 20) runtimeIncidents.shift()
+  if (diagnosticIncidentsPath) {
+    try { writeDiagnosticIncidents(diagnosticIncidentsPath, runtimeIncidents) }
+    catch { /* Diagnostics must not affect the application. */ }
+  }
+}
 let aiPreferencesStore: AiPreferencesStore | null = null
 const codexControl = new CodexControl(() => app.getPath('userData'))
 const codexSetup = new CodexSetup(() => app.getPath('userData'))
 const generatingProjects = new Set<string>()
 const generatingDeckThreads = new Set<string>()
 const activeAiControllers = new Map<string, AbortController>()
+
+function jobProgress(job: AiJob, phase: AiJobPhase, detail: string, summary?: string): void {
+  aiJobStore?.updateProgress(job.id, phase, detail, summary)
+}
+
+function jobSummary(job: AiJob, phase: AiJobPhase, detail: string): (summary: string) => void {
+  return (summary) => jobProgress(job, phase, detail, summary)
+}
 const catalogAdvancedResults = new Map<string, CatalogAdvancedExecution>()
 let activeCatalogAdvancedSearch: AbortController | null = null
 let recoveringAiJobs = false
@@ -314,15 +338,19 @@ function catalogAdvancedEvents(question: string, catalog: CatalogView):
 async function matchupAiQueries(request: string, deckContext: string,
   sample: { url: string | null; cards: string[]; mechanics?: unknown },
   evidence: MatchupTournamentEvidence, config: AiRunConfig,
-  signal: AbortSignal, history?: string) {
+  signal: AbortSignal, history?: string, job?: AiJob) {
   if (!catalogStore) throw new Error('Catalogo non disponibile per le query AI.')
   const catalog = catalogStore.view()
   const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
     tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog, 31))
+  if (job) jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla guida.')
   const trace = await runAiEvidenceQueries(request, { deckContext, sample, evidence,
     history }, engine,
-    (prompt) => planEvidenceQueriesWithCodex(prompt, config, signal),
-    { contextTexts: [deckContext, sample.cards.join('\n'), history ?? ''] })
+    (prompt) => planEvidenceQueriesWithCodex(prompt, config, signal,
+      job ? jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.') : undefined),
+    { contextTexts: [deckContext, sample.cards.join('\n'), history ?? ''],
+      onRound: (round, queries) => { if (job) jobProgress(job, 'planning',
+        `Ricerca ${round}: ${queries} interrogazioni locali completate.`) } })
   return { trace, engine }
 }
 
@@ -464,6 +492,69 @@ function registerProjectHandlers(): void {
   const isMainFrame = (event: Electron.IpcMainInvokeEvent): boolean =>
     mainWindow !== null && event.sender === mainWindow.webContents &&
     event.senderFrame === mainWindow.webContents.mainFrame && isTrustedRendererUrl(event.senderFrame.url)
+
+  ipcMain.handle('diagnostics:ui-long-task', (event, duration: unknown): void => {
+    if (!isMainFrame(event) || typeof duration !== 'number' || !Number.isFinite(duration) ||
+      duration < 50 || duration > 60_000) return
+    uiLongTasks.push({ at: new Date().toISOString(), durationMs: duration })
+    if (uiLongTasks.length > 50) uiLongTasks.shift()
+  })
+
+  ipcMain.handle('diagnostics:export', async (event): Promise<OperationResult<{ saved: boolean; fileName?: string }>> => {
+    if (!isMainFrame(event) || !mainWindow) return { ok: false, error: 'Richiesta non autorizzata.' }
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15)
+    const fileName = `Pokeguru-diagnostica-${stamp}.json`
+    try {
+      const choice = await dialog.showSaveDialog(mainWindow, {
+        title: 'Esporta diagnostica', defaultPath: join(app.getPath('downloads'), fileName),
+        filters: [{ name: 'Diagnostica JSON', extensions: ['json'] }]
+      })
+      if (choice.canceled || !choice.filePath) return { ok: true, value: { saved: false } }
+      const start = performance.now()
+      const unavailableSections: string[] = []
+      const collect = <T>(name: string, read: () => T): T | null => {
+        try { return read() } catch { unavailableSections.push(name); return null }
+      }
+      const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
+      const size = (path: string): number | null => {
+        try { return statSync(path).size } catch { return null }
+      }
+      const projects = collect('projects', () => projectStore
+        ? { active: projectStore.list().length, archived: projectStore.listArchived().length } : null)
+      const catalog = collect('catalog', () => {
+        if (!catalogStore) return null
+        const overview = catalogStore.browseOverview()
+        return { sets: overview.sets.length, prints: overview.stats.acquired,
+          groups: overview.stats.groups, thumbnails: overview.stats.thumbnails,
+          highImages: overview.stats.highImages, missingImages: overview.stats.imageCacheMissing,
+          syncedAt: overview.syncedAt, coverageExpected: overview.standardCoverage?.expected ?? null,
+          coverageAcquired: overview.standardCoverage?.acquired ?? null }
+      })
+      const events = collect('events', () => tournamentStore
+        ? { play: tournamentStore.summaries().length, regional: tournamentStore.mainSummaries().length } : null)
+      const catalogSync = collect('catalogSync', () => catalogStore ? catalogJobStatus(catalogStore) : null)
+      const playSync = collect('playSync', () => playTournamentJob?.status() ?? null)
+      const mainSync = collect('mainSync', () => mainTournamentJob?.status() ?? null)
+      const jobs = collect('aiJobs', () => aiJobStore?.recent(30) ?? null)
+      const report = buildDiagnosticReport({
+        generatedAt: new Date().toISOString(), version: app.getVersion(), packaged: app.isPackaged,
+        platform: process.platform, architecture: process.arch,
+        electron: process.versions.electron ?? '', chrome: process.versions.chrome ?? '',
+        node: process.versions.node, uptimeSeconds: process.uptime(),
+        mainHeapBytes: process.memoryUsage().heapUsed,
+        database: { available: !!projectStore, issue: storageIssue,
+          bytes: size(databasePath), walBytes: size(`${databasePath}-wal`) },
+        projects, catalog, events, catalogSync, playSync, mainSync,
+        daily: { catalog: collect('dailyCatalog', () => dailySyncStore?.read('catalog') ?? null),
+          play: collect('dailyPlay', () => dailySyncStore?.read('play') ?? null),
+          main: collect('dailyMain', () => dailySyncStore?.read('main') ?? null) },
+        jobs, uiLongTasks, incidents: runtimeIncidents,
+        collectionMs: performance.now() - start, unavailableSections
+      })
+      await writeFile(choice.filePath, JSON.stringify(report, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 })
+      return { ok: true, value: { saved: true, fileName: choice.filePath.split(/[\\/]/).pop() ?? fileName } }
+    } catch { return { ok: false, error: 'Esportazione non riuscita. Scegli un’altra cartella e riprova.' } }
+  })
 
   ipcMain.handle('tournament:get', (event): OperationResult<TournamentSnapshot | null> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
@@ -1122,21 +1213,28 @@ function registerProjectHandlers(): void {
     activeAiControllers.set(job.id, controller)
     generatingDeckThreads.add(threadId)
     try {
+      jobProgress(job, 'preparing', 'Preparo il turno e le preferenze Codex.')
       const config = await runConfig(override)
       const base = thread.baseVersionId
         ? projectStore.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null
         : null
       const catalog = catalogStore.view()
+      jobProgress(job, 'catalog', 'Raccolgo la lista e le schede del Catalogo.')
       const initialEvidence = buildThreadEvidence(thread, base, message.trim(),
         projectStore.listConstraints(projectId), catalog,
         tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
       const engine = createAiEvidenceEngine(catalog, tournamentStore?.list() ?? [],
         tournamentStore?.listMain() ?? [], currentAiEventWindow(catalog))
+      jobProgress(job, 'events', 'Collego le liste e i risultati degli Eventi pertinenti.')
+      jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla domanda.')
       const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
-        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal),
+        engine, (prompt) => planEvidenceQueriesWithCodex(prompt, config, controller.signal,
+          jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.')),
         { contextTexts: [thread.title, ...thread.messages.slice(-12).map((item) => item.text),
           base?.rawText ?? '', thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? ''],
-        eventContextTexts: thread.messages.slice(-2).map((item) => item.text) })
+        eventContextTexts: thread.messages.slice(-2).map((item) => item.text),
+        onRound: (round, queries) => jobProgress(job, 'planning',
+          `Ricerca ${round}: ${queries} interrogazioni locali completate.`) })
       let evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
@@ -1149,10 +1247,14 @@ function registerProjectHandlers(): void {
       let sessionRef = thread.aiSessionRef
       let result: Awaited<ReturnType<typeof codexControl.jsonTurn>> | null = null
       for (let attempt = 0; attempt < 4; attempt++) {
+        jobProgress(job, 'analysis', attempt ? `Codex rielabora la risposta con nuove schede (${attempt + 1}/4).` :
+          'Codex elabora la risposta con le prove raccolte.')
         const answerStarted = Date.now()
         result = await codexControl.jsonTurn(sessionRef, cwd, context.prompt, config,
           DECK_THREAD_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
-            signal: controller.signal, onSessionStarted: (id) => {
+            signal: controller.signal,
+            onSummary: jobSummary(job, 'analysis', 'Codex elabora la risposta con le prove raccolte.'),
+            onSessionStarted: (id) => {
               if (!sessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
               sessionRef = id
             } })
@@ -1172,10 +1274,12 @@ function registerProjectHandlers(): void {
           sources: context.sources, existingUserMessageId })
       }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      jobProgress(job, 'verification', 'Verifico le carte citate e la risposta strutturata.')
       if (!result || queryTrace.cardTargets?.some((target) => target.status === 'not-supplied'))
         throw new Error('Le schede nominate non sono state tutte consegnate a Codex. Riprova l’analisi.')
       aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: true,
         message: message.trim(), config, evidence, sources: context.sources, existingUserMessageId })
+      jobProgress(job, 'saving', 'Salvo la risposta e la candidata nel Thread.')
       aiJobStore.ready(job.id, result)
       const sessionId = result.sessionId
       if (!thread.aiSessionRef) projectStore.assignDeckAiSession(projectId, threadId, sessionId)
@@ -1388,36 +1492,44 @@ function registerProjectHandlers(): void {
     activeAiControllers.set(job.id, controller)
     generatingProjects.add(projectId)
     try {
+      jobProgress(job, 'preparing', 'Preparo l’avversario e le preferenze Codex.')
       const config = await runConfig(override)
       const sampleDeck = await fetchOpponentSample(opponent)
+      jobProgress(job, 'catalog', 'Raccolgo le schede delle due liste dal Catalogo.')
       await enrichMatchupDeck(projectId, baseline)
       await enrichOpponentCards(snapshot, opponent)
+      jobProgress(job, 'events', 'Collego le liste e i risultati dei tornei.')
       const evidence = currentMatchupEvidence(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
       const deckContext = currentMatchupDeckContext(projectId, baseline)
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
-        deckContext, sample, evidence, config, controller.signal)
+        deckContext, sample, evidence, config, controller.signal, undefined, job)
       const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config,
         evidence, aiQueries, deckVersion)
       let generated: MatchupReport | null = null
       for (let attempt = 0; attempt < 4; attempt++) {
+        jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
+          'Codex costruisce la guida usando lista, schede e tornei.')
         generated = await generateMatchup(projectId, hash, deckContext, snapshot, opponent,
           sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
             onPrompt: (audit) => aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
-                base: { ...base, promptAudit: audit } }) })
+                base: { ...base, promptAudit: audit } }),
+            onSummary: jobSummary(job, 'analysis', 'Codex costruisce la guida usando le prove raccolte.') })
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, generated)
         if (!added) break
         if (attempt === 3) throw new Error('La guida ha introdotto altre carte: completa il recupero delle prove e riprova.')
       }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      jobProgress(job, 'verification', 'Controllo le carte nominate e i campi della guida.')
       requireNamedEvidence(aiQueries)
       if (!generated) throw new Error('Guida Matchup non prodotta.')
       aiJobStore.prepare(job.id, { analysisVersion: 2, validatedDraft: true,
         base: { ...base, promptAudit: generated.promptAudit } })
       const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
         deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
+      jobProgress(job, 'saving', 'Salvo la guida Matchup.')
       aiJobStore.ready(job.id, { report })
       projectStore.saveMatchupReport(report)
       aiJobStore.transition(job.id, 'applied')
@@ -1445,6 +1557,7 @@ function registerProjectHandlers(): void {
     activeAiControllers.set(job.id, controller)
     generatingProjects.add(discussion.projectId)
     try {
+      jobProgress(job, 'preparing', 'Preparo lo storico e il commento della discussione.')
       const pending = turnId === null
         ? projectStore.addMatchupFeedback(discussion.id, feedback as string)
         : discussion
@@ -1469,30 +1582,36 @@ function registerProjectHandlers(): void {
           mechanics: previousReport.sampleDeckMechanics ?? [] }
         : await opponentSampleWithMechanics(await fetchOpponentSample(opponent),
           currentMatchupEvidence(snapshot, opponent))
+      jobProgress(job, 'catalog', 'Aggiorno le schede della lista corrente.')
       await enrichMatchupDeck(discussion.projectId, baseline)
       const deckContext = currentMatchupDeckContext(discussion.projectId, baseline)
       const evidence = previousReport?.tournamentEvidence ??
         currentMatchupEvidence(snapshot, opponent)
+      jobProgress(job, 'events', 'Ricollego le evidenze dei tornei alla revisione.')
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(target.feedback, deckContext,
-        sample, evidence, config, controller.signal, matchupHistoryContext(context))
+        sample, evidence, config, controller.signal, matchupHistoryContext(context), job)
       const base = matchupJobBase(job.id, discussion.projectId, discussion.deckHash,
         snapshot, opponent, sample, config, evidence, aiQueries,
         discussion.deckVersionId ? { versionId: discussion.deckVersionId,
           resolutionId: discussion.deckResolutionId ?? null } : null)
       let revised: Awaited<ReturnType<typeof reviseMatchup>> | null = null
       for (let attempt = 0; attempt < 4; attempt++) {
+        jobProgress(job, 'analysis', attempt ? `Codex rielabora la revisione con nuove schede (${attempt + 1}/4).` :
+          'Codex rivede la guida alla luce del tuo commento.')
         revised = await reviseMatchup(context, target.feedback, deckContext, snapshot,
           opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
             onPrompt: (audit) => aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
                 base: { ...base, promptAudit: audit },
-                discussionId: discussion.id, turnId: target.id }) })
+                discussionId: discussion.id, turnId: target.id }),
+            onSummary: jobSummary(job, 'analysis', 'Codex rivede la guida alla luce del tuo commento.') })
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, revised.report, revised.changeSummary)
         if (!added) break
         if (attempt === 3) throw new Error('La revisione ha introdotto altre carte: completa il recupero delle prove e riprova.')
       }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      jobProgress(job, 'verification', 'Controllo le carte citate e la guida aggiornata.')
       requireNamedEvidence(aiQueries)
       if (!revised) throw new Error('Revisione Matchup non prodotta.')
       aiJobStore.prepare(job.id, { analysisVersion: 2, validatedDraft: true,
@@ -1500,6 +1619,7 @@ function registerProjectHandlers(): void {
         discussionId: discussion.id, turnId: target.id })
       const report = { ...revised.report, jobId: job.id, generatedAt: base.generatedAt,
         deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
+      jobProgress(job, 'saving', 'Salvo la revisione nella discussione.')
       aiJobStore.ready(job.id, { report, changeSummary: revised.changeSummary })
       const saved = projectStore.completeMatchupFeedback(discussion.id, target.id,
         report, revised.changeSummary)
@@ -1539,6 +1659,7 @@ function registerProjectHandlers(): void {
     activeAiControllers.set(job.id, controller)
     generatingProjects.add(parent.projectId)
     try {
+      jobProgress(job, 'preparing', 'Preparo la nuova base della discussione.')
       const project = projectStore.get(parent.projectId)
       const baseline = projectStore.getBaseline(parent.projectId)
       const snapshot = projectStore.getLatestMetaSnapshot()
@@ -1559,35 +1680,42 @@ function registerProjectHandlers(): void {
       const config = await runConfig(override)
       const context = await prepareMatchupHistory(parent, config, controller.signal)
       const sampleDeck = await fetchOpponentSample(opponent)
+      jobProgress(job, 'catalog', 'Aggiorno le schede delle due liste.')
       await enrichMatchupDeck(parent.projectId, baseline)
       await enrichOpponentCards(snapshot, opponent)
+      jobProgress(job, 'events', 'Collego i tornei della nuova base.')
       const evidence = currentMatchupEvidence(snapshot, opponent)
       const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
       const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Continua l'analisi di ${opponent.name} sulla nuova lista e sul nuovo metagame`,
         deckContext, sample, evidence, config, controller.signal,
-        matchupHistoryContext(context))
+        matchupHistoryContext(context), job)
       const base = matchupJobBase(job.id, parent.projectId, hash,
         snapshot, opponent, sample, config, evidence, aiQueries, deckVersion)
       let generated: MatchupReport | null = null
       for (let attempt = 0; attempt < 4; attempt++) {
+        jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
+          'Codex aggiorna la guida sulla nuova base.')
         generated = await generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
           config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
             onPrompt: (audit) => aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
-                base: { ...base, promptAudit: audit }, parentId: parent.id }) })
+                base: { ...base, promptAudit: audit }, parentId: parent.id }),
+            onSummary: jobSummary(job, 'analysis', 'Codex aggiorna la guida sulla nuova base.') })
         const added = extendMatchupDraftEvidence(aiQueries, queryEngine, generated)
         if (!added) break
         if (attempt === 3) throw new Error('La guida ha introdotto altre carte: completa il recupero delle prove e riprova.')
       }
       if (controller.signal.aborted) throw new Error('Operazione Codex annullata.')
+      jobProgress(job, 'verification', 'Controllo le carte citate e la guida aggiornata.')
       requireNamedEvidence(aiQueries)
       if (!generated) throw new Error('Guida Matchup non prodotta.')
       aiJobStore.prepare(job.id, { analysisVersion: 2, validatedDraft: true,
         base: { ...base, promptAudit: generated.promptAudit }, parentId: parent.id })
       const report = { ...generated, jobId: job.id, generatedAt: base.generatedAt,
         deckVersionId: base.deckVersionId, deckResolutionId: base.deckResolutionId }
+      jobProgress(job, 'saving', 'Salvo la nuova guida Matchup.')
       aiJobStore.ready(job.id, { report })
       const saved = projectStore.saveContinuedMatchupReport(report, parent.id)
       aiJobStore.transition(job.id, 'applied')
@@ -1639,6 +1767,15 @@ function createWindow(): void {
     }
   })
   mainWindow = window
+
+  window.on('unresponsive', () => {
+    recordRuntimeIncident({ at: new Date().toISOString(), kind: 'unresponsive' })
+  })
+  window.webContents.on('render-process-gone', (_event, details) => {
+    recordRuntimeIncident({ at: new Date().toISOString(), kind: 'renderer-gone',
+      reason: ['crashed', 'killed', 'oom', 'launch-failed', 'integrity-failure'].includes(details.reason)
+        ? details.reason : 'other' })
+  })
 
   window.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown' || input.alt || input.meta) return
@@ -1695,6 +1832,8 @@ app.whenReady().then(async () => {
       mkdirSync(override, { recursive: true })
       app.setPath('userData', override)
     }
+    diagnosticIncidentsPath = join(app.getPath('userData'), 'data', 'diagnostic-incidents.json')
+    runtimeIncidents.push(...readDiagnosticIncidents(diagnosticIncidentsPath))
     const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
     const migration = await prepareDatabaseMigration(databasePath)
     projectStore = new ProjectStore(databasePath)
@@ -1741,6 +1880,7 @@ app.whenReady().then(async () => {
     storageError = error instanceof DatabaseIntegrityError
       ? 'Archivio locale danneggiato. Gli aggiornamenti sono stati fermati per evitare altre modifiche. Conserva la cartella dati e segnala il problema.'
       : 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
+    storageIssue = error instanceof DatabaseIntegrityError ? 'integrity' : 'unavailable'
   }
 
   const imageDirectory = join(app.getPath('userData'), 'data', 'catalog-images')

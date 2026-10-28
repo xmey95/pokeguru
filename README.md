@@ -71,6 +71,10 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Novità della v0.3.3
+
+Durante le analisi lunghe di Thread e Matchup, Pokéguru mostra le fasi del job Codex e le sintesi disponibili, conservando lo stato durante navigazione e riavvio. Da **Impostazioni AI → Assistenza e diagnostica → Esporta diagnostica…** puoi salvare un JSON per segnalare bug e rallentamenti. Il file include stati tecnici, tempi dei blocchi UI e incidenti del renderer; esclude liste, conversazioni e credenziali. Controllalo prima di condividerlo.
+
 ### Correzioni della v0.3.2
 
 Nei Thread e nei Matchup Pokéguru recupera le schede delle carte nominate nella discussione e nelle liste Evento trovate. Se una prima risposta cita altre carte, le cerca nel Catalogo locale e rivede la risposta prima di salvarla. La diagnostica mostra quali testi sono stati consegnati, quali schede sono incomplete e quando una ricerca raggiunge un limite tecnico. Le liste del progetto vengono considerate per intero; le stampe con regole diverse restano distinte.
@@ -122,5 +126,7 @@ Lo stack usa Electron, React, TypeScript e SQLite. I rami `task/*` confluiscono 
 | [Istruzioni di progetto](AGENTS.md) | Procedura per contribuire con Codex. |
 
 Per un problema o una proposta, apri una [issue su GitHub](https://github.com/xmey95/pokeguru/issues). Indica versione dell'app, sistema operativo e passaggi per riprodurre il comportamento; allega una lista di esempio quando utile, evitando credenziali e dati personali.
+
+Da v0.3.3, per un problema nell'app apri **Impostazioni AI → Assistenza e diagnostica → Esporta diagnostica…** e allega il JSON salvato. Il report contiene stati e misure tecniche, senza nomi dei progetti, liste, conversazioni o credenziali; controllalo prima di condividerlo. Non viene inviato automaticamente.
 
 Le carte e le immagini consultate mantengono l'attribuzione alle rispettive fonti e ai titolari dei diritti. Gli asset delle carte acquisiti dall'app restano nella cache locale e non sono inclusi nel repository o nei pacchetti.
