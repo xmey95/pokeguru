@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import type { AiJobKind, AiJobStatus, AiJobSummary } from '../shared/ai-job'
+import type { AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
 
 export interface AiJob extends AiJobSummary {
   request: unknown | null
@@ -12,14 +12,20 @@ export interface AiJob extends AiJobSummary {
 interface JobRow {
   id: string; kind: AiJobKind; project_id: string; resource_id: string
   status: AiJobStatus; request_json: string | null; result_json: string | null
-  created_at: string; updated_at: string; error: string | null
+  created_at: string; updated_at: string; error: string | null; progress_json: string | null
+}
+
+function progress(row: { progress_json: string | null }): AiJobProgress | null {
+  if (!row.progress_json) return null
+  try { return JSON.parse(row.progress_json) as AiJobProgress }
+  catch { return null }
 }
 
 function job(row: JobRow): AiJob {
   return { id: row.id, kind: row.kind, projectId: row.project_id, resourceId: row.resource_id,
     status: row.status, request: row.request_json ? JSON.parse(row.request_json) as unknown : null,
     result: row.result_json ? JSON.parse(row.result_json) as unknown : null,
-    createdAt: row.created_at, updatedAt: row.updated_at, error: row.error }
+    createdAt: row.created_at, updatedAt: row.updated_at, error: row.error, progress: progress(row) }
 }
 
 export class AiJobStore {
@@ -38,11 +44,15 @@ export class AiJobStore {
       resource_id TEXT NOT NULL,
       status TEXT NOT NULL CHECK (status IN ('running', 'ready', 'applied', 'interrupted', 'cancelled', 'failed')),
       request_json TEXT, result_json TEXT,
-      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, error TEXT
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, error TEXT,
+      progress_json TEXT
     ) STRICT;
     CREATE UNIQUE INDEX IF NOT EXISTS ai_jobs_active_resource
       ON ai_jobs(project_id, resource_id) WHERE status IN ('running', 'ready');
     CREATE INDEX IF NOT EXISTS ai_jobs_recovery ON ai_jobs(status, updated_at);`)
+    const columns = this.db.prepare('PRAGMA table_info(ai_jobs)').all() as { name: string }[]
+    if (!columns.some((column) => column.name === 'progress_json'))
+      this.db.exec('ALTER TABLE ai_jobs ADD COLUMN progress_json TEXT')
   }
 
   start(kind: AiJobKind, projectId: string, resourceId: string): AiJob {
@@ -66,14 +76,16 @@ export class AiJobStore {
       AND status IN ('running', 'ready') LIMIT 1`).get(projectId, resourceId) as JobRow | undefined
     if (!row) return null
     return { id: row.id, kind: row.kind, projectId: row.project_id, resourceId: row.resource_id,
-      status: row.status, createdAt: row.created_at, updatedAt: row.updated_at, error: row.error }
+      status: row.status, createdAt: row.created_at, updatedAt: row.updated_at, error: row.error,
+      progress: progress(row) }
   }
 
   latest(projectId: string, resourceId: string): AiJobSummary | null {
     const row = this.db.prepare(`SELECT * FROM ai_jobs WHERE project_id = ? AND resource_id = ?
       ORDER BY created_at DESC, rowid DESC LIMIT 1`).get(projectId, resourceId) as JobRow | undefined
     return row ? { id: row.id, kind: row.kind, projectId: row.project_id, resourceId: row.resource_id,
-      status: row.status, createdAt: row.created_at, updatedAt: row.updated_at, error: row.error } : null
+      status: row.status, createdAt: row.created_at, updatedAt: row.updated_at, error: row.error,
+      progress: progress(row) } : null
   }
 
   recent(limit = 30): AiJobSummary[] {
@@ -82,6 +94,22 @@ export class AiJobStore {
     return rows.map((row) => ({ id: row.id, kind: row.kind, projectId: row.project_id,
       resourceId: row.resource_id, status: row.status, createdAt: row.created_at,
       updatedAt: row.updated_at, error: row.error }))
+  }
+
+  updateProgress(id: string, phase: AiJobPhase, detail: string, summary?: string): void {
+    const current = this.db.prepare('SELECT status, progress_json FROM ai_jobs WHERE id = ?')
+      .get(id) as { status: AiJobStatus; progress_json: string | null } | undefined
+    if (!current || current.status !== 'running') return
+    const at = new Date().toISOString()
+    const cleanDetail = detail.trim().slice(0, 180)
+    const previous = progress(current)
+    const next: AiJobProgress = { phase, detail: cleanDetail,
+      summary: summary === undefined ? (previous?.phase === phase ? previous.summary : null) :
+        summary.trim().slice(0, 900) || null,
+      updatedAt: at, steps: [...(previous?.steps ?? []),
+        { phase, detail: cleanDetail, at }].slice(-12) }
+    this.db.prepare(`UPDATE ai_jobs SET progress_json = ?, updated_at = ?
+      WHERE id = ? AND status = 'running'`).run(JSON.stringify(next), at, id)
   }
 
   recoverable(): AiJob[] {

@@ -20,7 +20,7 @@ import { AiDiagnostics, AiEvidenceLimit } from './AiDiagnostics'
 import { MatchupPlan } from './MatchupPlan'
 import { catalogCardTargets, reportGuideReferences, type GuideReference } from './guide-links'
 import { useNavigation, useViewState, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
-import { ActivityStatus, LoadingSkeleton, Spinner } from './Loading'
+import { ActivityStatus, AiJobActivity, LoadingSkeleton, Spinner } from './Loading'
 
 function date(value: string): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -378,8 +378,9 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     </div>
     {error && <div className="error-banner" role="alert">{error}</div>}
     {loading && snapshot && <ActivityStatus title="Aggiornamento del metagame…" detail="La guida salvata resta consultabile." />}
-    {(generating || aiJob?.status === 'running') && !revisionInFlight && aiJob?.status !== 'ready' && <ActivityStatus title="Preparazione della guida…" startedAt={startedAt}
-      detail={report ? 'La guida precedente resta consultabile.' : 'Puoi consultare la lista o cambiare sezione.'} />}
+    {(generating || aiJob?.status === 'running') && aiJob?.status !== 'ready' && <AiJobActivity
+      job={aiJob?.projectId === projectId ? aiJob : null} startedAt={startedAt}
+      title={revisionInFlight ? 'Codex sta aggiornando la guida…' : 'Preparazione della guida…'} />}
     {aiJob && (aiJob.status === 'running' || aiJob.status === 'ready') &&
       <div className="content-note">{aiJob.status === 'ready' && <span role="status">La guida è pronta, ma non è stata salvata.</span>}
         <button type="button" className="text-button" onClick={() => void cancelAi()}>{aiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
@@ -457,7 +458,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               {discussion && <DiscussionView discussion={discussion} feedback={feedback} onFeedback={setFeedback}
                 onSubmit={() => void submitFeedback()} onRetry={(turnId) => void submitFeedback(turnId)}
                 onContinue={() => void continueOnCurrentBase()} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard}
-                generating={generating} startedAt={startedAt} inFlight={revisionInFlight} error={revisionError}
+                generating={generating} inFlight={revisionInFlight} error={revisionError}
                 canRevise={!aiBusy && !snapshot.cached && !!reconciliation} canRetry={!aiBusy && !!reconciliation}
                 canContinue={!aiBusy && !currentDiscussion && selectedInCurrentMeta && hasBaseline}
                 absentFromMeta={!selectedInCurrentMeta} cached={snapshot.cached} aiControls={aiControls} />}

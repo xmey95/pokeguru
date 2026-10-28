@@ -110,7 +110,8 @@ export function extendAiEvidenceForText(trace: AiEvidenceQueryTrace, engine: AiE
 /** Execute read-only local queries, beginning with exact names found in the full context. */
 export async function runAiEvidenceQueries(request: string, initialEvidence: unknown,
   engine: AiEvidenceEngine, plan: (prompt: string) => Promise<unknown>,
-  options: { contextTexts?: string[]; eventContextTexts?: string[] } = {}):
+  options: { contextTexts?: string[]; eventContextTexts?: string[];
+    onRound?: (round: number, queries: number) => void } = {}):
   Promise<AiEvidenceQueryTrace> {
   const started = performance.now()
   const trace: AiEvidenceQueryTrace = { schemaVersion: 1, engine: engine.describe(),
@@ -142,6 +143,7 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
       typeof value?.continueAfterResults !== 'boolean')
       throw new Error('Piano delle query Codex non valido.')
     trace.planningRounds++
+    options.onRound?.(trace.planningRounds, queries.length)
     for (const query of queries) {
       const normalized = query && typeof query === 'object' && !Array.isArray(query)
         ? Object.fromEntries(Object.entries(query).filter(([, item]) => item !== null)) : query

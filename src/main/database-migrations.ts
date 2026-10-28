@@ -5,8 +5,9 @@ import { backup, DatabaseSync } from 'node:sqlite'
 
 /** Version 1 records legacy migrations, 2 AI jobs, 3 the opening AI message link,
  * 4 project archives, 5 Catalog cooldowns, 6 Catalog job run IDs,
- * 7 rotation history, 8 daily sync outcomes, 9 deck version context and restoration. */
-export const CURRENT_SCHEMA_VERSION = 9
+ * 7 rotation history, 8 daily sync outcomes, 9 deck version context and restoration,
+ * 10 persisted AI job progress. */
+export const CURRENT_SCHEMA_VERSION = 10
 
 export interface MigrationPreparation {
   fromVersion: number

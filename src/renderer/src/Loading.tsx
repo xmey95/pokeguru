@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
+import type { AiJobPhase, AiJobSummary } from '../../shared/ai-job'
 
 export function Spinner() {
   return <span className="loading-spinner" aria-hidden="true" />
@@ -46,11 +47,44 @@ export function ActivityStatus({ title, detail, state = 'working', startedAt, pr
       <strong id={id} role="status" aria-describedby={detail ? `${id}-detail` : undefined}>{title}</strong>
       {state === 'working' && startedAt && <Elapsed startedAt={startedAt} />}
     </div>
-    {detail && <p id={`${id}-detail`} className="activity-detail">{detail}</p>}
+    {detail && <p id={`${id}-detail`} className="activity-detail" aria-live="polite">{detail}</p>}
     {measured && <div className="activity-progress">
       <progress aria-label={progress.label} value={Math.max(0, Math.min(progress.value, progress.total))} max={progress.total} />
       <span>{progress.value.toLocaleString('it-IT')} / {progress.total.toLocaleString('it-IT')} · {progress.label}</span>
     </div>}
     {children}
   </div>
+}
+
+const aiStages: { label: string; phases: AiJobPhase[] }[] = [
+  { label: 'Raccolta dati', phases: ['preparing', 'catalog', 'events'] },
+  { label: 'Ricerche', phases: ['planning'] },
+  { label: 'Analisi Codex', phases: ['analysis'] },
+  { label: 'Verifica e salvataggio', phases: ['verification', 'saving'] }
+]
+
+export function AiJobActivity({ job, title, startedAt, className = '' }: {
+  job: AiJobSummary | null
+  title: string
+  startedAt?: number | null
+  className?: string
+}) {
+  const phase = job?.progress?.phase ?? 'preparing'
+  const activeIndex = aiStages.findIndex((stage) => stage.phases.includes(phase))
+  return <ActivityStatus title={title} detail={job?.progress?.detail ?? 'Preparazione del lavoro Codex…'}
+    startedAt={startedAt ?? (job ? Date.parse(job.createdAt) : null)} className={`ai-job-activity ${className}`}>
+    <ol className="ai-job-stages" aria-label="Fasi dell’elaborazione">
+      {aiStages.map((stage, index) => <li key={stage.label} data-state={index < activeIndex ? 'done' : index === activeIndex ? 'current' : 'waiting'}>
+        <span aria-hidden="true">{index < activeIndex ? '✓' : index + 1}</span>{stage.label}
+      </li>)}
+    </ol>
+    {job?.progress?.summary && <div className="ai-job-summary">
+      <strong>Sintesi fornita da Codex</strong><p>{job.progress.summary}</p>
+    </div>}
+    {!!job?.progress?.steps.length && <details className="ai-job-trace"><summary>Attività svolte</summary>
+      <ol>{job.progress.steps.map((step, index) => <li key={`${step.at}-${index}`}>
+        <time dateTime={step.at}>{new Date(step.at).toLocaleTimeString('it-IT')}</time> · {step.detail}
+      </li>)}</ol>
+    </details>}
+  </ActivityStatus>
 }

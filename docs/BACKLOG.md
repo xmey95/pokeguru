@@ -158,6 +158,16 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-151** | Diagnosticare la corruzione SQLite e fermare l'app prima di nuove scritture | Affidabilità dati | R-01, R-03 / blocco d'avvio osservato | P0 / M | Diagnosi nei limiti delle evidenze; guardia d'avvio in `dev` con CI verde; profilo attivo invariato | Done |
 | **APP-152** | Pubblicare v0.3.1 con le correzioni APP-148 e APP-151 | Distribuzione | R-01, R-02, R-03, R-12 / richiesta utente | P0 / S | Release pubblica verificata; APP-147 resta in attesa della prova Finder | Done |
 | **APP-153** | Recupero iterativo e verificabile delle prove AI per Thread e Matchup | Funzionalità/qualità AI | R-02, R-06, R-07, R-10, R-13 / feedback utente 27-10-2026 | P0 / L | APP-115/116/118/119; dati locali e test Codex reali | Done |
+| **APP-154** | Mostrare l’attività Codex durante i turni lunghi nei Thread e Matchup | UI/affidabilità AI | R-07, R-10, R-13 / richiesta utente 28-10-2026 | P1 / M | APP-153; job durevoli APP-097; CLI Codex isolata | In progress |
+
+### APP-154 — Attività Codex visibile durante l’elaborazione
+
+- **Autorizzazione:** l’utente ha approvato la proposta grafica e richiesto un obiettivo per completare l’attività. Integrare in `dev`; I4 e una nuova release restano fuori dal perimetro di questa richiesta.
+- **Accettazione:** Thread, generazione, revisione e continuazione Matchup mostrano fasi fondate su eventi reali di Catalogo, Eventi, ricerche locali, analisi Codex, verifica e salvataggio. Quando Codex emette una sintesi leggibile del proprio ragionamento, la vista la mostra come tale senza esporre output grezzo o promettere un flusso continuo che la CLI non emette. Lo stato è associato al job e al progetto, sopravvive alla navigazione e al riavvio, e non avanza dopo annullamento o completamento. La lista resta consultabile.
+- **Verifica prevista:** migrazione SQLite da job preesistenti, isolamento dei job, parsing JSONL delle sole sintesi Codex, typecheck/build, test pertinenti, smoke Electron e un turno Codex reale; CI della PR su `dev`.
+- **Avvio:** ramo `task/app-154-codex-progress` da `dev` `58f709d`. Implementazione in corso.
+- **Risultato locale:** schema SQLite v10 con backup verificato da v9, progresso limitato e persistito per job, lettura filtrata su progetto/risorsa, quattro tappe nella vista e registro delle attività. Le tre invocazioni CLI isolate chiedono solo la sintesi concisa e filtrano gli eventi JSONL. Thread, generazione, revisione e continuazione Matchup aggiornano le fasi durante il lavoro; dopo annullamento o completamento il progresso non può più avanzare.
+- **Verifiche locali (28-10-2026):** build/typecheck, 252 test della suite (32 live esclusi), test mirati di migrazione v9→v10, persistenza e parser, smoke Electron offline e Thread con CLI assente riusciti. Prova Electron con Codex reale: due Thread indipendenti, candidate e riapertura riuscite; Matchup con 45 archetipi Limitless, guida iniziale, due revisioni e continuazione sulla nuova lista persistite. I selettori obsoleti del test Matchup sono stati allineati alla UI corrente. La CLI può emettere sintesi a blocchi o non emetterle in un turno; non è garantito un flusso parola per parola. Restano PR, CI e merge in `dev`.
 
 ### APP-129 — Conversazione naturale e candidate nel Thread
 

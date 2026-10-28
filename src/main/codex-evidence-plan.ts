@@ -7,10 +7,11 @@ import { readAiTokenUsage, type AiTokenUsage } from '../shared/ai-evidence'
 import { CODEX_ISOLATION_ARGS } from './codex-isolation'
 import { codexLauncher } from './codex-setup'
 import { AI_QUERY_PLAN_SCHEMA } from './ai-evidence-queries'
+import { codexReasoningSummary } from './codex-progress'
 
 /** An isolated, ephemeral structured call. The app validates the result before using it. */
 export async function runStructuredCodex(prompt: string, config: AiRunConfig,
-  schema: unknown, signal?: AbortSignal): Promise<unknown> {
+  schema: unknown, signal?: AbortSignal, onSummary?: (summary: string) => void): Promise<unknown> {
   if (signal?.aborted) throw new Error('Operazione Codex annullata.')
   const directory = mkdtempSync(join(tmpdir(), 'pokeguru-query-plan-'))
   const schemaPath = join(directory, 'schema.json')
@@ -18,7 +19,7 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
   writeFileSync(schemaPath, JSON.stringify(schema), 'utf8')
   const launcher = codexLauncher('')
   const args = ['exec', '--ephemeral', '--json', ...CODEX_ISOLATION_ARGS,
-    '--config', 'approval_policy="never"', '--skip-git-repo-check',
+    '--config', 'approval_policy="never"', '--config', 'model_reasoning_summary="concise"', '--skip-git-repo-check',
     '--color', 'never', '-C', directory,
     ...(config.model ? ['--model', config.model] : []),
     ...(config.reasoningEffort ? ['--config',
@@ -34,12 +35,15 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
       let stderr = ''
       let stdout = ''
       let usage: AiTokenUsage | null = null
-      child.stdout.on('data', (chunk: Buffer) => {
-        stdout += chunk.toString()
+      child.stdout.setEncoding('utf8')
+      child.stdout.on('data', (chunk: string) => {
+        stdout += chunk
         const lines = stdout.split('\n')
         stdout = lines.pop() ?? ''
         for (const line of lines) {
           try {
+            const summary = codexReasoningSummary(line)
+            if (summary) onSummary?.(summary)
             const event = JSON.parse(line) as { type?: string; usage?: unknown }
             if (event.type === 'turn.completed') usage = readAiTokenUsage(event.usage)
           } catch { /* Ignore non-event output. */ }
@@ -77,6 +81,6 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
 
 /** The existing Matchup/Thread query planner keeps its fixed schema. */
 export function planEvidenceQueriesWithCodex(prompt: string, config: AiRunConfig,
-  signal?: AbortSignal): Promise<unknown> {
-  return runStructuredCodex(prompt, config, AI_QUERY_PLAN_SCHEMA, signal)
+  signal?: AbortSignal, onSummary?: (summary: string) => void): Promise<unknown> {
+  return runStructuredCodex(prompt, config, AI_QUERY_PLAN_SCHEMA, signal, onSummary)
 }

@@ -118,6 +118,14 @@ try {
       await switchThread(page, new RegExp(name))
       await page.getByLabel('Scrivi nel thread').fill(`Rispondi brevemente includendo il codice ${code}.`)
       await page.getByRole('button', { name: 'Invia a Codex' }).click()
+      await page.locator('.ai-job-activity').waitFor({ timeout: 30000 })
+      assert.equal(await page.locator('.ai-job-stages li').count(), 4)
+      const activeJob = await page.evaluate(([projectId, threadId]) =>
+        window.projectsApi.getAiJobStatus(projectId, threadId),
+      [project.id, (await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)).value
+        .find((thread) => thread.title === name).id])
+      assert.equal(activeJob.ok, true)
+      assert.ok(activeJob.value?.progress?.steps.length > 0)
       try {
         await page.locator('.thread-message')
           .filter({ has: page.locator('small', { hasText: 'Codex' }) })
