@@ -41,6 +41,8 @@ export type OperationResult<T> =
   | { ok: false; error: string }
 
 export interface ProjectsApi {
+  exportDiagnostics(): Promise<OperationResult<{ saved: boolean; fileName?: string }>>
+  recordUiLongTask(durationMs: number): Promise<void>
   getCatalog(): Promise<OperationResult<CatalogView>>
   getCatalogBrowseOverview(): Promise<OperationResult<CatalogBrowseOverview>>
   searchCatalog(query: string, setId: string, offset: number): Promise<OperationResult<CatalogBrowsePage>>

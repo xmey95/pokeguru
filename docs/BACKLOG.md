@@ -159,6 +159,14 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-152** | Pubblicare v0.3.1 con le correzioni APP-148 e APP-151 | Distribuzione | R-01, R-02, R-03, R-12 / richiesta utente | P0 / S | Release pubblica verificata; APP-147 resta in attesa della prova Finder | Done |
 | **APP-153** | Recupero iterativo e verificabile delle prove AI per Thread e Matchup | Funzionalità/qualità AI | R-02, R-06, R-07, R-10, R-13 / feedback utente 27-10-2026 | P0 / L | APP-115/116/118/119; dati locali e test Codex reali | Done |
 | **APP-154** | Mostrare l’attività Codex durante i turni lunghi nei Thread e Matchup | UI/affidabilità AI | R-07, R-10, R-13 / richiesta utente 28-10-2026 | P1 / M | APP-153; job durevoli APP-097; CLI Codex isolata | Done |
+| **APP-155** | Esportare diagnostica locale discreta per bug, prestazioni e sicurezza | Affidabilità/UI | R-14 / richiesta utente 28-10-2026 | P1 / M | APP-151, APP-154; export da Impostazioni | Done |
+
+### APP-155 — Diagnostica esportabile
+
+- **Autorizzazione:** richiesta del 28-10-2026 per ottenere dalle release un file facilmente condivisibile, senza mettere l'export in primo piano. Ramo `task/app-155-diagnostics` da `dev`.
+- **Accettazione:** comando secondario e richiudibile nelle Impostazioni AI; salvataggio JSON dopo scelta della destinazione; nessuna rete né telemetria. Versione/piattaforma, stato dell'archivio, conteggi Catalogo/Eventi, sincronizzazioni, job AI, tempi di blocco UI e incidenti renderer disponibili anche con archivio illeggibile. Allowlist dei campi: niente contenuto dei progetti o delle conversazioni, credenziali, URL, percorsi e testi grezzi degli errori. Il file dichiara cosa esclude.
+- **Verifica prevista:** test di esclusione dei dati sensibili e del caso archivio corrotto, build/typecheck, smoke Electron con export reale su profilo temporaneo e suite pertinente. Prima di integrare in `dev`, verificare che la UI rimanga discreta e che l'export non alteri i dati locali.
+- **Risultato e verifiche locali:** file JSON a campi consentiti, scelta della destinazione, avviso di salvataggio e sezione richiudibile. Incidenti renderer conservati fino a 20 anche dopo riavvio; blocchi UI conservati fino a 50 durante la sessione. Build/typecheck passati, suite locale Node 24 con Temp nel workspace: 344 test passati, 42 esclusi; smoke Electron con profilo temporaneo e nome progetto privato ha verificato export e assenza del nome nel file; secondo smoke con SQLite danneggiato ha salvato un report con `issue: integrity` senza modificare l'archivio. `git diff --check` passato. I blocchi UI sono disponibili soltanto se osservati nella sessione aperta; il report non sostituisce un audit di sicurezza o un profilo CPU completo. Consegnare in `dev` tramite PR e CI; nessuna release pubblicata da questo task.
 
 ### APP-154 — Attività Codex visibile durante l’elaborazione
 

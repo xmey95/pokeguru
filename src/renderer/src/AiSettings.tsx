@@ -25,6 +25,8 @@ export function AiSettings() {
   const [error, setError] = useDraftState<string | null>('ai.error', null)
   const [errorScope, setErrorScope] = useDraftState<'connection' | 'preferences'>('ai.error-scope', 'preferences')
   const [notice, setNotice] = useDraftState<string | null>('ai.notice', null)
+  const [exportingDiagnostics, setExportingDiagnostics] = useState(false)
+  const [diagnosticsNotice, setDiagnosticsNotice] = useState<string | null>(null)
   const connectionRequest = useRef(0)
   const preferencesRequest = useRef(0)
 
@@ -168,6 +170,17 @@ export function AiSettings() {
     finally { finish() }
   }
 
+  async function exportDiagnostics(): Promise<void> {
+    setExportingDiagnostics(true)
+    setDiagnosticsNotice(null)
+    try {
+      const result = await window.projectsApi.exportDiagnostics()
+      setDiagnosticsNotice(!result.ok ? result.error : result.value.saved
+        ? `File salvato: ${result.value.fileName}. Allegalo alla conversazione per l’analisi.` : null)
+    } catch { setDiagnosticsNotice('Esportazione non riuscita. Riprova.') }
+    finally { setExportingDiagnostics(false) }
+  }
+
   return <section className="ai-settings" aria-label="Impostazioni AI" data-nav-loading={loading || preferencesLoading}>
     <h1>Impostazioni AI</h1>
     <p className="content-note">Configura Codex per le prossime analisi.</p>
@@ -263,6 +276,13 @@ export function AiSettings() {
         <summary>Dati inviati a Codex</summary>
         <p className="content-note">Thread: messaggio, conversazione, lista di riferimento, vincoli e fonti. Matchup: lista, avversario e fonti; nelle revisioni anche guida e osservazioni.</p>
         <p className="content-note">Il dettaglio dei dati è consultabile nelle rispettive sezioni, prima dell’invio.</p>
+      </details>
+      <details>
+        <summary>Assistenza e diagnostica</summary>
+        <p className="content-note">Salva un file da allegare quando segnali bug o rallentamenti. Include versione, stato del catalogo e degli eventi, job AI e tempi di blocco dell’interfaccia.</p>
+        <p className="content-note">Esclude nomi e liste dei progetti, conversazioni, testi degli errori, percorsi e credenziali. Controlla comunque il file prima di condividerlo.</p>
+        <button type="button" className="secondary-button" onClick={() => void exportDiagnostics()} disabled={exportingDiagnostics}>{exportingDiagnostics ? 'Esportazione…' : 'Esporta diagnostica…'}</button>
+        {diagnosticsNotice && <p className="content-note" role="status">{diagnosticsNotice}</p>}
       </details>
     </div>
   </section>

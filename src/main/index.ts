@@ -1,5 +1,6 @@
-import { app, BrowserWindow, clipboard, ipcMain, Menu, protocol, shell } from 'electron'
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, shell } from 'electron'
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { dirname, join } from 'node:path'
@@ -65,6 +66,8 @@ import type { DailySyncSource } from '../shared/daily-sync'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../shared/tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
 import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
+import { buildDiagnosticReport, type RuntimeIncident, type UiLongTask } from './diagnostics'
+import { readDiagnosticIncidents, writeDiagnosticIncidents } from './diagnostic-incidents'
 
 app.setName('Pokeguru')
 protocol.registerSchemesAsPrivileged([{
@@ -80,6 +83,19 @@ let dailySyncStore: DailySyncStore | null = null
 let playTournamentJob: TournamentSyncJob<TournamentSyncProgress> | null = null
 let mainTournamentJob: TournamentSyncJob<MainTournamentSyncProgress> | null = null
 let storageError: string | null = null
+let storageIssue: 'integrity' | 'unavailable' | null = null
+const uiLongTasks: UiLongTask[] = []
+const runtimeIncidents: RuntimeIncident[] = []
+let diagnosticIncidentsPath: string | null = null
+
+function recordRuntimeIncident(incident: RuntimeIncident): void {
+  runtimeIncidents.push(incident)
+  if (runtimeIncidents.length > 20) runtimeIncidents.shift()
+  if (diagnosticIncidentsPath) {
+    try { writeDiagnosticIncidents(diagnosticIncidentsPath, runtimeIncidents) }
+    catch { /* Diagnostics must not affect the application. */ }
+  }
+}
 let aiPreferencesStore: AiPreferencesStore | null = null
 const codexControl = new CodexControl(() => app.getPath('userData'))
 const codexSetup = new CodexSetup(() => app.getPath('userData'))
@@ -476,6 +492,69 @@ function registerProjectHandlers(): void {
   const isMainFrame = (event: Electron.IpcMainInvokeEvent): boolean =>
     mainWindow !== null && event.sender === mainWindow.webContents &&
     event.senderFrame === mainWindow.webContents.mainFrame && isTrustedRendererUrl(event.senderFrame.url)
+
+  ipcMain.handle('diagnostics:ui-long-task', (event, duration: unknown): void => {
+    if (!isMainFrame(event) || typeof duration !== 'number' || !Number.isFinite(duration) ||
+      duration < 50 || duration > 60_000) return
+    uiLongTasks.push({ at: new Date().toISOString(), durationMs: duration })
+    if (uiLongTasks.length > 50) uiLongTasks.shift()
+  })
+
+  ipcMain.handle('diagnostics:export', async (event): Promise<OperationResult<{ saved: boolean; fileName?: string }>> => {
+    if (!isMainFrame(event) || !mainWindow) return { ok: false, error: 'Richiesta non autorizzata.' }
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15)
+    const fileName = `Pokeguru-diagnostica-${stamp}.json`
+    try {
+      const choice = await dialog.showSaveDialog(mainWindow, {
+        title: 'Esporta diagnostica', defaultPath: join(app.getPath('downloads'), fileName),
+        filters: [{ name: 'Diagnostica JSON', extensions: ['json'] }]
+      })
+      if (choice.canceled || !choice.filePath) return { ok: true, value: { saved: false } }
+      const start = performance.now()
+      const unavailableSections: string[] = []
+      const collect = <T>(name: string, read: () => T): T | null => {
+        try { return read() } catch { unavailableSections.push(name); return null }
+      }
+      const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
+      const size = (path: string): number | null => {
+        try { return statSync(path).size } catch { return null }
+      }
+      const projects = collect('projects', () => projectStore
+        ? { active: projectStore.list().length, archived: projectStore.listArchived().length } : null)
+      const catalog = collect('catalog', () => {
+        if (!catalogStore) return null
+        const overview = catalogStore.browseOverview()
+        return { sets: overview.sets.length, prints: overview.stats.acquired,
+          groups: overview.stats.groups, thumbnails: overview.stats.thumbnails,
+          highImages: overview.stats.highImages, missingImages: overview.stats.imageCacheMissing,
+          syncedAt: overview.syncedAt, coverageExpected: overview.standardCoverage?.expected ?? null,
+          coverageAcquired: overview.standardCoverage?.acquired ?? null }
+      })
+      const events = collect('events', () => tournamentStore
+        ? { play: tournamentStore.summaries().length, regional: tournamentStore.mainSummaries().length } : null)
+      const catalogSync = collect('catalogSync', () => catalogStore ? catalogJobStatus(catalogStore) : null)
+      const playSync = collect('playSync', () => playTournamentJob?.status() ?? null)
+      const mainSync = collect('mainSync', () => mainTournamentJob?.status() ?? null)
+      const jobs = collect('aiJobs', () => aiJobStore?.recent(30) ?? null)
+      const report = buildDiagnosticReport({
+        generatedAt: new Date().toISOString(), version: app.getVersion(), packaged: app.isPackaged,
+        platform: process.platform, architecture: process.arch,
+        electron: process.versions.electron ?? '', chrome: process.versions.chrome ?? '',
+        node: process.versions.node, uptimeSeconds: process.uptime(),
+        mainHeapBytes: process.memoryUsage().heapUsed,
+        database: { available: !!projectStore, issue: storageIssue,
+          bytes: size(databasePath), walBytes: size(`${databasePath}-wal`) },
+        projects, catalog, events, catalogSync, playSync, mainSync,
+        daily: { catalog: collect('dailyCatalog', () => dailySyncStore?.read('catalog') ?? null),
+          play: collect('dailyPlay', () => dailySyncStore?.read('play') ?? null),
+          main: collect('dailyMain', () => dailySyncStore?.read('main') ?? null) },
+        jobs, uiLongTasks, incidents: runtimeIncidents,
+        collectionMs: performance.now() - start, unavailableSections
+      })
+      await writeFile(choice.filePath, JSON.stringify(report, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 })
+      return { ok: true, value: { saved: true, fileName: choice.filePath.split(/[\\/]/).pop() ?? fileName } }
+    } catch { return { ok: false, error: 'Esportazione non riuscita. Scegli un’altra cartella e riprova.' } }
+  })
 
   ipcMain.handle('tournament:get', (event): OperationResult<TournamentSnapshot | null> => {
     if (!isMainFrame(event)) return { ok: false, error: 'Richiesta non autorizzata.' }
@@ -1689,6 +1768,15 @@ function createWindow(): void {
   })
   mainWindow = window
 
+  window.on('unresponsive', () => {
+    recordRuntimeIncident({ at: new Date().toISOString(), kind: 'unresponsive' })
+  })
+  window.webContents.on('render-process-gone', (_event, details) => {
+    recordRuntimeIncident({ at: new Date().toISOString(), kind: 'renderer-gone',
+      reason: ['crashed', 'killed', 'oom', 'launch-failed', 'integrity-failure'].includes(details.reason)
+        ? details.reason : 'other' })
+  })
+
   window.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown' || input.alt || input.meta) return
     const key = input.key.toLowerCase()
@@ -1744,6 +1832,8 @@ app.whenReady().then(async () => {
       mkdirSync(override, { recursive: true })
       app.setPath('userData', override)
     }
+    diagnosticIncidentsPath = join(app.getPath('userData'), 'data', 'diagnostic-incidents.json')
+    runtimeIncidents.push(...readDiagnosticIncidents(diagnosticIncidentsPath))
     const databasePath = join(app.getPath('userData'), 'data', 'pokeguru.sqlite')
     const migration = await prepareDatabaseMigration(databasePath)
     projectStore = new ProjectStore(databasePath)
@@ -1790,6 +1880,7 @@ app.whenReady().then(async () => {
     storageError = error instanceof DatabaseIntegrityError
       ? 'Archivio locale danneggiato. Gli aggiornamenti sono stati fermati per evitare altre modifiche. Conserva la cartella dati e segnala il problema.'
       : 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
+    storageIssue = error instanceof DatabaseIntegrityError ? 'integrity' : 'unavailable'
   }
 
   const imageDirectory = join(app.getPath('userData'), 'data', 'catalog-images')
