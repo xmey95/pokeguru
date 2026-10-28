@@ -30,6 +30,8 @@ La cancellazione rimuove il progetto dal database attivo, ma **non cancella i ba
 
 ## Job Codex e risultati
 
+La v0.3.6 mantiene lo schema 13. La correzione APP-170 cambia l'identità delle nuove partecipazioni nelle prove AI, senza riscrivere snapshot già sigillati o cancellare job. L'errore UNIQUE della v0.3.5 annullava soltanto la transazione della cattura Eventi: il primo messaggio, il workflow e gli input precedenti restano disponibili. Dopo l'aggiornamento, **Riprendi analisi** ripete quella cattura e prosegue sullo stesso job. Il recupero è verificato con un profilo temporaneo passato dalla build v0.3.5 alla build corretta e Codex reale; non è una riparazione di database fisicamente danneggiati.
+
 Un job Thread o Matchup in corso conserva il contesto in `ai_jobs` e l'output CLI in `data/ai-jobs/<id>/`. Dopo un'interruzione, all'avvio l'app applica un risultato completo una volta sola; un job senza risultato viene segnato come interrotto e può essere ripetuto dall'interfaccia. La cancellazione è registrata prima dell'arresto del processo. Quando il risultato è applicato o il job termina senza risultato, il contesto e la risposta duplicati vengono rimossi dal registro; le evidenze associate ai messaggi Thread e alle guide Matchup restano nell'archivio. Le directory temporanee di un processo terminato bruscamente possono richiedere pulizia successiva dopo aver verificato che il job non sia recuperabile.
 
 ## Cronologia attività AI

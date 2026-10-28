@@ -74,6 +74,14 @@ function canonical(value: unknown): unknown {
 export const evidenceHash = (value: unknown): string =>
   createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex')
 
+/** New snapshots identify the participation, independently from a shared deck URL.
+ * Keep the old identity for already-sealed v0.3.5 snapshots and their saved pages. */
+export function evidenceOccurrenceIdentity(value: Record<string, unknown>): string {
+  return typeof value.participationId === 'string' && value.participationId
+    ? evidenceHash([value.id, 'participation', value.participationId])
+    : evidenceHash([value.id, value.listUrl])
+}
+
 /** Exact quantities and printed card identifiers; neither similarity nor names alone. */
 function exactDeckLines(cards: string[]): string[] {
   const copies = new Map<string, number>()
@@ -212,9 +220,16 @@ export class AiEvidenceArchive {
   captureSources(metadata: unknown, rows: Iterable<EvidenceSnapshotRow>): void {
     if (this.value('snapshot', 'sources') !== undefined) return
     this.atomic(() => {
-      const insert = this.db.prepare('INSERT INTO ai_evidence_event_index VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      for (const row of rows) insert.run(this.id, row.key, row.deckKey, row.date, row.placing,
-        row.deckName, row.deckText, row.cardsText, this.put(row.value))
+      const insert = this.db.prepare(`INSERT INTO ai_evidence_event_index VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(job_id, key) DO NOTHING`)
+      const existing = this.db.prepare('SELECT object_hash FROM ai_evidence_event_index WHERE job_id = ? AND key = ?')
+      for (const row of rows) {
+        const hash = this.put(row.value)
+        const saved = insert.run(this.id, row.key, row.deckKey, row.date, row.placing,
+          row.deckName, row.deckText, row.cardsText, hash)
+        if (!saved.changes && (existing.get(this.id, row.key) as { object_hash: string }).object_hash !== hash)
+          throw new Error('La stessa partecipazione contiene dati diversi nello snapshot degli Eventi.')
+      }
       this.db.prepare('INSERT INTO ai_evidence_values VALUES (?, ?, ?, ?)')
         .run(this.id, 'snapshot', 'sources', this.put(metadata))
     })
@@ -322,7 +337,7 @@ export class AiEvidenceArchive {
         const sourceId = result.sourceIds[index] ?? `deck:${key}`
         this.record(`deck:${key}`, 'deck', sourceId, { identity: key, cards: exactDeckLines(cards) })
         const refs = Array.isArray(occurrences) ? occurrences.map((value: Row) => {
-          const occurrenceKey = evidenceHash([value.id, value.listUrl])
+          const occurrenceKey = evidenceOccurrenceIdentity(value)
           if (!value.id || !value.listUrl) throw new Error('Partecipazione priva di provenienza.')
           const { pairings, ...participation } = value
           this.record(`occurrence:${occurrenceKey}`, 'occurrence', sourceId, participation, key)

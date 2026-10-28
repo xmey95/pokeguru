@@ -71,6 +71,10 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Correzione della v0.3.6
+
+Le analisi distinguono i partecipanti dello stesso torneo anche quando condividono l'URL della lista. Questo corregge il blocco `UNIQUE constraint failed: ai_evidence_event_index.job_id, ai_evidence_event_index.key`. Dopo l'aggiornamento usa **Riprendi analisi** sul lavoro interrotto: messaggio iniziale e input già salvati vengono conservati. Non occorre annullare il Thread o azzerare il database.
+
 ### Novità della v0.3.5
 
 La cronologia delle attività AI conserva tutte le nuove voci e sintesi, carica le precedenti quando scorri verso l'alto e mantiene navigabili Thread e Matchup durante il lavoro.

@@ -19,6 +19,11 @@ La conferma riguarda il Thread mostrato e il backend verifica progetto, ID e tit
 ### T-168 — Caricamento delle guide e selezione progetti
 
 Le letture Matchup sono associate a progetto, avversario, snapshot e versione della lista. Prima del completamento si mostra un'attesa; errore con riprova e assenza confermata hanno stati distinti. Le azioni di generazione compaiono solo dopo la lettura. Il selettore progetti usa una modale nativa centrata, sfondo sfocato, ricerca e schede attivi/archiviati; il browser gestisce contenimento del focus, Escape e ritorno al pulsante. Restano tutte le azioni di gestione già disponibili.
+### T-170 — Identità delle partecipazioni e compatibilità degli snapshot
+
+L'URL di una lista identifica la fonte del mazzo, non necessariamente il partecipante. Dalla v0.3.6 l'indice e i record delle occorrenze condividono una chiave basata su evento e identificativo del giocatore; quando manca, si conserva la posizione della riga nello snapshot immutabile. Non si fondono partecipanti per nome, piazzamento o lista, e l'identificativo del giocatore Regional disponibile resta nella provenienza. Ripetizioni della stessa identità sono accettate solo con originale identico; dati discordanti causano rollback, senza sovrascrittura o scarto silenzioso.
+
+Gli snapshot v0.3.5 già sigillati conservano la chiave precedente e le pagine salvate; nessuna migrazione distruttiva o aumento dello schema 13. La cattura fallita per collisione non aveva sigillato gli Eventi: ripeterla con la correzione conserva il resto del workflow. Prova Electron di aggiornamento v0.3.5 → v0.3.6 con Codex reale passata: stesso job, primo messaggio e hash degli input invariati, quattro partecipazioni con URL comune, altro progetto intatto, nessuna risposta duplicata dopo un altro riavvio.
 
 ### T-164 — Release verificata dell'incremento automatico
 
