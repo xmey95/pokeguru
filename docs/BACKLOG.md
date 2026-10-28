@@ -175,6 +175,14 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-168** | Distinguere caricamento e assenza delle guide Matchup | UI | R-10, R-13 | P1 / S | Guide e discussioni persistite | Done |
 | **APP-169** | Selettore progetti in modale con sfondo sfocato | UI | R-03 | P1 / S | Archivio e gestione progetti esistenti | Done |
 | **APP-170** | Distinguere partecipazioni con URL lista condiviso e recuperare le analisi v0.3.5 | Affidabilità/distribuzione | R-01, R-06, R-07, R-13, R-14 | P0 / M | APP-164; difetto riprodotto su schema 13 nuovo | Done |
+| **APP-171** | Pubblicare in main la release v0.3.7 del feedback desktop | Distribuzione | R-01, R-12 / I3 | P0 / S | APP-165–170 integrati in dev | In progress |
+
+### APP-171 — Release v0.3.7 del feedback desktop
+
+- **Autorizzazione e Ready (28-10-2026):** l'utente richiede una nuova release in `main` dopo il merge della PR #104 in `dev` (`e78a6c7`). La versione pubblica precedente è v0.3.6. Preparare 0.3.7 senza altre modifiche applicative; APP-171 è l'unica attività principale in corso.
+- **Accettazione:** versione coerente in package e lockfile, note sui cinque interventi e sulla migrazione allo schema 14; PR di preparazione in dev e PR di rilascio in main con quattro check verdi. Workflow Release riuscito, tag sul commit main, quattro pacchetti nativi, quattro manifest e checksum verificati dopo la pubblicazione.
+- **Preparazione locale:** versione `0.3.7` coerente nelle tre occorrenze package/lockfile; README aggiornato con novità e limiti. Build/typecheck Node 24.18.0 e `git diff --check` passati. Nessuna dipendenza o logica applicativa modificata.
+- **Verifica prevista:** build/typecheck locale e coerenza versione; CI completa su Linux, Windows, macOS Intel e Apple Silicon; package/smoke, attestazioni, confronto hash/commit/versione/run degli asset pubblicati. Base funzionale già verificata da [CI #40761261959](https://github.com/xmey95/pokeguru/actions/runs/40761261959) su PR #104 (311 test canonici e prove Electron). Nessuna modifica al profilo personale; restano i limiti macOS documentati e APP-147.
 
 ### APP-170 — Partecipazioni distinte e ripresa dopo errore UNIQUE
 
