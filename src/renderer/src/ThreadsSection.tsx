@@ -627,18 +627,19 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     event.preventDefault()
     if (!selected || working || asking || composerSubmitting.current.has(selected.id) || aiBusy || openingAiPending || !message.trim()) return
     const threadId = selected.id
+    const submittedMessage = message
     composerSubmitting.current.add(threadId)
     setAsking(true)
     setComposerError(null)
     invalidatePreview()
     let succeeded = false
     try {
-      const result = await window.projectsApi.askDeckThread(projectId, selected.id, message,
+      const result = await window.projectsApi.askDeckThread(projectId, selected.id, submittedMessage,
         selectedOverride?.model ? selectedOverride : null)
       if (!result.ok) throw new Error(result.error)
       showDetail(result.value)
       await refreshSummaries()
-      setMessage('')
+      setMessage((current) => current === submittedMessage ? '' : current)
       setPreview(null)
       succeeded = true
     } catch (cause) {
