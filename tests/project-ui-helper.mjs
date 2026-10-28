@@ -34,6 +34,10 @@ export async function switchThread(page, name) {
 
 /** Loaded decks expose import on request; empty projects expose it immediately. */
 export async function openDeckImport(page) {
+  // Creation can finish after the click returns. Do not select the previous
+  // project's import trigger while the new empty project is still being saved.
+  await page.locator('.compact-create-panel, .create-form').waitFor({ state: 'hidden' })
+  await page.locator('#main-content[data-nav-loading="false"]').waitFor()
   const trigger = page.getByRole('button', { name: 'Importa / sostituisci', exact: true })
   if (await trigger.count()) await trigger.click()
   await page.getByLabel('Testo lista').waitFor()
