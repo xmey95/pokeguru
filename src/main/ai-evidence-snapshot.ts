@@ -1,7 +1,7 @@
 import type { CatalogView } from '../shared/catalog'
 import type { TournamentSnapshot } from '../shared/tournament'
 import type { MainTournamentSnapshot } from '../shared/main-tournament'
-import { AiEvidenceArchive, evidenceHash, exactDeckIdentity } from './ai-evidence-archive'
+import { AiEvidenceArchive, evidenceOccurrenceIdentity, exactDeckIdentity } from './ai-evidence-archive'
 import { createAiEvidenceEngine, evidenceEventRows, normalizedEvidenceText,
   type EvidenceEventRow } from './ai-evidence-engine'
 
@@ -18,7 +18,7 @@ export function createArchivedEvidenceEngine(archive: AiEvidenceArchive,
     function* rows() {
       for (const row of evidenceEventRows(play, main)) {
         if (row.date < window.from || row.date > window.to) continue
-        yield { key: evidenceHash([row.id, row.listUrl]), deckKey: exactDeckIdentity(row.cards),
+        yield { key: evidenceOccurrenceIdentity(row), deckKey: exactDeckIdentity(row.cards),
           date: row.date, placing: row.placing, deckName: row.deck,
           deckText: normalizedEvidenceText(row.deck),
           cardsText: row.cards.map(normalizedEvidenceText).join('\n'), value: row }
