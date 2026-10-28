@@ -66,9 +66,12 @@ describe('main Limitless tournament archive', () => {
         return new Response(list)
       }
       const store = new TournamentStore(path)
+      expect(store.listMain()).toBe(store.listMain())
       const first = await syncMainTournamentBlock(store, 'new', fetcher as typeof fetch,
         new Date('2026-10-24T12:00:00.000Z'))
       expect(first).toMatchObject({ status: 'running', inspectedEvents: 2, fetchedLists: 4 })
+      expect(store.listMain()).toHaveLength(2)
+      expect(store.listMain()).toBe(store.listMain())
       expect(first.runId).toMatch(/^[a-f0-9-]{36}$/)
       expect(store.pruneMainIntermediates(new Set())).toBeGreaterThan(0)
       store.close()

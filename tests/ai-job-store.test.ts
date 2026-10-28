@@ -69,3 +69,65 @@ it('upgrades an existing job table without losing earlier jobs', () => {
     jobs.close()
   } finally { projects.close(); rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) }
 })
+
+it('keeps every AI activity and pages older entries within the owning project', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-ai-activity-'))
+  const path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path)
+  let jobs: AiJobStore | null = null
+  try {
+    const project = projects.create({ name: 'Owner', format: 'STANDARD' })
+    const thread = projects.createDeckThread({ projectId: project.id, title: 'Activity' })
+    const other = projects.create({ name: 'Other', format: 'STANDARD' })
+    jobs = new AiJobStore(path)
+    const started = jobs.start('thread-ask', project.id, thread.id)
+    for (let index = 0; index < 67; index++)
+      jobs.updateProgress(started.id, 'analysis', `Attività ${index + 1}`,
+        index === 35 ? 'Sintesi Codex del passaggio' : undefined)
+    expect(jobs.get(started.id)?.progress?.steps).toHaveLength(12)
+    expect(jobs.activity(other.id, thread.id, started.id)).toBeNull()
+    expect(jobs.activity(project.id, thread.id, started.id, -1)).toBeNull()
+    const latest = jobs.activity(project.id, thread.id, started.id)!
+    expect(latest.steps).toHaveLength(25)
+    expect(latest.steps.at(-1)?.detail).toBe('Attività 67')
+    expect(latest.hasMore).toBe(true)
+    const middle = jobs.activity(project.id, thread.id, started.id, latest.steps[0].id)!
+    const oldest = jobs.activity(project.id, thread.id, started.id, middle.steps[0].id)!
+    expect(middle.steps.find((step) => step.detail === 'Attività 36')?.summary)
+      .toBe('Sintesi Codex del passaggio')
+    expect([...oldest.steps, ...middle.steps, ...latest.steps].map((step) => step.detail))
+      .toEqual(Array.from({ length: 67 }, (_, index) => `Attività ${index + 1}`))
+    expect(oldest.hasMore).toBe(false)
+    jobs.close(); jobs = new AiJobStore(path)
+    expect(jobs.activity(project.id, thread.id, started.id)?.steps.at(-1)?.detail).toBe('Attività 67')
+    jobs.transition(started.id, 'cancelled')
+    jobs.updateProgress(started.id, 'saving', 'Non registrare')
+    expect(jobs.activity(project.id, thread.id, started.id)?.steps.at(-1)?.detail).toBe('Attività 67')
+  } finally { jobs?.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+})
+
+it('imports the retained legacy activity once before appending new entries', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-ai-activity-legacy-'))
+  const path = join(folder, 'data.sqlite')
+  const projects = new ProjectStore(path)
+  let jobs: AiJobStore | null = null
+  try {
+    const project = projects.create({ name: 'Legacy', format: 'STANDARD' })
+    const thread = projects.createDeckThread({ projectId: project.id, title: 'Legacy' })
+    jobs = new AiJobStore(path)
+    const started = jobs.start('thread-ask', project.id, thread.id)
+    const db = new DatabaseSync(path)
+    db.prepare('UPDATE ai_jobs SET progress_json = ? WHERE id = ?').run(JSON.stringify({
+      phase: 'analysis', detail: 'Seconda', summary: null,
+      updatedAt: '2026-10-28T10:02:00.000Z', steps: [
+        { phase: 'catalog', detail: 'Prima', at: '2026-10-28T10:01:00.000Z' },
+        { phase: 'analysis', detail: 'Seconda', at: '2026-10-28T10:02:00.000Z' }]
+    }), started.id)
+    db.close()
+    expect(jobs.activity(project.id, thread.id, started.id)?.steps.map((step) => step.detail))
+      .toEqual(['Prima', 'Seconda'])
+    jobs.updateProgress(started.id, 'verification', 'Terza')
+    expect(jobs.activity(project.id, thread.id, started.id)?.steps.map((step) => step.detail))
+      .toEqual(['Prima', 'Seconda', 'Terza'])
+  } finally { jobs?.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
+})
