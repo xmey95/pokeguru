@@ -22,6 +22,7 @@ export interface DiagnosticInput {
   node: string
   uptimeSeconds: number
   mainHeapBytes: number
+  backendHeapBytes?: number
   database: { available: boolean; issue: 'integrity' | 'unavailable' | null; bytes: number | null; walBytes: number | null }
   projects: { active: number; archived: number } | null
   catalog: { sets: number; prints: number; groups: number; thumbnails: number; highImages: number;
@@ -89,7 +90,8 @@ export function buildDiagnosticReport(input: DiagnosticInput) {
     transmission: 'Nessun invio automatico; file salvato solo dopo azione dell’utente.' },
     app: { version: input.version, packaged: input.packaged, platform: input.platform,
       architecture: input.architecture, electron: input.electron, chrome: input.chrome,
-      node: input.node, uptimeSeconds: Math.round(input.uptimeSeconds), mainHeapBytes: input.mainHeapBytes },
+      node: input.node, uptimeSeconds: Math.round(input.uptimeSeconds), mainHeapBytes: input.mainHeapBytes,
+      backendHeapBytes: input.backendHeapBytes ?? null },
     security: { nodeIntegration: false, contextIsolation: true, sandbox: true,
       navigationBlocked: true, newWindowsBlocked: true, packagedCsp: input.packaged,
       devToolsEnabled: !input.packaged },

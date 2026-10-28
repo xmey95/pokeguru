@@ -70,9 +70,10 @@ export function prizeCardsOnKnockOut(card?: { name: string; category: string | n
 }
 
 export function gameplaySummary(gameplay: CardGameplay,
-  card?: { name: string; category: string | null }): string {
+  card?: { name: string; category: string | null; gameplaySupplement?: { checkedAt: string; sourceUrl: string } }): string {
   const prizes = prizeCardsOnKnockOut(card)
   const pieces = [
+    card?.gameplaySupplement ? `Campi mancanti integrati dalla scansione della stessa stampa, verificata ${card.gameplaySupplement.checkedAt}: ${card.gameplaySupplement.sourceUrl}` : '',
     gameplay.hp === null ? '' : `HP ${gameplay.hp}`,
     gameplay.types.length ? `tipi ${gameplay.types.join('/')}` : '',
     gameplay.evolveFrom ? `evolve da ${gameplay.evolveFrom}` : '',

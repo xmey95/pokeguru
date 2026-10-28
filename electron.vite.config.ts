@@ -10,7 +10,9 @@ export const developmentCsp = [
 ].join('; ')
 
 export default defineConfig({
-  main: {},
+  main: { build: { rollupOptions: { input: {
+    index: 'src/main/index.ts', 'backend-worker': 'src/main/backend-worker.ts'
+  } } } },
   preload: {},
   renderer: {
     plugins: [react()],

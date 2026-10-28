@@ -55,6 +55,8 @@ export function CardFace({ print, imagePrint, missingMessage, onOpenCatalog }: {
         {!!gameplay?.types.length && <span>{gameplay.types.join(' / ')}</span>}
         {partial && <span className="card-data-partial">Scheda parziale</span>}
       </div>
+      {print?.gameplaySupplement && <p className="content-note">{print.gameplaySupplement.fields.includes('effect')
+        ? 'Testo effetto' : 'Costo gratuito'} verificato sulla scansione di questa stampa il {print.gameplaySupplement.checkedAt}; il dato manca nell’API TCGdex.</p>}
       {!hasText && !basicEnergy && <div className="card-gameplay-missing">
         <p>{missingMessage ?? 'Testo di gioco non disponibile nel catalogo locale.'}</p>
         {onOpenCatalog && <button type="button" className="text-button" onClick={onOpenCatalog}>Apri Catalogo</button>}

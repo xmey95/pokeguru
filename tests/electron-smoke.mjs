@@ -191,7 +191,7 @@ try {
   await application.close()
   application = undefined
   const upgraded = new DatabaseSync(join(legacyData, 'pokeguru.sqlite'), { readOnly: true })
-  try { assert.equal(upgraded.prepare('PRAGMA user_version').get().user_version, 13) }
+  try { assert.equal(upgraded.prepare('PRAGMA user_version').get().user_version, 14) }
   finally { upgraded.close() }
   const backupFiles = readdirSync(join(legacyData, 'backups'))
   assert.equal(backupFiles.filter((name) => name.endsWith('.sqlite')).length, 1)

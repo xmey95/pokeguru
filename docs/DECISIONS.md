@@ -4,6 +4,22 @@
 
 ## Decisioni
 
+### T-165 — Operazioni locali fuori dal processo della finestra
+
+Database, snapshot delle fonti, compressione, ricerche e orchestrazione Codex sono posseduti da un solo worker Node. Il processo Electron della finestra conserva autenticazione del frame IPC, protocollo delle immagini, dialoghi, appunti e apertura degli URL consentiti. Il trasporto è asincrono e non sposta snapshot completi nella finestra. Gli store mantengono un unico proprietario; pausa, checkpoint e ripresa seguono lo stesso percorso anche alla chiusura. Un worker interrotto fa fallire le richieste pendenti con un messaggio recuperabile alla riapertura. Diagnostica: heap del processo finestra e heap del backend distinti. Un blocco del worker può ritardare una risposta dati, senza bloccare i due cicli UI.
+
+### T-166 — Integrazioni di gioco verificate per stampa
+
+L'audit Windows del 28-10-2026 riconduce le 19 schede incomplete a omissioni TCGdex: costo assente per 16 stampe Pokémon con attacco gratuito e testo effetto assente per tre Trainer. Le scansioni esatte sono state tutte lette. Un registro versionato conserva ID, payload di gioco atteso, URL e SHA-256 delle immagini; integra solo payload ancora identici, senza riscrivere dati grezzi o identità già usate dai progetti. Origine e data sono esposte nella scheda e nel contesto AI. Nessuna inferenza generale «costo assente = gratuito», nessun trasferimento per solo nome, nessuna modifica ai report storici. Dettagli e limiti in [CATALOG-APP-166.md](CATALOG-APP-166.md).
+
+### T-167 — Cancellazione atomica di un Thread
+
+La conferma riguarda il Thread mostrato e il backend verifica progetto, ID e titolo. La transazione cancella conversazione, candidate e job, raccoglie solo evidenze non più referenziate e conserva versioni adottate e altri Thread. I Thread derivati mantengono una copia del testo di partenza anche se la candidata originale viene eliminata (schema 14). Job attivi/pronti o esecutori in fase di annullamento impediscono la cancellazione; un job in pausa può essere eliminato. Backup preesistenti e cronologia remota Codex non vengono cancellati. I file temporanei locali sono rimossi dopo il commit, con possibile residuo in caso di errore filesystem.
+
+### T-168 — Caricamento delle guide e selezione progetti
+
+Le letture Matchup sono associate a progetto, avversario, snapshot e versione della lista. Prima del completamento si mostra un'attesa; errore con riprova e assenza confermata hanno stati distinti. Le azioni di generazione compaiono solo dopo la lettura. Il selettore progetti usa una modale nativa centrata, sfondo sfocato, ricerca e schede attivi/archiviati; il browser gestisce contenimento del focus, Escape e ritorno al pulsante. Restano tutte le azioni di gestione già disponibili.
+
 ### T-170 — Identità delle partecipazioni e compatibilità degli snapshot
 
 L'URL di una lista identifica la fonte del mazzo, non necessariamente il partecipante. Dalla v0.3.6 l'indice e i record delle occorrenze condividono una chiave basata su evento e identificativo del giocatore; quando manca, si conserva la posizione della riga nello snapshot immutabile. Non si fondono partecipanti per nome, piazzamento o lista, e l'identificativo del giocatore Regional disponibile resta nella provenienza. Ripetizioni della stessa identità sono accettate solo con originale identico; dati discordanti causano rollback, senza sovrascrittura o scarto silenzioso.

@@ -52,6 +52,7 @@ const api: ProjectsApi = {
   resumeAiJob: (projectId, resourceId) => ipcRenderer.invoke('ai:resume-job', projectId, resourceId),
   recoverAiJobs: () => ipcRenderer.invoke('ai:recover-jobs'),
   createDeckThread: (input) => ipcRenderer.invoke('deck:create-thread', input),
+  deleteDeckThread: (projectId, threadId, title) => ipcRenderer.invoke('deck:delete-thread', projectId, threadId, title),
   continueDeckThread: (input) => ipcRenderer.invoke('deck:continue-thread', input),
   addDeckThreadMessage: (projectId, threadId, text) => ipcRenderer.invoke('deck:add-thread-message', projectId, threadId, text),
   previewDeckThreadEvidence: (projectId, threadId, text) => ipcRenderer.invoke('deck:preview-evidence', projectId, threadId, text),

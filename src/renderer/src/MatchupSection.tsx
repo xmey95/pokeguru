@@ -44,6 +44,9 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const [historyKey, setHistoryKey] = useState<string | null>(null)
   const [discussions, setDiscussions] = useState<MatchupDiscussion[]>([])
   const [discussionsKey, setDiscussionsKey] = useState<string | null>(null)
+  const [reportsError, setReportsError] = useState<{ key: string; text: string } | null>(null)
+  const [discussionsError, setDiscussionsError] = useState<{ key: string; text: string } | null>(null)
+  const [guideReload, setGuideReload] = useState(0)
   const [activeDiscussionId, setActiveDiscussionId] = useViewState<string | null>('matchup.discussion', null)
   const [reportsKey, setReportsKey] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useViewState<string | null>('matchup.selected', null)
@@ -163,13 +166,14 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     if (!snapshot || !hasBaseline) { setReports([]); setReportsKey(null); return }
     let active = true
     const key = `${projectId}:${snapshot.id}:${baselineKey}`
+    setReportsError(null)
     void window.projectsApi.listMatchupReports(projectId, snapshot.id).then((result) => {
       if (!active) return
       if (result.ok) { setReports(result.value); setReportsKey(key) }
-      else setError(result.error)
-    }).catch(() => { if (active) setError('Impossibile leggere le analisi salvate.') })
+      else setReportsError({ key, text: result.error })
+    }).catch(() => { if (active) setReportsError({ key, text: 'Impossibile leggere le analisi salvate.' }) })
     return () => { active = false }
-  }, [projectId, snapshot?.id, baselineKey, hasBaseline, generating])
+  }, [projectId, snapshot?.id, baselineKey, hasBaseline, generating, guideReload])
 
   async function reloadDiscussions(opponentId: string): Promise<void> {
     const result = await window.projectsApi.listMatchupDiscussions(projectId, opponentId)
@@ -186,6 +190,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     if (!selectedId || !snapshot) { setDiscussions([]); setDiscussionsKey(null); return }
     let active = true
     const key = `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`
+    setDiscussionsError(null)
     void window.projectsApi.listMatchupDiscussions(projectId, selectedId).then((result) => {
       if (!active) return
       if (result.ok) {
@@ -193,10 +198,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         setDiscussionsKey(key)
         setActiveDiscussionId((old) => old ?? result.value.find((item) => item.current)?.id ?? result.value[0]?.id ?? null)
         if (activeDiscussionId && !result.value.some((item) => item.id === activeDiscussionId)) setError('Questa discussione non è più disponibile. Scegli una base disponibile oppure torna indietro.')
-      } else setError(result.error)
-    }).catch(() => { if (active) setError('Impossibile leggere le discussioni Matchup.') })
+      } else setDiscussionsError({ key, text: result.error })
+    }).catch(() => { if (active) setDiscussionsError({ key, text: 'Impossibile leggere le discussioni Matchup.' }) })
     return () => { active = false }
-  }, [projectId, selectedId, snapshot?.id, baselineKey, generating])
+  }, [projectId, selectedId, snapshot?.id, baselineKey, generating, guideReload])
 
   useEffect(() => {
     let active = true
@@ -344,6 +349,9 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const selectedInCurrentMeta = !!snapshot?.decks.some((deck) => deck.id === selectedId)
   const currentReports = reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}` ? reports : []
   const reportsLoaded = !hasBaseline || reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}`
+  const guideLoaded = reportsLoaded && discussionsKey === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}`
+  const guideError = reportsError?.key === `${projectId}:${snapshot?.id}:${baselineKey}` ? reportsError.text
+    : discussionsError?.key === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}` ? discussionsError.text : null
   const visibleDiscussions = discussionsKey === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}` ? discussions : []
   const currentDiscussion = visibleDiscussions.find((item) => item.current)
   const discussion = visibleDiscussions.find((item) => item.id === activeDiscussionId) ?? currentDiscussion ?? visibleDiscussions[0]
@@ -381,13 +389,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const opponentOptions = allOpponents.map((opponent) => ({
     ...opponent,
     inCurrentMeta: !!snapshot?.decks.some((deck) => deck.id === opponent.id),
-    guideStatus: currentReports.some((item) => item.opponentId === opponent.id) ? 'Guida disponibile'
+    guideStatus: guideError ? 'Disponibilità da verificare' : currentReports.some((item) => item.opponentId === opponent.id) ? 'Guida disponibile'
       : knownHistory.some((item) => item.id === opponent.id) && (reportsLoaded || !snapshot?.decks.some((deck) => deck.id === opponent.id)) ? 'Guida storica'
       : historyLoaded && reportsLoaded
         ? 'Nessuna guida' : 'Disponibilità da verificare'
   }))
 
-  return <section className="matchup-section" aria-label="Matchup del progetto" data-nav-loading={!error && (loading || !historyLoaded || !reportsLoaded || (!!selectedId && !!snapshot && discussionsKey !== `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`))}>
+  return <section className="matchup-section" aria-label="Matchup del progetto" data-nav-loading={!error && !guideError && (loading || !historyLoaded || !reportsLoaded || (!!selectedId && !!snapshot && discussionsKey !== `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`))}>
     {!loading && historyLoaded && selectedId && !selected && <p className="error-banner" role="alert">Questo avversario non è più disponibile. Scegline un altro oppure torna indietro.</p>}
     <div className="panel-heading">
       <h2>Matchup</h2>
@@ -429,7 +437,10 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 {item.current ? 'Base attuale' : `Storico ${index + 1}`}{item.parentId ? ' · collegata' : ''}
               </button>)}
             </div>}
-            {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p> : report ? <>
+            {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p>
+              : guideError ? <div className="error-banner" role="alert">{guideError} <button type="button" className="text-button"
+                onClick={() => setGuideReload(value => value + 1)}>Riprova caricamento</button></div>
+              : !guideLoaded ? <LoadingSkeleton label="Caricamento analisi salvata…" rows={3} /> : report ? <>
               <div className="matchup-fields" aria-label="Guida tattica">
                 <section className="strategy-field"><h3>Piano di gioco</h3><MatchupPlan key={`${report.projectId}:${report.opponentId}:${report.metaId}:${report.deckVersionId ?? report.deckHash}:${report.generatedAt}`} report={report} renderText={body} /></section>
                 <section><h3>Punti forti</h3>{list(report.strengths)}</section>
@@ -489,7 +500,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
                 canContinue={!aiBusy && !currentDiscussion && selectedInCurrentMeta && hasBaseline}
                 absentFromMeta={!selectedInCurrentMeta} cached={snapshot.cached} aiControls={aiControls} />}
             </> : <p className="matchup-empty">Nessuna guida per questo archetipo e questa lista.</p>}
-            {selectedInCurrentMeta && (!discussion || discussion.current) && <div className="matchup-generation-actions">
+            {guideLoaded && !guideError && selectedInCurrentMeta && (!discussion || discussion.current) && <div className="matchup-generation-actions">
               {!discussion && aiControls}
               <button type="button" className={report ? 'secondary-button matchup-regenerate' : 'primary-button'} onClick={() => void generate()} disabled={!hasBaseline || !reconciliation || generating || aiBusy || snapshot.cached || !!pendingTurn}>
               {generating && !revisionInFlight && <Spinner />}{generating && !revisionInFlight ? 'Analisi in corso…' : report ? 'Rigenera guida' : 'Genera analisi con Codex'}

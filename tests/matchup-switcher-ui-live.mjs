@@ -147,7 +147,8 @@ async function geometry(page, width, height, open) {
   }, open)
   assert.equal(boxes.rootScroll, 0, 'Il focus ha spostato la griglia')
   assert.equal(boxes.overflow, false, 'Overflow orizzontale')
-  assert.ok(boxes.target.left >= boxes.main.left && boxes.target.right <= boxes.main.right, 'Selettore fuori dal contenuto')
+  assert.ok(boxes.target.left >= boxes.main.left && boxes.target.right <= boxes.main.right,
+    `Selettore fuori dal contenuto (${width}, open=${open}): ${JSON.stringify(boxes)}`)
   assert.ok(boxes.target.top >= boxes.main.top && boxes.target.bottom <= boxes.main.bottom, 'Menu fuori dal contenuto')
   assert.ok(width > 1240 ? boxes.main.right <= boxes.deck.left : boxes.main.bottom <= boxes.deck.top, 'Lista coperta')
   minimumContrast = Math.min(minimumContrast, (await auditDesignSystem(page, 'Matchup ' + width)).minimumContrast)

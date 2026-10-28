@@ -41,16 +41,23 @@ a { color: var(--accent); }
 .preview-deck-lines li small { color: var(--ink-muted); }
 .project-picker { position: fixed; inset: auto; margin: 0; padding: 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); box-shadow: 0 12px 36px #12273526; overflow: hidden; }
 .project-picker:popover-open { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; gap: 12px; }
+dialog.project-picker { inset: 0; margin: auto; width: min(620px, calc(100vw - 48px)); max-height: min(680px, calc(100dvh - 48px)); padding: 28px; border-radius: 20px; box-shadow: 0 24px 80px #12273538; }
+dialog.project-picker[open] { display: grid; grid-template-rows: auto auto auto minmax(80px, 1fr) auto; gap: 20px; }
+dialog.project-picker::backdrop, .thread-delete-dialog::backdrop { background: #15292070; backdrop-filter: blur(7px); }
+.thread-delete-dialog { width: min(520px, calc(100vw - 48px)); padding: 28px; border: 1px solid var(--line-strong); border-radius: 18px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 80px #12273538; }
+.thread-delete-dialog h2 { margin-top: 0; }
+.thread-delete-trigger { order: 3; color: var(--ink-muted); }
 .project-picker-tabs { display: flex; gap: 8px; }
 .project-picker-tabs button { min-height: 36px; padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); }
 .project-picker-tabs button[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 650; }
-.project-picker-row { border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.project-picker-row { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; padding: 5px; background: var(--surface); }
 .project-row-actions { display: flex; justify-content: flex-end; gap: 6px; padding: 0 8px 4px; }
 .project-row-actions button { min-height: 32px; padding: 4px 7px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--accent); font-size: var(--text-xs); }
 .project-row-actions button:hover { background: var(--accent-soft); }
 .project-row-actions .project-delete-action { color: var(--danger); }
 .project-picker-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
 .project-picker-head h2 { margin: 0; font-size: var(--text-md); }
+dialog.project-picker .project-picker-head h2 { margin: 6px 0 0; font-size: 26px; letter-spacing: -.5px; }
 .project-picker-head > span { color: var(--ink-muted); font-size: var(--text-xs); }
 .project-picker-results { min-height: 0; overflow: auto; margin: 0 -4px; padding: 4px; }
 .project-picker-results ul { list-style: none; margin: 0; padding: 0; }
@@ -62,8 +69,8 @@ a { color: var(--accent); }
 .project-option strong { font-size: var(--text-base); overflow-wrap: anywhere; }
 .project-option small { color: var(--ink-muted); }
 .project-current { flex: none; font-size: var(--text-xs); color: var(--accent); }
-.project-picker-create { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 12px 8px 4px; border: 0; border-top: 1px solid var(--line); background: var(--surface); color: var(--accent); font-weight: 600; text-align: left; }
-.project-picker-create:hover { background: var(--accent-soft); }
+.project-picker-create { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 10px 16px; border: 0; border-radius: var(--radius-sm); background: var(--accent); color: white; font-weight: 650; }
+.project-picker-create:hover { filter: brightness(.95); }
 .primary-button, .secondary-button, .text-button, .danger-button, .file-picker { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 8px 14px; border: 1px solid transparent; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 650; line-height: 1.4; text-align: center; }
 .primary-button { background: var(--accent); color: #fff; }
 .primary-button:hover:not(:disabled) { background: var(--accent-hover); }
