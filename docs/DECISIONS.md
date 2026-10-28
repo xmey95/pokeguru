@@ -4,6 +4,22 @@
 
 ## Decisioni
 
+### T-165 — Operazioni locali fuori dal processo della finestra
+
+Database, snapshot delle fonti, compressione, ricerche e orchestrazione Codex sono posseduti da un solo worker Node. Il processo Electron della finestra conserva autenticazione del frame IPC, protocollo delle immagini, dialoghi, appunti e apertura degli URL consentiti. Il trasporto è asincrono e non sposta snapshot completi nella finestra. Gli store mantengono un unico proprietario; pausa, checkpoint e ripresa seguono lo stesso percorso anche alla chiusura. Un worker interrotto fa fallire le richieste pendenti con un messaggio recuperabile alla riapertura. Diagnostica: heap del processo finestra e heap del backend distinti. Un blocco del worker può ritardare una risposta dati, senza bloccare i due cicli UI.
+
+### T-166 — Integrazioni di gioco verificate per stampa
+
+L'audit Windows del 28-10-2026 riconduce le 19 schede incomplete a omissioni TCGdex: costo assente per 16 stampe Pokémon con attacco gratuito e testo effetto assente per tre Trainer. Le scansioni esatte sono state tutte lette. Un registro versionato conserva ID, payload di gioco atteso, URL e SHA-256 delle immagini; integra solo payload ancora identici, senza riscrivere dati grezzi o identità già usate dai progetti. Origine e data sono esposte nella scheda e nel contesto AI. Nessuna inferenza generale «costo assente = gratuito», nessun trasferimento per solo nome, nessuna modifica ai report storici. Dettagli e limiti in [CATALOG-APP-166.md](CATALOG-APP-166.md).
+
+### T-167 — Cancellazione atomica di un Thread
+
+La conferma riguarda il Thread mostrato e il backend verifica progetto, ID e titolo. La transazione cancella conversazione, candidate e job, raccoglie solo evidenze non più referenziate e conserva versioni adottate e altri Thread. I Thread derivati mantengono una copia del testo di partenza anche se la candidata originale viene eliminata (schema 14). Job attivi/pronti o esecutori in fase di annullamento impediscono la cancellazione; un job in pausa può essere eliminato. Backup preesistenti e cronologia remota Codex non vengono cancellati. I file temporanei locali sono rimossi dopo il commit, con possibile residuo in caso di errore filesystem.
+
+### T-168 — Caricamento delle guide e selezione progetti
+
+Le letture Matchup sono associate a progetto, avversario, snapshot e versione della lista. Prima del completamento si mostra un'attesa; errore con riprova e assenza confermata hanno stati distinti. Le azioni di generazione compaiono solo dopo la lettura. Il selettore progetti usa una modale nativa centrata, sfondo sfocato, ricerca e schede attivi/archiviati; il browser gestisce contenimento del focus, Escape e ritorno al pulsante. Restano tutte le azioni di gestione già disponibili.
+
 ### T-164 — Release verificata dell'incremento automatico
 
 APP-161–164 e APP-160 sono nella [v0.3.5](https://github.com/xmey95/pokeguru/releases/tag/v0.3.5), sul commit `df61ca4192b7acd82df2001a87cfa7b4dac60945` di `main`. PR #99 e #100 con quattro check verdi; [Release #40745083391](https://github.com/xmey95/pokeguru/actions/runs/40745083391) con package/smoke nativi, manifest, attestazioni e nove asset verificati dopo la pubblicazione. Thread e Matchup sono stati provati con Codex reale in profili temporanei; il ciclo di riapertura usa risposte sintetiche per verificare persistenza e idempotenza sulle quattro piattaforme. La fixture oltre 64 MB verifica la pipeline locale, senza attribuirle una prova del modello su quel volume. Lo spazio esaurito è verificato tramite rifiuto SQLite delle scritture, senza riempimento fisico del disco. I dettagli e i limiti sono registrati in APP-164 e `DISTRIBUTION.md`; nessuna estensione all'intero I4.

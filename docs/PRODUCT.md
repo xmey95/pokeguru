@@ -10,6 +10,8 @@ L'obiettivo comprende i due percorsi «da zero» e «da lista» e la copertura d
 
 ## Flussi utente
 
+**Feedback desktop APP-165–169:** il lavoro locale delle analisi viene eseguito fuori dal processo della finestra. I Thread si possono eliminare con conferma conservando le liste adottate; una guida Matchup distingue attesa, errore e assenza verificata. La scelta del progetto avviene in una modale con ricerca e sfondo sfocato. Le integrazioni delle schede Catalogo da scansione dichiarano fonte e data, senza trattare un costo assente nella fonte come gratuito in generale.
+
 Nel Thread un unico compositore invia a Codex domande, idee e richieste di modifica. Ogni turno conserva un pensiero oppure una lista proposta; soltanto una lista completa di 60 carte che supera i controlli deterministici diventa candidata nel Thread. Una lista parziale o non verificabile resta nella conversazione con la causa, senza alterare la lista principale. Le fonti, le evidenze e la cronologia restano associate alla risposta; l'adozione dell'intera candidata richiede sempre un'azione esplicita. Senza lista iniziale si può discutere, ma il salvataggio di una candidata appartiene al percorso da lista finché I4 non completa quello da zero.
 
 **Qualità dell'interfaccia (APP-083):** navigazione e componenti seguono il design system documentato in `DESIGN_SYSTEM.md`. La lista principale rimane consultabile durante Thread e Matchup, in un pannello fisso con scorrimento indipendente o nel dock responsive. Principale, proposta e differenze devono essere distinguibili senza affidarsi al solo colore. La gerarchia privilegia carte, decisioni e piano tattico; incertezza, blocchi e fonti necessarie restano accessibili. Tastiera, focus e leggibilità fanno parte dei criteri di verifica UI.

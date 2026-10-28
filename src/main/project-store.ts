@@ -294,6 +294,7 @@ export class ProjectStore {
     if (!threadColumns.has('base_resolution_id')) this.db.exec('ALTER TABLE deck_threads ADD COLUMN base_resolution_id TEXT')
     if (!threadColumns.has('parent_thread_id')) this.db.exec('ALTER TABLE deck_threads ADD COLUMN parent_thread_id TEXT')
     if (!threadColumns.has('seed_candidate_id')) this.db.exec('ALTER TABLE deck_threads ADD COLUMN seed_candidate_id TEXT')
+    if (!threadColumns.has('seed_candidate_text')) this.db.exec('ALTER TABLE deck_threads ADD COLUMN seed_candidate_text TEXT')
     const messageColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[]).map((row) => row.name))
     if (!messageColumns.has('ai_config_json') || !messageColumns.has('ai_turn_id')) {
       this.db.exec('BEGIN IMMEDIATE')
@@ -611,6 +612,33 @@ export class ProjectStore {
     return project
   }
 
+  deleteDeckThread(projectId: string, threadId: string, confirmationTitle: string): string[] {
+    if (typeof projectId !== 'string' || typeof threadId !== 'string' || typeof confirmationTitle !== 'string' ||
+      !this.get(projectId)) throw new Error('Thread non trovato in questo progetto.')
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const thread = this.db.prepare('SELECT title FROM deck_threads WHERE id = ? AND project_id = ?')
+        .get(threadId, projectId) as { title: string } | undefined
+      if (!thread) throw new Error('Thread non trovato in questo progetto.')
+      if (thread.title !== confirmationTitle) throw new Error('Il titolo di conferma non corrisponde al Thread.')
+      if (this.db.prepare("SELECT 1 FROM ai_jobs WHERE project_id = ? AND resource_id = ? AND status IN ('running', 'ready')")
+        .get(projectId, threadId)) throw new Error('Attendi o annulla l’analisi prima di eliminare il Thread.')
+      const jobs = this.db.prepare('SELECT id FROM ai_jobs WHERE project_id = ? AND resource_id = ?')
+        .all(projectId, threadId) as { id: string }[]
+      // Child conversations keep their starting deck even after its source is removed.
+      this.db.prepare(`UPDATE deck_threads SET seed_candidate_text = COALESCE(seed_candidate_text,
+        (SELECT raw_text FROM deck_thread_candidates WHERE id = seed_candidate_id),
+        (SELECT raw_text FROM deck_ai_candidates WHERE id = seed_candidate_id)),
+        parent_thread_id = NULL, seed_candidate_id = NULL WHERE project_id = ? AND parent_thread_id = ?`)
+        .run(projectId, threadId)
+      this.db.prepare('DELETE FROM ai_jobs WHERE project_id = ? AND resource_id = ?').run(projectId, threadId)
+      collectUnusedEvidence(this.db)
+      this.db.prepare('DELETE FROM deck_threads WHERE project_id = ? AND id = ?').run(projectId, threadId)
+      this.db.exec('COMMIT')
+      return jobs.map(job => job.id)
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+  }
+
   getBaseline(projectId: string): DeckBaseline | null {
     if (!this.get(projectId)) return null
     const row = this.db.prepare(`
@@ -828,7 +856,7 @@ export class ProjectStore {
       t.base_resolution_id, t.parent_thread_id, t.seed_candidate_id,
       t.ai_session_ref, t.opening_ai_message_id, t.created_at, t.updated_at, v.sequence AS base_sequence,
       h.version_id AS current_version_id, rh.revision_id AS current_resolution_id,
-      COALESCE((SELECT raw_text FROM deck_thread_candidates WHERE id = t.seed_candidate_id),
+      COALESCE(t.seed_candidate_text, (SELECT raw_text FROM deck_thread_candidates WHERE id = t.seed_candidate_id),
         (SELECT raw_text FROM deck_ai_candidates WHERE id = t.seed_candidate_id)) AS seed_candidate_text,
       (SELECT id FROM (
         SELECT id, sequence FROM deck_thread_candidates WHERE thread_id = t.id
@@ -916,7 +944,7 @@ export class ProjectStore {
     const current = this.getCurrentDeckContext(projectId)
     const rows = this.db.prepare(`SELECT t.id, t.project_id, t.title, t.base_version_id,
       t.base_resolution_id, t.parent_thread_id, t.seed_candidate_id,
-      COALESCE((SELECT raw_text FROM deck_thread_candidates WHERE id = t.seed_candidate_id),
+      COALESCE(t.seed_candidate_text, (SELECT raw_text FROM deck_thread_candidates WHERE id = t.seed_candidate_id),
         (SELECT raw_text FROM deck_ai_candidates WHERE id = t.seed_candidate_id)) AS seed_candidate_text,
       t.ai_session_ref, t.opening_ai_message_id, t.created_at, t.updated_at, v.sequence AS base_sequence
       FROM deck_threads t LEFT JOIN deck_versions v ON v.id = t.base_version_id

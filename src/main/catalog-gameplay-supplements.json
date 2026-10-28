@@ -1,0 +1,717 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-28",
+  "entries": [
+    {
+      "id": "30th-089",
+      "name": "Alolan Meowth",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 60,
+        "types": [
+          "Darkness"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Pay Day",
+            "cost": null,
+            "damage": "10",
+            "effect": "Draw a card."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Grass",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 1
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/me/30th/089/high.webp",
+      "imageSha256": "90e71b0ce3fe592f7a74abf4f5e413cd6acb167b5481ca4857615038d2534fea"
+    },
+    {
+      "id": "30th-120",
+      "name": "Igglybuff",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 30,
+        "types": [
+          "Colorless"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Bouncy Circle",
+            "cost": null,
+            "damage": "30×",
+            "effect": "This attack does 30 damage for each of your Benched Pokémon that has a maximum HP of 30."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Fighting",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 0
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/me/30th/120/high.webp",
+      "imageSha256": "b4804c10de808fbf1ed2fdda622ef5c991d33cf4c40179ee901858056b71d5a5"
+    },
+    {
+      "id": "30th-126",
+      "name": "Poké Pad",
+      "category": "Trainer",
+      "stage": null,
+      "expected": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Item",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "freeAttacks": [],
+      "effect": "Search your deck for a Pokémon that doesn't have a Rule Box, reveal it, and put it into your hand. Then, shuffle your deck. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+      "sourceUrl": "https://assets.tcgdex.net/en/me/30th/126/high.webp",
+      "imageSha256": "60d4131897ae19d33d46463a32eb45807765a443b5c696b964c52b484eda6ff4"
+    },
+    {
+      "id": "30th-127",
+      "name": "Switch",
+      "category": "Trainer",
+      "stage": null,
+      "expected": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Item",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "freeAttacks": [],
+      "effect": "Switch your Active Pokémon with 1 of your Benched Pokémon.",
+      "sourceUrl": "https://assets.tcgdex.net/en/me/30th/127/high.webp",
+      "imageSha256": "a5a2bcc9da7881b8687bab50b0e3b44f8042ed1e73117b928fe5dd53d11edcd1"
+    },
+    {
+      "id": "30th-128",
+      "name": "Ultra Ball",
+      "category": "Trainer",
+      "stage": null,
+      "expected": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Item",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "freeAttacks": [],
+      "effect": "You can use this card only if you discard 2 other cards from your hand.\n\nSearch your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "sourceUrl": "https://assets.tcgdex.net/en/me/30th/128/high.webp",
+      "imageSha256": "e6e7c489c5a6ad7940a9a4224d22e4e98fcdcdf98ccd5a8dd9c1005ee34dd7c6"
+    },
+    {
+      "id": "30th-139",
+      "name": "Alolan Meowth",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 60,
+        "types": [
+          "Darkness"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Pay Day",
+            "cost": null,
+            "damage": "10",
+            "effect": "Draw a card."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Grass",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 1
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/me/30th/139/high.webp",
+      "imageSha256": "a762c0aed90fc0182814edf987108b7cd93c85375553c8c16b6e9eb33c9df522"
+    },
+    {
+      "id": "me01-071",
+      "name": "Tyrogue",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 30,
+        "types": [
+          "Fighting"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Pow-Pow Punching",
+            "cost": null,
+            "damage": "10+",
+            "effect": "Flip a coin until you get tails. This attack does 30 more damage for each heads."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Psychic",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 0
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/me/me01/071/high.webp",
+      "imageSha256": "3e44c070f22172d9e9c97b41fc61222c6ade46d74d8400a1c70e2c214945859d"
+    },
+    {
+      "id": "me02.5-016",
+      "name": "Budew",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 30,
+        "types": [
+          "Grass"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Itchy Pollen",
+            "cost": null,
+            "damage": "10",
+            "effect": "During your opponent's next turn, they can't play any Item cards from their hand."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Fire",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 0
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/me/me02.5/016/high.webp",
+      "imageSha256": "4ec1cc9220cffc81e4f06da2d089b07629390fd4f41ef5a016d72a932b16cea9"
+    },
+    {
+      "id": "me02.5-221",
+      "name": "Budew",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 30,
+        "types": [
+          "Grass"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Itchy Pollen",
+            "cost": null,
+            "damage": "10",
+            "effect": "During your opponent's next turn, they can't play any Item cards from their hand."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Fire",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 0
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/me/me02.5/221/high.webp",
+      "imageSha256": "8eb148170bd90f25e02a15d5ea9d398ac54a300eb8d0ec2a32d7708408712a8c"
+    },
+    {
+      "id": "sv06-099",
+      "name": "Hisuian Growlithe",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 80,
+        "types": [
+          "Fighting"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Blazing Destruction",
+            "cost": null,
+            "damage": null,
+            "effect": "Discard a Stadium in play."
+          },
+          {
+            "name": "Take Down",
+            "cost": [
+              "Fighting",
+              "Colorless"
+            ],
+            "damage": "40",
+            "effect": "This Pokémon also does 10 damage to itself."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Grass",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 2
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv06/099/high.webp",
+      "imageSha256": "389f4cdd8efc17e34d69b08cf00c0b7e9adaba5e0afff6757ff3f38453f64a35"
+    },
+    {
+      "id": "sv06-100",
+      "name": "Hisuian Arcanine",
+      "category": "Pokemon",
+      "stage": "Stage1",
+      "expected": {
+        "hp": 130,
+        "types": [
+          "Fighting"
+        ],
+        "evolveFrom": "Hisuian Growlithe",
+        "attacks": [
+          {
+            "name": "Proud Fangs",
+            "cost": null,
+            "damage": "30+",
+            "effect": "If your Benched Pokémon have any damage counters on them, this attack does 90 more damage."
+          },
+          {
+            "name": "Searing Flame",
+            "cost": [
+              "Fighting",
+              "Fighting",
+              "Colorless"
+            ],
+            "damage": "90",
+            "effect": "Your opponent's Active Pokémon is now Burned."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Grass",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 2
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv06/100/high.webp",
+      "imageSha256": "bfc94be6803d0dab15869b27a90c506b7c18b121177a1a56db32243d2cb36d4b"
+    },
+    {
+      "id": "sv06-181",
+      "name": "Hisuian Growlithe",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 80,
+        "types": [
+          "Fighting"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Blazing Destruction",
+            "cost": null,
+            "damage": null,
+            "effect": "Discard a Stadium in play."
+          },
+          {
+            "name": "Take Down",
+            "cost": [
+              "Fighting",
+              "Colorless"
+            ],
+            "damage": "40",
+            "effect": "This Pokémon also does 10 damage to itself."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Grass",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 2
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv06/181/high.webp",
+      "imageSha256": "bb78140ee24a2f361e5a05465c6c343c4e7444505e8b390e8260ef344af9bb4a"
+    },
+    {
+      "id": "sv08-075",
+      "name": "Smoochum",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 30,
+        "types": [
+          "Psychic"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Delightful Kiss",
+            "cost": null,
+            "damage": null,
+            "effect": "Search your deck for up to 2 Basic {P} Energy cards and attach them to 1 of your Benched Pokémon. Then, shuffle your deck."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Darkness",
+            "value": "×2"
+          }
+        ],
+        "resistances": [
+          {
+            "type": "Fighting",
+            "value": "-30"
+          }
+        ],
+        "retreat": 0
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv08/075/high.webp",
+      "imageSha256": "efe947b45ced08e3540533ccb48709b421ce1e90e5f3d76be99424f0ff5f7988"
+    },
+    {
+      "id": "sv08-122",
+      "name": "Alolan Diglett",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 50,
+        "types": [
+          "Metal"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Surprise Attack",
+            "cost": null,
+            "damage": "30",
+            "effect": "Flip a coin. If tails, this attack does nothing."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Fire",
+            "value": "×2"
+          }
+        ],
+        "resistances": [
+          {
+            "type": "Grass",
+            "value": "-30"
+          }
+        ],
+        "retreat": 1
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv08/122/high.webp",
+      "imageSha256": "e56ede1160172d0d5be15a79f795df33cc89f4edc03c9acdb93a4b19b5b3f768"
+    },
+    {
+      "id": "sv08-123",
+      "name": "Alolan Dugtrio",
+      "category": "Pokemon",
+      "stage": "Stage1",
+      "expected": {
+        "hp": 110,
+        "types": [
+          "Metal"
+        ],
+        "evolveFrom": "Alolan Diglett",
+        "attacks": [
+          {
+            "name": "Trio-Cheehoo",
+            "cost": null,
+            "damage": "120",
+            "effect": "If you don't have exactly 3 cards in your hand, this attack does nothing."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Fire",
+            "value": "×2"
+          }
+        ],
+        "resistances": [
+          {
+            "type": "Grass",
+            "value": "-30"
+          }
+        ],
+        "retreat": 2
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv08/123/high.webp",
+      "imageSha256": "957d7cc9cdd2ae3f84926cbc361957d7cfcfffa8b0d066e5c80a01c566365ae3"
+    },
+    {
+      "id": "sv08-208",
+      "name": "Alolan Dugtrio",
+      "category": "Pokemon",
+      "stage": "Stage1",
+      "expected": {
+        "hp": 110,
+        "types": [
+          "Metal"
+        ],
+        "evolveFrom": "Alolan Diglett",
+        "attacks": [
+          {
+            "name": "Trio-Cheehoo",
+            "cost": null,
+            "damage": "120",
+            "effect": "If you don't have exactly 3 cards in your hand, this attack does nothing."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Fire",
+            "value": "×2"
+          }
+        ],
+        "resistances": [
+          {
+            "type": "Grass",
+            "value": "-30"
+          }
+        ],
+        "retreat": 2
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv08/208/high.webp",
+      "imageSha256": "7b60517e10fa39ed3013f9574e96e5dc9ef206845e5f81e82c83a82c132612f3"
+    },
+    {
+      "id": "sv08.5-004",
+      "name": "Budew",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 30,
+        "types": [
+          "Grass"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Itchy Pollen",
+            "cost": null,
+            "damage": "10",
+            "effect": "During your opponent's next turn, they can't play any Item cards from their hand."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Fire",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 0
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv08.5/004/high.webp",
+      "imageSha256": "9db2b56d4f734bc9d7f4f83aa691692fd9b5d5e39ee1b1144448922d677efe27"
+    },
+    {
+      "id": "sv10-071",
+      "name": "Ethan's Pichu",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 30,
+        "types": [
+          "Lightning"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Zapping Draw",
+            "cost": null,
+            "damage": "30",
+            "effect": "Draw a card."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Fighting",
+            "value": "×2"
+          }
+        ],
+        "resistances": [],
+        "retreat": 0
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv10/071/high.webp",
+      "imageSha256": "375f612e17fbf097e2fe91547e792d734cb501d9299c0e9c834490129a8ec783"
+    },
+    {
+      "id": "sv10-085",
+      "name": "Team Rocket's Chingling",
+      "category": "Pokemon",
+      "stage": "Basic",
+      "expected": {
+        "hp": 30,
+        "types": [
+          "Psychic"
+        ],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Chiming Commotion",
+            "cost": null,
+            "damage": null,
+            "effect": "Discard a random card from your opponent's hand."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [
+          {
+            "type": "Darkness",
+            "value": "×2"
+          }
+        ],
+        "resistances": [
+          {
+            "type": "Fighting",
+            "value": "-30"
+          }
+        ],
+        "retreat": 0
+      },
+      "freeAttacks": [
+        0
+      ],
+      "sourceUrl": "https://assets.tcgdex.net/en/sv/sv10/085/high.webp",
+      "imageSha256": "0196e6b81effd2045ce2fd2371299eff8c78447d2bcaa4484b93d6088de15456"
+    }
+  ]
+}

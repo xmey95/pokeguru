@@ -92,6 +92,7 @@ export interface ProjectsApi {
   resumeAiJob(projectId: string, resourceId: string): Promise<OperationResult<boolean>>
   recoverAiJobs(): Promise<OperationResult<boolean>>
   createDeckThread(input: CreateDeckThreadInput): Promise<OperationResult<DeckThread>>
+  deleteDeckThread(projectId: string, threadId: string, confirmationTitle: string): Promise<OperationResult<boolean>>
   continueDeckThread(input: ContinueDeckThreadInput): Promise<OperationResult<DeckThread>>
   addDeckThreadMessage(projectId: string, threadId: string, text: string): Promise<OperationResult<DeckThread>>
   previewDeckThreadEvidence(projectId: string, threadId: string, text: string): Promise<OperationResult<ThreadEvidencePacket>>
