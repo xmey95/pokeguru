@@ -4,6 +4,12 @@
 
 ## Decisioni
 
+### T-162 — Input immutabili e adattamento per chiamata
+
+APP-161 congela separatamente le fasi della preparazione Matchup e i dati necessari alla finalizzazione dei Thread; una fase incompleta non diventa un checkpoint. Il workflow versione 2 è nel database insieme alle prove, oltre alla copia temporanea per compatibilità. I file v0.3.4 restano leggibili, ma non possono fornire uno snapshot completo che quella versione non salvava: la ripresa automatica dei vecchi lavori dovrà riconoscere questo limite. Il salvataggio di una guida relativa a una base nel frattempo cambiata deve conservarne il carattere storico (APP-163), senza attribuirla alla nuova lista.
+
+APP-162 è ora in corso: i limiti devono operare sulla singola chiamata e produrre partizioni verificabili, non una riduzione del perimetro. Errori di contesto richiedono un input diverso; errori transitori hanno tentativi e attese persistenti; spazio esaurito, autenticazione o mancanza di progresso devono produrre una causa operativa distinta.
+
 ### T-161 — Archivio delle prove e raccolta durevole (in corso)
 
 Il completamento automatico delle ricerche estese è autorizzato il 28-10-2026, fino alla release main. APP-161–164 sostituiscono la ripresa sempre esplicita di T-159: chiusura e riapertura riprendono il lavoro prima attivo; una pausa volontaria resta tale. Nessun avvio dell'intero I4.

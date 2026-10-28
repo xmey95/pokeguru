@@ -1,6 +1,9 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AiRunConfig } from '../shared/ai'
+import type { CatalogView } from '../shared/catalog'
+import type { DeckConstraint } from '../shared/constraints'
+import type { DeckVersion } from '../shared/deck-threads'
 import { readAiTokenUsage } from '../shared/ai-evidence'
 import type { DeckCandidate } from '../shared/deck-threads'
 import type { ThreadEvidencePacket } from '../shared/thread-evidence'
@@ -15,6 +18,7 @@ import { makeAiPromptAudit } from './ai-evidence-queries'
 import { readMatchupAnalysis } from './matchup-analysis'
 import { hasStrategyPhases } from '../shared/meta-matchups'
 import { aiFailureCode } from './ai-failure'
+import { AiEvidenceArchive } from './ai-evidence-archive'
 
 interface ThreadRequest {
   schemaVersion?: number
@@ -99,12 +103,20 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
     jobs.transition(job.id, 'applied')
     return 'applied'
   }
+  const archive = new AiEvidenceArchive(jobs.filePath, job, true)
+  let frozen: { catalog?: CatalogView; constraints?: DeckConstraint[]; base?: DeckVersion | null; referenceDate?: string }
+  try {
+    frozen = { catalog: archive.value<{ catalog: CatalogView }>('snapshot', 'sources')?.catalog,
+      constraints: archive.value<DeckConstraint[]>('input', 'constraints'),
+      base: archive.value<DeckVersion | null>('input', 'base'),
+      referenceDate: archive.value<string>('input', 'reference-date') }
+  } finally { archive.close() }
   const newTurn = job.kind === 'thread-ask' && request.schemaVersion === 2
     ? readDeckThreadTurn(result.value, job.projectId,
-      thread.baseVersionId ? projects.listDeckVersions(job.projectId)
+      frozen.base !== undefined ? frozen.base : thread.baseVersionId ? projects.listDeckVersions(job.projectId)
         .find((version) => version.id === thread.baseVersionId) ?? null : null,
-      catalog.view(), projects.listConstraints(job.projectId), request.evidence,
-      request.sources ?? []) : null
+      frozen.catalog ?? catalog.view(), frozen.constraints ?? projects.listConstraints(job.projectId), request.evidence,
+      request.sources ?? [], frozen.referenceDate) : null
   const answer = newTurn?.answer ?? (job.kind === 'thread-ask'
     ? readDeckDiscussionReply(result.value) : null)
   const sources = newTurn?.citedSourceIds ?? readDeckDiscussionSourceIds(result.value, request.evidence)

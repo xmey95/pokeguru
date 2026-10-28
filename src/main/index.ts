@@ -177,7 +177,7 @@ async function recoverAiJobs(): Promise<void> {
     for (const job of aiJobStore.recoverable()) {
       if (activeAiControllers.has(job.id)) continue
       try {
-        if (job.status === 'running' && readAiWorkflow(aiArtifactDirectory(job.id)) &&
+        if (job.status === 'running' && readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id) &&
           (job.request as { validatedDraft?: boolean } | null)?.validatedDraft !== true) {
           aiJobStore.suspend(job.id, 'Analisi sospesa alla chiusura dell’app. Riprendi dai lotti salvati.')
           continue
@@ -296,16 +296,17 @@ function startDailySync(): void {
   () => { mainTournamentJob!.start('new', true) })
 }
 async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRunConfig,
-  signal?: AbortSignal): Promise<MatchupDiscussion> {
+  work: AiAnalysisWork): Promise<MatchupDiscussion> {
   if (!projectStore) throw new Error(unavailableMessage())
   let current = discussion
   const lastToSummarize = current.turns.length - 5
   while (lastToSummarize > current.summarizedThrough) {
     const through = Math.min(current.summarizedThrough + 5, lastToSummarize)
     if (!current.turns[through]?.report) break
-    const summary = await summarizeMatchupContext(current, through, config, signal)
+    const summary = await work.snapshotAsync(`history-summary:${through}`,
+      () => summarizeMatchupContext(current, through, config, work.signal))
     projectStore.saveMatchupContextSummary(current.id, summary, through)
-    current = projectStore.getMatchupDiscussion(current.id)!
+    current = { ...current, contextSummary: summary, summarizedThrough: through }
   }
   return current
 }
@@ -330,17 +331,42 @@ function unavailableMessage(): string {
   return storageError ?? 'Archivio locale non disponibile. Controlla i permessi della cartella dati e riavvia l’app.'
 }
 
-function currentMatchupDeckContext(projectId: string, baseline: DeckBaseline): string {
-  const catalog = catalogStore?.view() ?? null
-  const asOf = localCalendarDate()
-  const standard = evaluateStandardDeck(baseline, catalog, asOf,
-    projectStore?.getStandardRuleAudit() ?? null)
-  return matchupDeckContext(baseline, projectStore!.getReconciliation(projectId), catalog, standard)
+function captureMatchupSelection(projectId: string, metaId: string, opponentId: string) {
+  const project = projectStore!.get(projectId)
+  const baseline = projectStore!.getBaseline(projectId)
+  const snapshot = projectStore!.getLatestMetaSnapshot()
+  const opponent = snapshot?.decks.find((deck) => deck.id === opponentId)
+  const hash = projectStore!.getCurrentDeckHash(projectId)
+  if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot || snapshot.id !== metaId || !opponent || !hash)
+    throw new Error('Importa una lista e aggiorna il metagame prima di generare l’analisi.')
+  return { projectId, baseline, snapshot, opponent, hash,
+    deckVersion: projectStore!.getCurrentDeckContext(projectId),
+    reconciliation: projectStore!.getReconciliation(projectId),
+    ruleAudit: projectStore!.getStandardRuleAudit(), asOf: localCalendarDate() }
 }
 
-function currentAiEventWindow(catalog: CatalogView, recentDays?: number):
+async function prepareStableMatchup(work: AiAnalysisWork, selection: ReturnType<typeof captureMatchupSelection>,
+  config: AiRunConfig, discussion?: MatchupDiscussion, reusePrevious = false) {
+  const { projectId, baseline, snapshot, opponent, reconciliation, ruleAudit, asOf } = selection
+  const context = discussion ? await work.snapshotAsync('matchup-history',
+    () => prepareMatchupHistory(work.snapshot('discussion', [], () => discussion), config, work)) : undefined
+  const previous = reusePrevious ? [...context?.turns ?? []].reverse().find((turn) => turn.report)?.report : undefined
+  const sampleDeck = await work.snapshotAsync('opponent-deck', async () => previous?.sampleDeckCards
+    ? { url: previous.sampleDeckUrl, cards: previous.sampleDeckCards } : fetchOpponentSample(opponent))
+  await work.snapshotAsync('deck-enrichment', async () => { await enrichMatchupDeck(projectId, baseline, reconciliation); return true })
+  if (!reusePrevious) await work.snapshotAsync('opponent-enrichment', async () => { await enrichOpponentCards(snapshot, opponent); return true })
+  const evidence = work.snapshot('tournament-evidence', [], () => previous?.tournamentEvidence ?? currentMatchupEvidence(snapshot, opponent))
+  const sample = await work.snapshotAsync('opponent-mechanics', async () => previous?.sampleDeckCards
+    ? { ...sampleDeck, mechanics: previous.sampleDeckMechanics ?? [] } : opponentSampleWithMechanics(sampleDeck, evidence))
+  const deckContext = work.snapshot('deck-context', [], () => {
+    const catalog = catalogStore?.view() ?? null
+    return matchupDeckContext(baseline, reconciliation, catalog, evaluateStandardDeck(baseline, catalog, asOf, ruleAudit))
+  })
+  return { context, evidence, sample, deckContext }
+}
+
+function currentAiEventWindow(catalog: CatalogView, recentDays?: number, to = localCalendarDate()):
   { from: string; to: string } {
-  const to = localCalendarDate()
   const rotation = catalog.rulePackage?.rotations.find((period) =>
     period.effectiveFrom <= to && period.effectiveUntil >= to)
   const recent = recentDays ? new Date(Date.parse(`${to}T00:00:00Z`) -
@@ -378,7 +404,8 @@ async function matchupAiQueries(request: string, deckContext: string,
   if (!work) throw new Error('Job di analisi non disponibile.')
   const { engine, catalog } = createArchivedEvidenceEngine(work.archive, () => {
     const current = catalogStore!.view()
-    return { catalog: current, window: currentAiEventWindow(current, 31),
+    const selection = work.archive.value<ReturnType<typeof captureMatchupSelection>>('input', 'matchup-selection')
+    return { catalog: current, window: currentAiEventWindow(current, 31, selection?.asOf),
       play: tournamentStore?.iterate() ?? [], main: tournamentStore?.iterateMain() ?? [] }
   })
   if (job) jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla guida.')
@@ -421,9 +448,10 @@ function requireNamedEvidence(trace: AiEvidenceQueryTrace): void {
   if (missing.length) throw new Error(`Prove locali non consegnate per ${missing.map((item) => item.name).join(', ')}. Riprova l’analisi.`)
 }
 
-async function enrichMatchupDeck(projectId: string, baseline: DeckBaseline): Promise<void> {
+async function enrichMatchupDeck(projectId: string, baseline: DeckBaseline,
+  frozenReconciliation?: DeckReconciliation): Promise<void> {
   if (!catalogStore || !projectStore || catalogSyncing) return
-  const reconciliation = projectStore.getReconciliation(projectId)
+  const reconciliation = frozenReconciliation ?? projectStore.getReconciliation(projectId)
   const cards = buildDeckCards(baseline, catalogStore.view(), reconciliation)
   const ids = [...new Set([
     ...cards.flatMap((card) => card.importedPrintIds),
@@ -1245,7 +1273,7 @@ function registerProjectHandlers(): void {
     if (!job || job.status !== 'interrupted' || !job.progress?.diagnostics?.resumable)
       return { ok: false, error: 'Nessuna analisi da riprendere.' }
     try {
-      const input = readAiWorkflow(aiArtifactDirectory(job.id))
+      const input = readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id)
       const runner = input && input.kind === job.kind ? resumeRunners.get(job.kind) : null
       if (!runner || !input) return { ok: false, error: 'Contesto di ripresa non disponibile.' }
       const targetProject = job.kind === 'thread-ask' || job.kind === 'matchup-generate'
@@ -1332,6 +1360,7 @@ function registerProjectHandlers(): void {
     try {
       jobProgress(job, 'preparing', 'Preparo il turno e le preferenze Codex.')
       const work = beginAiWork(job, controller, [projectId, threadId, message, override, existingUserMessageId])
+      const referenceDate = work.snapshot('reference-date', [], localCalendarDate)
       const config = await pinnedAiConfig(work, override)
       const currentSession = thread.aiSessionRef
       thread = work.snapshot('thread-context', [], () => thread!)
@@ -1342,7 +1371,7 @@ function registerProjectHandlers(): void {
       jobProgress(job, 'catalog', 'Raccolgo la lista e le schede del Catalogo.')
       const { engine, catalog } = createArchivedEvidenceEngine(work.archive, () => {
         const current = catalogStore!.view()
-        return { catalog: current, window: currentAiEventWindow(current),
+        return { catalog: current, window: currentAiEventWindow(current, undefined, referenceDate),
           play: tournamentStore?.iterate() ?? [], main: tournamentStore?.iterateMain() ?? [] }
       })
       const initialEvidence = work.snapshot('initial-evidence', [],
@@ -1366,7 +1395,7 @@ function registerProjectHandlers(): void {
       const cwd = join(app.getPath('temp'), 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
       let context = deckThreadPrompt(thread, base, message.trim(),
-        constraints, catalog, evidence)
+        constraints, catalog, evidence, referenceDate)
       evidence.promptAudit = makeAiPromptAudit(context.prompt)
       aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: false,
         message: message.trim(), config, evidence,
@@ -1399,7 +1428,7 @@ function registerProjectHandlers(): void {
         await analyzeLargeEvidence(queryTrace, message.trim(), config, work)
         evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
         context = deckThreadPrompt(thread, base, message.trim(),
-          constraints, catalog, evidence)
+          constraints, catalog, evidence, referenceDate)
         evidence.promptAudit = makeAiPromptAudit(context.prompt)
         aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: false,
           message: message.trim(), config, evidence,
@@ -1410,7 +1439,7 @@ function registerProjectHandlers(): void {
       if (!result || queryTrace.cardTargets?.some((target) => target.status === 'not-supplied'))
         throw new Error('Le schede nominate non sono state tutte consegnate a Codex. Riprova l’analisi.')
       const turn = readDeckThreadTurn(result.value, projectId, base, catalog,
-        constraints, evidence, context.sources)
+        constraints, evidence, context.sources, referenceDate)
       aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: true,
         message: message.trim(), config, evidence, sources: context.sources, existingUserMessageId })
       jobProgress(job, 'saving', 'Salvo la risposta e la candidata nel Thread.')
@@ -1614,15 +1643,9 @@ function registerProjectHandlers(): void {
       !/^\d+$/.test(opponentId) || generatingProjects.has(projectId)) {
       return { ok: false, error: 'Analisi già in corso o richiesta non valida.' }
     }
-    const project = projectStore.get(projectId)
-    const baseline = projectStore.getBaseline(projectId)
-    const snapshot = projectStore.getLatestMetaSnapshot()
-    const opponent = snapshot?.decks.find((deck) => deck.id === opponentId)
-    if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot || snapshot.id !== metaId || !opponent) {
-      return { ok: false, error: 'Importa una lista e aggiorna il metagame prima di generare l’analisi.' }
-    }
-    const hash = projectStore.getCurrentDeckHash(projectId)!
-    const deckVersion = projectStore.getCurrentDeckContext(projectId)
+    let initialSelection: ReturnType<typeof captureMatchupSelection> | undefined
+    try { if (!resumedJob) initialSelection = captureMatchupSelection(projectId, metaId, opponentId) }
+    catch (error) { return { ok: false, error: aiError(error) } }
     let job: AiJob
     try { job = resumedJob ? aiJobStore.resume(resumedJob.id) : aiJobStore.start('matchup-generate', projectId, `matchup:${projectId}`) }
     catch { return { ok: false, error: 'Esiste già un job Codex per questo progetto.' } }
@@ -1632,17 +1655,13 @@ function registerProjectHandlers(): void {
     try {
       jobProgress(job, 'preparing', 'Preparo l’avversario e le preferenze Codex.')
       const work = beginAiWork(job, controller, [projectId, metaId, opponentId, override])
+      const selection = work.snapshot('matchup-selection', [],
+        () => initialSelection ?? captureMatchupSelection(projectId, metaId, opponentId))
+      const { snapshot, opponent, hash, deckVersion } = selection
       const config = await pinnedAiConfig(work, override)
-      const sampleDeck = await fetchOpponentSample(opponent)
       jobProgress(job, 'catalog', 'Raccolgo le schede delle due liste dal Catalogo.')
-      await enrichMatchupDeck(projectId, baseline)
-      await enrichOpponentCards(snapshot, opponent)
+      const { evidence, sample, deckContext } = await prepareStableMatchup(work, selection, config)
       jobProgress(job, 'events', 'Collego le liste e i risultati dei tornei.')
-      await yieldAiPreparation(controller.signal)
-      const evidence = currentMatchupEvidence(snapshot, opponent)
-      const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
-      await yieldAiPreparation(controller.signal)
-      const deckContext = currentMatchupDeckContext(projectId, baseline)
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
         deckContext, sample, evidence, config, controller.signal, undefined, job)
       const base = matchupJobBase(job.id, projectId, hash, snapshot, opponent, sample, config,
@@ -1715,32 +1734,20 @@ function registerProjectHandlers(): void {
       if (!target || !target.feedback || target.report || target !== pending.turns.at(-1))
         throw new Error('Commento Matchup in attesa non trovato.')
       const work = beginAiWork(job, controller, [discussionId, target.id, null, override])
-      const project = projectStore.get(discussion.projectId)
-      const baseline = projectStore.getBaseline(discussion.projectId)
-      const snapshot = projectStore.getLatestMetaSnapshot()
-      const opponent = snapshot?.decks.find((deck) => deck.id === discussion.opponentId)
-      if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot ||
-        snapshot.id !== discussion.metaId || projectStore.getCurrentDeckHash(discussion.projectId) !== discussion.deckHash ||
-        (discussion.deckVersionId && (discussion.deckVersionId !== projectStore.getCurrentDeckContext(discussion.projectId)?.versionId ||
-          discussion.deckResolutionId !== projectStore.getCurrentDeckContext(discussion.projectId)?.resolutionId)) || !opponent)
-        throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
+      const selection = work.snapshot('matchup-selection', [], () => {
+        const value = captureMatchupSelection(discussion.projectId, discussion.metaId, discussion.opponentId)
+        if (value.hash !== discussion.deckHash || (discussion.deckVersionId &&
+          (value.deckVersion?.versionId !== discussion.deckVersionId || value.deckVersion?.resolutionId !== discussion.deckResolutionId)))
+          throw new Error('La base dell’analisi è cambiata. Continua sulla nuova base.')
+        return value
+      })
+      const { snapshot, opponent } = selection
       const config = await pinnedAiConfig(work, override)
-      const context = await prepareMatchupHistory(pending, config, controller.signal)
-      const previousReport = [...context.turns].reverse().find((turn) => turn.report)?.report
-      await yieldAiPreparation(controller.signal)
-      const evidence = previousReport?.tournamentEvidence ?? currentMatchupEvidence(snapshot, opponent)
-      const sample = previousReport?.sampleDeckCards
-        ? { url: previousReport.sampleDeckUrl, cards: previousReport.sampleDeckCards,
-          mechanics: previousReport.sampleDeckMechanics ?? [] }
-        : await opponentSampleWithMechanics(await fetchOpponentSample(opponent),
-          evidence)
       jobProgress(job, 'catalog', 'Aggiorno le schede della lista corrente.')
-      await enrichMatchupDeck(discussion.projectId, baseline)
-      await yieldAiPreparation(controller.signal)
-      const deckContext = currentMatchupDeckContext(discussion.projectId, baseline)
+      const { context, evidence, sample, deckContext } = await prepareStableMatchup(work, selection, config, pending, true)
       jobProgress(job, 'events', 'Ricollego le evidenze dei tornei alla revisione.')
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(target.feedback, deckContext,
-        sample, evidence, config, controller.signal, matchupHistoryContext(context), job)
+        sample, evidence, config, controller.signal, matchupHistoryContext(context!), job)
       const base = matchupJobBase(job.id, discussion.projectId, discussion.deckHash,
         snapshot, opponent, sample, config, evidence, aiQueries,
         discussion.deckVersionId ? { versionId: discussion.deckVersionId,
@@ -1749,7 +1756,7 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la revisione con nuove schede (${attempt + 1}/4).` :
           'Codex rivede la guida alla luce del tuo commento.')
-        revised = await work.run('analysis', '', config, () => reviseMatchup(context, target.feedback!, deckContext, snapshot,
+        revised = await work.run('analysis', '', config, () => reviseMatchup(context!, target.feedback!, deckContext, snapshot,
           opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
             onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
@@ -1816,38 +1823,25 @@ function registerProjectHandlers(): void {
     try {
       jobProgress(job, 'preparing', 'Preparo la nuova base della discussione.')
       const work = beginAiWork(job, controller, [discussionId, metaId, override])
-      const project = projectStore.get(parent.projectId)
-      const baseline = projectStore.getBaseline(parent.projectId)
-      const snapshot = projectStore.getLatestMetaSnapshot()
-      const opponent = snapshot?.decks.find((deck) => deck.id === parent.opponentId)
-      const hash = projectStore.getCurrentDeckHash(parent.projectId)
-      const deckVersion = projectStore.getCurrentDeckContext(parent.projectId)
-      if (!project || project.circuit !== 'WESTERN' || !baseline || !snapshot || snapshot.id !== metaId || !opponent || !hash)
-        throw new Error('Importa una lista e aggiorna il metagame prima di continuare.')
-      if (parent.metaId === metaId && parent.deckHash === hash &&
-        parent.deckVersionId === deckVersion?.versionId &&
-        parent.deckResolutionId === deckVersion?.resolutionId)
-        throw new Error('Questa discussione usa già la base corrente.')
-      if (projectStore.listMatchupDiscussions(parent.projectId, parent.opponentId)
-        .some((item) => item.metaId === metaId && item.deckHash === hash &&
-          item.deckVersionId === deckVersion?.versionId &&
-          item.deckResolutionId === deckVersion?.resolutionId))
-        throw new Error('Esiste già una discussione per la base corrente.')
+      const selection = work.snapshot('matchup-selection', [], () => {
+        const value = captureMatchupSelection(parent.projectId, metaId, parent.opponentId)
+        if (parent.metaId === metaId && parent.deckHash === value.hash &&
+          parent.deckVersionId === value.deckVersion?.versionId && parent.deckResolutionId === value.deckVersion?.resolutionId)
+          throw new Error('Questa discussione usa già la base corrente.')
+        if (projectStore!.listMatchupDiscussions(parent.projectId, parent.opponentId)
+          .some((item) => item.metaId === metaId && item.deckHash === value.hash &&
+            item.deckVersionId === value.deckVersion?.versionId && item.deckResolutionId === value.deckVersion?.resolutionId))
+          throw new Error('Esiste già una discussione per la base corrente.')
+        return value
+      })
+      const { snapshot, opponent, hash, deckVersion } = selection
       const config = await pinnedAiConfig(work, override)
-      const context = await prepareMatchupHistory(parent, config, controller.signal)
-      const sampleDeck = await fetchOpponentSample(opponent)
       jobProgress(job, 'catalog', 'Aggiorno le schede delle due liste.')
-      await enrichMatchupDeck(parent.projectId, baseline)
-      await enrichOpponentCards(snapshot, opponent)
+      const { context, evidence, sample, deckContext } = await prepareStableMatchup(work, selection, config, parent)
       jobProgress(job, 'events', 'Collego i tornei della nuova base.')
-      await yieldAiPreparation(controller.signal)
-      const evidence = currentMatchupEvidence(snapshot, opponent)
-      const sample = await opponentSampleWithMechanics(sampleDeck, evidence)
-      await yieldAiPreparation(controller.signal)
-      const deckContext = currentMatchupDeckContext(parent.projectId, baseline)
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Continua l'analisi di ${opponent.name} sulla nuova lista e sul nuovo metagame`,
         deckContext, sample, evidence, config, controller.signal,
-        matchupHistoryContext(context), job)
+        matchupHistoryContext(context!), job)
       const base = matchupJobBase(job.id, parent.projectId, hash,
         snapshot, opponent, sample, config, evidence, aiQueries, deckVersion)
       let generated: MatchupReport | null = null
@@ -1855,7 +1849,7 @@ function registerProjectHandlers(): void {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
           'Codex aggiorna la guida sulla nuova base.')
         generated = await work.run('analysis', '', config, () => generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
-          config, evidence, matchupHistoryContext(context), { jobDirectory: aiArtifactDirectory(job.id),
+          config, evidence, matchupHistoryContext(context!), { jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, aiQueries,
             onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,

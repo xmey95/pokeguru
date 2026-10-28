@@ -55,6 +55,7 @@ it('analyzes every record beyond the former budget and resumes completed batches
     expect(before.size).toBeLessThan(60)
     jobs.suspend(job.id, 'Pausa di prova')
     expect(() => jobs.start('thread-ask', project.id, 'thread')).toThrow(/Riprendi/)
+    work.close()
     jobs.close(); jobs = new AiJobStore(path)
     expect(jobs.get(job.id)?.progress?.diagnostics?.resumable).toBe(true)
     expect(readAiWorkflow(directory)?.args[2]).toBe('Domanda privata')
@@ -75,6 +76,7 @@ it('analyzes every record beyond the former budget and resumes completed batches
     expect(aiEvidenceForPrompt(input)).toMatchObject({ focusedCards: [{ printId: 'card-59' }] })
     expect(jobs.get(job.id)?.progress?.diagnostics?.cacheHits).toBe(2)
     expect(jobs.get(job.id)?.progress?.diagnostics?.batchesCompleted).toBe(input.analysis?.batches)
+    resumed.close()
   } finally { jobs.close(); projects.close(); rmSync(folder, { recursive: true, force: true }) }
 })
 

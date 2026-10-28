@@ -11,7 +11,7 @@ import { runStructuredCodex } from './codex-evidence-plan'
 import { AiEvidenceArchive } from './ai-evidence-archive'
 import { archiveReferences, evidenceArchive } from './ai-evidence-access'
 
-export interface AiWorkflowInput { kind: AiJobKind; args: unknown[] }
+export interface AiWorkflowInput { schemaVersion?: 1 | 2; kind: AiJobKind; args: unknown[] }
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
 function save(path: string, value: unknown): void {
@@ -19,12 +19,18 @@ function save(path: string, value: unknown): void {
   renameSync(`${path}.tmp`, path)
 }
 
-export function readAiWorkflow(directory: string): AiWorkflowInput | null {
+export function readAiWorkflow(directory: string, jobs?: AiJobStore, id?: string): AiWorkflowInput | null {
   const path = join(directory, 'workflow.json')
-  if (!existsSync(path)) return null
-  const input = JSON.parse(readFileSync(path, 'utf8')) as AiWorkflowInput
+  let input: AiWorkflowInput | undefined
+  const owner = id ? jobs?.get(id) : undefined
+  if (owner && jobs) {
+    const archive = new AiEvidenceArchive(jobs.filePath, owner, true)
+    try { input = archive.value<AiWorkflowInput>('workflow', 'input') } finally { archive.close() }
+  }
+  if (!input && existsSync(path)) input = JSON.parse(readFileSync(path, 'utf8')) as AiWorkflowInput
+  if (!input) return null
   if (!['thread-ask', 'matchup-generate', 'matchup-revise', 'matchup-continue'].includes(input.kind) ||
-    !Array.isArray(input.args)) throw new Error('Contesto di ripresa non valido.')
+    !Array.isArray(input.args) || ![undefined, 1, 2].includes(input.schemaVersion)) throw new Error('Contesto di ripresa non valido.')
   return input
 }
 
@@ -45,7 +51,11 @@ export class AiAnalysisWork {
   constructor(readonly directory: string, private readonly jobs: AiJobStore,
     readonly id: string, readonly signal: AbortSignal, input?: AiWorkflowInput) {
     mkdirSync(directory, { recursive: true })
-    if (input && !existsSync(join(directory, 'workflow.json'))) save(join(directory, 'workflow.json'), input)
+    if (input) {
+      const workflow = readAiWorkflow(directory, jobs, id) ?? { ...input, schemaVersion: 2 as const }
+      this.archive.saveValue('workflow', 'input', workflow)
+      if (!existsSync(join(directory, 'workflow.json'))) save(join(directory, 'workflow.json'), workflow)
+    }
     jobs.recordDiagnostics(id, { workflow: true, resumable: false })
   }
 
@@ -59,6 +69,16 @@ export class AiAnalysisWork {
     const existing = this.archive.value<T>('input', name)
     if (existing !== undefined) return existing
     const value = create()
+    this.archive.saveValue('input', name, value)
+    return value
+  }
+
+  async snapshotAsync<T>(name: string, create: () => Promise<T>): Promise<T> {
+    this.check()
+    const existing = this.archive.value<T>('input', name)
+    if (existing !== undefined) return existing
+    const value = await create()
+    this.check()
     this.archive.saveValue('input', name, value)
     return value
   }

@@ -165,8 +165,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-158** | Cronologia scorrevole delle attività AI e UI reattiva durante Codex | UI/affidabilità AI | R-07, R-10, R-13 / feedback utente 28-10-2026 | P1 / M | APP-154; migrazione archivio e verifica Electron | Done |
 | **APP-159** | Analisi estese riprendibili, diagnostica e release v0.3.4 | Funzionalità/affidabilità/distribuzione | R-07, R-12, R-13, R-14 / richiesta utente | P0 / L | APP-157; query locali, CI e release esistenti | Done |
 | **APP-160** | Attività AI comprensibili per un giocatore e sintesi formattate | UI | R-07, R-10, R-13 / feedback utente 28-10-2026 | P1 / S | APP-154/158; renderer Markdown esistente | Done |
-| **APP-161** | Archivio incrementale e raccolta persistente delle analisi | Dati/affidabilità | R-06, R-07, R-13, R-14 / obiettivo utente 28-10-2026 | P0 / L | APP-159; perimetro concordato | In progress |
-| **APP-162** | Analisi adattiva e sintesi verificabile con recupero automatico | AI/affidabilità | R-07, R-08, R-10, R-13 | P0 / L | APP-161 | Backlog |
+| **APP-161** | Archivio incrementale e raccolta persistente delle analisi | Dati/affidabilità | R-06, R-07, R-13, R-14 / obiettivo utente 28-10-2026 | P0 / L | APP-159; perimetro concordato | Done |
+| **APP-162** | Analisi adattiva e sintesi verificabile con recupero automatico | AI/affidabilità | R-07, R-08, R-10, R-13 | P0 / L | APP-161 | In progress |
 | **APP-163** | Ripresa automatica e stati operativi delle analisi | Affidabilità/UI | R-01, R-07, R-13, R-14 | P0 / M | APP-161/162; APP-160 preservato | Backlog |
 | **APP-164** | Verifica integrata e release delle analisi automatiche | Verifica/distribuzione | R-07, R-12, R-14 | P0 / M | APP-161–163; CI e release | Backlog |
 
@@ -181,6 +181,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Ripresa:** APP-161 resta In progress. Completare il congelamento di tutta la preparazione/finalizzazione Matchup (campione, contesto della lista, metagame e cronologia: attualmente le query usano lo snapshot, ma questi input esterni vengono ancora ricalcolati alla ripresa), verificare compatibilità dei checkpoint della v0.3.4 e chiudere l'audit del percorso integrato. Le nuove query applicative non usano più il tetto di 64 MB; rimangono da risolvere in APP-162 record singoli troppo grandi, pianificazione adattiva e recuperi limitati. APP-163 deve ancora attivare la ripresa automatica e distinguere pause/attese/errori. APP-164: prove Codex reali, CI, dev/main e release; obiettivo attivo.
 
 ### APP-162 — Analisi adattiva e sintesi verificabile
+
+- **Ready e avvio (28-10-2026):** APP-161 completato; incremento autorizzato dal goal utente. Una sola attività principale in corso. Prima verifica: partizione senza perdita di Unicode/campi, riduzione automatica dopo errore di contesto, tentativi persistenti e limitati, pausa durante attesa e nessuna ripetizione identica strutturale.
 
 - **Ambito autorizzato:** pianificazione e partizioni adattive mantenendo la domanda; limiti separati per memoria, singola chiamata e disco; ogni prova conserva riferimenti agli originali. Conteggi deterministici, confronto globale e recupero mirato di contraddizioni. Riuso per dipendenze, input, configurazione e versione del procedimento.
 - **Accettazione:** un blocco troppo grande viene diviso senza ripetizione identica; errori transitori con tentativi limitati e attese persistenti; ripianificazione senza progresso fermata con causa; nessuna sintesi incompleta presentata come esaustiva. Controlli finali su carte e candidate mantenuti.
