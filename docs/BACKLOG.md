@@ -167,6 +167,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 
 ### APP-159 — Analisi estese riprendibili, diagnostica e release v0.3.4
 
+- **Correzione CI:** lo smoke del primo messaggio assumeva `failed` e il vecchio comando Riprova; aggiornato a sospensione/ripresa del medesimo job, riapertura e annullamento seguito da nuova richiesta, verificando che il messaggio iniziale resti unico. Prova Electron locale passata; microcopy del primo messaggio corretto per non indicare esecuzione durante una pausa.
+
 - **Integrazione finale:** APP-158 è arrivato in `dev` tramite PR #93 durante la preparazione; integrato preservando cronologia, diagnostica e checkpoint. Typecheck/build e 355 test passati (43 live esclusi); prove Electron di ripresa/isolation/cancellazione e 127 attività con burst di 60 passate sulla build combinata. Anche il flusso Matchup reale ha completato guida, due revisioni e prosecuzione sulla nuova lista. PR #94 aperta; attesa CI sul merge finale prima di `main`.
 
 - **Autorizzazione e Ready (28-10-2026):** l'utente chiede di aggiungere le informazioni mancanti alla diagnostica e creare una nuova release per riprovare il Thread. Comprende APP-157, diagnostica strutturata persistente, integrazione `dev`/`main` e pubblicazione v0.3.4 con CI. APP-158 è in un worktree separato e non viene modificato.

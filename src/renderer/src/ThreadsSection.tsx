@@ -742,7 +742,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
         </form>}
         <div className="thread-detail">
           {detailLoading && !selected ? <LoadingSkeleton label="Caricamento dettaglio thread…" rows={3} /> : selected ? <>
-            {openingAiPending && <div className="content-note" role="status">{aiBusy
+            {openingAiPending && <div className="content-note" role="status">{currentAiJob?.status === 'running'
               ? 'Codex sta rispondendo al primo messaggio.'
               : 'Il primo messaggio è salvato. La risposta Codex è ancora da completare.'}
               {(openingErrors[selected.id] || currentAiJob?.error) &&
