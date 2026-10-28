@@ -40,7 +40,8 @@ function source(id: string, label: string, url: string | null, value: unknown): 
 }
 
 function choosePrint(name: string, line: ReturnType<typeof parseDeck>['lines'][number] | null,
-  catalog: CatalogView, explicit: CatalogPrint | null = null):
+  catalog: CatalogView, explicit: CatalogPrint | null = null,
+  byName?: Map<string, CatalogPrint[]>):
   { print: CatalogPrint | null; status: ThreadCardEvidence['identityStatus'] } {
   if (line?.kind === 'card') {
     const exact = suggestPrints(line, catalog).filter((item) => item.reason === 'same-print' && item.print.detailAt)
@@ -48,7 +49,8 @@ function choosePrint(name: string, line: ReturnType<typeof parseDeck>['lines'][n
     if (exact.length > 1) return { print: null, status: 'ambiguous' }
   }
   if (explicit) return { print: explicit, status: 'exact' }
-  const matches = catalog.prints.filter((print) => print.detailAt && normal(print.name) === normal(name))
+  const matches = (byName?.get(normal(name)) ?? catalog.prints.filter((print) =>
+    normal(print.name) === normal(name))).filter((print) => print.detailAt)
   if (!matches.length) return { print: null, status: 'missing' }
   if (matches.length === 1) return { print: matches[0],
     status: matches[0].gameplay ? 'same-gameplay' : 'unverified' }
@@ -84,12 +86,17 @@ function eventRows(play: TournamentSnapshot[], main: MainTournamentSnapshot[], q
   const words = tokens(query)
   const rows: ListRow[] = []
   const score = (deck: string, cards: TournamentCard[]): number => {
-    const deckName = normal(deck)
-    const queryMatches = words.filter((word) => deckName.split(' ').some((part) => part.startsWith(word))).length
-    const cardMatches = words.filter((word) => cards.some((card) => normal(card.name).split(' ')
-      .some((part) => part.startsWith(word)))).length
-    const overlap = new Set(cards.filter((card) => card.category === 'pokemon' &&
-      ownPokemon.has(normal(card.name))).map((card) => normal(card.name))).size
+    const deckParts = normal(deck).split(' ')
+    const cardParts: string[] = []
+    const matchingPokemon = new Set<string>()
+    for (const card of cards) {
+      const name = normal(card.name)
+      cardParts.push(...name.split(' '))
+      if (card.category === 'pokemon' && ownPokemon.has(name)) matchingPokemon.add(name)
+    }
+    const queryMatches = words.filter((word) => deckParts.some((part) => part.startsWith(word))).length
+    const cardMatches = words.filter((word) => cardParts.some((part) => part.startsWith(word))).length
+    const overlap = matchingPokemon.size
     return queryMatches * 10 + cardMatches * 4 + overlap * 2
   }
   for (const event of play.filter((item) => item.circuit === 'WESTERN' && item.format === 'STANDARD')) {
@@ -124,6 +131,16 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   constraints: DeckConstraint[], catalog: CatalogView, play: TournamentSnapshot[],
   main: MainTournamentSnapshot[]): ThreadEvidencePacket {
   const candidate = thread.candidates.at(-1) ?? null
+  const byPrintName = new Map<string, CatalogPrint[]>()
+  const byPrintId = new Map<string, CatalogPrint>()
+  const bySetId = new Map(catalog.sets.map((set) => [set.id, set]))
+  for (const print of catalog.prints) {
+    const key = normal(print.name)
+    const named = byPrintName.get(key) ?? []
+    named.push(print)
+    byPrintName.set(key, named)
+    byPrintId.set(print.id, print)
+  }
   const deckText = candidate?.rawText ?? thread.seedCandidateText ?? base?.rawText ?? ''
   const lines = parseDeck(deckText).lines.filter((line) => line.kind === 'card')
   const byName = new Map<string, { name: string; quantity: number; line: typeof lines[number] | null }>()
@@ -141,8 +158,8 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   const normalizedQuestion = normal(searchText)
   const mentioned = new Set<string>()
   let unmatchedText = ` ${normalizedQuestion} `
-  const catalogNames = [...new Set(catalog.prints.map((print) => normal(print.name))
-    .filter((name) => name.length >= 4))].sort((a, b) => b.length - a.length)
+  const catalogNames = [...byPrintName.keys()].filter((name) => name.length >= 4)
+    .sort((a, b) => b.length - a.length)
   for (const name of catalogNames) {
     const phrase = ` ${name} `
     if (!unmatchedText.includes(phrase)) continue
@@ -153,14 +170,14 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   for (const [alias, canonical] of CARD_NAME_ALIASES) {
     const key = normal(canonical)
     if (` ${normalizedQuestion} `.includes(` ${normal(alias)} `) &&
-      catalog.prints.some((print) => normal(print.name) === key && print.detailAt)) {
+      byPrintName.get(key)?.some((print) => print.detailAt)) {
       mentioned.add(key)
       matchedAliases.set(key, alias)
     }
   }
   const explicitPrints = new Map<string, CatalogPrint[]>()
   for (const print of catalog.prints.filter((item) => item.detailAt && mentioned.has(normal(item.name)))) {
-    const set = catalog.sets.find((item) => item.id === print.setId)
+    const set = bySetId.get(print.setId)
     if (![print.setId, set?.abbreviation].filter((code): code is string => Boolean(code))
       .some((code) => normalizedQuestion.includes(normal(`${print.name} ${code} ${print.localId}`)))) continue
     const key = normal(print.name)
@@ -168,7 +185,8 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   }
   for (const constraint of constraints) mentioned.add(normal(constraint.identityName))
   const ownPokemon = new Set([...byName.values()].filter((item) =>
-    choosePrint(item.name, item.line, catalog).print?.category === 'Pokemon').map((item) => normal(item.name)))
+    choosePrint(item.name, item.line, catalog, null, byPrintName).print?.category === 'Pokemon')
+    .map((item) => normal(item.name)))
   const ranked = eventRows(play, main, searchText, ownPokemon)
   const chosenRows: ListRow[] = []
   const perEvent = new Map<string, number>()
@@ -181,13 +199,19 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   }
   const names = [...byName.values()]
   for (const key of mentioned) if (!byName.has(key)) {
-    const print = catalog.prints.find((item) => normal(item.name) === key)
+    const print = byPrintName.get(key)?.[0]
     if (print) names.push({ name: print.name, quantity: 0, line: null })
+  }
+  const pokemon = new Map<string, boolean>()
+  const isPokemon = (item: typeof names[number]): boolean => {
+    const key = normal(item.name)
+    if (!pokemon.has(key)) pokemon.set(key,
+      choosePrint(item.name, item.line, catalog, null, byPrintName).print?.category === 'Pokemon')
+    return pokemon.get(key) === true
   }
   names.sort((a, b) => Number(mentioned.has(normal(b.name))) -
     Number(mentioned.has(normal(a.name))) ||
-    Number(choosePrint(b.name, b.line, catalog).print?.category === 'Pokemon') -
-    Number(choosePrint(a.name, a.line, catalog).print?.category === 'Pokemon') ||
+    Number(isPokemon(b)) - Number(isPokemon(a)) ||
     b.quantity - a.quantity || a.name.localeCompare(b.name))
   const observed = new Map<string, { name: string; count: number; category: TournamentCard['category'] }>()
   for (const row of chosenRows) for (const card of row.cards) {
@@ -207,7 +231,8 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   const asOf = localCalendarDate()
   const cards: ThreadCardEvidence[] = selected.map((item) => {
     const explicit = explicitPrints.get(normal(item.name)) ?? []
-    const chosen = choosePrint(item.name, item.line, catalog, explicit.length === 1 ? explicit[0] : null)
+    const chosen = choosePrint(item.name, item.line, catalog,
+      explicit.length === 1 ? explicit[0] : null, byPrintName)
     const print = chosen.print
     const effective = print ? effectiveCardGameplay(print, asOf, catalog.rulePackage) : null
     return { name: item.name, ...(matchedAliases.has(normal(item.name))
@@ -230,7 +255,7 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
     'Candidata del Thread precedente', null, thread.seedCandidateText))
   if (constraints.length) sources.push(source('constraints', 'Vincoli del progetto', null, constraints))
   for (const card of cards) {
-    const print = catalog.prints.find((item) => item.id === card.printId)
+    const print = card.printId ? byPrintId.get(card.printId) : null
     if (print && card.sourceId) sources.push(source(card.sourceId,
       `${print.name} · ${print.setName} ${print.localId}`, print.sourceUrl,
       { gameplay: card.gameplay, printedGameplay: print.gameplay,
@@ -267,7 +292,7 @@ export function buildThreadEvidence(thread: DeckThread, base: DeckVersion | null
   return { schemaVersion: 1, capturedAt: new Date().toISOString(), baseVersionId: base?.id ?? null,
     candidateId: candidate?.id ?? null, catalogSyncedAt: catalog.syncedAt,
     cardCoverage: { selected: cards.length, withGameplay: cards.filter((item) => {
-      const print = catalog.prints.find((entry) => entry.id === item.printId)
+      const print = item.printId ? byPrintId.get(item.printId) : null
       return Boolean(print && effectiveCardGameplay(print, asOf, catalog.rulePackage).status !== 'source-mismatch' &&
         hasComparableGameplay(print.category, print.stage ?? null,
           print.energyType ?? null, item.gameplay))

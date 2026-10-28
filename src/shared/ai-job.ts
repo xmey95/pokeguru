@@ -10,7 +10,21 @@ export interface AiJobProgress {
   detail: string
   summary: string | null
   updatedAt: string
+  sequence?: number
   steps: { phase: AiJobPhase; detail: string; at: string }[]
+}
+
+export interface AiJobActivityStep {
+  id: number
+  phase: AiJobPhase
+  detail: string
+  summary: string | null
+  at: string
+}
+
+export interface AiJobActivityPage {
+  steps: AiJobActivityStep[]
+  hasMore: boolean
 }
 
 export interface AiJobSummary {
