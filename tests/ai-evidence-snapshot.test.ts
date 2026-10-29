@@ -116,7 +116,9 @@ it('includes immutable sources, originals and cursors in a verified SQLite backu
     try {
       expect(restored.counts()).toEqual(f.archive.counts())
       expect(restored.page(saved.key, 1)).toEqual(f.archive.page(saved.key, 1))
-      expect(restored.value('snapshot', 'sources')).toEqual({ catalog, window })
+      expect(restored.value('snapshot', 'sources')).toEqual(f.archive.value('snapshot', 'sources'))
+      expect(restored.value('snapshot', 'sources')).toMatchObject({ catalog, window,
+        eventCoverage: [{ id: 'play:event-1', returnedParticipants: 7, completeLists: 7 }] })
       expect(() => restored.saveValue('input', 'forbidden', 1)).toThrow()
     } finally { restored.close() }
     expect(() => new AiEvidenceArchive(destination, { ...f.job, projectId: 'other' }, true)).toThrow(/progetto/)

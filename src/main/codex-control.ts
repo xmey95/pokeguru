@@ -199,6 +199,7 @@ export class CodexControl {
   async jsonTurn(sessionId: string | null, cwd: string, prompt: string, config: AiRunConfig,
     outputSchema: Record<string, unknown>, options: { jobId?: string; jobDirectory?: string;
       signal?: AbortSignal; onSessionStarted?: (sessionId: string) => void;
+      onUsage?: (usage: AiTokenUsage | null) => void;
       onSummary?: (summary: string) => void } = {}): Promise<{ sessionId: string; turnId: string; value: unknown; usage: AiTokenUsage | null }> {
     const key = options.jobId ?? sessionId ?? `new:${randomUUID()}`
     if (this.cliTurns.has(key)) throw new Error('Questa sessione Codex è già in elaborazione.')
@@ -270,6 +271,7 @@ export class CodexControl {
         child.on('close', (code) => {
           clearTimeout(timer)
           options.signal?.removeEventListener('abort', abort)
+          try { options.onUsage?.(usage) } catch (error) { reject(error); return }
           if (captureError) return reject(new Error('Impossibile conservare la sessione Codex.'))
           if (options.signal?.aborted) return reject(new Error('Operazione Codex annullata.'))
           if (timedOut) return reject(new Error('Codex ha superato il tempo massimo di dieci minuti per questa chiamata. Puoi riprendere l’analisi.'))

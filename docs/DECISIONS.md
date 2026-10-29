@@ -4,9 +4,19 @@
 
 ## Decisioni
 
-### T-177 — Release v0.3.8 dal dev verificato
+### T-179 — Riduzione del lavoro ripetuto a configurazione AI invariata
 
-Il 29-10-2026 l'utente autorizza merge dev→main e pubblicazione delle ottimizzazioni DB. Incremento patch 0.3.8, schema 16 già introdotto e verificato in APP-174–176; inclusi i miglioramenti APP-172/173 presenti in dev. Si mantengono branch protetti e quattro check obbligatori per ogni PR, più package/smoke, manifest e attestazioni del workflow Release sul commit main. I risultati locali non sostituiscono le prove dei runner. Restano dichiarati i limiti di firma ad hoc, notarizzazione e Finder esterno. Nessun cambiamento ai parametri di durabilità o ai dati personali durante la pubblicazione.
+APP-179–181, autorizzati il 29-10-2026, mantengono modello, ragionamento, copertura e verifiche delle carte. Un journal per tentativo distingue usage noto, valori ignoti, cache locale, token cached e attese; gli aggregati non dipendono dalla finestra delle ultime 40 chiamate. I namespace nelle tabelle esistenti non richiedono migrazione. Il modello/effort effettivo non osservato dalla CLI resta null.
+
+Manifest di lotti con membri e hash stabili, sintesi dipendenti dai figli e checkpoint finale evitano ricalcoli e scansioni. La prima partizione resta invariata; aggiunte successive non spostano i lotti completati. Cambiamenti di prove/query/statistiche/configurazione/istruzioni invalidano i risultati dipendenti. I job legacy mantengono l'algoritmo precedente. Gli originali pertinenti sono selezionati prima della bozza, ma il registro di consegna nasce solo dal prompt serializzato; nuove carte o contenuti diversi mantengono la revisione. Riferimenti sostituiscono esclusivamente duplicazioni esatte, preservando errata, note e provenienza.
+
+Il [confronto misurato](AI-OPTIMIZATION-RESULTS.md) separa callback sintetiche, Codex reale, byte/token e tempi. L'append reale passa da 5 a 2 chiamate senza nuovo errore sostanziale nei casi verificati; il prompt deduplicato riduce input ma non dimostra minore latenza nella singola coppia. Falsi negativi del grader, omissioni secondarie, recupero del report sovrascritto e limiti del corpus sono registrati. Il risultato non autorizza cambi di effort/modello o concorrenza in APP-182/183, né promette non inferiorità tattica generale.
+
+### T-178 — Audit prima del cambiamento di modello o copertura
+
+La richiesta del 29-10-2026 autorizza l'audit approfondito con subagent AI e Performance. Il [rapporto APP-178](AI-ANALYSIS-AUDIT.md) e le [metriche](AI-ANALYSIS-AUDIT-METRICS.json) distinguono codice, prove di orchestrazione con risposte sintetiche e ipotesi da valutare con Codex reale. La prima priorità raccomandata è misurare ogni tentativo e preservare il riuso delle evidenze, mantenendo inizialmente invariati modello e ragionamento. Non si cambia il contratto di copertura T-161/T-162 né si elimina la verifica delle carte. Cache locale, cache del fornitore, byte, token e quota non sono misure intercambiabili.
+
+APP-179–183 preparano gli incrementi successivi, senza autorizzarne implicitamente l'esecuzione. Il margine proposto di non inferiorità di 0,2 punti su scala 1–5 e il corpus iniziale di 30–50 casi restano da definire prima della campagna, insieme al budget; non sono promesse di qualità. Fonti ufficiali consultate: [ottimizzazione della latenza](https://developers.openai.com/api/docs/guides/latency-optimization), [prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching), [App Server](https://learn.chatgpt.com/docs/app-server). Le indicazioni API non dimostrano prezzi, cache hit o compatibilità del percorso CLI con accesso Codex dell'utente.
 
 ### T-176 — Pagine profonde, storici e riferimenti derivati (APP-175/176)
 
@@ -580,3 +590,8 @@ Lo schema diagnostico v3 salva solo campi consentiti: causa tecnica, configurazi
 ### T-157 — Errori delle bozze e tempi della diagnostica (APP-157)
 
 La presenza di `result.json` non prova che una risposta sia recuperabile: con `validatedDraft=false` contiene una bozza che il recupero già rifiuta. Se l'invocazione termina con errore, il job passa quindi a `failed`, conserva la causa e libera la risorsa. I risultati già verificati conservano il percorso di recupero e registrano l'errore senza scartare richiesta e risposta. Non cambiano le verifiche delle carte né l'adozione manuale delle candidate. La diagnostica passa allo schema v2: `elapsedMs` usa l'istante dell'export per `running`/`ready` e l'ultimo aggiornamento per gli stati finali; `sinceLastUpdateMs` distingue l'età dell'ultimo evento. Del progresso esporta soltanto fase e timestamp degli ultimi 12 passi, senza dettagli o sintesi. Nessuna migrazione SQLite. La prima diagnostica e la fase riferita dall'utente sono compatibili con il difetto riprodotto, ma non dimostrano quale controllo abbia respinto la risposta reale.
+
+
+### T-185 — Aggregati deterministici e accesso agli originali (APP-185)
+
+Il job reale APP-184 dedica il 68,88% dei byte ad abbinamenti e partecipazioni. Nei nuovi workflow v3 questi record restano nell’archivio, mentre l’analisi riceve tabelle deterministiche per lista esatta/evento/etichetta avversaria; lo schema delle colonne accompagna ogni foglia. Si distinguono risultati nel torneo, lati giocatore nei matchup e incontri unici, con W/L/T, bye, doppie sconfitte e ignoti espliciti. La panoramica usa solo il denominatore delle liste complete locali; i dettagli originali sono richiedibili senza limite totale implicito. Inventari e aggregati sono persistiti per contenuto e job, senza migrazione SQLite; v1/v2 mantengono algoritmo e checkpoint. La telemetria conta la prima introduzione dei record e non esporta query o dati personali. Modello ed effort invariati. Benchmark reale offline: 344 foglie contro 872, senza chiamate AI; nessuna equivalenza tattica dichiarata. Contratto, verifica e limiti in [AI-EVENT-AGGREGATES.md](AI-EVENT-AGGREGATES.md).

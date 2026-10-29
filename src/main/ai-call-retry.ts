@@ -18,7 +18,8 @@ export interface AiCallJournal {
  * reset the budget, and structural failures never replay the identical input. */
 export async function runRecoverableAiCall<T>(execute: () => Promise<T>, journal: AiCallJournal,
   options: { signal: AbortSignal; now?: () => number; wait?: (ms: number, signal: AbortSignal) => Promise<void>;
-    onWaiting?: (state: AiCallState) => void; onRunning?: () => void }): Promise<T> {
+    onWaiting?: (state: AiCallState) => void; onRunning?: () => void;
+    onWaitElapsed?: (milliseconds: number) => void }): Promise<T> {
   const now = options.now ?? Date.now
   const wait = options.wait ?? ((ms, signal) => sleep(ms, undefined, { signal }))
   const check = () => {
@@ -33,8 +34,10 @@ export async function runRecoverableAiCall<T>(execute: () => Promise<T>, journal
     if (state.status === 'waiting' && state.nextAttemptAt) {
       options.onWaiting?.(state)
       while (now() < state.nextAttemptAt) {
+        const started = performance.now()
         try { await wait(Math.min(30_000, state.nextAttemptAt - now()), options.signal) }
         catch (error) { check(); throw error }
+        finally { options.onWaitElapsed?.(performance.now() - started) }
         check()
       }
     }

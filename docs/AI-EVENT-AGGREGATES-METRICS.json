@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "label": "Real APP-184 snapshot; offline representation only, zero model calls",
+  "originalRecords": 101505,
+  "analysisRecords": 15930,
+  "originalLeafBatches": 872,
+  "aggregateLeafBatches": 344,
+  "inputBytes": 20036920,
+  "byKind": {
+    "card": {
+      "records": 1010,
+      "bytes": 1344787
+    },
+    "deck": {
+      "records": 7343,
+      "bytes": 6710120
+    },
+    "search": {
+      "records": 233,
+      "bytes": 226947
+    },
+    "event-statistics": {
+      "records": 7343,
+      "bytes": 11719201
+    },
+    "event-coverage": {
+      "records": 1,
+      "bytes": 667
+    }
+  },
+  "coverage": {
+    "kind": "event-aggregation-coverage",
+    "uniqueParticipations": 16212,
+    "uniquePairings": 69364,
+    "resolvedSelectedPlayerSides": 80405,
+    "unassociatedPairings": 0,
+    "ambiguousSelectedSides": 0,
+    "missingDeckKeys": 0,
+    "rules": [
+      "Field records are not matchup records.",
+      "Matchup rows count player sides; never sum both sides as unique matches.",
+      "Denominator is wins + losses + ties. Byes, double losses, unresolved and invalid outcomes are reported separately.",
+      "Opponents use source labels only when their complete list and player identity are known.",
+      "All individual records remain in the job archive and events.details can retrieve them."
+    ]
+  },
+  "checks": {
+    "everyDeckFieldRecordAndPlacementReconciled": true,
+    "eventParticipationTotalsReconciled": true,
+    "matchupPlayerSidesReconciled": true
+  },
+  "durationMs": 27955
+}

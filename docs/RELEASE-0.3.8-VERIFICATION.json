@@ -1,0 +1,41 @@
+{
+  "release": "https://github.com/xmey95/pokeguru/releases/tag/v0.3.8",
+  "sourceSha": "e75c6c6bdf4510983d744b74b67e9a2def08d98b",
+  "run": "40840175644",
+  "assets": 9,
+  "verifiedChecksumEntries": 8,
+  "packages": [
+    {
+      "platform": "linux",
+      "artifact": "Pokeguru-0.3.8-linux-x86_64.AppImage",
+      "bytes": 294328302,
+      "sha256": "acf6bcf24e31b91af06dc2054d093da1f19604621e2361cc39b9f5adcb76d281"
+    },
+    {
+      "platform": "windows",
+      "artifact": "Pokeguru-0.3.8-windows-x64-setup.exe",
+      "bytes": 226383720,
+      "sha256": "7f05e13495fa320490e81ea0e9a7520ad33637b7655fba5fdac83666024e1320"
+    },
+    {
+      "platform": "macos-x64",
+      "artifact": "Pokeguru-0.3.8-macos-x64.dmg",
+      "bytes": 277111459,
+      "sha256": "b30b3ce8bda744fe63afc12d39c8bcbea2a28252e465aab729bd5000ce5b6111"
+    },
+    {
+      "platform": "macos-arm64",
+      "artifact": "Pokeguru-0.3.8-macos-arm64.dmg",
+      "bytes": 260201714,
+      "sha256": "11cb71f3867bc7d6a08901dc24a92fa43e2a95c795da17d1597ade552ca6c326"
+    }
+  ],
+  "preparationPr": "https://github.com/xmey95/pokeguru/pull/111",
+  "mainPr": "https://github.com/xmey95/pokeguru/pull/112",
+  "ciRuns": [
+    "https://github.com/xmey95/pokeguru/actions/runs/40837286776",
+    "https://github.com/xmey95/pokeguru/actions/runs/40838585253"
+  ],
+  "releaseRun": "https://github.com/xmey95/pokeguru/actions/runs/40840175644",
+  "verification": "Four CI jobs succeeded on each PR; four package/smoke jobs, attest and publish succeeded. Tag equals sourceSha; all eight checksums match GitHub asset digests; downloaded manifests and checksum file hashes match; manifest version/source/run/bytes match the published packages. Package bytes and signed attestations were checked by the Release workflow."
+}

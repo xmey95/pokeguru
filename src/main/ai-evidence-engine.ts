@@ -5,12 +5,15 @@ import type { MainTournamentSnapshot } from '../shared/main-tournament'
 import type { AiEvidenceQueryResult } from '../shared/ai-evidence'
 import { searchCatalogEvidence } from './catalog-evidence-search'
 import { exactDeckIdentity } from './ai-evidence-archive'
+import { eventOverview } from './ai-event-aggregates'
 
 export type AiEvidenceQuery =
   | { operation: 'catalog.search'; terms?: string[]; printIds?: string[];
       identityIds?: string[]; mode?: 'any' | 'all'; offset?: number; limit?: number }
   | { operation: 'events.search'; deckName?: string; cardName?: string;
       from?: string; to?: string; offset?: number; limit?: number }
+  | { operation: 'events.overview'; from: string; to: string; offset: number; limit: number }
+  | { operation: 'events.details'; deckKey: string; eventId?: string; offset: number; limit: number }
 
 export interface AiEvidenceEngine {
   describe(): { operations: string[]; catalog: { syncedAt: string | null;
@@ -50,6 +53,22 @@ function page(value: unknown, fallback: number, max: number): number | null {
 export function parseEvidenceQuery(input: unknown, window: { from: string; to: string }): AiEvidenceQuery {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Query non valida.')
   const value = input as Record<string, unknown>
+  if (value.operation === 'events.overview') {
+    const from = value.from ?? window.from, to = value.to ?? window.to
+    if (Object.keys(value).some((key) => !['operation', 'from', 'to', 'offset', 'limit'].includes(key)) ||
+      !date(from) || !date(to) || from > to || from < window.from || to > window.to ||
+      page(value.offset, 0, 0) === null || page(value.limit, 1, 1) !== 1) throw new Error('Panoramica Eventi non valida.')
+    return { operation: 'events.overview', from, to, offset: 0, limit: 1 }
+  }
+  if (value.operation === 'events.details') {
+    if (Object.keys(value).some((key) => !['operation', 'deckKey', 'eventId', 'offset', 'limit'].includes(key)) ||
+      typeof value.deckKey !== 'string' || !/^[a-f0-9]{64}$/.test(value.deckKey) ||
+      value.eventId !== undefined && !boundedString(value.eventId, 200) ||
+      page(value.offset, 0, Number.MAX_SAFE_INTEGER) === null || !page(value.limit, 20, 20))
+      throw new Error('Dettaglio Eventi non valido.')
+    return { operation: 'events.details', deckKey: value.deckKey, eventId: value.eventId as string | undefined,
+      offset: page(value.offset, 0, Number.MAX_SAFE_INTEGER)!, limit: page(value.limit, 20, 20)! }
+  }
   if (value.operation === 'catalog.search') {
     if (Object.keys(value).some((key) => !['operation', 'terms', 'printIds', 'identityIds',
       'mode', 'offset', 'limit'].includes(key))) throw new Error('Argomenti Catalogo non consentiti.')
@@ -141,6 +160,8 @@ export function* evidenceEventRows(play: Iterable<TournamentSnapshot>,
 export interface EvidenceEventSource {
   names(): Iterable<string>
   search(query: Extract<AiEvidenceQuery, { operation: 'events.search' }>): unknown
+  overview?(from: string, to: string): unknown
+  details?(deckKey: string, offset: number, limit: number, eventId?: string): unknown
 }
 
 /** A read-only, bounded gateway from model-chosen queries to local app data. */
@@ -166,7 +187,7 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
   const eventSearches = new Map<string, { matchingLists: number;
     groups: (EvidenceEventRow & { occurrences: Omit<EvidenceEventRow, 'cards'>[] })[] }>()
   return {
-    describe: () => ({ operations: ['catalog.search', 'events.search'],
+    describe: () => ({ operations: ['catalog.search', 'events.search', ...(!events || events.overview ? ['events.overview'] : []), ...(events?.details ? ['events.details'] : [])],
       catalog: { syncedAt: catalog.syncedAt, expected: scope.expected,
         indexed: scope.indexed, gameplay: scope.withGameplay }, eventWindow: window }),
     cardTargets(text) {
@@ -223,6 +244,18 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
         const sourceIds = data.matches.map((item) => `card:${item.printId}`)
         return { query, status: 'ok', data, sourceIds,
           fingerprint: fingerprint({ query, data }) }
+      }
+      if (query.operation === 'events.overview') {
+        if (events && !events.overview) return { query, status: 'rejected', data: { error: 'Panoramica Eventi non disponibile.' },
+          sourceIds: [], fingerprint: fingerprint(query) }
+        const data = events?.overview ? events.overview(query.from, query.to) : eventOverview(rows, query.from, query.to)
+        return { query, status: 'ok', data, sourceIds: [], fingerprint: fingerprint({ query, data }) }
+      }
+      if (query.operation === 'events.details') {
+        if (!events?.details) return { query, status: 'rejected', data: { error: 'Originali archiviati non disponibili.' },
+          sourceIds: [], fingerprint: fingerprint(query) }
+        const data = events.details(query.deckKey, query.offset, query.limit, query.eventId) as { records: { sourceId: string }[] }
+        return { query, status: 'ok', data, sourceIds: [...new Set(data.records.map((r) => r.sourceId))], fingerprint: fingerprint({ query, data }) }
       }
       if (events) {
         const data = events.search(query) as { lists: EvidenceEventRow[] }

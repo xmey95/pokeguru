@@ -71,6 +71,14 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Novità della v0.3.9
+
+Le analisi estese riutilizzano lotti e sintesi compatibili quando le prove crescono o il lavoro viene ripreso. La diagnostica distingue chiamate, riuso, tempi, dimensioni e consumo effettivamente disponibile; le schede originali necessarie alla verifica finale restano pronte senza duplicazioni esatte.
+
+Le nuove analisi possono consultare una panoramica degli Eventi senza scegliere prima un archetipo. Partecipazioni e abbinamenti sono rappresentati da aggregati deterministici per lista esatta, evento e avversario, con denominatori e lacune espliciti; gli originali restano recuperabili. Ogni lotto riceve lista di partenza e vincoli. Modello e livello di ragionamento restano quelli scelti.
+
+Sul campione reale verificato offline i lotti foglia passano da 872 a 344 (−60,55%). La misura non certifica la qualità tattica né una riduzione proporzionale di costi o durata. Le analisi già avviate conservano rappresentazione e checkpoint precedenti: la nuova aggregazione si applica ai nuovi workflow. Lo schema del database resta 16. [Misure e limiti](docs/AI-EVENT-AGGREGATES.md).
+
 ### Novità della v0.3.8
 
 Le letture del database sono più leggere: indici mirati, riepiloghi compatti e pagine Eventi profonde indicizzate riducono scansioni e lavoro ripetuto. Versioni della lista, candidate, conversazioni e guide Matchup caricano lo storico a blocchi, mantenendo raggiungibile ogni elemento e la base corrente anche quando è fuori dalla prima pagina.
@@ -121,7 +129,7 @@ La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e
 
 ## Sviluppo
 
-La v0.3.8 include l'audit e le ottimizzazioni SQLite con schema 16. Il passaggio crea un backup verificato prima dell'upgrade e conserva le analisi in sospeso. Include pagine Eventi profonde indicizzate, storici caricati a blocchi e riferimenti di conservazione incrementali. Misure e limiti sono nel [rapporto sulle prestazioni del database](docs/DATABASE-PERFORMANCE.md).
+La v0.3.9 aggiunge riuso delle analisi e aggregati Evento sullo schema 16 della v0.3.8. Conserva i workflow precedenti e non introduce migrazioni SQLite. Misure, contratto e limiti sono nel [rapporto sugli aggregati](docs/AI-EVENT-AGGREGATES.md); le ottimizzazioni SQLite precedenti sono documentate nel [rapporto sul database](docs/DATABASE-PERFORMANCE.md).
 
 Servono **Node.js 24 o successivo**, npm e un ambiente grafico. Dalla radice del repository:
 

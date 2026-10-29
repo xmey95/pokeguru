@@ -1,3 +1,5 @@
+import { aiCallKinds, readAiCallMetrics, type AiCallKind, type AiCallMetrics } from './ai-call-metrics'
+
 export const aiFailureCodes = ['unknown', 'cancelled', 'paused', 'timeout', 'auth', 'network',
   'storage', 'invalid-plan', 'invalid-response', 'evidence-incomplete', 'draft-limit',
   'batch-too-large', 'query-limit', 'cli-unavailable', 'context-limit', 'quota', 'storage-full', 'no-progress'] as const
@@ -18,7 +20,19 @@ export interface AiCollectionDiagnostics {
   maxPageMs: number
 }
 
+export const evidenceMetricKinds = ['card', 'deck', 'occurrence', 'pairing', 'statistics', 'search',
+  'event-statistics', 'event-coverage', 'detail', 'other'] as const
+export interface AiEvidencePlanMetrics {
+  representation: 'event-aggregates-v1'
+  originalAnalysisRecords: number; analysisRecords: number; leafBatches: number; batchBytes: number
+  byType: { kind: typeof evidenceMetricKinds[number]; records: number; recordBytes: number; batchesTouched: number }[]
+  queries: { queryOrdinal: number; operation: 'catalog.search' | 'events.search' | 'events.overview' | 'events.details' | 'unknown';
+    pages: number; responseBytes: number; introducedRecords?: number; introducedRecordBytes?: number }[]
+}
+
 export interface AiDiagnostics {
+  evidencePlan?: AiEvidencePlanMetrics
+  metrics?: AiCallMetrics
   collection?: AiCollectionDiagnostics
   failureCode?: AiFailureCode
   model?: string | null
@@ -41,7 +55,7 @@ export interface AiDiagnostics {
   nextRetryAt?: string
   automaticWait?: boolean
   suspensionReason?: 'user' | 'shutdown' | 'failure' | 'legacy'
-  calls?: { kind: 'planning' | 'batch' | 'synthesis' | 'analysis'; startedAt: string;
+  calls?: { kind: AiCallKind; startedAt: string;
     endedAt: string | null; status: 'running' | 'succeeded' | 'failed'; inputBytes: number;
     failureCode?: AiFailureCode }[]
 }
@@ -51,6 +65,24 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   const data = value as Record<string, unknown>
   const result: AiDiagnostics = {}
+  const plan = data.evidencePlan as Partial<AiEvidencePlanMetrics> | undefined
+  const count = (n: unknown): n is number => Number.isSafeInteger(n) && Number(n) >= 0
+  if (plan?.representation === 'event-aggregates-v1' &&
+    [plan.originalAnalysisRecords, plan.analysisRecords, plan.leafBatches, plan.batchBytes].every(count) &&
+    Array.isArray(plan.byType) && Array.isArray(plan.queries)) {
+    result.evidencePlan = { representation: plan.representation, originalAnalysisRecords: plan.originalAnalysisRecords!,
+      analysisRecords: plan.analysisRecords!, leafBatches: plan.leafBatches!, batchBytes: plan.batchBytes!,
+      byType: plan.byType.filter(row => row && evidenceMetricKinds.includes(row.kind) &&
+        [row.records, row.recordBytes, row.batchesTouched].every(count)).map(row => ({ kind: row.kind,
+        records: row.records, recordBytes: row.recordBytes, batchesTouched: row.batchesTouched })),
+      queries: plan.queries.filter(row => row && ['catalog.search', 'events.search', 'events.overview', 'events.details', 'unknown'].includes(row.operation) &&
+        [row.queryOrdinal, row.pages, row.responseBytes].every(count)).map(row => ({ queryOrdinal: row.queryOrdinal,
+        operation: row.operation, pages: row.pages, responseBytes: row.responseBytes,
+        ...(count(row.introducedRecords) ? { introducedRecords: row.introducedRecords } : {}),
+        ...(count(row.introducedRecordBytes) ? { introducedRecordBytes: row.introducedRecordBytes } : {}) })) }
+  }
+  const metrics = readAiCallMetrics(data.metrics)
+  if (metrics) result.metrics = metrics
   if (['user', 'shutdown', 'failure', 'legacy'].includes(data.suspensionReason as string))
     result.suspensionReason = data.suspensionReason as AiDiagnostics['suspensionReason']
   if (aiFailureCodes.includes(data.failureCode as AiFailureCode)) result.failureCode = data.failureCode as AiFailureCode
@@ -81,7 +113,7 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
   if (timestamp(data.nextRetryAt)) result.nextRetryAt = data.nextRetryAt
   if (Array.isArray(data.calls)) result.calls = data.calls.slice(-40).flatMap((entry) => {
     if (!entry || typeof entry !== 'object' ||
-      !['planning', 'batch', 'synthesis', 'analysis'].includes(entry.kind) ||
+      !aiCallKinds.includes(entry.kind) ||
       !timestamp(entry.startedAt) || !(entry.endedAt === null || timestamp(entry.endedAt)) ||
       !['running', 'succeeded', 'failed'].includes(entry.status) ||
       !Number.isSafeInteger(entry.inputBytes) || entry.inputBytes < 0) return []

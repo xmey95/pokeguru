@@ -4,9 +4,29 @@ import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { statementCache } from './database-statements'
 import type { AiJobActivityPage, AiJobActivityStep, AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
-import { readAiDiagnostics, type AiDiagnostics } from '../shared/ai-diagnostics'
+import { readAiDiagnostics, type AiDiagnostics, type AiFailureCode } from '../shared/ai-diagnostics'
 import { AI_EVIDENCE_ARCHIVE_SCHEMA } from './ai-evidence-archive'
 import type { AiCallState } from './ai-call-retry'
+import type { AiRunConfig } from '../shared/ai'
+import { readAiTokenUsage, type AiTokenUsage } from '../shared/ai-evidence'
+import { emptyAiCallTotals, readAiCallMetrics, type AiCallKind, type AiCallMetrics,
+  type AiCallTotals } from '../shared/ai-call-metrics'
+
+const METRICS_KEY = 'metrics:v1:summary'
+const ATTEMPT_PREFIX = 'metrics:v1:attempt:'
+export interface AiCallAttempt {
+  kind: AiCallKind
+  callKey: string
+  startedAt: string
+  endedAt: string | null
+  status: 'running' | 'succeeded' | 'failed' | 'interrupted'
+  inputBytes: number
+  executionMs: number | null
+  failureCode?: AiFailureCode
+  usage: AiTokenUsage | null
+  requested: { model: string | null; reasoningEffort: string | null }
+  effective: { model: string | null; reasoningEffort: string | null }
+}
 
 export interface AiJob extends AiJobSummary {
   request: unknown | null
@@ -260,6 +280,128 @@ export class AiJobStore {
   }
   saveCallResult(id: string, key: string, result: unknown): void {
     this.statement('INSERT OR IGNORE INTO ai_call_cache VALUES (?, ?, ?)').run(id, key, JSON.stringify(result))
+  }
+
+  // The existing journal is keyed by (job, key). Namespaced telemetry rows never
+  // overlap SHA-256 call keys or retry states; deletion follows the owning job.
+  private metricValue<T>(id: string, key: string): T | undefined {
+    const row = this.statement('SELECT state_json FROM ai_call_state WHERE job_id = ? AND key = ?')
+      .get(id, key) as { state_json: string } | undefined
+    return row ? JSON.parse(row.state_json) as T : undefined
+  }
+
+  private saveMetricValue(id: string, key: string, value: unknown): void {
+    this.statement(`INSERT INTO ai_call_state VALUES (?, ?, ?) ON CONFLICT(job_id, key)
+      DO UPDATE SET state_json = excluded.state_json`).run(id, key, JSON.stringify(value))
+  }
+
+  callMetrics(id: string): AiCallMetrics | undefined {
+    return readAiCallMetrics(this.metricValue(id, METRICS_KEY))
+  }
+
+  /** Bounded, job-scoped access to the durable attempt journal; not an IPC payload. */
+  callAttempts(id: string, after = '', limit = 100): { key: string; attempt: AiCallAttempt }[] {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) throw new Error('Pagina metriche non valida.')
+    return (this.statement(`SELECT key, state_json FROM ai_call_state
+      WHERE job_id = ? AND key >= ? AND key < ? AND key > ? ORDER BY key LIMIT ?`)
+      .all(id, ATTEMPT_PREFIX, `${ATTEMPT_PREFIX}\uffff`, after, limit) as { key: string; state_json: string }[])
+      .map((row) => ({ key: row.key, attempt: JSON.parse(row.state_json) as AiCallAttempt }))
+  }
+
+  private changeCallMetrics(id: string, kind: AiCallKind, change: (value: AiCallTotals) => void): void {
+    const metrics = this.callMetrics(id) ?? { schemaVersion: 1 as const,
+      coverage: 'recorded-attempts' as const, totals: emptyAiCallTotals(), phases: {} }
+    const phase = metrics.phases[kind] ??= emptyAiCallTotals()
+    for (const value of [metrics.totals, phase]) {
+      change(value)
+      value.usage = value.attempts > 0 && value.usageKnownAttempts === value.attempts ? value.observedUsage : null
+      value.executionMs = value.attempts > 0 && !value.running && !value.incompleteTimingAttempts
+        ? value.observedExecutionMs : null
+    }
+    this.saveMetricValue(id, METRICS_KEY, metrics)
+    this.recordDiagnostics(id, { metrics })
+  }
+
+  beginCallAttempt(id: string, callKey: string, kind: AiCallKind, inputBytes: number, config: AiRunConfig): string {
+    const key = `${ATTEMPT_PREFIX}${randomUUID()}`
+    const attempt: AiCallAttempt = { kind, callKey, startedAt: new Date().toISOString(), endedAt: null,
+      status: 'running', inputBytes, executionMs: null, usage: null,
+      requested: { model: config.model, reasoningEffort: config.reasoningEffort },
+      effective: { model: null, reasoningEffort: null } }
+    this.transaction(() => {
+      this.saveMetricValue(id, key, attempt)
+      this.changeCallMetrics(id, kind, (value) => { value.attempts++; value.running++; value.inputBytes += inputBytes })
+    })
+    return key
+  }
+
+  recordCallUsage(id: string, key: string, raw: unknown): void {
+    const usage = readAiTokenUsage(raw)
+    if (!usage) return
+    const attempt = this.metricValue<AiCallAttempt>(id, key)
+    if (!attempt || attempt.status !== 'running') return
+    attempt.usage = usage
+    this.saveMetricValue(id, key, attempt)
+  }
+
+  recordCallInputBytes(id: string, key: string, inputBytes: number): void {
+    this.transaction(() => {
+      const attempt = this.metricValue<AiCallAttempt>(id, key)
+      if (!attempt || attempt.status !== 'running') return
+      const difference = inputBytes - attempt.inputBytes
+      attempt.inputBytes = inputBytes
+      this.saveMetricValue(id, key, attempt)
+      this.changeCallMetrics(id, attempt.kind, (value) => { value.inputBytes += difference })
+    })
+  }
+
+  /** Cache publication and accounting share one commit. A recovered cache hit cannot charge twice. */
+  finishCallAttempt(id: string, key: string, status: Exclude<AiCallAttempt['status'], 'running'>,
+    executionMs: number | null, cache?: { key: string; value: unknown }, failureCode?: AiFailureCode): void {
+    this.transaction(() => {
+      const attempt = this.metricValue<AiCallAttempt>(id, key)
+      if (!attempt || attempt.status !== 'running') return
+      attempt.status = status
+      if (failureCode) attempt.failureCode = failureCode
+      attempt.executionMs = executionMs === null ? null : Math.max(0, Math.round(executionMs))
+      attempt.endedAt = executionMs === null ? null : new Date().toISOString()
+      this.saveMetricValue(id, key, attempt)
+      if (cache) this.saveCallResult(id, cache.key, cache.value)
+      this.changeCallMetrics(id, attempt.kind, (value) => {
+        value.running--; value[status]++
+        if (attempt.executionMs === null) value.incompleteTimingAttempts++
+        else value.observedExecutionMs += attempt.executionMs
+        if (attempt.usage) {
+          value.usageKnownAttempts++
+          value.observedUsage ??= { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 }
+          for (const field of ['inputTokens', 'cachedInputTokens', 'outputTokens'] as const)
+            value.observedUsage[field] += attempt.usage[field]
+        }
+      })
+    })
+  }
+
+  recordCallCacheHit(id: string, kind: AiCallKind, count = 1): void {
+    if (!Number.isSafeInteger(count) || count < 0) throw new Error('Conteggio riuso non valido.')
+    if (!count) return
+    this.transaction(() => {
+      this.changeCallMetrics(id, kind, (value) => { value.cacheHits += count })
+      const prior = this.diagnostics(id)
+      this.recordDiagnostics(id, { cacheHits: (prior?.cacheHits ?? 0) + count })
+    })
+  }
+
+  recordCallWait(id: string, kind: AiCallKind, elapsedMs: number): void {
+    const duration = Math.max(0, Math.round(elapsedMs))
+    this.transaction(() => this.changeCallMetrics(id, kind, (value) => { value.waitingMs += duration }))
+  }
+
+  /** Called only when the job executor is re-created, never when another store opens. */
+  recoverCallMetrics(id: string): void {
+    const rows = this.statement(`SELECT key FROM ai_call_state WHERE job_id = ?
+      AND key >= ? AND key < ? AND json_extract(state_json, '$.status') = 'running'`)
+      .all(id, ATTEMPT_PREFIX, `${ATTEMPT_PREFIX}\uffff`) as { key: string }[]
+    for (const row of rows) this.finishCallAttempt(id, row.key, 'interrupted', null)
   }
 
   runtimeFacts(id: string): { requestPrepared: boolean; validatedDraft: boolean | null; resultPrepared: boolean } {

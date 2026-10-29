@@ -1,0 +1,418 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-10-29T13:02:32.043Z",
+  "source": "Stable private copy of the running v0.3.8 job; no AI calls",
+  "snapshot": {
+    "dbBytes": 1122897920,
+    "walBytes": 213671472,
+    "dbSha256": "f56019461dfdd83e369a3488fdadd5b32271ef542132566687322647e8f6ccb1",
+    "walSha256": "76fba76ff5117f8131dee2f765d7001e7ddae762090b039e8aaa4895ad55ae78",
+    "secondLiveReadMatched": true,
+    "quickCheck": [
+      {
+        "quick_check": "ok"
+      }
+    ]
+  },
+  "baselineMatchesProvidedDeck": true,
+  "baselineCardLines": 21,
+  "job": {
+    "status": "running",
+    "createdAt": "2026-10-29T08:46:39.405Z",
+    "updatedAt": "2026-10-29T12:57:19.504Z",
+    "batchesCompleted": 333,
+    "batchesTotal": 872,
+    "planningRounds": 2,
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "totals": {
+    "searches": 233,
+    "completedSearches": 233,
+    "pages": 4300,
+    "responseBytes": 50881758,
+    "cards": 1010,
+    "decks": 7343,
+    "occurrences": 16212,
+    "pairings": 69364,
+    "records": 101505,
+    "recordBytes": 51872300,
+    "serializedBatchBytes": 51974677,
+    "leafBatches": 872
+  },
+  "recordTypes": {
+    "card": {
+      "records": 1010,
+      "bytes": 1344787,
+      "batchesTouched": 23,
+      "pureBatches": 22,
+      "maxRecordBytes": 1950,
+      "batchesWithoutType": 849
+    },
+    "deck": {
+      "records": 7343,
+      "bytes": 6710120,
+      "batchesTouched": 114,
+      "pureBatches": 112,
+      "maxRecordBytes": 1775,
+      "batchesWithoutType": 759
+    },
+    "occurrence": {
+      "records": 16212,
+      "bytes": 13177454,
+      "batchesTouched": 223,
+      "pureBatches": 221,
+      "maxRecordBytes": 879,
+      "batchesWithoutType": 650
+    },
+    "pairing": {
+      "records": 69364,
+      "bytes": 22550914,
+      "batchesTouched": 379,
+      "pureBatches": 377,
+      "maxRecordBytes": 362,
+      "batchesWithoutType": 494
+    },
+    "statistics": {
+      "records": 7343,
+      "bytes": 7862078,
+      "batchesTouched": 133,
+      "pureBatches": 131,
+      "maxRecordBytes": 4812,
+      "batchesWithoutType": 740
+    },
+    "search": {
+      "records": 233,
+      "bytes": 226947,
+      "batchesTouched": 5,
+      "pureBatches": 4,
+      "maxRecordBytes": 1373,
+      "batchesWithoutType": 868
+    }
+  },
+  "queryOperations": {
+    "catalog.search": {
+      "queries": 227,
+      "pages": 236,
+      "responseBytes": 1535188,
+      "addedRecords": 1237,
+      "addedBytes": 1568497
+    },
+    "events.search": {
+      "queries": 6,
+      "pages": 4064,
+      "responseBytes": 49346570,
+      "addedRecords": 100268,
+      "addedBytes": 50303803
+    }
+  },
+  "attribution": "Serialized record bytes assigned once to the first page introducing the record, in archive insertion order; derived statistics assigned with the first participation of that exact deck. Batch-touch counts overlap. Exclusive-record removal is a nonadditive sensitivity probe, not a recommendation.",
+  "eventQueries": [
+    {
+      "order": 74,
+      "query": {
+        "operation": "events.search",
+        "cardName": "Dragapult ex",
+        "from": "2026-04-10",
+        "to": "2026-10-29"
+      },
+      "pages": 3182,
+      "responseBytes": 38896725,
+      "records": 81069,
+      "addedRecords": 80178,
+      "recordBytes": 39986085,
+      "addedBytes": 39651492,
+      "batchesTouched": 847,
+      "exclusiveRecords": 77326,
+      "exclusiveBytes": 38716245,
+      "leafBatchesIfExclusiveRecordsRemoved": 222,
+      "status": "ok",
+      "scope": {
+        "matchingLists": 12726,
+        "distinctDecks": 5697,
+        "listsInspected": 60043,
+        "from": "2026-04-10",
+        "to": "2026-10-29",
+        "duplicateLists": 7029
+      },
+      "error": null
+    },
+    {
+      "order": 205,
+      "query": {
+        "operation": "events.search",
+        "cardName": "Raging Bolt ex",
+        "from": "2026-04-10",
+        "to": "2026-10-29"
+      },
+      "pages": 675,
+      "responseBytes": 8063914,
+      "records": 17496,
+      "addedRecords": 14573,
+      "recordBytes": 8732584,
+      "addedBytes": 7781600,
+      "batchesTouched": 847,
+      "exclusiveRecords": 14573,
+      "exclusiveBytes": 7781600,
+      "leafBatchesIfExclusiveRecordsRemoved": 741,
+      "status": "ok",
+      "scope": {
+        "matchingLists": 2699,
+        "distinctDecks": 1150,
+        "listsInspected": 60043,
+        "from": "2026-04-10",
+        "to": "2026-10-29",
+        "duplicateLists": 1549
+      },
+      "error": null
+    },
+    {
+      "order": 3,
+      "query": {
+        "operation": "events.search",
+        "deckName": "Toucannon",
+        "from": "2026-04-10",
+        "to": "2026-10-29"
+      },
+      "pages": 189,
+      "responseBytes": 2201984,
+      "records": 5147,
+      "addedRecords": 5147,
+      "recordBytes": 2641633,
+      "addedBytes": 2641633,
+      "batchesTouched": 840,
+      "exclusiveRecords": 4122,
+      "exclusiveBytes": 2263258,
+      "leafBatchesIfExclusiveRecordsRemoved": 834,
+      "status": "ok",
+      "scope": {
+        "matchingLists": 756,
+        "distinctDecks": 462,
+        "listsInspected": 60043,
+        "from": "2026-04-10",
+        "to": "2026-10-29",
+        "duplicateLists": 294
+      },
+      "error": null
+    },
+    {
+      "order": 194,
+      "query": {
+        "operation": "events.search",
+        "cardName": "Gardevoir ex",
+        "from": "2026-04-10",
+        "to": "2026-10-29"
+      },
+      "pages": 16,
+      "responseBytes": 183229,
+      "records": 442,
+      "addedRecords": 368,
+      "recordBytes": 259752,
+      "addedBytes": 228129,
+      "batchesTouched": 353,
+      "exclusiveRecords": 361,
+      "exclusiveBytes": 225854,
+      "leafBatchesIfExclusiveRecordsRemoved": 868,
+      "status": "ok",
+      "scope": {
+        "matchingLists": 64,
+        "distinctDecks": 62,
+        "listsInspected": 60043,
+        "from": "2026-04-10",
+        "to": "2026-10-29",
+        "duplicateLists": 2
+      },
+      "error": null
+    },
+    {
+      "order": 204,
+      "query": {
+        "operation": "events.search",
+        "cardName": "Charizard ex",
+        "from": "2026-04-10",
+        "to": "2026-10-29"
+      },
+      "pages": 1,
+      "responseBytes": 438,
+      "records": 1,
+      "addedRecords": 1,
+      "recordBytes": 557,
+      "addedBytes": 557,
+      "batchesTouched": 1,
+      "exclusiveRecords": 1,
+      "exclusiveBytes": 557,
+      "leafBatchesIfExclusiveRecordsRemoved": 872,
+      "status": "ok",
+      "scope": {
+        "matchingLists": 0,
+        "distinctDecks": 0,
+        "listsInspected": 60043,
+        "from": "2026-04-10",
+        "to": "2026-10-29",
+        "duplicateLists": 0
+      },
+      "error": null
+    },
+    {
+      "order": 71,
+      "query": {
+        "operation": "events.search",
+        "from": "2026-04-10",
+        "to": "2026-10-29"
+      },
+      "pages": 1,
+      "responseBytes": 280,
+      "records": 1,
+      "addedRecords": 1,
+      "recordBytes": 392,
+      "addedBytes": 392,
+      "batchesTouched": 1,
+      "exclusiveRecords": 1,
+      "exclusiveBytes": 392,
+      "leafBatchesIfExclusiveRecordsRemoved": 872,
+      "status": "rejected",
+      "scope": null,
+      "error": "Argomenti Eventi non validi."
+    }
+  ],
+  "catalogQueries": {
+    "total": 227,
+    "byArguments": {
+      "printIds": 225,
+      "terms": 2,
+      "identityIds": 0
+    },
+    "largestByAddedBytes": [
+      {
+        "query": {
+          "operation": "catalog.search",
+          "terms": [
+            "Iono",
+            "Counter Catcher",
+            "Enhanced Hammer",
+            "Area Zero Underdepths"
+          ],
+          "mode": "any"
+        },
+        "pages": 9,
+        "addedBytes": 214649
+      },
+      {
+        "query": {
+          "operation": "catalog.search",
+          "printIds": [
+            "me02.5-276",
+            "mep-107",
+            "mep-109",
+            "sv08.5-028",
+            "me03-054",
+            "sv08-056",
+            "me03-062",
+            "sv05-128",
+            "sv09-120",
+            "sv08-076",
+            "sv05-126",
+            "sv07-114",
+            "sv08.5-077",
+            "me02.5-039",
+            "mep-007",
+            "sv05-127",
+            "sv07-115",
+            "sv06-154",
+            "me05-078",
+            "sv10.5w-084"
+          ]
+        },
+        "pages": 1,
+        "addedBytes": 28801
+      },
+      {
+        "query": {
+          "operation": "catalog.search",
+          "printIds": [
+            "sv05-144",
+            "me02.5-196",
+            "me02.5-181",
+            "sv10-168",
+            "sv07-118",
+            "sv06-112",
+            "me02.5-255",
+            "sv09-143",
+            "sv07-131",
+            "me04-082",
+            "mee-006",
+            "me02.5-142",
+            "me01-116",
+            "me05-104",
+            "sv05-154",
+            "sv06-165",
+            "sv05-129",
+            "30th-053",
+            "30th-054",
+            "me02.5-057"
+          ]
+        },
+        "pages": 1,
+        "addedBytes": 27141
+      }
+    ]
+  },
+  "checkpointValidation": {
+    "currentGeneration": {
+      "checked": 333,
+      "mismatches": 0
+    },
+    "olderGeneration": {
+      "checked": 58,
+      "mismatchesAgainstCurrentInput": 58,
+      "interpretation": "Older input set; not a corruption finding."
+    }
+  },
+  "observedBatchTiming": {
+    "sample": 39,
+    "medianMs": 35896,
+    "p90Ms": 40463,
+    "minMs": 28272,
+    "maxMs": 53426
+  },
+  "sensitivityOnly": {
+    "all": 101505,
+    "withoutIndividualRows": 272,
+    "withoutIndividualRowsAndRepeatedStatCards": 190,
+    "repeatedStatsCardBytes": 4837655,
+    "occurrenceFields": [
+      "completeLists",
+      "date",
+      "deck",
+      "id",
+      "kind",
+      "listUrl",
+      "name",
+      "participants",
+      "participationId",
+      "placing",
+      "playerId",
+      "record",
+      "snapshotId",
+      "url"
+    ],
+    "pairingFields": [
+      "eventId",
+      "match",
+      "phase",
+      "player1",
+      "player2",
+      "round",
+      "table",
+      "winner"
+    ],
+    "warning": "Omitting raw rows changes the information delivered. These counts exclude replacement matchup aggregates, drilldown, prompt context and future synthesis/revisions; they are not equivalent-quality or end-to-end savings."
+  },
+  "checks": {
+    "recordTotalsReconciled": true,
+    "queryAttributionReconciled": true,
+    "allPageMembersResolved": true,
+    "quickCheck": "ok",
+    "currentCheckpointsMatched": true
+  }
+}
