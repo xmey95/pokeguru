@@ -44,7 +44,7 @@ try {
         ipcMain.handle('matchups:get-meta', () => ({ ok: false, error: 'Fixture offline.' }))
       })
       for (let repeat = 0; repeat < 5; repeat++) {
-        for (const section of ['Catalogo', 'Lista', 'Thread', 'Eventi', 'Matchup', 'Impostazioni AI']) {
+        for (const section of ['Catalogo', 'Lista', 'Strategie', 'Eventi', 'Guide matchup', 'Impostazioni AI']) {
           const elapsed = await page.evaluate(async (name) => {
             const button = [...document.querySelectorAll('.sidebar button')]
               .find((item) => item.textContent?.trim() === name)

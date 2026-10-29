@@ -5,7 +5,7 @@ import { gameplaySummary } from './card-gameplay'
 import { effectiveCardGameplay } from './card-errata'
 import { localCalendarDate } from './calendar-date'
 import type { StandardDeckEvaluation } from './standard-deck'
-import { basicEnergyType } from './basic-energy-name'
+import { basicEnergyType, expandEnergyNameSymbols } from './basic-energy-name'
 
 export interface MappedPrint {
   id: string
@@ -83,7 +83,7 @@ export interface DeckCardEntry {
 }
 
 function normalizedName(value: string): string {
-  return value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase()
+  return expandEnergyNameSymbols(value.normalize('NFKC')).trim().replace(/\s+/g, ' ').toLocaleLowerCase()
 }
 
 function printNameMatches(lineName: string, print: CatalogPrint): boolean {
@@ -183,7 +183,7 @@ export function suggestPrints(line: DeckLine, catalog: CatalogView, search = '')
   const candidates = [...catalog.prints, ...referencePrints]
     .filter((print) => print.detailAt !== null && print.identityId !== null)
     .map((print): PrintCandidate | null => {
-      if (term && !`${print.name} ${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase().includes(term)) return null
+      if (term && !`${normalizedName(print.name)} ${print.id} ${print.setName} ${print.rarity ?? ''}`.toLocaleLowerCase().includes(term)) return null
       const printCode = sameCode(line, print, catalog)
       const name = printNameMatches(line.name!, print)
       if (printCode && name) return { print, reason: 'same-print' }

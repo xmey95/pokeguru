@@ -60,7 +60,7 @@ try {
     globalThis.openedSources = []
     shell.openExternal = async (url) => { globalThis.openedSources.push(url) }
   })
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await switchThread(page, /Fonte locale/)
   const message = page.locator('.thread-message').filter({ hasText: 'Scheda citata nella risposta di prova.' })
   await message.getByText('Fonti e dettagli', { exact: false }).click()
@@ -68,7 +68,7 @@ try {
   await page.locator('.catalog-detail').getByRole('heading', { name: 'Mega Absol ex', exact: true }).waitFor({ timeout: 30000 })
   assert.deepEqual(await application.evaluate(() => globalThis.openedSources), [])
 
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await switchThread(page, /Fonte locale/)
   const candidate = page.locator('.thread-candidate.featured')
   await candidate.locator('.candidate-comparison > summary').click()

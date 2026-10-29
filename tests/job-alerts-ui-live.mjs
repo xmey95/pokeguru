@@ -13,6 +13,16 @@ try {
   app = await electron.launch({ executablePath: require('electron'), args: ['.'], cwd: workspace,
     env: { ...process.env, POKEGURU_DATA_DIR: join(temporary, 'profile') }, timeout: 30000 })
   const page = await app.firstWindow()
+  await page.evaluate(() => {
+    window.notificationTones = 0
+    const createOscillator = AudioContext.prototype.createOscillator
+    AudioContext.prototype.createOscillator = function () {
+      const oscillator = createOscillator.call(this)
+      const start = oscillator.start.bind(oscillator)
+      oscillator.start = (...args) => { window.notificationTones++; return start(...args) }
+      return oscillator
+    }
+  })
   await page.waitForFunction(() => {
     const state = JSON.parse(localStorage.getItem('pokeguru.job-alerts.v1') ?? 'null')
     return state?.sources.catalog && state?.sources.play && state?.sources.main && state?.sources.ai
@@ -51,6 +61,9 @@ try {
   await change('catalog', { state: 'done', running: false })
   const catalogAlert = page.getByRole('status').filter({ hasText: 'Aggiornamento del Catalogo completato' })
   await catalogAlert.waitFor()
+  assert.equal(await page.evaluate(() => window.notificationTones), 1, 'il nuovo avviso riproduce un suono reale')
+  await page.waitForTimeout(5300)
+  assert.equal(await page.evaluate(() => window.notificationTones), 1, 'il polling non ripete il suono')
   assert.equal(await page.getByRole('heading', { name: 'Impostazioni AI' }).count(), 1)
   await catalogAlert.getByRole('button', { name: 'Apri Catalogo' }).click()
   await page.getByRole('heading', { name: 'Catalogo' }).waitFor()
@@ -88,10 +101,10 @@ try {
   }, ids)
   await recorded('ai:ai-fixture-1', 'working')
   await app.evaluate(() => { globalThis.alertFixtures.ai[0].status = 'applied' })
-  const aiAlert = page.getByRole('status').filter({ hasText: 'Analisi Thread completata' })
+  const aiAlert = page.getByRole('status').filter({ hasText: 'Analisi della strategia completata' })
   await aiAlert.waitFor()
-  await aiAlert.getByRole('button', { name: 'Apri Thread' }).click()
-  await page.getByRole('button', { name: 'Thread', exact: true }).waitFor()
+  await aiAlert.getByRole('button', { name: 'Apri Strategie' }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).waitFor()
   await page.getByText('Thread avviso', { exact: true }).first().waitFor()
   await app.evaluate(() => {
     const first = globalThis.alertFixtures.ai[0]
@@ -104,11 +117,21 @@ try {
   assert.equal(await page.locator('.job-alert').count(), 3)
   await more.click()
   assert.equal(await page.locator('.job-alert').count(), 4)
+  assert.equal(await page.evaluate(() => window.notificationTones), 6, 'un solo suono per il gruppo di quattro avvisi')
+  await page.getByRole('button', { name: 'Impostazioni AI', exact: true }).click()
+  await page.getByText('Suono delle notifiche', { exact: true }).click()
+  await page.getByRole('button', { name: 'Prova suono', exact: true }).click()
+  assert.equal(await page.evaluate(() => window.notificationTones), 7)
+  await page.getByRole('checkbox', { name: 'Suono per i nuovi avvisi di attività' }).uncheck()
+  await change('catalog', { runId: 'catalog-muted', state: 'done', error: null })
+  await recorded('catalog:catalog-muted', 'complete')
+  assert.equal(await page.evaluate(() => window.notificationTones), 7, 'gli avvisi silenziati non suonano')
   await recorded('main:regional-1', 'failed')
   await page.reload()
   await page.waitForTimeout(5300)
   assert.equal(await page.locator('.job-alert').count(), 0, 'riapertura non deve duplicare gli avvisi')
-  console.log('Avvisi job OK: Catalogo successo/errore, Play, Regional, AI, navigazione e riapertura.')
+  assert.equal(await page.evaluate(() => localStorage.getItem('pokeguru.notification-sound.v1')), 'off')
+  console.log('Avvisi job OK: Catalogo/Play/Regional/AI, audio Web Audio reale, gruppo senza duplicati, mute persistente e riapertura.')
 } finally {
   if (app) await app.close()
   if (realpathSync(dirname(temporary)) !== realpathSync(tmpdir()) || !basename(temporary).startsWith('pokeguru-job-alerts-'))

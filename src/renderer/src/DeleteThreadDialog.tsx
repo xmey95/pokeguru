@@ -16,15 +16,15 @@ export function DeleteThreadDialog({ thread, onClose, onDeleted }: {
       if (!result.ok) throw new Error(result.error)
       dialog.current?.close()
       onDeleted(thread.id)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Thread non eliminato. Riprova.') }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Strategia non eliminata. Riprova.') }
     finally { setWorking(false) }
   }
   return <dialog ref={dialog} className="thread-delete-dialog" aria-labelledby="delete-thread-title"
     onCancel={(event) => { if (working) event.preventDefault() }} onClose={onClose}>
-    <h2 id="delete-thread-title">Eliminare questo Thread?</h2>
+    <h2 id="delete-thread-title">Eliminare questa strategia?</h2>
     <p><strong>{thread.title}</strong></p>
-    <p>La conversazione, le candidate e le analisi salvate in questo Thread saranno eliminate definitivamente.
-      La lista principale, le versioni già adottate e gli altri Thread rimangono disponibili.</p>
+    <p>La conversazione, le candidate e le analisi salvate in questa strategia saranno eliminate definitivamente.
+      La lista principale, le versioni già adottate e le altre strategie rimangono disponibili.</p>
     {error && <p className="error-banner" role="alert">{error}</p>}
     <div className="dialog-actions">
       <button type="button" className="secondary-button" autoFocus disabled={working} onClick={() => dialog.current?.close()}>Annulla</button>

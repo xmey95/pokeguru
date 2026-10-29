@@ -4,6 +4,20 @@
 
 ## Decisioni
 
+### T-173 — Lista compatta e Strategie approvate
+
+Il 29-10-2026 l'utente sceglie la proposta Lista compatta e il nome Strategie. Il selettore mantiene la modale con ricerca e schede Attivi/Archiviati, ma ogni progetto occupa una riga di circa 64 px con nome su una linea, metadati e menu ⋯ laterale. La creazione è nell'intestazione; il menu usa il popover nativo nel livello superiore per non essere tagliato dallo scorrimento. Escape chiude prima il menu e restituisce il focus, frecce/Home/End spostano tra le azioni, clic fuori chiude il menu senza chiudere la modale; scorrimento dell'elenco e ridimensionamento chiudono un menu aperto. Archiviazione, ripristino e conferma distruttiva riusano i comandi esistenti.
+
+Strategie è il nome della sezione, strategia quello del singolo percorso. Etichette, creazione, selettore, conversazione, dettagli AI, avvisi e messaggi di errore vengono allineati. Route `threads`, chiavi UI, API, schema SQLite e contenuti delle conversazioni rimangono compatibili: nessuna rinomina dei titoli scelti dall'utente né migrazione dati. Le proposte APP-172 restano documentazione storica della scelta, non alternative ancora aperte.
+
+### T-172 — Simboli delle Energie, avvisi sonori e scroll
+
+Il 29-10-2026 la [scheda TCGdex me03-088](https://api.tcgdex.net/v2/en/cards/me03-088) restituisce nome `Telepathic Psychic Energy`, numero `088`, categoria `Energy` e tipo `Normal`. La [scheda ufficiale Pokémon 88](https://www.pokemon.com/us/pokemon-tcg/pokemon-cards/series/me03/88) identifica invece un'Energia Speciale. L'import fornito dall'utente `4 Telepathic {P} Energy POR 88` falliva il confronto dei nomi perché la normalizzazione dei simboli copriva solo le Energie Base. Si espandono i soli simboli inglesi noti nei nomi terminanti in Energy, preservando tutti gli altri termini, il testo originale e il confronto di set/numero. Simboli ignoti o diversi, nomi Base contro Speciale e codici discordanti restano irrisolti. Le grafie equivalenti sono sommate anche nel limite copie; il solo `Normal` della fonte non basta più per esentare una carta. Nessuna riscrittura di schede, identità o regole Standard, né sostituzione per sola somiglianza.
+
+Il suono è sintetizzato localmente con Web Audio (330 ms, volume contenuto), una volta per gruppo di nuovi avvisi prodotto dal registro esistente. Preferenza `pokeguru.notification-sound.v1` in localStorage e prova in Impostazioni AI, senza IPC o dipendenze nuove. Il fallimento/sospensione dell'audio non ostacola l'avviso visivo e non produce un suono ritardato al clic successivo. Lo scroll delle attività mantiene il contenitore e la paginazione ma rimuove il contenimento dell'overscroll: ai bordi prosegue sulla pagina secondo il comportamento nativo Chromium.
+
+Guide matchup è il nome richiesto della sezione; `matchups` e gli altri identificativi persistiti restano stabili. Restyling progetti e nome Thread sono proposte, con scelta in APP-173: nessuna applicazione anticipata delle due direzioni grafiche al selettore reale.
+
 ### T-165 — Operazioni locali fuori dal processo della finestra
 
 Database, snapshot delle fonti, compressione, ricerche e orchestrazione Codex sono posseduti da un solo worker Node. Il processo Electron della finestra conserva autenticazione del frame IPC, protocollo delle immagini, dialoghi, appunti e apertura degli URL consentiti. Il trasporto è asincrono e non sposta snapshot completi nella finestra. Gli store mantengono un unico proprietario; pausa, checkpoint e ripresa seguono lo stesso percorso anche alla chiusura. Un worker interrotto fa fallire le richieste pendenti con un messaggio recuperabile alla riapertura. Diagnostica: heap del processo finestra e heap del backend distinti. Un blocco del worker può ritardare una risposta dati, senza bloccare i due cicli UI.

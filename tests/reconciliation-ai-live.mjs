@@ -23,7 +23,7 @@ try {
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.locator('.deck-card').filter({ hasText: 'Iono' }).first().waitFor()
-  await page.getByRole('button', { name: 'Matchup' }).click()
+  await page.getByRole('button', { name: 'Guide matchup' }).click()
   await page.locator('#matchup-switcher-trigger').waitFor({ timeout: 30000 })
   const connection = await page.evaluate(() => window.projectsApi.getAiConnection())
   assert.equal(connection.ok, true, connection.ok ? '' : connection.error)
@@ -51,7 +51,7 @@ try {
   await page.getByLabel('Testo lista').fill('2 Iono PAL 185\n2 Rare Candy PAF 089')
   await page.getByRole('button', { name: 'Sostituisci lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
-  await page.getByRole('button', { name: 'Matchup' }).click()
+  await page.getByRole('button', { name: 'Guide matchup' }).click()
   await page.locator('.stale-discussion').getByText('Guida storica · lista o meta precedenti.').waitFor({ timeout: 30000 })
   console.log('LIVE AI APP-006 OK: lista aggregata inviata a Codex; la guida diventa storica dopo cambio lista.')
 } finally {

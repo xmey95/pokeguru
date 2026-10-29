@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { AiConnection, AiLoginStart, AiPreferences, CodexSetupStatus } from '../../shared/ai'
 import { useNavigation, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
 import { ActivityStatus, Spinner } from './Loading'
+import { NotificationSoundSettings } from './NotificationSoundSettings'
 
 const automatic: AiPreferences = { model: null, reasoningEffort: null }
 type Action = 'save' | 'test' | 'login' | 'logout'
@@ -222,7 +223,7 @@ export function AiSettings() {
 
     <section className="settings-panel ai-preferences-panel" aria-labelledby="ai-preferences-title">
       <h2 id="ai-preferences-title">Modello e ragionamento</h2>
-      <p className="content-note">Usati in Thread e Matchup, salvo scelte personalizzate.</p>
+      <p className="content-note">Usati in Strategie e Guide matchup, salvo scelte personalizzate.</p>
       {preferencesError && <div className="error-banner" role="alert">{preferencesError}
         <button type="button" className="secondary-button" disabled={busy || preferencesLoading} onClick={() => void readPreferences()}>Ricarica preferenze</button>
       </div>}
@@ -266,6 +267,7 @@ export function AiSettings() {
     </section>
 
     <div className="ai-settings-details">
+      <NotificationSoundSettings />
       <details>
         <summary>Modelli e disponibilità</summary>
         <p className="content-note">Automatico segue il modello predefinito di Codex. L’elenco dipende dall’account; una prova verifica che la configurazione funzioni.</p>
@@ -274,7 +276,7 @@ export function AiSettings() {
       </details>
       <details>
         <summary>Dati inviati a Codex</summary>
-        <p className="content-note">Thread: messaggio, conversazione, lista di riferimento, vincoli e fonti. Matchup: lista, avversario e fonti; nelle revisioni anche guida e osservazioni.</p>
+        <p className="content-note">Strategie: messaggio, conversazione, lista di riferimento, vincoli e fonti. Guide matchup: lista, avversario e fonti; nelle revisioni anche guida e osservazioni.</p>
         <p className="content-note">Il dettaglio dei dati è consultabile nelle rispettive sezioni, prima dell’invio.</p>
       </details>
       <details>

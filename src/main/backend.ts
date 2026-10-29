@@ -1313,7 +1313,7 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Scrivi prima una domanda o una modifica da valutare.' }
     return withStore(() => {
       const thread = projectStore!.getDeckThread(projectId, threadId)
-      if (!thread) throw new Error('Thread non trovato in questo progetto.')
+      if (!thread) throw new Error('Strategia non trovata in questo progetto.')
       const base = thread.baseVersionId
         ? projectStore!.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null : null
       return buildThreadEvidence(thread, base, question.trim(), projectStore!.listConstraints(projectId),
@@ -1331,17 +1331,17 @@ function registerProjectHandlers(): void {
     if (!project) return { ok: false, error: 'Progetto non trovato.' }
     if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le sessioni Codex sono disponibili solo per il circuito occidentale.' }
     let thread = projectStore.getDeckThread(projectId, threadId)
-    if (!thread) return { ok: false, error: 'Thread non trovato in questo progetto.' }
+    if (!thread) return { ok: false, error: 'Strategia non trovata in questo progetto.' }
     if (existingUserMessageId !== undefined && (typeof existingUserMessageId !== 'string' ||
       thread.openingAiMessageId !== existingUserMessageId ||
       !thread.messages.some((entry) => entry.id === existingUserMessageId &&
         entry.author === 'user' && entry.text === message.trim()) ||
       thread.messages.some((entry) => entry.author === 'assistant')))
       return { ok: false, error: 'Primo messaggio Codex non recuperabile.' }
-    if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questo thread.' }
+    if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questa strategia.' }
     let job: AiJob
     try { job = resumedJob ? aiJobStore.resume(resumedJob.id) : aiJobStore.start('thread-ask', projectId, threadId) }
-    catch { return { ok: false, error: 'Esiste già un job Codex per questo thread.' } }
+    catch { return { ok: false, error: 'Esiste già un’analisi Codex per questa strategia.' } }
     const controller = new AbortController()
     activeAiControllers.set(job.id, controller)
     generatingDeckThreads.add(threadId)

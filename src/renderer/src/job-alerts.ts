@@ -71,10 +71,10 @@ export function aiObservations(jobs: AiJobSummary[]): ObservedJob[] {
       : job.status === 'failed' ? 'failed' : job.status === 'cancelled' ? 'cancelled'
         : job.status === 'interrupted' ? ['failure', 'legacy'].includes(job.progress?.diagnostics?.suspensionReason ?? '')
           ? 'failed' : 'paused' : 'working'
-    const kind = job.kind.startsWith('thread') ? 'Thread' : 'Matchup'
+    const kind = job.kind.startsWith('thread') ? 'Strategie' : 'Guide matchup'
     return { key: `ai:${job.id}`, source: 'ai', state, projectId: job.projectId,
       resourceId: job.resourceId, aiKind: job.kind,
-      title: `Analisi ${kind} ${state === 'complete' ? 'completata' : state === 'failed' ? 'non riuscita'
+      title: `${job.kind.startsWith('thread') ? 'Analisi della strategia' : 'Guida matchup'} ${state === 'complete' ? 'completata' : state === 'failed' ? 'non riuscita'
         : state === 'cancelled' ? 'annullata' : 'in corso'}`,
       detail: state === 'complete' ? `Apri ${kind} per vedere il risultato.`
         : state === 'failed' ? job.error ?? 'Apri il lavoro per controllare il problema.'

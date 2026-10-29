@@ -20,14 +20,14 @@ export async function startNewProject(page) {
 
 export async function switchProject(page, name) {
   await openProjectPicker(page)
-  await page.getByRole('dialog', { name: 'Scegli progetto' }).getByRole('button', { name }).click()
+  await page.getByRole('dialog', { name: 'Scegli progetto' }).locator('button.project-option').filter({ hasText: name }).click()
   await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
 }
 
 export async function switchThread(page, name) {
   await page.locator('#thread-switcher-trigger').click()
-  await page.getByRole('dialog', { name: 'Scegli thread' }).getByRole('button', { name }).click()
+  await page.getByRole('dialog', { name: 'Scegli strategia' }).getByRole('button', { name }).click()
   await page.waitForFunction(() => !document.querySelector('[data-nav-loading="true"]'))
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
 }
@@ -57,6 +57,6 @@ export async function seedStoredCandidate(page, rawText, note = '', threadTitle 
     if (!result.ok) throw new Error(result.error)
   }, { rawText, note, threadTitle })
   await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
-  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Strategie', exact: true }).click()
   await page.locator('.thread-candidate.featured').waitFor()
 }

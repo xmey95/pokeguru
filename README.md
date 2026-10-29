@@ -26,9 +26,9 @@ Disponibile per **Linux, Windows e macOS**, con consultazione offline dei dati g
 | **Controlla la lista** | Valuta costruzione, rotazione e ammissione alla data scelta. Distingui errori certi e casi da verificare; imposta vincoli di quantità o stampa dal dettaglio delle carte nella Lista. |
 | **Studia il metagame** | Consulta archetipi, tornei Play e Regional da Limitless, con liste disponibili, provenienza e copertura dei risultati. |
 | **Prepara i matchup** | Genera guide con punti forti, rischi, carte chiave e piano di gioco. Discuti le analisi e conserva le revisioni legate alla versione del mazzo. |
-| **Valuta alternative con l'AI** | Apri Thread indipendenti, chiedi modifiche e confronta candidate complete di 60 carte verificate dai controlli locali. Adotta manualmente l'intera lista quando sei convinto. |
+| **Valuta alternative con l'AI** | Apri strategie indipendenti, chiedi modifiche e confronta candidate complete di 60 carte verificate dai controlli locali. Adotta manualmente l'intera lista quando sei convinto. |
 
-La lista principale resta consultabile mentre lavori nei Thread o nei Matchup. Le proposte e le conversazioni dei diversi progetti rimangono separate.
+La lista principale resta consultabile mentre lavori in Strategie o nelle Guide matchup. Le proposte e le conversazioni dei diversi progetti rimangono separate.
 
 ## Installazione
 
@@ -51,7 +51,7 @@ I pacchetti includono la CLI Codex nativa: **non servono Node.js, npm o un'insta
 2. **Importa la lista.** Nella sezione **Lista**, incolla il testo o scegli un file `.txt`. Controlla quantità e righe non riconosciute. Per esplorare l'interfaccia puoi usare la [lista dimostrativa](examples/lista-demo.txt): contiene 12 carte ed è una bozza, non un mazzo pronto da giocare.
 3. **Aggiorna il Catalogo.** Usa **Aggiorna nuove carte** per acquisire schede e miniature disponibili. Torna alla Lista per consultare le carte, chiarire eventuali ambiguità e leggere l'esito Standard. Nel dettaglio di una carta puoi aggiungere i vincoli da rispettare.
 4. **Prepara le analisi.** In **Impostazioni AI**, verifica l'accesso Codex e scegli modello e livello di ragionamento, oppure lascia **Automatico**. In **Eventi** aggiorna Play e Regional per rendere disponibili le relative evidenze locali.
-5. **Studia e confronta.** In **Matchup** scegli un archetipo e genera una guida; nei **Thread** discuti la lista o chiedi una proposta. Puoi consultare i dati inviati e le fonti delle risposte. Le candidate valide restano separate finché non le adotti.
+5. **Studia e confronta.** In **Guide matchup** scegli un archetipo e genera una guida; in **Strategie** discuti la lista o chiedi una proposta. Puoi consultare i dati inviati e le fonti delle risposte. Le candidate valide restano separate finché non le adotti.
 6. **Porta con te la lista.** Usa **Copia export** dalla Lista per copiarla negli appunti. Versioni, discussioni e guide restano nel progetto alla riapertura.
 
 ## Dati locali e servizi online
