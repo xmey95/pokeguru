@@ -3,13 +3,15 @@ import { createHash } from 'node:crypto'
 import { readAiTokenUsage, type AiEvidenceQueryTrace, type AiPromptAudit,
   type AiTokenUsage } from '../shared/ai-evidence'
 import type { ThreadEvidencePacket, ThreadEvidenceSource } from '../shared/thread-evidence'
-import type { CatalogEvidenceSearch } from './catalog-evidence-search'
+import type { CatalogEvidenceMatch, CatalogEvidenceSearch } from './catalog-evidence-search'
 import type { AiEvidenceEngine } from './ai-evidence-engine'
 import { AiFailure } from './ai-failure'
 import type { AiEvidenceArchive } from './ai-evidence-archive'
 import { collectArchivedEvidence, type CollectionObserver } from './ai-evidence-collection'
 import { archiveReferences, bindEvidenceArchive, evidenceArchive, evidenceCards,
   refreshEvidenceArchive } from './ai-evidence-access'
+import { CARD_REFERENCE_NOTE, cardForPrompt, queryPagesForPrompt, recordEvidenceDelivery,
+  selectedEvidenceCards } from './ai-evidence-delivery'
 
 // This is the local audit budget. Model contexts are separately analyzed in small batches.
 const MAX_RESPONSE_BYTES = 64_000_000
@@ -315,13 +317,20 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
 
 export function aiEvidenceForPrompt(trace: AiEvidenceQueryTrace): unknown {
   const archive = evidenceArchive(trace)
-  if (!trace.analysis) return archive ? { ...trace, durationMs: 0, requests: [...archive.pages()] } : trace
+  if (!trace.analysis) {
+    const pages = archive ? [...archive.pages()] : trace.requests
+    const originals = pages.flatMap((page) => (page.data as { matches?: CatalogEvidenceMatch[] } | null)?.matches ?? [])
+    recordEvidenceDelivery(trace, originals)
+    const { deliveredCards: _delivery, ...context } = trace
+    return { ...context, ...(archive ? { durationMs: 0 } : {}), ...queryPagesForPrompt(pages) }
+  }
   const focused = new Set(trace.focusedPrintIds ?? [])
-  const cards = new Map<string, CatalogEvidenceSearch['matches'][number]>()
-  for (const card of evidenceCards(trace)) if (focused.has(card.printId)) cards.set(card.printId, card)
+  const cards = selectedEvidenceCards(trace, [...focused])
+  recordEvidenceDelivery(trace, cards)
+  archiveReferences(trace)
   return { schemaVersion: trace.schemaVersion, engine: trace.engine, analysis: trace.analysis,
     originalRequests: trace.archive?.pages ?? trace.requests.length, originalBytes: trace.responseBytes,
-    exhausted: trace.exhausted, focusedCards: [...cards.values()],
+    exhausted: trace.exhausted, focusedCards: cards.map(cardForPrompt), cardReferenceNote: CARD_REFERENCE_NOTE,
     cardTargets: trace.cardTargets?.filter((target) => target.printIds.some((id) => focused.has(id))),
     note: 'Tutti gli originali sono stati analizzati a lotti e conservati. La sintesi è un’elaborazione AI; le focusedCards sono schede originali per la verifica finale.' }
 }

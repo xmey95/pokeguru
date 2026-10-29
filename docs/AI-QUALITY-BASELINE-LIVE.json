@@ -1,0 +1,330 @@
+{
+  "schemaVersion": 1,
+  "corpusVersion": "app179-181-fidelity-v1",
+  "kind": "real-codex-factual-fidelity",
+  "label": "baseline",
+  "config": {
+    "provider": "codex",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null,
+    "source": "global"
+  },
+  "configHash": "61fa2fef21853e700ca8a0f875f82b30fd62a6bdfcf7a563d913adb63f8930ba",
+  "node": "v24.18.0",
+  "platform": "win32",
+  "maxInvocations": 12,
+  "limitations": "Small factual-fidelity corpus with one real curated card and five synthetic cases. Not a statistical or tactical non-inferiority claim. Null model/effort do not prove the service resolved the same defaults.",
+  "rows": [
+    {
+      "step": "initial",
+      "elapsedMs": 66145,
+      "calls": 5,
+      "inputBytes": 161473,
+      "outputBytes": 7948,
+      "usageCalls": 5,
+      "usage": {
+        "inputTokens": 63409,
+        "cachedInputTokens": 44800,
+        "outputTokens": 1737
+      },
+      "evidenceBytes": 145521,
+      "uniqueSourceCount": 8,
+      "newlyInvokedLeafSourceCount": 8,
+      "archive": {
+        "searches": 2,
+        "completedSearches": 2,
+        "pages": 2,
+        "responseBytes": 145521,
+        "cards": 7,
+        "decks": 1,
+        "occurrences": 1,
+        "pairings": 0
+      },
+      "checks": [
+        {
+          "id": "Q1",
+          "passed": true,
+          "detail": "Real Budew: zero Energy, 10 damage, opponent Items from hand next turn; no blanket Trainer prohibition."
+        },
+        {
+          "id": "Q2",
+          "passed": true,
+          "detail": "Same name, two printings with different draw counts remain distinct."
+        },
+        {
+          "id": "Q3",
+          "passed": true,
+          "detail": "6/3/1 and denominator 10 are field results, not this user matchup winrate."
+        },
+        {
+          "id": "Q4",
+          "passed": true,
+          "detail": "Missing attack cost cannot be silently converted to zero or a legality claim."
+        },
+        {
+          "id": "Q5",
+          "passed": true,
+          "detail": "Both conflicting source values and their unresolved status survive."
+        },
+        {
+          "id": "Q6",
+          "passed": true,
+          "detail": "Overlapping query memberships do not create a second independent observation."
+        },
+        {
+          "id": "sources",
+          "passed": true,
+          "detail": "All decisive fixture sources are retained and no foreign source is cited."
+        }
+      ],
+      "originalChecks": [
+        {
+          "printId": "sv08.5-004",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-alpha",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-beta",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa04-unknown",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-a",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-b",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa06-duplicate",
+          "exactGameplayDelivered": true
+        }
+      ],
+      "summary": "Q1 — Budew (sv08.5-004): Itchy Pollen costs no Energy, deals 10 damage, and prevents the opponent from playing Item cards from their hand during their next turn; it does not prohibit every Trainer card. Provenance: a real printing transcribed in a local supplement checked on 2026-10-28, not newly verified online.\nQ2 — Synthetic Courier qa02-alpha says “Draw 2 cards.” Synthetic Courier qa02-beta says “Draw 3 cards.” These are separate print identities with different effects; matching names do not establish gameplay equivalence. Both are marked comparableGameplay=true, dated 2026-10-28T00:00:00.000Z, and have deckKey=null. Their separate provenance URLs are https://example.test/ai-quality/qa02-alpha and https://example.test/ai-quality/qa02-beta.\nQ3 — Synthetic field has one deduplicated participation in one event and one available record: 6 wins, 3 losses, 1 tie; denominator 10 matches; one 5th-place finish at Synthetic field tournament on 2026-10-28. These are event-field results, not a matchup against the user deck. The supplied list contains 60 synthetic energy qa 1. Authoritative statistics confirm the totals; the same participation retrieved through two queries counts once.\nQ4 — Synthetic Unknown’s Unknown Attack has damage \"50\" and cost=null: its cost is unknown, not established as free. No legality verdict is supplied.\nQ5 — Observation A reports a maximum of 2 uses; observation B reports a maximum of 3 uses. The sources explicitly conflict and do not resolve the disagreement; retain both values.\nQ6 — Synthetic Duplicate, printId qa06-duplicate, says “Draw 1 card.” Its overlapping query memberships represent one distinct printing, not two independent observations. Its supplied record is dated 2026-10-28 with example.test provenance.",
+      "limitations": "This synthesis integrates supplied AI summaries, which are interpretations, not new primary observations. Statements that other conclusions were absent apply to each earlier batch, not to the combined evidence. Synthetic records are invented evaluation fixtures, not claims about real cards or legality. No user-deck matchup results or matchup winrate, tactics, or legality determinations are supported. Apart from Q3’s list quantity, participation and placement, no deck quantities, frequencies or placement distributions are established; Q3’s 10-match denominator does not establish a user-deck matchup rate. Q4’s missing cost and Q5’s conflict remain unresolved. Completed searches with zero remaining results do not establish missing card facts. Repeated query memberships add no independent evidence, and padding has no evidentiary meaning.",
+      "sourceIds": [
+        "card:sv08.5-004",
+        "card:qa02-alpha",
+        "card:qa02-beta",
+        "list:quality-field",
+        "card:qa04-unknown",
+        "card:qa05-a",
+        "card:qa05-b",
+        "card:qa06-duplicate"
+      ]
+    },
+    {
+      "step": "identical_replay",
+      "elapsedMs": 64,
+      "calls": 0,
+      "inputBytes": 0,
+      "outputBytes": 0,
+      "usageCalls": 0,
+      "usage": null,
+      "evidenceBytes": 145521,
+      "uniqueSourceCount": 8,
+      "newlyInvokedLeafSourceCount": 0,
+      "archive": {
+        "searches": 2,
+        "completedSearches": 2,
+        "pages": 2,
+        "responseBytes": 145521,
+        "cards": 7,
+        "decks": 1,
+        "occurrences": 1,
+        "pairings": 0
+      },
+      "checks": [
+        {
+          "id": "Q1",
+          "passed": true,
+          "detail": "Real Budew: zero Energy, 10 damage, opponent Items from hand next turn; no blanket Trainer prohibition."
+        },
+        {
+          "id": "Q2",
+          "passed": true,
+          "detail": "Same name, two printings with different draw counts remain distinct."
+        },
+        {
+          "id": "Q3",
+          "passed": true,
+          "detail": "6/3/1 and denominator 10 are field results, not this user matchup winrate."
+        },
+        {
+          "id": "Q4",
+          "passed": true,
+          "detail": "Missing attack cost cannot be silently converted to zero or a legality claim."
+        },
+        {
+          "id": "Q5",
+          "passed": true,
+          "detail": "Both conflicting source values and their unresolved status survive."
+        },
+        {
+          "id": "Q6",
+          "passed": true,
+          "detail": "Overlapping query memberships do not create a second independent observation."
+        },
+        {
+          "id": "sources",
+          "passed": true,
+          "detail": "All decisive fixture sources are retained and no foreign source is cited."
+        }
+      ],
+      "originalChecks": [
+        {
+          "printId": "sv08.5-004",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-alpha",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-beta",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa04-unknown",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-a",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-b",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa06-duplicate",
+          "exactGameplayDelivered": true
+        }
+      ],
+      "summary": "Q1 — Budew (sv08.5-004): Itchy Pollen costs no Energy, deals 10 damage, and prevents the opponent from playing Item cards from their hand during their next turn; it does not prohibit every Trainer card. Provenance: a real printing transcribed in a local supplement checked on 2026-10-28, not newly verified online.\nQ2 — Synthetic Courier qa02-alpha says “Draw 2 cards.” Synthetic Courier qa02-beta says “Draw 3 cards.” These are separate print identities with different effects; matching names do not establish gameplay equivalence. Both are marked comparableGameplay=true, dated 2026-10-28T00:00:00.000Z, and have deckKey=null. Their separate provenance URLs are https://example.test/ai-quality/qa02-alpha and https://example.test/ai-quality/qa02-beta.\nQ3 — Synthetic field has one deduplicated participation in one event and one available record: 6 wins, 3 losses, 1 tie; denominator 10 matches; one 5th-place finish at Synthetic field tournament on 2026-10-28. These are event-field results, not a matchup against the user deck. The supplied list contains 60 synthetic energy qa 1. Authoritative statistics confirm the totals; the same participation retrieved through two queries counts once.\nQ4 — Synthetic Unknown’s Unknown Attack has damage \"50\" and cost=null: its cost is unknown, not established as free. No legality verdict is supplied.\nQ5 — Observation A reports a maximum of 2 uses; observation B reports a maximum of 3 uses. The sources explicitly conflict and do not resolve the disagreement; retain both values.\nQ6 — Synthetic Duplicate, printId qa06-duplicate, says “Draw 1 card.” Its overlapping query memberships represent one distinct printing, not two independent observations. Its supplied record is dated 2026-10-28 with example.test provenance.",
+      "limitations": "This synthesis integrates supplied AI summaries, which are interpretations, not new primary observations. Statements that other conclusions were absent apply to each earlier batch, not to the combined evidence. Synthetic records are invented evaluation fixtures, not claims about real cards or legality. No user-deck matchup results or matchup winrate, tactics, or legality determinations are supported. Apart from Q3’s list quantity, participation and placement, no deck quantities, frequencies or placement distributions are established; Q3’s 10-match denominator does not establish a user-deck matchup rate. Q4’s missing cost and Q5’s conflict remain unresolved. Completed searches with zero remaining results do not establish missing card facts. Repeated query memberships add no independent evidence, and padding has no evidentiary meaning.",
+      "sourceIds": [
+        "card:sv08.5-004",
+        "card:qa02-alpha",
+        "card:qa02-beta",
+        "list:quality-field",
+        "card:qa04-unknown",
+        "card:qa05-a",
+        "card:qa05-b",
+        "card:qa06-duplicate"
+      ]
+    },
+    {
+      "step": "overlapping_query_memberships",
+      "elapsedMs": 32895,
+      "calls": 2,
+      "inputBytes": 32783,
+      "outputBytes": 4385,
+      "usageCalls": 2,
+      "usage": {
+        "inputTokens": 26372,
+        "cachedInputTokens": 17920,
+        "outputTokens": 1017
+      },
+      "evidenceBytes": 167541,
+      "uniqueSourceCount": 8,
+      "newlyInvokedLeafSourceCount": 2,
+      "archive": {
+        "searches": 4,
+        "completedSearches": 4,
+        "pages": 4,
+        "responseBytes": 167541,
+        "cards": 7,
+        "decks": 1,
+        "occurrences": 1,
+        "pairings": 0
+      },
+      "checks": [
+        {
+          "id": "Q1",
+          "passed": true,
+          "detail": "Real Budew: zero Energy, 10 damage, opponent Items from hand next turn; no blanket Trainer prohibition."
+        },
+        {
+          "id": "Q2",
+          "passed": true,
+          "detail": "Same name, two printings with different draw counts remain distinct."
+        },
+        {
+          "id": "Q3",
+          "passed": true,
+          "detail": "6/3/1 and denominator 10 are field results, not this user matchup winrate."
+        },
+        {
+          "id": "Q4",
+          "passed": true,
+          "detail": "Missing attack cost cannot be silently converted to zero or a legality claim."
+        },
+        {
+          "id": "Q5",
+          "passed": true,
+          "detail": "Both conflicting source values and their unresolved status survive."
+        },
+        {
+          "id": "Q6",
+          "passed": true,
+          "detail": "Overlapping query memberships do not create a second independent observation."
+        },
+        {
+          "id": "sources",
+          "passed": true,
+          "detail": "All decisive fixture sources are retained and no foreign source is cited."
+        }
+      ],
+      "originalChecks": [
+        {
+          "printId": "sv08.5-004",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-alpha",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-beta",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa04-unknown",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-a",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-b",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa06-duplicate",
+          "exactGameplayDelivered": true
+        }
+      ],
+      "summary": "Q1 — Budew (sv08.5-004): Itchy Pollen costs no Energy, deals 10 damage, and prevents the opponent from playing Item cards from their hand during their next turn. It does not prohibit every Trainer card. The supplied transcription was checked locally on 2026-10-28, not newly verified online.\nQ2 — Synthetic Courier has two separate print identities: qa02-alpha says “Draw 2 cards.”; qa02-beta says “Draw 3 cards.” Matching names do not establish gameplay equivalence, despite both records being marked comparableGameplay=true. Both are dated 2026-10-28T00:00:00.000Z, have deckKey=null, and originate from separate supplied records at https://example.test/ai-quality/qa02-alpha and https://example.test/ai-quality/qa02-beta.\nQ3 — Synthetic field has 1 deduplicated participation in 1 event and 1 available record: 6 wins, 3 losses, 1 tie; denominator 10 matches; placing 5 (count 1). These are event-field results, not a matchup against the user deck. The participation returned by two queries counts once. Its linked deck list contains 60 Synthetic Energy (qa 1). Original deduplicated statistics govern the counts.\nQ4 — Synthetic Unknown’s Unknown Attack has damage \"50\" and attack cost null: its cost is unknown, not established as free. No legality verdict is supplied.\nQ5 — Observation A reports a maximum of 2 uses; observation B reports a maximum of 3 uses. Their explicit conflict remains unresolved by the supplied sources.\nQ6 — Synthetic Duplicate, printId qa06-duplicate, says “Draw 1 card.” Overlapping query results represent 1 distinct printing, not 2 independent observations; repeated query memberships add no evidence.",
+      "limitations": "The supplied material consists of prior AI summaries, not new primary observations; citations identify their underlying supplied source IDs. Batch-local statements that other Q conclusions were absent describe those individual batches; the combined material supports Q1–Q6 as summarized here. Synthetic records are invented evaluation fixtures, with no claim about real cards or legality; qa05-b and qa06-duplicate are reported as dated 2026-10-28 with example.test provenance. No user-deck matchup results or matchup winrate are supplied, and no tactics or legality conclusions are supported. Beyond the stated Q3 list and statistics, no deck quantities, frequencies, placements or denominators are established; the Courier records have no linked deck. Q4’s cost and Q5’s conflicting maximum remain unresolved. Search metadata and completed searches add no missing card facts. Repeated query memberships must not be summed as independent evidence across batches. Padding is inert.",
+      "sourceIds": [
+        "card:sv08.5-004",
+        "card:qa02-alpha",
+        "card:qa02-beta",
+        "list:quality-field",
+        "card:qa04-unknown",
+        "card:qa05-a",
+        "card:qa05-b",
+        "card:qa06-duplicate"
+      ]
+    }
+  ]
+}

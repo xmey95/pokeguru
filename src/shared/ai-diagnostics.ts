@@ -1,3 +1,5 @@
+import { aiCallKinds, readAiCallMetrics, type AiCallKind, type AiCallMetrics } from './ai-call-metrics'
+
 export const aiFailureCodes = ['unknown', 'cancelled', 'paused', 'timeout', 'auth', 'network',
   'storage', 'invalid-plan', 'invalid-response', 'evidence-incomplete', 'draft-limit',
   'batch-too-large', 'query-limit', 'cli-unavailable', 'context-limit', 'quota', 'storage-full', 'no-progress'] as const
@@ -19,6 +21,7 @@ export interface AiCollectionDiagnostics {
 }
 
 export interface AiDiagnostics {
+  metrics?: AiCallMetrics
   collection?: AiCollectionDiagnostics
   failureCode?: AiFailureCode
   model?: string | null
@@ -41,7 +44,7 @@ export interface AiDiagnostics {
   nextRetryAt?: string
   automaticWait?: boolean
   suspensionReason?: 'user' | 'shutdown' | 'failure' | 'legacy'
-  calls?: { kind: 'planning' | 'batch' | 'synthesis' | 'analysis'; startedAt: string;
+  calls?: { kind: AiCallKind; startedAt: string;
     endedAt: string | null; status: 'running' | 'succeeded' | 'failed'; inputBytes: number;
     failureCode?: AiFailureCode }[]
 }
@@ -51,6 +54,8 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   const data = value as Record<string, unknown>
   const result: AiDiagnostics = {}
+  const metrics = readAiCallMetrics(data.metrics)
+  if (metrics) result.metrics = metrics
   if (['user', 'shutdown', 'failure', 'legacy'].includes(data.suspensionReason as string))
     result.suspensionReason = data.suspensionReason as AiDiagnostics['suspensionReason']
   if (aiFailureCodes.includes(data.failureCode as AiFailureCode)) result.failureCode = data.failureCode as AiFailureCode
@@ -81,7 +86,7 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
   if (timestamp(data.nextRetryAt)) result.nextRetryAt = data.nextRetryAt
   if (Array.isArray(data.calls)) result.calls = data.calls.slice(-40).flatMap((entry) => {
     if (!entry || typeof entry !== 'object' ||
-      !['planning', 'batch', 'synthesis', 'analysis'].includes(entry.kind) ||
+      !aiCallKinds.includes(entry.kind) ||
       !timestamp(entry.startedAt) || !(entry.endedAt === null || timestamp(entry.endedAt)) ||
       !['running', 'succeeded', 'failed'].includes(entry.status) ||
       !Number.isSafeInteger(entry.inputBytes) || entry.inputBytes < 0) return []

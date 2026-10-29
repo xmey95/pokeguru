@@ -16,7 +16,8 @@ import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaD
 import type { AiConnection, AiLoginProgress, AiLoginStart, AiPreferences, AiRunConfig, CodexSetupStatus } from '../shared/ai'
 import type { AiEvidenceQueryResult, AiEvidenceQueryTrace } from '../shared/ai-evidence'
 import { fetchMeta, fetchOpponentSample } from './limitless-meta'
-import { generateMatchup, matchupHistoryContext, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
+import { generateMatchup, matchupGenerationPrompt, matchupRevisionPrompt, matchupHistoryContext, matchupSummaryPrompt, reviseMatchup, summarizeMatchupContext, testCodex } from './codex-matchup'
+import { draftNeedsEvidenceReview, prepareEvidenceDelivery } from './ai-evidence-delivery'
 import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
 import { CodexSetup } from './codex-setup'
@@ -338,8 +339,10 @@ async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRu
     const through = Math.min(current.summarizedThrough + 5, lastToSummarize)
     const batch = projectStore.getMatchupSummaryBatch(current.projectId, current.id, current.summarizedThrough + 1, through)
     if (!batch.at(-1)?.report) break
+    const history = { ...current, turns: batch }
     const summary = await work.snapshotAsync(`history-summary:${through}`,
-      () => summarizeMatchupContext({ ...current, turns: batch }, through, config, work.signal))
+      () => work.run('history', matchupSummaryPrompt(history, through), config,
+        (reportUsage) => summarizeMatchupContext(history, through, config, work.signal, reportUsage)))
     projectStore.saveMatchupContextSummary(current.id, summary, through)
     current = { ...current, contextSummary: summary, summarizedThrough: through }
   }
@@ -451,8 +454,8 @@ async function matchupAiQueries(request: string, deckContext: string,
     sample.cards, history], () => initial) ?? initial
   const trace = await runAiEvidenceQueries(request, stableInitial, engine,
     (prompt) => {
-      const execute = () => planEvidenceQueriesWithCodex(prompt, config, signal,
-        job ? jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.') : undefined)
+      const execute = (reportUsage?: (usage: unknown) => void) => planEvidenceQueriesWithCodex(prompt, config, signal,
+        job ? jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.') : undefined, reportUsage)
       return work ? work.run('planning', prompt, config, execute) : execute()
     },
     { archive: work.archive, contextTexts: [stableInitial.deckContext, stableInitial.sample.cards.join('\n'), stableInitial.history ?? ''],
@@ -462,6 +465,8 @@ async function matchupAiQueries(request: string, deckContext: string,
       onRound: (round, queries) => { if (job) jobProgress(job, 'planning',
         `Approfondimento ${round}: ${queries} ricerche locali selezionate.`) } })
   if (work) await analyzeLargeEvidence(trace, request, config, work)
+  prepareEvidenceDelivery(trace, engine, [request, stableInitial.deckContext,
+    stableInitial.sample.cards.join('\n'), stableInitial.history ?? ''])
   return { trace, engine }
 }
 
@@ -476,10 +481,8 @@ function extendMatchupDraftEvidence(trace: AiEvidenceQueryTrace, engine: AiEvide
   changeSummary = ''): number {
   const text = matchupDraftText(report, changeSummary)
   const added = extendAiEvidenceForText(trace, engine, text)
-  const focus = engine.cardTargets(text).flatMap((target) => target.printIds)
-  const needsFocus = !!trace.analysis && focus.some((id) => !trace.focusedPrintIds?.includes(id))
-  trace.focusedPrintIds = [...new Set([...(trace.focusedPrintIds ?? []), ...focus])]
-  return added || (needsFocus ? 1 : 0)
+  const needsReview = draftNeedsEvidenceReview(trace, engine, text)
+  return added || (needsReview ? 1 : 0)
 }
 
 function requireNamedEvidence(trace: AiEvidenceQueryTrace): void {
@@ -1380,8 +1383,8 @@ function registerProjectHandlers(): void {
       jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla domanda.')
       const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
         engine, (prompt) => work.run('planning', prompt, config,
-          () => planEvidenceQueriesWithCodex(prompt, config, controller.signal,
-            jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.'))),
+          (reportUsage) => planEvidenceQueriesWithCodex(prompt, config, controller.signal,
+            jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.'), reportUsage)),
         { archive: work.archive, contextTexts: [thread.title, ...thread.messages.slice(-12).map((item) => item.text),
           base?.rawText ?? '', thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? ''],
         eventContextTexts: thread.messages.slice(-2).map((item) => item.text),
@@ -1391,6 +1394,9 @@ function registerProjectHandlers(): void {
         onRound: (round, queries) => jobProgress(job, 'planning',
           `Approfondimento ${round}: ${queries} ricerche locali selezionate.`) })
       await analyzeLargeEvidence(queryTrace, message.trim(), config, work)
+      prepareEvidenceDelivery(queryTrace, engine, [message.trim(), base?.rawText ?? '',
+        thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? '',
+        ...thread.messages.slice(-12).map((item) => item.text)])
       let evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
       const cwd = join(backendContext.temp, 'pokeguru-codex-deck')
       mkdirSync(cwd, { recursive: true })
@@ -1406,9 +1412,9 @@ function registerProjectHandlers(): void {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la risposta con nuove schede (${attempt + 1}/4).` :
           'Codex elabora la risposta con le prove raccolte.')
         const answerStarted = Date.now()
-        result = await work.run('analysis', context.prompt, config, () => codexControl.jsonTurn(sessionRef, cwd, context.prompt, config,
+        result = await work.run('analysis', context.prompt, config, (reportUsage) => codexControl.jsonTurn(sessionRef, cwd, context.prompt, config,
           DECK_THREAD_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
-            signal: controller.signal,
+            signal: controller.signal, onUsage: reportUsage,
             onSummary: jobSummary(job, 'analysis', 'Codex elabora la risposta con le prove raccolte.'),
             onSessionStarted: (id) => {
               if (!sessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
@@ -1419,9 +1425,8 @@ function registerProjectHandlers(): void {
         const draft = result.value as { reply?: unknown; rawText?: unknown }
         const added = extendAiEvidenceForText(queryTrace, engine,
           [draft.reply, draft.rawText].filter((part): part is string => typeof part === 'string').join('\n'))
-        const focus = engine.cardTargets([draft.reply, draft.rawText].filter((part): part is string => typeof part === 'string').join('\n')).flatMap((target) => target.printIds)
-        const needsFocus = !!queryTrace.analysis && focus.some((id) => !queryTrace.focusedPrintIds?.includes(id))
-        queryTrace.focusedPrintIds = [...new Set([...(queryTrace.focusedPrintIds ?? []), ...focus])]
+        const needsFocus = draftNeedsEvidenceReview(queryTrace, engine,
+          [draft.reply, draft.rawText].filter((part): part is string => typeof part === 'string').join('\n'))
         work.evidence(queryTrace)
         if (!added && !needsFocus) break
         if (attempt === 3) throw new Error('La risposta ha introdotto altre carte: completa il recupero delle prove e riprova.')
@@ -1664,10 +1669,10 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
           'Codex costruisce la guida usando lista, schede e tornei.')
-        generated = await work.run('analysis', JSON.stringify(['generate-v2', projectId, hash, deckContext, snapshot,
-          opponent, sample, evidence, { ...aiQueries, durationMs: 0 }]), config, () => generateMatchup(projectId, hash, deckContext, snapshot, opponent,
+        const prompt = matchupGenerationPrompt(deckContext, snapshot, opponent, sample, evidence, undefined, aiQueries)
+        generated = await work.run('analysis', prompt, config, (reportUsage) => generateMatchup(projectId, hash, deckContext, snapshot, opponent,
           sample, config, evidence, undefined, { jobDirectory: aiArtifactDirectory(job.id),
-            signal: controller.signal, aiQueries,
+            signal: controller.signal, aiQueries, onUsage: reportUsage,
             onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
                 base: { ...base, promptAudit: audit } }) },
@@ -1749,10 +1754,10 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la revisione con nuove schede (${attempt + 1}/4).` :
           'Codex rivede la guida alla luce del tuo commento.')
-        revised = await work.run('analysis', JSON.stringify(['revise-v2', context, target.feedback, deckContext, snapshot,
-          opponent, sample, evidence, { ...aiQueries, durationMs: 0 }]), config, () => reviseMatchup(context!, target.feedback!, deckContext, snapshot,
+        const prompt = matchupRevisionPrompt(context!, target.feedback!, deckContext, snapshot, opponent, sample, evidence, aiQueries)
+        revised = await work.run('analysis', prompt, config, (reportUsage) => reviseMatchup(context!, target.feedback!, deckContext, snapshot,
           opponent, sample, config, evidence, { jobDirectory: aiArtifactDirectory(job.id),
-            signal: controller.signal, aiQueries,
+            signal: controller.signal, aiQueries, onUsage: reportUsage,
             onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
                 base: { ...base, promptAudit: audit },
@@ -1838,10 +1843,10 @@ function registerProjectHandlers(): void {
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la guida con nuove schede (${attempt + 1}/4).` :
           'Codex aggiorna la guida sulla nuova base.')
-        generated = await work.run('analysis', JSON.stringify(['continue-v2', parent.projectId, hash, deckContext, snapshot,
-          opponent, sample, evidence, matchupHistoryContext(context!), { ...aiQueries, durationMs: 0 }]), config, () => generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
+        const prompt = matchupGenerationPrompt(deckContext, snapshot, opponent, sample, evidence, matchupHistoryContext(context!), aiQueries)
+        generated = await work.run('analysis', prompt, config, (reportUsage) => generateMatchup(parent.projectId, hash, deckContext, snapshot, opponent, sample,
           config, evidence, matchupHistoryContext(context!), { jobDirectory: aiArtifactDirectory(job.id),
-            signal: controller.signal, aiQueries,
+            signal: controller.signal, aiQueries, onUsage: reportUsage,
             onPrompt: (audit) => { work.promptBytes(audit.utf8Bytes); aiJobStore!.prepare(job.id,
               { analysisVersion: 2, validatedDraft: false,
                 base: { ...base, promptAudit: audit }, parentId: parent.id }) },
