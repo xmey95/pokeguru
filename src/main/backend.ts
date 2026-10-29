@@ -191,7 +191,7 @@ function resumeSavedAiJob(job: AiJob, explicit: boolean): Promise<unknown> {
   const input = readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id)
   const runner = input && input.kind === job.kind ? resumeRunners.get(job.kind) : null
   if (!runner || !input) throw new Error('Contesto di ripresa non disponibile.')
-  if (input.schemaVersion !== 2) {
+  if (input.schemaVersion !== 2 && input.schemaVersion !== 3) {
     const message = 'Questa analisi proviene da una versione che non salvava tutti gli input. Gli esiti completati restano disponibili; annulla il lavoro e avvia una nuova analisi sui dati attuali.'
     aiJobStore.suspend(job.id, message, 'legacy')
     throw new Error(message)
@@ -235,7 +235,7 @@ async function recoverAiJobs(): Promise<void> {
       if (activeAiControllers.has(job.id)) continue
       try {
         const workflow = job.status === 'running' ? readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id) : null
-        if (job.status === 'running' && workflow && (workflow.schemaVersion === 2 ||
+        if (job.status === 'running' && workflow && (workflow.schemaVersion === 2 || workflow.schemaVersion === 3 ||
           (job.request as { validatedDraft?: boolean } | null)?.validatedDraft !== true)) {
           const voluntary = job.progress?.diagnostics?.suspensionReason === 'user'
           aiJobStore.suspend(job.id, voluntary ? 'Analisi in pausa su tua richiesta.'

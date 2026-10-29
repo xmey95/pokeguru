@@ -34,10 +34,17 @@ function event(): TournamentSnapshot {
 }
 
 describe('AI evidence engine', () => {
+  it('does not present missing overview support as an empty event sample', () => {
+    const engine = createAiEvidenceEngine(catalog, [], [],
+      { from: '2026-10-01', to: '2026-10-25' }, { names: () => [], search: () => ({ lists: [] }) })
+    expect(engine.describe().operations).not.toContain('events.overview')
+    expect(engine.execute({ operation: 'events.overview' }).status).toBe('rejected')
+  })
+
   it('answers model-selected read-only catalog and event queries with bounded provenance', () => {
     const engine = createAiEvidenceEngine(catalog, [event()], [],
       { from: '2026-10-01', to: '2026-10-25' })
-    expect(engine.describe().operations).toEqual(['catalog.search', 'events.search'])
+    expect(engine.describe().operations).toEqual(['catalog.search', 'events.search', 'events.overview'])
     const card = engine.execute({ operation: 'catalog.search', terms: ['evolution'] })
     expect(card.status).toBe('ok')
     expect(card.sourceIds).toEqual(['card:me01-001'])

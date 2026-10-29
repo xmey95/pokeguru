@@ -18,7 +18,7 @@ export async function collectArchivedEvidence(input: unknown, engine: AiEvidence
   if (search.cursor === null) return search
   const startedAt = new Date().toISOString()
   const metrics: AiCollectionDiagnostics = {
-    operation: (input as { operation?: string } | null)?.operation === 'events.search' ? 'events' : 'catalog',
+    operation: (input as { operation?: string } | null)?.operation?.startsWith('events.') ? 'events' : 'catalog',
     stage: 'reading', startedAt, updatedAt: startedAt, pages: search.pages,
     queryMs: 0, persistMs: 0, dependencyMs: 0, maxPageMs: 0
   }
