@@ -195,7 +195,7 @@ export async function navigationScenarios(page, application, artifacts) {
     ipcMain.removeHandler('deck:list-thread-summaries')
     ipcMain.handle('deck:list-thread-summaries', globalThis.navigationThreadHandler)
   })
-  await area('Matchup').click()
+  await area('Guide matchup').click()
   await ready()
   await area('Catalogo').click()
   await back.click()
