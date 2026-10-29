@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 29 ottobre 2026. **Fase corrente:** I3, v0.3.9 pubblicata e verificata su main tramite APP-186; include APP-179–181 e APP-185, schema 16 invariato. CI delle PR, Release, pacchetti e provenienza verificati sulle quattro piattaforme. Restano i limiti di firma e prova Finder esterna APP-147. I4 non avviato. Gli stati operativi sono esclusivamente in BACKLOG.md.
+**Aggiornato:** 29 ottobre 2026. **Fase corrente:** I3, v0.3.10 pubblicata e verificata su main tramite APP-190; include la correzione APP-189 al salvataggio e recupero delle Strategie, schema 16 invariato. CI delle PR, Release, pacchetti e provenienza verificati sulle quattro piattaforme. Restano i limiti di firma e prova Finder esterna APP-147. I4 non avviato. Gli stati operativi sono esclusivamente in BACKLOG.md.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-190 completato:** La [v0.3.10](https://github.com/xmey95/pokeguru/releases/tag/v0.3.10) è pubblicata sul merge main 0d9376406ec00c5efa5b9c685109f3a363a9109c. [PR #120](https://github.com/xmey95/pokeguru/pull/120) verso dev e [PR #121](https://github.com/xmey95/pokeguru/pull/121) verso main con quattro check verdi ciascuna. [CI preparazione](https://github.com/xmey95/pokeguru/actions/runs/40964229970), [CI main](https://github.com/xmey95/pokeguru/actions/runs/40965786390), [Release](https://github.com/xmey95/pokeguru/actions/runs/40967419364). Verificati quattro package/smoke, attestazione/pubblicazione, tag sul commit atteso, nove asset, otto checksum confrontati con i digest GitHub, hash dei quattro manifest scaricati e del file checksum, versione/commit/run/dimensioni. Quattro attestazioni dei manifest verificate anche localmente con GitHub CLI sul commit e workflow attesi. [Rapporto](RELEASE-0.3.10-VERIFICATION.json). Correzione APP-189 distribuita, note APP-188 incluse, dati personali intatti. Il recupero del risultato originale richiede l’aggiornamento dell’app; nessun altro incremento avviato. Le note di preparazione seguenti sono storiche.
 
 - **APP-190 in corso (29-10-2026):** autorizzati integrazione della correzione APP-189 in dev e rilascio v0.3.10. Ramo task/app-190-release-0.3.10 da dev 7c0fec2 con c6dc28b; schema 16 invariato. Versione e note preparate, prossimi passi: gate PR dev/main, pubblicazione e verifica asset. Nessuna installazione o modifica al risultato personale. Questa autorizzazione supera il limite locale della nota APP-189 seguente.
 

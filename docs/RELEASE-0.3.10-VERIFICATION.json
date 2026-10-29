@@ -1,0 +1,45 @@
+{
+  "release": "https://github.com/xmey95/pokeguru/releases/tag/v0.3.10",
+  "sourceSha": "0d9376406ec00c5efa5b9c685109f3a363a9109c",
+  "run": "40967419364",
+  "assets": 9,
+  "verifiedChecksumEntries": 8,
+  "packages": [
+    {
+      "platform": "linux",
+      "artifact": "Pokeguru-0.3.10-linux-x86_64.AppImage",
+      "bytes": 294344578,
+      "sha256": "546daf040d9b7392183a621fabb77ce284fe20cd1aaca4e425955b7a61c7655e"
+    },
+    {
+      "platform": "windows",
+      "artifact": "Pokeguru-0.3.10-windows-x64-setup.exe",
+      "bytes": 226397842,
+      "sha256": "bb7fc1911e2a4bc141bd924e1205495b137376f3f7616a66a54a9afe08942cba"
+    },
+    {
+      "platform": "macos-x64",
+      "artifact": "Pokeguru-0.3.10-macos-x64.dmg",
+      "bytes": 277126523,
+      "sha256": "6eba11b6946e5f6cc3f345dc97bff8c6a59c865f3982899a73aeb39c990e8ce3"
+    },
+    {
+      "platform": "macos-arm64",
+      "artifact": "Pokeguru-0.3.10-macos-arm64.dmg",
+      "bytes": 260196135,
+      "sha256": "400dfee7d729d0e2d971e9bf7173c7b21a6c17163052040a23ba43e81426c6f2"
+    }
+  ],
+  "preparationPr": "https://github.com/xmey95/pokeguru/pull/120",
+  "mainPr": "https://github.com/xmey95/pokeguru/pull/121",
+  "ciRuns": [
+    "https://github.com/xmey95/pokeguru/actions/runs/40964229970",
+    "https://github.com/xmey95/pokeguru/actions/runs/40965786390"
+  ],
+  "releaseRun": "https://github.com/xmey95/pokeguru/actions/runs/40967419364",
+  "verification": "Four CI jobs succeeded on each PR; four package/smoke jobs, attest and publish succeeded. Tag equals sourceSha; all eight checksums match GitHub asset digests; downloaded manifests and checksum file hashes match; manifest version/source/run/bytes match published packages. Package bytes and signed attestations were checked by the Release workflow. The four downloaded manifest attestations were independently verified with GitHub CLI, pinned to source SHA, main ref and signer workflow.",
+  "independentlyVerifiedManifestAttestations": 4,
+  "verificationNotes": [
+    "The first local macOS arm64 attestation check could not initialize the public-good verifier; the same check passed on a sequential retry. No release files changed."
+  ]
+}
