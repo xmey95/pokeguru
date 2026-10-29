@@ -4,6 +4,12 @@
 
 ## Decisioni
 
+### T-189 — Persistenza integrale delle evidenze delle Strategie
+
+Il pacchetto delle evidenze è costruito dall’app con dati locali, traccia delle query, riferimenti all’archivio e copia del prompt effettivamente consegnato. Il limite storico di 250.000 caratteri al momento della persistenza non è compatibile con le analisi estese: il caso reale della v0.3.9 ha 426.754 caratteri e tutte le 29 citazioni risolte, ma blocca sia il salvataggio sia il recupero. Si rimuove quel limite, senza sostituirlo con un altro tetto arbitrario o troncare la provenienza. Restano i controlli di schema, citazioni, progetto/sessione, risposta e candidata; la serializzazione precede la transazione e viene riusata nella scrittura.
+
+Nessuna migrazione o rielaborazione AI: i risultati ready già validati possono essere applicati tramite il percorso esistente con controllo del turno già salvato. La verifica usa SQLite reale e il risultato dell’utente solo su copie isolate, inclusi due avvii della build Electron. Il campione conferma conservazione e idempotenza per quel risultato; non misura nuovi limiti prestazionali di pacchetti arbitrariamente grandi e non certifica la qualità competitiva della proposta.
+
 ### T-179 — Riduzione del lavoro ripetuto a configurazione AI invariata
 
 APP-179–181, autorizzati il 29-10-2026, mantengono modello, ragionamento, copertura e verifiche delle carte. Un journal per tentativo distingue usage noto, valori ignoti, cache locale, token cached e attese; gli aggregati non dipendono dalla finestra delle ultime 40 chiamate. I namespace nelle tabelle esistenti non richiedono migrazione. Il modello/effort effettivo non osservato dalla CLI resta null.
