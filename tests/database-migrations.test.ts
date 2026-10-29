@@ -7,6 +7,7 @@ import { ProjectStore } from '../src/main/project-store'
 import { CatalogStore } from '../src/main/catalog'
 import { TournamentStore } from '../src/main/tournament-store'
 import { AiJobStore } from '../src/main/ai-job-store'
+import { AiEvidenceArchive } from '../src/main/ai-evidence-archive'
 import { DailySyncStore } from '../src/main/daily-sync'
 import { CURRENT_SCHEMA_VERSION, DatabaseIntegrityError, completeDatabaseMigration,
   prepareDatabaseMigration, verifyDatabase } from '../src/main/database-migrations'
@@ -16,6 +17,50 @@ function schemaVersion(path: string): number {
   try { return (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version }
   finally { db.close() }
 }
+
+it('upgrades v14 indexes with a verified backup and preserves suspended work and originals', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-indexes-')), path = join(folder, 'data.sqlite')
+  let projects: ProjectStore | undefined, jobs: AiJobStore | undefined, archive: AiEvidenceArchive | undefined
+  try {
+    projects = new ProjectStore(path); jobs = new AiJobStore(path)
+    const project = projects.create({ name: 'Retained job', format: 'STANDARD' })
+    const owner = jobs.start('thread-ask', project.id, 'resource')
+    const request = { question: 'Original input', validatedDraft: false }
+    jobs.prepare(owner.id, request)
+    jobs.saveCallResult(owner.id, 'finished-call', { text: 'Completed result' })
+    archive = new AiEvidenceArchive(path, owner)
+    archive.saveValue('workflow', 'input', { retained: true })
+    jobs.suspend(owner.id, 'Paused by the user', 'user')
+    archive.close(); archive = undefined; jobs.close(); jobs = undefined; projects.close(); projects = undefined
+    const old = new DatabaseSync(path)
+    old.exec(`DROP INDEX ai_jobs_resource_history; DROP INDEX ai_evidence_page_sequence;
+      DROP INDEX ai_evidence_event_order; DROP INDEX ai_evidence_record_object;
+      CREATE INDEX ai_evidence_event_date ON ai_evidence_event_index(job_id, date DESC, placing, key);
+      PRAGMA user_version = 14`)
+    old.close()
+    const migration = await prepareDatabaseMigration(path)
+    expect(migration.fromVersion).toBe(14)
+    expect(existsSync(`${migration.backupPath}.verified`)).toBe(true)
+    const backup = new DatabaseSync(migration.backupPath!, { readOnly: true })
+    try {
+      expect(backup.prepare("SELECT 1 FROM sqlite_master WHERE name = 'ai_jobs_resource_history'").get()).toBeUndefined()
+      expect(backup.prepare('SELECT request_json FROM ai_jobs WHERE id = ?').get(owner.id)!.request_json).toBe(JSON.stringify(request))
+    } finally { backup.close() }
+    projects = new ProjectStore(path); jobs = new AiJobStore(path)
+    completeDatabaseMigration(path, migration)
+    expect(jobs.get(owner.id)).toMatchObject({ status: 'interrupted', request })
+    expect(jobs.diagnostics(owner.id)?.suspensionReason).toBe('user')
+    expect(jobs.callResult(owner.id, 'finished-call')).toEqual({ value: { text: 'Completed result' } })
+    archive = new AiEvidenceArchive(path, owner, true)
+    expect(archive.value('workflow', 'input')).toEqual({ retained: true })
+    expect(schemaVersion(path)).toBe(CURRENT_SCHEMA_VERSION)
+    verifyDatabase(path)
+    expect((await prepareDatabaseMigration(path)).needsMigration).toBe(false)
+  } finally {
+    archive?.close(); jobs?.close(); projects?.close()
+    rmSync(folder, { recursive: true, force: true })
+  }
+})
 
 it('backs up schema 9 before adding persistent AI progress', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pokeguru-schema-progress-'))
@@ -361,13 +406,13 @@ it('backs up v8 and scopes legacy guides to the list active at migration', async
       theirKeyCards: '', strategy: 'Piano', limitations: 'Campione' })
     store.close()
     const old = new DatabaseSync(path)
-    old.exec(`DROP TABLE deck_resolution_heads; DROP TABLE deck_resolution_revisions;
+    try { old.exec(`DROP INDEX matchup_discussions_context;
+      DROP TABLE deck_resolution_heads; DROP TABLE deck_resolution_revisions;
       DROP TABLE deck_restores; DROP TABLE deck_version_annotations;
       ALTER TABLE matchup_discussions DROP COLUMN content_hash;
       ALTER TABLE matchup_discussions DROP COLUMN deck_version_id;
       ALTER TABLE matchup_discussions DROP COLUMN deck_resolution_id;
-      PRAGMA user_version = 8`)
-    old.close()
+      PRAGMA user_version = 8`) } finally { old.close() }
     const preparation = await prepareDatabaseMigration(path)
     expect(preparation).toMatchObject({ fromVersion: 8, needsMigration: true })
     expect(existsSync(`${preparation.backupPath}.verified`)).toBe(true)
@@ -418,13 +463,13 @@ it('keeps legacy guides historical when v1 and v3 contain the same text', async 
     store.close()
 
     const old = new DatabaseSync(path)
-    old.exec(`DROP TABLE deck_resolution_heads; DROP TABLE deck_resolution_revisions;
+    try { old.exec(`DROP INDEX matchup_discussions_context;
+      DROP TABLE deck_resolution_heads; DROP TABLE deck_resolution_revisions;
       DROP TABLE deck_restores; DROP TABLE deck_version_annotations;
       ALTER TABLE matchup_discussions DROP COLUMN content_hash;
       ALTER TABLE matchup_discussions DROP COLUMN deck_version_id;
       ALTER TABLE matchup_discussions DROP COLUMN deck_resolution_id;
-      PRAGMA user_version = 8`)
-    old.close()
+      PRAGMA user_version = 8`) } finally { old.close() }
     const preparation = await prepareDatabaseMigration(path)
     const reopened = new ProjectStore(path)
     completeDatabaseMigration(path, preparation)

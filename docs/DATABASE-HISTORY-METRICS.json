@@ -1,0 +1,22 @@
+{
+  "fixture": {
+    "events": 80000,
+    "versions": 3000,
+    "messages": 3000,
+    "messagePaddingBytes": 24000000
+  },
+  "coldEventPageMs": 781.77,
+  "deepPage20BeforeMs": 22925.2,
+  "deepPage20AfterMs": 172.67,
+  "versionsBeforeMs": 31.31,
+  "versionsAfterMs": 2.13,
+  "threadBeforeMs": 116.04,
+  "threadAfterMs": 3.6,
+  "retentionBeforeMs": 83.1,
+  "retentionAfterMs": 0.81,
+  "insert200WithoutReferencesMs": 3.29,
+  "insert200WithReferencesMs": 39.19,
+  "eventTempBytes": 1126400,
+  "versionPayloadBefore": 1824847,
+  "versionPayloadAfter": 30451
+}

@@ -1,9 +1,9 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { AiAnalysisWork, analyzeLargeEvidence } from '../src/main/ai-analysis-work'
-import { aiEvidenceForPrompt, runAiEvidenceQueries } from '../src/main/ai-evidence-queries'
+import { aiEvidenceForPrompt, extendAiEvidenceForText, runAiEvidenceQueries } from '../src/main/ai-evidence-queries'
 import { evidenceHash } from '../src/main/ai-evidence-archive'
 import { AiJobStore } from '../src/main/ai-job-store'
 import { ProjectStore } from '../src/main/project-store'
@@ -38,7 +38,7 @@ function fixture(count: number, bytes: number) {
       return { query, status: 'ok', data, sourceIds: matches.map((m) => `card:${m.printId}`), fingerprint: evidenceHash(data) }
     }
   }
-  return { engine, jobs, job, get executions() { return executions }, get work() { return work },
+  return { engine, jobs, job, get signal() { return controller.signal }, get executions() { return executions }, get work() { return work },
     pause() { controller.abort('pause') },
     reopen() {
       work.close(); jobs.suspend(job.id, 'Pausa di prova'); jobs.resume(job.id)
@@ -49,6 +49,93 @@ function fixture(count: number, bytes: number) {
 }
 const plan = async () => ({ continueAfterResults: false,
   queries: [{ operation: 'catalog.search', terms: ['draw'], limit: 1 }] })
+
+it('shows local collection after finished batches, resumes its cursor and preserves cached model work', async () => {
+  const f = fixture(8, 100)
+  try {
+    const cachedAnswer = { summary: 'Already completed batch' }
+    await f.work.run('batch', 'previous batch prompt', config, async () => cachedAnswer)
+    f.work.progress(187, 187)
+    let paused = false
+    const progress = (value: Parameters<AiAnalysisWork['collecting']>[0], force: boolean) => {
+      f.work.collecting(value, force)
+      if (value.pages === 2 && value.stage === 'page' && !paused) { paused = true; f.pause() }
+    }
+    await expect(runAiEvidenceQueries('Collect further evidence', {}, f.engine, plan,
+      { archive: f.work.archive, signal: f.signal, onCollection: progress,
+        onTrace: (trace) => f.work.evidence(trace) })).rejects.toMatchObject({ code: 'paused' })
+    const saved = f.jobs.get(f.job.id)!
+    expect(saved.progress).toMatchObject({ phase: 'collecting', summary: null,
+      diagnostics: { batchesCompleted: 187, collection: { stage: 'interrupted', pages: 2, items: 2, total: 8 } } })
+    expect(saved.progress!.detail).not.toContain('187')
+    const history = f.jobs.activity(f.job.projectId, f.job.resourceId, f.job.id)!
+    expect(history.steps.some((step) => step.phase === 'collecting')).toBe(true)
+    expect(saved.updatedAt).toBe(saved.progress!.updatedAt)
+    expect(f.executions).toBe(2)
+    f.reopen()
+    let newPlans = 0
+    const resumed = await runAiEvidenceQueries('Collect further evidence', {}, f.engine,
+      // The saved first plan is replayed. Newly collected records legitimately
+      // require one further plan before declaring the research complete.
+      async () => { newPlans++; return { queries: [], continueAfterResults: false } },
+      { archive: f.work.archive, signal: f.signal,
+        onCollection: (value, force) => f.work.collecting(value, force) })
+    expect(f.executions).toBe(8)
+    expect(newPlans).toBe(1)
+    expect(resumed.archive).toMatchObject({ cards: 8, pages: 8 })
+    expect(f.jobs.diagnostics(f.job.id)?.collection).toMatchObject({ stage: 'complete', pages: 8, items: 8, total: 8 })
+    expect(await f.work.run('batch', 'previous batch prompt', config,
+      async () => { throw new Error('Must not spend another model call') })).toEqual(cachedAnswer)
+  } finally { f.close() }
+})
+
+it('does not reread all saved card bodies or search summaries for each page', async () => {
+  const f = fixture(40, 100)
+  try {
+    const reads = vi.spyOn(f.work.archive, 'records')
+    const summaries = vi.spyOn(f.work.archive, 'searchSummary')
+    f.engine.cardTargets = (text) => text.includes('Card 39') ? [{ name: 'Card 39', printIds: ['p39'] }] : []
+    const trace = await runAiEvidenceQueries('Collect', {}, f.engine, plan, { archive: f.work.archive })
+    const queries = f.executions
+    for (let i = 0; i < 40; i++) extendAiEvidenceForText(trace, f.engine, 'Card 39')
+    expect(trace.cardTargets).toEqual([{ name: 'Card 39', printIds: ['p39'], status: 'supplied' }])
+    expect(f.executions).toBe(queries)
+    expect(reads.mock.calls.filter(([kind]) => kind === 'card')).toHaveLength(1)
+    expect(summaries.mock.calls.length).toBeLessThan(45)
+    f.reopen()
+    const restored = await runAiEvidenceQueries('Card 39', {}, f.engine,
+      async () => { throw new Error('Replan') }, { archive: f.work.archive })
+    expect(restored.cardTargets?.[0].status).toBe('supplied')
+    expect(f.executions).toBe(queries)
+  } finally { f.close() }
+})
+
+it('can pause during restored card dependencies and fills them on the next resume', async () => {
+  const f = fixture(1, 100)
+  try {
+    const query = { operation: 'events.search', deckName: 'Saved deck', limit: 4 }
+    const search = f.work.archive.search(query)
+    const data = { remaining: 0, offset: 0, lists: [{ cards: ['60 Card 0 XXX 1'] }] }
+    f.work.archive.appendPage(search.key, search.cursor, { query, data, status: 'ok',
+      sourceIds: ['event:fixture'], fingerprint: evidenceHash(data) }, null)
+    f.engine.cardTargets = (text) => text.toLowerCase().includes('card 0') ? [{ name: 'Card 0', printIds: ['p0'] }] : []
+    await expect(runAiEvidenceQueries('Collect', {}, f.engine,
+      async () => { throw new Error('Planning before restoring dependencies') },
+      { archive: f.work.archive, signal: f.signal, onCollection: (progress, force) => {
+        f.work.collecting(progress, force)
+        if (progress.operation === 'dependencies') f.pause()
+      } })).rejects.toMatchObject({ code: 'paused' })
+    expect(f.executions).toBe(0)
+    expect(f.work.archive.counts()).toMatchObject({ decks: 1, pages: 1 })
+    f.reopen()
+    const restored = await runAiEvidenceQueries('Collect', {}, f.engine,
+      async () => ({ queries: [], continueAfterResults: false }),
+      { archive: f.work.archive, signal: f.signal, onCollection: (progress, force) => f.work.collecting(progress, force) })
+    expect(restored.cardTargets).toEqual([{ name: 'Card 0', printIds: ['p0'], status: 'supplied' }])
+    expect(f.executions).toBe(1)
+    expect(f.work.archive.counts()).toMatchObject({ decks: 1, pages: 2, cards: 1 })
+  } finally { f.close() }
+})
 
 it('collects more than 64 MB through the application query path while keeping history compact', async () => {
   const f = fixture(70, 1_000_000)

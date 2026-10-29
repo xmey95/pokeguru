@@ -68,6 +68,7 @@ export interface DeckThreadMessagePage {
 }
 
 export interface DeckCandidate {
+  adoptedVersionNumber?: number | null
   id: string
   parentCandidateId?: string | null
   sequence: number
@@ -102,13 +103,16 @@ export interface DeckThread {
   messages: DeckThreadMessage[]
   candidates: DeckCandidate[]
   /** Present on a recent-message window; older messages can be fetched with oldestMessageCursor. */
+  candidateCount?: number
   messageCount?: number
   oldestMessageCursor?: DeckThreadMessageCursor | null
   openingAiMessage?: DeckThreadMessage | null
   openingAiPending?: boolean
+  /** Analysis projection retains all unanswered user notes without loading older evidence JSON. */
+  pendingNotes?: string[]
 }
 
-export type DeckThreadSummary = Omit<DeckThread, 'messages' | 'candidates'> & {
+export type DeckThreadSummary = Omit<DeckThread, 'messages' | 'candidates' | 'seedCandidateText' | 'pendingNotes' | 'openingAiMessage'> & {
   latestCandidateId: string | null
 }
 

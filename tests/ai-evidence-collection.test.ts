@@ -90,3 +90,22 @@ it('keeps rejection evidence as a terminal search without an identical retry loo
     expect([...f.archive.pages()][0].status).toBe('rejected')
   } finally { f.close() }
 })
+
+it('publishes the local phase before execution, permits pausing there, and reports a stalled cursor', async () => {
+  const f = fixture(() => 50)
+  const stages: string[] = []
+  try {
+    const controller = new AbortController()
+    await expect(collectArchivedEvidence(query, f.engine, f.archive, { signal: controller.signal,
+      onProgress: (value) => { stages.push(value.stage); if (value.stage === 'reading') controller.abort('pause') }
+    })).rejects.toMatchObject({ code: 'paused' })
+    expect(f.executed).toEqual([])
+    expect(stages).toEqual(['reading', 'interrupted'])
+    const updates: { stage: string; pages: number; remaining?: number }[] = []
+    await expect(collectArchivedEvidence(query, f.engine, f.archive, {
+      onProgress: (value) => updates.push(value)
+    })).rejects.toMatchObject({ code: 'query-limit' })
+    expect(updates.at(-1)).toMatchObject({ stage: 'interrupted', pages: 1, remaining: 50 })
+    expect(f.archive.counts().pages).toBe(1)
+  } finally { f.close() }
+})

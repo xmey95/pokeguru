@@ -95,13 +95,13 @@ try {
       format: 'STANDARD', fetchedAt: new Date().toISOString(), cached: false, period: 'Fixture UI',
       sourceUrl: 'https://limitlesstcg.com/decks', decks: [{ id: 'test', name: 'Gardevoir ex', points: 1,
         share: 10, url: 'https://limitlesstcg.com/decks/1' }] } }))
-    for (const channel of ['matchups:list-reports', 'matchups:list-discussions']) {
+    for (const channel of ['matchups:report-summaries', 'matchups:discussion-page']) {
       ipcMain.removeHandler(channel)
       ipcMain.handle(channel, async () => {
         globalThis.feedbackPending++
         await new Promise(resolve => setTimeout(resolve, 1200))
         globalThis.feedbackPending--
-        return globalThis.feedbackReadMode === 'error' ? { ok: false, error: 'Lettura di prova non riuscita.' } : { ok: true, value: [] }
+        return globalThis.feedbackReadMode === 'error' ? { ok: false, error: 'Lettura di prova non riuscita.' } : { ok: true, value: channel === 'matchups:discussion-page' ? { items: [], currentId: null, nextCursor: null } : [] }
       })
     }
   })

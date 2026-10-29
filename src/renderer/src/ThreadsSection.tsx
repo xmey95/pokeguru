@@ -135,7 +135,8 @@ function CandidateDetail({ candidate, thread, versions, catalog, constraints, au
   const comparison = useRef<HTMLDetailsElement>(null)
   const base = versions.find((version) => version.id === thread.baseVersionId)
   const current = versions[0]
-  const adopted = versions.find((version) => version.adoption?.candidateId === candidate.id)
+  const adopted = candidate.adoptedVersionNumber ? { sequence: candidate.adoptedVersionNumber }
+    : versions.find((version) => version.adoption?.candidateId === candidate.id)
   const asOf = localCalendarDate()
   const review = useMemo(() => catalog ? reviewCandidate(thread.projectId, candidate, catalog, constraints,
     asOf, audit) : null, [thread.projectId, candidate, catalog, constraints, asOf, audit])
@@ -266,6 +267,9 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const [createError, setCreateError] = useState<string | null>(null)
   const adoptionTrigger = useRef<HTMLElement | null>(null)
   const [versions, setVersions] = useState<DeckVersion[]>([])
+  const [versionMore, setVersionMore] = useState(false)
+  const [versionLoading, setVersionLoading] = useState(false)
+  const [baseVersion, setBaseVersion] = useState<DeckVersion | null>(null)
   const [threads, setThreads] = useState<DeckThreadSummary[]>([])
   const [deleteThread, setDeleteThread] = useState<DeckThreadSummary | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<DeckThread | null>(null)
@@ -273,11 +277,17 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const olderRequest = useRef(false)
   function showDetail(next: DeckThread | null): void {
     setSelectedDetail((current) => {
-      if (!next || !current || current.id !== next.id ||
-        current.messages.length <= next.messages.length || !current.oldestMessageCursor) return next
-      const recentIds = new Set(next.messages.map((message) => message.id))
-      return { ...next, messages: [...current.messages.filter((message) => !recentIds.has(message.id)),
-        ...next.messages], oldestMessageCursor: current.oldestMessageCursor }
+      if (!next || !current || current.id !== next.id) return next
+      const recentMessages = new Set(next.messages.map((item) => item.id))
+      const recentCandidates = new Set(next.candidates.map((item) => item.id))
+      const olderCursor = current.oldestMessageCursor && (!next.oldestMessageCursor ||
+        current.oldestMessageCursor.createdAt < next.oldestMessageCursor.createdAt ||
+        current.oldestMessageCursor.createdAt === next.oldestMessageCursor.createdAt &&
+          current.oldestMessageCursor.rowId < next.oldestMessageCursor.rowId)
+      return { ...next,
+        messages: [...current.messages.filter((item) => !recentMessages.has(item.id)), ...next.messages],
+        candidates: [...current.candidates.filter((item) => !recentCandidates.has(item.id)), ...next.candidates],
+        oldestMessageCursor: olderCursor ? current.oldestMessageCursor : next.oldestMessageCursor }
     })
   }
   const [detailLoading, setDetailLoading] = useState(false)
@@ -344,6 +354,25 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
 
   const selectedSummary = threads.find((thread) => thread.id === selectedId) ?? null
   const selected = selectedSummary && selectedDetail?.id === selectedId ? selectedDetail : null
+  useEffect(() => {
+    let active = true
+    setBaseVersion(null)
+    if (selected?.baseVersionId) void window.projectsApi.getDeckVersion(projectId, selected.baseVersionId).then((result) => {
+      if (active && result.ok) setBaseVersion(result.value)
+    }).catch(() => { if (active) setError('Base della strategia non disponibile.') })
+    return () => { active = false }
+  }, [projectId, selected?.baseVersionId])
+  const comparisonVersions = baseVersion && !versions.some((item) => item.id === baseVersion.id) ? [...versions, baseVersion] : versions
+  async function loadOlderVersions(): Promise<void> {
+    if (versionLoading) return
+    setVersionLoading(true)
+    try {
+      const result = await window.projectsApi.listDeckVersionPage(projectId, versions.at(-1)?.sequence)
+      if (!result.ok) throw new Error(result.error)
+      setVersions((items) => [...items, ...result.value]); setVersionMore(result.value.length === 50)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Storico non disponibile.') }
+    finally { setVersionLoading(false) }
+  }
   const openingAiMessage = selected?.openingAiMessage ?? (selected?.openingAiMessageId
     ? selected.messages.find((entry) => entry.id === selected.openingAiMessageId) : null)
   const openingAiPending = selected?.openingAiPending ?? (!!openingAiMessage && !selected?.messages.some((entry) => entry.author === 'assistant'))
@@ -384,28 +413,30 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
   const timelineEntries = timeline.filter((entry) => entry.kind !== 'candidate' || entry.item.id !== featuredCandidate?.id)
   const visibleTimelineCount = timelineWindow.threadId === selectedId ? timelineWindow.count : TIMELINE_PAGE_SIZE
   const hiddenTimelineCount = Math.max(0, timelineEntries.length - visibleTimelineCount) +
-    Math.max(0, (selected?.messageCount ?? selected?.messages.length ?? 0) - (selected?.messages.length ?? 0))
+    Math.max(0, (selected?.messageCount ?? selected?.messages.length ?? 0) - (selected?.messages.length ?? 0)) +
+    Math.max(0, (selected?.candidateCount ?? selected?.candidates.length ?? 0) - (selected?.candidates.length ?? 0))
 
   async function revealOlder(): Promise<void> {
     if (!selected || olderRequest.current) return
     const threadId = selected.id
     const cursor = selected.oldestMessageCursor
-    const unloaded = Math.max(0, (selected.messageCount ?? selected.messages.length) - selected.messages.length)
-    if (unloaded && cursor) {
-      olderRequest.current = true
-      setOlderLoading(true)
+    const moreMessages = (selected.messageCount ?? selected.messages.length) > selected.messages.length
+    const moreCandidates = (selected.candidateCount ?? selected.candidates.length) > selected.candidates.length
+    if (moreMessages || moreCandidates) {
+      olderRequest.current = true; setOlderLoading(true)
       try {
-        const result = await window.projectsApi.getDeckThreadMessagesBefore(projectId, threadId, cursor)
-        if (!result.ok) throw new Error(result.error)
-        if (!result.value.messages.length) throw new Error('Cronologia precedente non disponibile.')
-        setSelectedDetail((current) => current?.id === threadId &&
-          current.oldestMessageCursor?.rowId === cursor.rowId
-          ? { ...current, messages: [...result.value.messages, ...current.messages],
-            oldestMessageCursor: result.value.oldestCursor } : current)
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Cronologia precedente non disponibile.')
-        return
-      } finally { olderRequest.current = false; setOlderLoading(false) }
+        const [messages, candidates] = await Promise.all([
+          moreMessages && cursor ? window.projectsApi.getDeckThreadMessagesBefore(projectId, threadId, cursor) : null,
+          moreCandidates ? window.projectsApi.getDeckThreadCandidatesBefore(projectId, threadId, selected.candidates[0].sequence) : null
+        ])
+        if (messages && !messages.ok) throw new Error(messages.error)
+        if (candidates && !candidates.ok) throw new Error(candidates.error)
+        setSelectedDetail((current) => current?.id !== threadId ? current : { ...current,
+          messages: [...(messages?.value.messages ?? []).filter((item) => !current.messages.some((saved) => saved.id === item.id)), ...current.messages],
+          oldestMessageCursor: messages ? messages.value.oldestCursor : current.oldestMessageCursor,
+          candidates: [...(candidates?.value ?? []).filter((item) => !current.candidates.some((saved) => saved.id === item.id)), ...current.candidates] })
+      } catch (cause) { setError(cause instanceof Error ? cause.message : 'Cronologia precedente non disponibile.'); return }
+      finally { olderRequest.current = false; setOlderLoading(false) }
     }
     setTimelineWindow({ threadId, count: visibleTimelineCount + TIMELINE_PAGE_SIZE })
   }
@@ -415,7 +446,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
     setLoading(!hasLoaded.current)
     setError(null)
     invalidatePreview()
-    void Promise.all([window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreadSummaries(projectId),
+    void Promise.all([window.projectsApi.listDeckVersionPage(projectId), window.projectsApi.listDeckThreadSummaries(projectId),
       window.projectsApi.getCatalog(), window.projectsApi.listConstraints(projectId), window.projectsApi.getStandardRuleAudit()])
       .then(([versionResult, threadResult, catalogResult, constraintResult, auditResult]) => {
         if (!active) return
@@ -424,7 +455,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
         if (!catalogResult.ok) throw new Error(catalogResult.error)
         if (!constraintResult.ok) throw new Error(constraintResult.error)
         if (!auditResult.ok) throw new Error(auditResult.error)
-        setVersions(versionResult.value)
+        setVersions(versionResult.value); setVersionMore(versionResult.value.length === 50)
         setThreads(threadResult.value)
         setCatalog(catalogResult.value)
         setConstraints(constraintResult.value)
@@ -705,10 +736,10 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
       onAdopt(result.value)
       setConfirmCandidate(null)
       const [newVersions, newThreads, newDetail] = await Promise.all([
-        window.projectsApi.listDeckVersions(projectId), window.projectsApi.listDeckThreadSummaries(projectId),
+        window.projectsApi.listDeckVersionPage(projectId), window.projectsApi.listDeckThreadSummaries(projectId),
         window.projectsApi.getDeckThreadWindow(projectId, selected.id)
       ])
-      if (newVersions.ok) setVersions(newVersions.value)
+      if (newVersions.ok) { setVersions(newVersions.value); setVersionMore(newVersions.value.length === 50) }
       if (newThreads.ok) setThreads(newThreads.value)
       if (newDetail.ok) showDetail(newDetail.value)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Adozione non riuscita.') }
@@ -751,7 +782,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
         <div className="thread-detail">
           {detailLoading && !selected ? <LoadingSkeleton label="Caricamento dettaglio strategia…" rows={3} /> : selected ? <>
             {openingAiPending && <div className="content-note" role="status">{currentAiJob?.status === 'running'
-              ? 'Codex sta rispondendo al primo messaggio.'
+              ? currentAiJob.progress?.phase === 'collecting' ? 'Raccolgo i dati per il primo messaggio.' : 'Codex sta rispondendo al primo messaggio.'
               : 'Il primo messaggio è salvato. La risposta Codex è ancora da completare.'}
               {(openingErrors[selected.id] || currentAiJob?.error) &&
                 <p>{openingErrors[selected.id] || currentAiJob?.error}</p>}
@@ -760,7 +791,8 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
             </div>}
             {currentAiJob && (currentAiJob.status === 'running' || currentAiJob.status === 'ready') &&
               <div className="content-note" role="status">{currentAiJob.status === 'running'
-                ? (aiJobWaitingText(currentAiJob) ?? (asking ? '' : 'Codex sta rispondendo…')) : 'La risposta è pronta, ma non è stata salvata.'}
+                ? (aiJobWaitingText(currentAiJob) ?? (currentAiJob.progress?.phase === 'collecting'
+                  ? 'Raccolta dei dati locali…' : asking ? '' : 'Codex sta rispondendo…')) : 'La risposta è pronta, ma non è stata salvata.'}
                 <button type="button" className="text-button" onClick={() => void cancelAi()}>{currentAiJob.status === 'ready' ? 'Scarta risultato' : 'Annulla'}</button>
                 {currentAiJob.status === 'running' && currentAiJob.progress?.diagnostics?.workflow &&
                   <button type="button" className="text-button" onClick={() => void pauseOrResumeAi(false)}>Pausa</button>}
@@ -782,7 +814,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
             {selected.parentThreadId && <div className="content-note">Strategia collegata a un percorso precedente. La candidata scelta è conservata come contesto per Codex; descrivi nella conversazione le modifiche che vuoi valutare. La strategia originale resta nello storico.
               {selected.seedCandidateText && <details className="seed-candidate"><summary>Mostra la candidata di partenza</summary><pre>{selected.seedCandidateText}</pre></details>}
             </div>}
-            {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={versions}
+            {featuredCandidate ? <CandidateDetail key={featuredCandidate.id} candidate={featuredCandidate} thread={selected} versions={comparisonVersions}
               catalog={catalog} constraints={constraints} audit={ruleAudit} working={working || asking || aiBusy} featured cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)}
               onReturn={returnPoint ? returnToConversation : undefined} />
               : <p className="thread-no-candidate">Nessuna proposta salvata.</p>}
@@ -794,7 +826,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               {hiddenTimelineCount > 0 && <button type="button" className="text-button" aria-busy={olderLoading} onClick={() => void revealOlder()}>
                 Mostra {Math.min(TIMELINE_PAGE_SIZE, hiddenTimelineCount)} precedenti ({hiddenTimelineCount} nascosti)
               </button>}
-              {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta della strategia' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={versions}
+              {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta della strategia' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={comparisonVersions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working || asking || aiBusy} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)} />)}
             </div>
             {(asking || currentAiJob?.status === 'running') && <AiJobActivity
@@ -849,7 +881,9 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
           </> : !creating && <p className="content-note">Crea una strategia per esplorare una variante del mazzo.</p>}
         </div>
       </div>
-      <details className="thread-versions"><summary>Versioni principali ({versions.length})</summary>
+      <details className="thread-versions"><summary>Versioni principali ({versions[0]?.sequence ?? 0})</summary>
+        {versionMore && <button type="button" className="secondary-button" disabled={versionLoading}
+          onClick={() => void loadOlderVersions()}>{versionLoading ? 'Caricamento…' : 'Carica versioni precedenti'}</button>}
         {versions.length === 0 ? <p className="content-note">Ancora nessuna lista principale.</p> : versions.map((version, index) =>
           <details key={version.id}><summary>v{version.sequence}{index === 0 ? ' · corrente' : ''}{version.adoption ? ' · adottata da una strategia' : ''} · {version.parsed.interpretedTotal} carte · {displayDate(version.createdAt)}</summary><pre>{version.rawText}</pre></details>)}
       </details>

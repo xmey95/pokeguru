@@ -1,0 +1,257 @@
+{
+  "date": "2026-10-29",
+  "task": "APP-174",
+  "platform": "Windows x64",
+  "baseCommit": "f3d287508deed43faf9574076d3d139770819367",
+  "scope": "Synthetic local SQLite workloads, not production telemetry. Baselines include pre-existing working tree changes. Machine load varied; no stable speedup factor is asserted.",
+  "databaseBefore": {
+    "node": "v24.19.0",
+    "sqlite": {
+      "version": "3.53.3"
+    },
+    "fixture": {
+      "jobs": 12000,
+      "records": 12000,
+      "pages": 12000,
+      "events": 12000
+    },
+    "metrics": {
+      "latestJob500": 565.86,
+      "activityDeep200": 235.25,
+      "records6000": 646.32,
+      "values12000": 1390.7,
+      "eventPages200": 5274.14,
+      "lastPage500": 4090.2,
+      "collect2000": 72658.57
+    },
+    "plans": {
+      "latest": [
+        {
+          "id": 4,
+          "parent": 0,
+          "notused": 216,
+          "detail": "SCAN ai_jobs"
+        },
+        {
+          "id": 21,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ],
+      "lastPage": [
+        {
+          "id": 5,
+          "parent": 0,
+          "notused": 62,
+          "detail": "SEARCH ai_evidence_pages USING INDEX sqlite_autoindex_ai_evidence_pages_1 (job_id=? AND search_key=?)"
+        },
+        {
+          "id": 24,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ],
+      "events": [
+        {
+          "id": 5,
+          "parent": 0,
+          "notused": 49,
+          "detail": "SEARCH ai_evidence_event_index USING INDEX ai_evidence_event_date (job_id=? AND date>? AND date<?)"
+        },
+        {
+          "id": 40,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR LAST 3 TERMS OF ORDER BY"
+        }
+      ],
+      "recovery": [
+        {
+          "id": 3,
+          "parent": 0,
+          "notused": 216,
+          "detail": "SCAN matchup_turns"
+        }
+      ]
+    },
+    "missingForeignKeyIndexes": [
+      "deck_main_heads(project_id,version_id)",
+      "deck_threads(base_version_id)",
+      "deck_adoptions(thread_id)",
+      "deck_restores(source_version_id)",
+      "deck_resolution_heads(revision_id)",
+      "matchup_reports(meta_id)",
+      "matchup_discussions(parent_id)",
+      "matchup_discussions(meta_id)",
+      "catalog_prints(set_id)",
+      "ai_jobs(project_id)",
+      "ai_evidence_links(child_hash)",
+      "ai_evidence_values(object_hash)",
+      "ai_evidence_records(object_hash)",
+      "ai_evidence_pages(object_hash)",
+      "ai_evidence_event_index(object_hash)"
+    ],
+    "bytes": 18305024
+  },
+  "databaseAfter": {
+    "node": "v24.19.0",
+    "sqlite": {
+      "version": "3.53.3"
+    },
+    "fixture": {
+      "jobs": 12000,
+      "records": 12000,
+      "pages": 12000,
+      "events": 12000
+    },
+    "metrics": {
+      "latestJob500": 4.45,
+      "activityDeep200": 11.12,
+      "records6000": 293.47,
+      "values12000": 715.59,
+      "eventPages200": 1407.16,
+      "lastPage500": 4.2,
+      "collect2000": 20.92
+    },
+    "plans": {
+      "latest": [
+        {
+          "id": 5,
+          "parent": 0,
+          "notused": 61,
+          "detail": "SEARCH ai_jobs USING INDEX ai_jobs_resource_history (project_id=? AND resource_id=?)"
+        }
+      ],
+      "lastPage": [
+        {
+          "id": 5,
+          "parent": 0,
+          "notused": 61,
+          "detail": "SEARCH ai_evidence_pages USING INDEX ai_evidence_page_sequence (job_id=? AND search_key=?)"
+        }
+      ],
+      "events": [
+        {
+          "id": 5,
+          "parent": 0,
+          "notused": 49,
+          "detail": "SEARCH ai_evidence_event_index USING INDEX ai_evidence_event_order (job_id=? AND date>? AND date<?)"
+        }
+      ],
+      "recovery": [
+        {
+          "id": 4,
+          "parent": 0,
+          "notused": 52,
+          "detail": "SEARCH matchup_turns USING COVERING INDEX matchup_turns_job (<expr>=?)"
+        }
+      ]
+    },
+    "missingForeignKeyIndexes": [
+      "deck_main_heads(project_id,version_id)"
+    ],
+    "bytes": 26361856
+  },
+  "summariesPairedComparison": {
+    "events": 180,
+    "originalBytes": 46080000,
+    "legacyMedianMs": 79.83,
+    "optimizedMedianMs": 1.01,
+    "summaryBytes": 39200
+  },
+  "collectionBefore": {
+    "rows": 2000,
+    "snapshotMs": 557.7179999999998,
+    "collectionMs": 92543.7995,
+    "eventQueryMs": 9804.363400000075,
+    "cardQueryMs": 33.54220000000146,
+    "persistMs": 10441.934399999962,
+    "cardReadMs": 42933.03810000033,
+    "cardsRead": 220820,
+    "searchSummaryMs": 18168.450699999798,
+    "searchSummaries": 61743,
+    "eventPages": 500,
+    "counts": {
+      "searches": 123,
+      "completedSearches": 123,
+      "pages": 622,
+      "responseBytes": 3449899,
+      "cards": 500,
+      "decks": 500,
+      "occurrences": 2000,
+      "pairings": 0
+    }
+  },
+  "collectionAfterFirst": {
+    "rows": 2000,
+    "snapshotMs": 408.15229999999997,
+    "collectionMs": 7666.740499999999,
+    "eventQueryMs": 1192.4298999999994,
+    "cardQueryMs": 21.99679999999921,
+    "persistMs": 4272.821300000012,
+    "cardReadMs": 0.09519999999997708,
+    "cardsRead": 0,
+    "searchSummaryMs": 144.07979999999907,
+    "searchSummaries": 622,
+    "eventPages": 500,
+    "counts": {
+      "searches": 123,
+      "completedSearches": 123,
+      "pages": 622,
+      "responseBytes": 3449899,
+      "cards": 500,
+      "decks": 500,
+      "occurrences": 2000,
+      "pairings": 0
+    }
+  },
+  "collectionAfterRepeat": {
+    "rows": 2000,
+    "snapshotMs": 397.66859999999997,
+    "collectionMs": 13016.9964,
+    "eventQueryMs": 2530.9211000000078,
+    "cardQueryMs": 22.7470000000028,
+    "persistMs": 7023.527999999995,
+    "cardReadMs": 0.07979999999997744,
+    "cardsRead": 0,
+    "searchSummaryMs": 251.374299999992,
+    "searchSummaries": 622,
+    "eventPages": 500,
+    "counts": {
+      "searches": 123,
+      "completedSearches": 123,
+      "pages": 622,
+      "responseBytes": 3449899,
+      "cards": 500,
+      "decks": 500,
+      "occurrences": 2000,
+      "pairings": 0
+    }
+  },
+  "relatedCollectionBaseline": {
+    "runtime": "Node 24.18.0, earlier APP-174 report",
+    "rows": 2000,
+    "snapshotMs": 537.8547000000001,
+    "collectionMs": 38421.8606,
+    "eventQueryMs": 5207.849300000032,
+    "cardQueryMs": 25.568399999997382,
+    "persistMs": 4860.492900000001,
+    "cardReadMs": 15554.759199999808,
+    "cardsRead": 220820,
+    "searchSummaryMs": 7029.293000000294,
+    "searchSummaries": 61743,
+    "eventPages": 500,
+    "counts": {
+      "searches": 123,
+      "completedSearches": 123,
+      "pages": 622,
+      "responseBytes": 3449899,
+      "cards": 500,
+      "decks": 500,
+      "occurrences": 2000,
+      "pairings": 0
+    }
+  }
+}

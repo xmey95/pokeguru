@@ -1,6 +1,8 @@
+import { retainedIds } from './retention-index'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { installTournamentSummaries } from './tournament-summary-schema'
 import type { TournamentSnapshot, TournamentSummary, TournamentSyncProgress } from '../shared/tournament'
 import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncProgress } from '../shared/main-tournament'
 import type { RotationRule } from '../shared/standard-rotation'
@@ -36,7 +38,7 @@ export class TournamentStore {
     this.filePath = filePath
     mkdirSync(dirname(filePath), { recursive: true })
     this.db = new DatabaseSync(filePath)
-    this.db.exec('PRAGMA journal_mode = WAL')
+    this.db.exec('PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL')
     this.db.exec(`CREATE TABLE IF NOT EXISTS tournament_snapshots (
       id TEXT PRIMARY KEY,
       event_id TEXT NOT NULL,
@@ -86,6 +88,7 @@ export class TournamentStore {
         this.db.exec('COMMIT')
       } catch (error) { this.db.exec('ROLLBACK'); throw error }
     }
+    installTournamentSummaries(this.db)
   }
 
   rotationNeedsPreflight(rotation: RotationRule): boolean {
@@ -100,31 +103,7 @@ export class TournamentStore {
 
   /** Cited Thread packets already contain their evidence; retain only an index for those snapshot IDs. */
   private citedSnapshotIds(): Set<string> {
-    const tables = new Set((this.db.prepare("SELECT name FROM sqlite_master WHERE type='table'")
-      .all() as { name: string }[]).map((row) => row.name))
-    const cited = new Set<string>()
-    if (tables.has('deck_thread_messages')) {
-      for (const row of this.db.prepare(`SELECT DISTINCT json_extract(event.value, '$.snapshotId') AS id
-        FROM deck_thread_messages AS message,
-          json_each(CASE WHEN json_valid(message.evidence_json) THEN message.evidence_json
-            ELSE '{}' END, '$.events') AS event
-        WHERE json_type(event.value, '$.snapshotId') = 'text'`).all() as { id: string }[])
-        cited.add(row.id)
-    }
-    // AI-selected event searches are persisted in Thread packets and Matchup report revisions.
-    for (const [table, column] of [['deck_thread_messages', 'evidence_json'],
-      ['matchup_reports', 'payload'], ['matchup_turns', 'report_payload']] as const) {
-      if (!tables.has(table)) continue
-      for (const row of this.db.prepare(`SELECT DISTINCT json_extract(list.value, '$.snapshotId') AS id
-        FROM ${table} AS evidence,
-          json_each(CASE WHEN json_valid(evidence.${column}) THEN evidence.${column} ELSE '{}' END,
-            '$.aiQueries.requests') AS request,
-          json_each(request.value, '$.data.lists') AS list
-        WHERE json_extract(request.value, '$.query.operation') = 'events.search'
-          AND json_type(list.value, '$.snapshotId') = 'text'`).all() as { id: string }[])
-        cited.add(row.id)
-    }
-    return cited
+    return retainedIds(this.db, 'snapshot')
   }
 
   historicalReference(snapshotId: string): { snapshotId: string; eventId: string; source: string;
@@ -225,32 +204,22 @@ export class TournamentStore {
   }
 
   *iterate(): Generator<TournamentSnapshot> {
-    for (const row of this.db.prepare(`SELECT payload FROM tournament_snapshots
-      WHERE rowid IN (SELECT MAX(rowid) FROM tournament_snapshots GROUP BY event_id)
-      ORDER BY json_extract(payload, '$.date') DESC, event_id`).iterate() as Iterable<{ payload: string }>)
+    for (const row of this.db.prepare(`SELECT s.payload FROM tournament_snapshots s
+      JOIN tournament_snapshots_summaries summary ON summary.snapshot_id = s.id
+      WHERE s.rowid IN (SELECT MAX(rowid) FROM tournament_snapshots GROUP BY event_id)
+      ORDER BY json_extract(summary.payload, '$.date') DESC, s.event_id`).iterate() as Iterable<{ payload: string }>)
       yield { ...JSON.parse(row.payload) as TournamentSnapshot, cached: true }
   }
 
   summaries(): TournamentSummary[] {
-    const rows = this.db.prepare(`SELECT event_id, json_extract(payload, '$.name') AS name,
-      json_extract(payload, '$.date') AS date, json_extract(payload, '$.circuit') AS circuit,
-      json_extract(payload, '$.platform') AS platform,
-      json_extract(payload, '$.isOnline') AS is_online,
-      json_extract(payload, '$.reportedPlayers') AS reported_players,
-      json_extract(payload, '$.coverage') AS coverage,
-      json_extract(payload, '$.pairingCoverage') AS pairing_coverage
-      FROM tournament_snapshots
-      WHERE rowid IN (SELECT MAX(rowid) FROM tournament_snapshots GROUP BY event_id)
-      ORDER BY date DESC, event_id`).all() as {
-        event_id: string; name: string; date: string; circuit: TournamentSummary['circuit']
-        platform: string; is_online: number; reported_players: number
-        coverage: string; pairing_coverage: string | null
-      }[]
-    return rows.map((row) => ({ eventId: row.event_id, name: row.name, date: row.date,
-      circuit: row.circuit, platform: row.platform, isOnline: !!row.is_online,
-      reportedPlayers: row.reported_players,
-      coverage: JSON.parse(row.coverage) as TournamentSummary['coverage'],
-      ...(row.pairing_coverage ? { pairingCoverage: JSON.parse(row.pairing_coverage) as TournamentSummary['pairingCoverage'] } : {}) }))
+    const rows = this.db.prepare(`SELECT summary.payload FROM tournament_snapshots s
+      JOIN tournament_snapshots_summaries summary ON summary.snapshot_id = s.id
+      WHERE s.rowid IN (SELECT MAX(rowid) FROM tournament_snapshots GROUP BY event_id)
+      ORDER BY json_extract(summary.payload, '$.date') DESC, s.event_id`).all() as { payload: string }[]
+    return rows.map((row) => {
+      const { pairingCoverage, ...summary } = JSON.parse(row.payload) as TournamentSummary
+      return { ...summary, isOnline: !!summary.isOnline, ...(pairingCoverage ? { pairingCoverage } : {}) }
+    })
   }
 
   getEvent(eventId: string): TournamentSnapshot | null {
@@ -326,26 +295,19 @@ export class TournamentStore {
   }
 
   *iterateMain(): Generator<MainTournamentSnapshot> {
-    for (const row of this.db.prepare(`SELECT payload FROM main_tournament_snapshots
-      WHERE rowid IN (SELECT MAX(rowid) FROM main_tournament_snapshots GROUP BY event_id)
-      ORDER BY json_extract(payload, '$.date') DESC, event_id`).iterate() as Iterable<{ payload: string }>)
+    for (const row of this.db.prepare(`SELECT s.payload FROM main_tournament_snapshots s
+      JOIN main_tournament_snapshots_summaries summary ON summary.snapshot_id = s.id
+      WHERE s.rowid IN (SELECT MAX(rowid) FROM main_tournament_snapshots GROUP BY event_id)
+      ORDER BY json_extract(summary.payload, '$.date') DESC, s.event_id`).iterate() as Iterable<{ payload: string }>)
       yield { ...JSON.parse(row.payload) as MainTournamentSnapshot, cached: true }
   }
 
   mainSummaries(): MainTournamentSummary[] {
-    const rows = this.db.prepare(`SELECT event_id, json_extract(payload, '$.name') AS name,
-      json_extract(payload, '$.date') AS date, json_extract(payload, '$.country') AS country,
-      json_extract(payload, '$.players') AS players, json_extract(payload, '$.url') AS url,
-      json_extract(payload, '$.coverage') AS coverage
-      FROM main_tournament_snapshots
-      WHERE rowid IN (SELECT MAX(rowid) FROM main_tournament_snapshots GROUP BY event_id)
-      ORDER BY date DESC, event_id`).all() as {
-        event_id: string; name: string; date: string; country: string
-        players: number; url: string; coverage: string
-      }[]
-    return rows.map((row) => ({ eventId: row.event_id, name: row.name, date: row.date,
-      country: row.country, players: row.players, url: row.url,
-      coverage: JSON.parse(row.coverage) as MainTournamentSummary['coverage'] }))
+    const rows = this.db.prepare(`SELECT summary.payload FROM main_tournament_snapshots s
+      JOIN main_tournament_snapshots_summaries summary ON summary.snapshot_id = s.id
+      WHERE s.rowid IN (SELECT MAX(rowid) FROM main_tournament_snapshots GROUP BY event_id)
+      ORDER BY json_extract(summary.payload, '$.date') DESC, s.event_id`).all() as { payload: string }[]
+    return rows.map((row) => JSON.parse(row.payload) as MainTournamentSummary)
   }
 
   mainProgress(): MainTournamentSyncProgress {

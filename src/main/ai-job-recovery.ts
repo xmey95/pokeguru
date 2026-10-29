@@ -76,7 +76,7 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
     jobs.transition(job.id, 'interrupted', 'Codex è stato interrotto prima di produrre il risultato.')
     return 'interrupted'
   }
-  const thread = projects.getDeckThread(job.projectId, job.resourceId)
+  const thread = projects.getDeckThreadWindow(job.projectId, job.resourceId)
   if (!thread) throw new Error('Strategia dell’analisi non trovata nel progetto.')
   const request = job.request as ThreadRequest | null
   if (!request || typeof request.message !== 'string' || !request.config || !request.evidence)
@@ -99,7 +99,7 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
   }
   if (!result || typeof result.sessionId !== 'string' || typeof result.turnId !== 'string')
     throw new Error('Risultato del job non leggibile.')
-  if (thread.messages.some((message) => message.aiTurnId === result!.turnId)) {
+  if (projects.hasDeckAiTurn(job.projectId, job.resourceId, result.turnId)) {
     jobs.transition(job.id, 'applied')
     return 'applied'
   }
@@ -113,8 +113,7 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
   } finally { archive.close() }
   const newTurn = job.kind === 'thread-ask' && request.schemaVersion === 2
     ? readDeckThreadTurn(result.value, job.projectId,
-      frozen.base !== undefined ? frozen.base : thread.baseVersionId ? projects.listDeckVersions(job.projectId)
-        .find((version) => version.id === thread.baseVersionId) ?? null : null,
+      frozen.base !== undefined ? frozen.base : thread.baseVersionId ? projects.getDeckVersion(job.projectId, thread.baseVersionId) : null,
       frozen.catalog ?? catalog.view(), frozen.constraints ?? projects.listConstraints(job.projectId), request.evidence,
       request.sources ?? [], frozen.referenceDate) : null
   const answer = newTurn?.answer ?? (job.kind === 'thread-ask'
@@ -196,9 +195,8 @@ export function recoverMatchupJob(job: AiJob, jobs: AiJobStore, projects: Projec
   if (!result.report.deckVersionId) {
     const baseline = projects.getBaseline(job.projectId)
     const context = projects.getCurrentDeckContext(job.projectId)
-    const matchingVersions = baseline ? projects.listDeckVersions(job.projectId)
-      .filter((version) => version.rawText === baseline.rawText) : []
-    if (!context || !baseline || matchingVersions.length !== 1 ||
+    const matchingVersions = baseline ? projects.countDeckVersionsWithText(job.projectId, baseline.rawText) : 0
+    if (!context || !baseline || matchingVersions !== 1 ||
       projects.getCurrentDeckHash(job.projectId) !== result.report.deckHash)
       throw new Error('La base della guida precedente non è determinabile. Riprova sulla lista corrente.')
     result = { ...result, report: { ...result.report,

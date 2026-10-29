@@ -7,7 +7,7 @@ import type { CatalogEvidenceSearch } from './catalog-evidence-search'
 import type { AiEvidenceEngine } from './ai-evidence-engine'
 import { AiFailure } from './ai-failure'
 import type { AiEvidenceArchive } from './ai-evidence-archive'
-import { collectArchivedEvidence } from './ai-evidence-collection'
+import { collectArchivedEvidence, type CollectionObserver } from './ai-evidence-collection'
 import { archiveReferences, bindEvidenceArchive, evidenceArchive, evidenceCards,
   refreshEvidenceArchive } from './ai-evidence-access'
 
@@ -98,6 +98,25 @@ function planningIndex(previous: AiEvidenceQueryTrace['requests']): unknown {
     note: 'Indice voluminoso: qui sono mostrati ricerca, copertura e conteggi. Tutti i dettagli originali vengono analizzati a lotti. Pianifica altri aspetti dalla domanda e dalle ricerche già completate; non ripetere le query per recuperare i dettagli omessi da questo indice.' }
 }
 
+// Only small availability flags are cached, scoped to this trace/snapshot. On
+// reopen they are rebuilt from committed originals, never from another job.
+const suppliedByTrace = new WeakMap<AiEvidenceQueryTrace, Map<string, boolean>>()
+function suppliedCards(trace: AiEvidenceQueryTrace): Map<string, boolean> {
+  let supplied = suppliedByTrace.get(trace)
+  if (!supplied) {
+    supplied = new Map()
+    for (const card of evidenceCards(trace)) supplied.set(card.printId, card.comparableGameplay)
+    suppliedByTrace.set(trace, supplied)
+  }
+  return supplied
+}
+function rememberCards(trace: AiEvidenceQueryTrace, result: AiEvidenceQueryTrace['requests'][number]): void {
+  if (result.status !== 'ok') return
+  const supplied = suppliedCards(trace)
+  for (const card of (result.data as Partial<CatalogEvidenceSearch>).matches ?? [])
+    supplied.set(card.printId, card.comparableGameplay)
+}
+
 function appendResult(trace: AiEvidenceQueryTrace, result: AiEvidenceQueryTrace['requests'][number]): void {
   const archive = evidenceArchive(trace)
   if (archive) {
@@ -107,7 +126,8 @@ function appendResult(trace: AiEvidenceQueryTrace, result: AiEvidenceQueryTrace[
         throw new Error('La ricerca puntuale richiede altre pagine.')
       archive.appendPage(search.key, search.cursor, result, null)
     }
-    refreshEvidenceArchive(trace)
+    refreshEvidenceArchive(trace, archive.getSearch(search.key)!)
+    rememberCards(trace, result)
     return
   }
   if (trace.requests.some((existing) => existing.fingerprint === result.fingerprint)) return
@@ -118,6 +138,7 @@ function appendResult(trace: AiEvidenceQueryTrace, result: AiEvidenceQueryTrace[
   }
   trace.responseBytes += size
   trace.requests.push(result)
+  rememberCards(trace, result)
 }
 
 function appendEventResult(trace: AiEvidenceQueryTrace, engine: AiEvidenceEngine,
@@ -138,8 +159,7 @@ export function extendAiEvidenceForText(trace: AiEvidenceQueryTrace, engine: AiE
   const targets = new Map((trace.cardTargets ?? []).map((item) => [item.name, item]))
   for (const target of engine.cardTargets(text)) targets.set(target.name,
     { ...target, status: 'not-supplied' })
-  const supplied = new Map<string, boolean>()
-  for (const card of evidenceCards(trace)) supplied.set(card.printId, card.comparableGameplay)
+  const supplied = suppliedCards(trace)
   const pending = [...new Set([...targets.values()].flatMap((target) => target.printIds))]
     .filter((id) => !supplied.has(id))
   let added = 0
@@ -168,6 +188,7 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
     archive?: AiEvidenceArchive;
     summarize?: (trace: AiEvidenceQueryTrace) => Promise<void>;
     onRound?: (round: number, queries: number) => void;
+    onCollection?: CollectionObserver;
     onTrace?: (trace: AiEvidenceQueryTrace) => void; signal?: AbortSignal } = {}):
   Promise<AiEvidenceQueryTrace> {
   const started = performance.now()
@@ -178,9 +199,10 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
   extendAiEvidenceForText(trace, engine, fullContext)
   async function collectPages(input: unknown): Promise<void> {
     if (options.archive) {
-      await collectArchivedEvidence(input, engine, options.archive, { signal: options.signal,
-        onPage(result) {
-          refreshEvidenceArchive(trace)
+      await collectArchivedEvidence(input, engine, options.archive, { signal: options.signal, onProgress: options.onCollection,
+        onPage(result, search) {
+          refreshEvidenceArchive(trace, search)
+          rememberCards(trace, result)
           if (result.status === 'ok') {
             const lists = (result.data as { lists?: { cards: string[] }[] }).lists ?? []
             extendAiEvidenceForText(trace, engine, lists.flatMap((list) => list.cards).join('\n'))
@@ -205,8 +227,23 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
   }
   // A pause can occur just after a page commits and before its dependent card
   // lookups. Recover those dependencies from distinct decks, even for finished searches.
-  if (options.archive) for (const record of options.archive.records('deck'))
-    extendAiEvidenceForText(trace, engine, (record.data as { cards: string[] }).cards.join('\n'))
+  if (options.archive && options.archive.counts().decks) {
+    const started = performance.now(), startedAt = new Date().toISOString()
+    const total = options.archive.counts().decks
+    let items = 0
+    const report = (complete = false) => options.onCollection?.({ operation: 'dependencies',
+      stage: complete ? 'complete' : 'cards', startedAt, updatedAt: new Date().toISOString(),
+      pages: 0, items, total, remaining: total - items, queryMs: 0, persistMs: 0,
+      dependencyMs: Math.round(performance.now() - started), maxPageMs: 0 }, items === 0 || complete)
+    report()
+    for (const record of options.archive.records('deck')) {
+      await new Promise<void>((resolve) => setImmediate(resolve))
+      if (options.signal?.aborted) throw new AiFailure(options.signal.reason === 'pause' ? 'paused' : 'cancelled', 'Analisi interrotta.')
+      extendAiEvidenceForText(trace, engine, (record.data as { cards: string[] }).cards.join('\n'))
+      items++; report()
+    }
+    report(true)
+  }
   for (const deckName of engine.eventTargets([request,
     ...(options.eventContextTexts ?? [])].join('\n'))) {
     if (trace.exhausted) break

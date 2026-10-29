@@ -47,16 +47,16 @@ it('retires only verified old marks after a complete Catalog job and restores it
     store.save({ sets, prints: [old, unverified, uncited, threadQuery, reportQuery,
       revisionQuery, current, omitted], fetchedAt: '2026-10-24T00:00:00Z' }, 'standard-marks')
     const referenceDb = new DatabaseSync(path)
-    referenceDb.exec(`CREATE TABLE deck_line_mappings (print_snapshot TEXT NOT NULL) STRICT;
-      CREATE TABLE deck_thread_messages (evidence_json TEXT) STRICT;
-      CREATE TABLE matchup_reports (payload TEXT) STRICT;
-      CREATE TABLE matchup_turns (report_payload TEXT) STRICT`)
-    referenceDb.prepare('INSERT INTO deck_line_mappings VALUES (?)').run(JSON.stringify({ id: old.id }))
+    referenceDb.exec(`CREATE TABLE deck_line_mappings (project_id TEXT NOT NULL DEFAULT 'fixture', line_number INTEGER NOT NULL DEFAULT 1, print_snapshot TEXT NOT NULL) STRICT;
+      CREATE TABLE deck_thread_messages (id INTEGER PRIMARY KEY, evidence_json TEXT) STRICT;
+      CREATE TABLE matchup_reports (project_id TEXT DEFAULT 'fixture', meta_id TEXT DEFAULT 'meta', opponent_id TEXT DEFAULT '1', deck_hash TEXT DEFAULT 'hash', payload TEXT) STRICT;
+      CREATE TABLE matchup_turns (id INTEGER PRIMARY KEY, report_payload TEXT) STRICT`)
+    referenceDb.prepare('INSERT INTO deck_line_mappings (print_snapshot) VALUES (?)').run(JSON.stringify({ id: old.id }))
     const catalogQuery = (id: string) => JSON.stringify({ aiQueries: { requests: [
       { query: { operation: 'catalog.search' }, data: { matches: [{ printId: id }] } }] } })
-    referenceDb.prepare('INSERT INTO deck_thread_messages VALUES (?)').run(catalogQuery(threadQuery.id))
-    referenceDb.prepare('INSERT INTO matchup_reports VALUES (?)').run(catalogQuery(reportQuery.id))
-    referenceDb.prepare('INSERT INTO matchup_turns VALUES (?)').run(catalogQuery(revisionQuery.id))
+    referenceDb.prepare('INSERT INTO deck_thread_messages (evidence_json) VALUES (?)').run(catalogQuery(threadQuery.id))
+    referenceDb.prepare('INSERT INTO matchup_reports (payload) VALUES (?)').run(catalogQuery(reportQuery.id))
+    referenceDb.prepare('INSERT INTO matchup_turns (report_payload) VALUES (?)').run(catalogQuery(revisionQuery.id))
     referenceDb.close()
     const missing = print('me01-002', 'I', null)
     store.save({ sets, prints: [current, missing], fetchedAt: '2027-04-10T00:00:00Z' }, 'standard-marks', next)
@@ -129,11 +129,11 @@ it('deletes old Event payloads while retaining only cited metadata and a recover
     store.saveMain(main('101', '2027-04-08'), true)
     store.saveMain(main('102', '2027-04-10'), true)
     const evidenceDb = new DatabaseSync(path)
-    evidenceDb.exec(`CREATE TABLE deck_thread_messages (evidence_json TEXT) STRICT;
-      CREATE TABLE matchup_turns (report_payload TEXT) STRICT`)
-    evidenceDb.prepare('INSERT INTO deck_thread_messages VALUES (?)').run(JSON.stringify({ events: [
+    evidenceDb.exec(`CREATE TABLE deck_thread_messages (id INTEGER PRIMARY KEY, evidence_json TEXT) STRICT;
+      CREATE TABLE matchup_turns (id INTEGER PRIMARY KEY, report_payload TEXT) STRICT`)
+    evidenceDb.prepare('INSERT INTO deck_thread_messages (evidence_json) VALUES (?)').run(JSON.stringify({ events: [
       { snapshotId: 'aaaaaaaaaaaaaaaaaaaaaaaa' }] }))
-    evidenceDb.prepare('INSERT INTO matchup_turns VALUES (?)').run(JSON.stringify({ aiQueries: { requests: [
+    evidenceDb.prepare('INSERT INTO matchup_turns (report_payload) VALUES (?)').run(JSON.stringify({ aiQueries: { requests: [
       { query: { operation: 'events.search' }, data: { lists: [{ snapshotId: '101' }] } }] } }))
     evidenceDb.close()
     store.saveProgress({ ...store.progress(), mode: 'new', status: 'running', pending: [

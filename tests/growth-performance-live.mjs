@@ -311,8 +311,8 @@ try {
     catalog: 'getCatalog', catalogOverview: 'getCatalogBrowseOverview',
     threadSummaries: 'listDeckThreadSummaries', playSummaries: 'listTournaments',
     regionalSummaries: 'listMainTournaments', matchupEvidence: 'getMatchupEvidence',
-    matchupReports: 'listMatchupReports',
-    matchupDiscussion: 'listMatchupDiscussions', threadDetail: 'getDeckThreadWindow',
+    matchupReports: 'listMatchupReportSummaries',
+    matchupDiscussion: 'listMatchupDiscussionPage', threadDetail: 'getDeckThreadWindow',
     catalogSearch: 'searchCatalog'
   })) {
     const samples = []
@@ -321,9 +321,9 @@ try {
       const measurement = await page.evaluate(async ({ call, projectId, metaId, threadCount, sampleIndex }) => {
         const start = performance.now()
         const args = { listDeckThreadSummaries: [projectId],
-          listMatchupReports: [projectId, metaId],
+          listMatchupReportSummaries: [projectId, metaId],
           getMatchupEvidence: [metaId, '900000'],
-          listMatchupDiscussions: [projectId, '900000'],
+          listMatchupDiscussionPage: [projectId, '900000'],
           getDeckThreadWindow: [projectId, `thread-${String(threadCount - 1).padStart(3, '0')}`],
           searchCatalog: ['Synthetic card', 'all', 0] }[call] ?? []
         const result = await window.projectsApi[call](...args)

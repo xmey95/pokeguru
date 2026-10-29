@@ -9,8 +9,10 @@ import { backup, DatabaseSync } from 'node:sqlite'
  * 10 persisted AI job progress, 11 paged AI activity history,
  * 12 durable evidence originals, query cursors and immutable source snapshots,
  * 13 bounded call retries and completed-call checkpoints in the database,
- * 14 retained seed text when a parent Thread is deleted. */
-export const CURRENT_SCHEMA_VERSION = 14
+ * 14 retained seed text when a parent Thread is deleted,
+ * 15 query/FK indexes and compact tournament summaries;
+ * 16 indexed retention references and compact matchup availability. */
+export const CURRENT_SCHEMA_VERSION = 16
 
 export interface MigrationPreparation {
   fromVersion: number

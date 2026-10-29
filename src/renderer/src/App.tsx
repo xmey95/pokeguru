@@ -90,7 +90,7 @@ export function App() {
       if (version !== selectionVersion.current) return
       setSelected(project)
       const [result, versions] = await Promise.all([
-        window.projectsApi.getBaseline(id), window.projectsApi.listDeckVersions(id)
+        window.projectsApi.getBaseline(id), window.projectsApi.listDeckVersionPage(id)
       ])
       if (version !== selectionVersion.current) return
       if (!result.ok) throw new Error(result.error)
@@ -250,7 +250,7 @@ export function App() {
         return
       }
       if (selectionVersion.current !== importVersion || !nav.isCurrent()) return
-      const versions = await window.projectsApi.listDeckVersions(projectId)
+      const versions = await window.projectsApi.listDeckVersionPage(projectId)
       if (selectionVersion.current !== importVersion || !nav.isCurrent()) return
       const updated = projectWithBaseline(selected, result.value)
       setProjects((current) => current.map((project) => project.id === projectId ? updated : project))
@@ -418,7 +418,7 @@ export function App() {
                       const updated = projectWithBaseline(selected, restored)
                       setSelected(updated)
                       setProjects((items) => items.map((item) => item.id === selected.id ? updated : item))
-                      void window.projectsApi.listDeckVersions(selected.id).then((result) => {
+                      void window.projectsApi.listDeckVersionPage(selected.id).then((result) => {
                         if (result.ok && selectionVersion.current === restoreSelectionVersion) setDeckVersions(result.value)
                       })
                     }} />
@@ -437,7 +437,7 @@ export function App() {
                   resetImportUi()
                   const updated = projectWithBaseline(selected, adopted)
                   setBaseline(adopted)
-                  void window.projectsApi.listDeckVersions(selected.id).then((result) => {
+                  void window.projectsApi.listDeckVersionPage(selected.id).then((result) => {
                     if (result.ok) setDeckVersions(result.value)
                   })
                   setDraft(adopted.rawText)
