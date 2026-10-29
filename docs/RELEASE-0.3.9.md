@@ -15,3 +15,7 @@ La nuova aggregazione vale per i nuovi workflow; le analisi precedenti mantengon
 Disponibili AppImage Linux x64, installer Windows x64 e DMG macOS Intel/Apple Silicon. Pacchetti accompagnati da manifest di provenienza, attestazioni GitHub e SHA256SUMS.txt.
 
 I pacchetti macOS usano una firma ad hoc, senza Developer ID né notarizzazione; Gatekeeper può bloccare l’apertura dopo il download. La prova Finder su un Mac Apple Silicon esterno alla CI resta aperta. L’installer Windows è senza firma Authenticode. Consulta la [guida alla distribuzione](https://github.com/xmey95/pokeguru/blob/main/docs/DISTRIBUTION.md) e il [rapporto sulle misure](https://github.com/xmey95/pokeguru/blob/main/docs/AI-EVENT-AGGREGATES.md).
+
+Resta in indagine un picco intermittente del renderer rilevato nella prova di reattività sui runner macOS Apple Silicon. Il controllo finale è passato alla ripetizione, senza cambiare la soglia; questa release non dichiara risolta la causa del picco.
+
+[Confronto completo con v0.3.8](https://github.com/xmey95/pokeguru/compare/v0.3.8...v0.3.9).
