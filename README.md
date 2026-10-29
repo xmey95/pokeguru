@@ -71,6 +71,12 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Correzione della v0.3.10
+
+Le Strategie con evidenze estese non vengono più bloccate da «Evidenze del turno non valide» al salvataggio. Risposta, candidata ammissibile e fonti sono conservate integralmente, mantenendo i controlli di validità.
+
+Per un risultato già pronto, aggiorna e riapri l’app; se necessario scegli **Completa salvataggio** nella Strategia. Non occorre scartare il risultato o rifare l’analisi AI. Recupero verificato sul caso reale con 426.754 caratteri di evidenze, senza duplicati né modifiche alla lista principale. Schema 16 invariato. [Note della release](docs/RELEASE-0.3.10.md).
+
 ### Novità della v0.3.9
 
 Le analisi estese riutilizzano lotti e sintesi compatibili quando le prove crescono o il lavoro viene ripreso. La diagnostica distingue chiamate, riuso, tempi, dimensioni e consumo effettivamente disponibile; le schede originali necessarie alla verifica finale restano pronte senza duplicazioni esatte.

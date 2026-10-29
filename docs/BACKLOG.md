@@ -194,6 +194,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-187** | Indagare i picchi intermittenti del renderer nei runner macOS | Verifica/prestazioni | R-07, R-12, R-14 / manutenzione I3 | P2 / M | Profili di esecuzione e confronto avvio/cattura worker | Backlog |
 | **APP-188** | Diagnosi delle 19 schede mancanti dopo reset locale | Dati / assistenza | R-02, R-14 | P1 / S | Diagnostica della sessione e copia isolata del nuovo catalogo | Done |
 | **APP-189** | Salvare e recuperare Strategie con evidenze oltre il vecchio limite | Persistenza / correzione | R-07, R-11, R-14 | P1 / S | Diagnostica e risultato reale ready della v0.3.9 | Done |
+| **APP-190** | Integrare APP-189 in dev e pubblicare v0.3.10 | Release | R-07, R-11, R-12, R-14 | P1 / M | Correzione locale verificata e richiesta esplicita di integrazione/release | In progress |
+
+### APP-190 — Release v0.3.10 del recupero Strategie
+
+- **Ready e autorizzazione (29-10-2026):** l’utente chiede di portare la correzione in dev e fare una nuova release. Base dev 7c0fec2, main e tag v0.3.9 fbfbd47; correzione APP-189 c6dc28b. Ramo task/app-190-release-0.3.10. Unica attività principale In progress; note APP-188 conservate.
+- **Accettazione:** versione 0.3.10 coerente, istruzioni di recupero del risultato ready, PR verso dev e dev → main con quattro check verdi, Release completa, tag/commit, quattro pacchetti, checksum e provenienza verificati. Chiusura documentale registrata in dev; nessuna installazione o riapertura del profilo personale, nessuna nuova analisi AI.
+- **Verifiche già disponibili:** APP-189 con 381 test locali, build/typecheck e due avvii Electron su copia reale, risposta/candidata/fonti conservate senza duplicati. La release ripete i gate multipiattaforma; schema 16 invariato. APP-187 e firma/Gatekeeper conservano i limiti documentati.
 
 ### APP-189 — Salvataggio di Strategie con evidenze estese
 

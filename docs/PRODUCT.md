@@ -14,7 +14,7 @@ L'obiettivo comprende i due percorsi «da zero» e «da lista» e la copertura d
 
 ## Flussi utente
 
-**Persistenza delle analisi estese (APP-189, correzione locale):** il salvataggio conserva integralmente il pacchetto delle evidenze prodotto dall’app, incluse traccia delle query e copia del prompt. La dimensione oltre il precedente limite di 250.000 caratteri non rende invalido un risultato con schema e citazioni corretti. Il recupero applica il risultato già pronto una sola volta, conservando il primo messaggio e senza una nuova analisi AI. La correzione richiede una release successiva alla v0.3.9.
+**Persistenza delle analisi estese (APP-189, preparata per v0.3.10 tramite APP-190):** il salvataggio conserva integralmente il pacchetto delle evidenze prodotto dall’app, incluse traccia delle query e copia del prompt. La dimensione oltre il precedente limite di 250.000 caratteri non rende invalido un risultato con schema e citazioni corretti. Il recupero applica il risultato già pronto una sola volta, conservando il primo messaggio e senza una nuova analisi AI. La correzione richiede l’aggiornamento dalla v0.3.9.
 
 **Feedback desktop APP-165–169:** il lavoro locale delle analisi viene eseguito fuori dal processo della finestra. I Thread si possono eliminare con conferma conservando le liste adottate; una guida Matchup distingue attesa, errore e assenza verificata. La scelta del progetto avviene in una modale con ricerca e sfondo sfocato. Le integrazioni delle schede Catalogo da scansione dichiarano fonte e data, senza trattare un costo assente nella fonte come gratuito in generale.
 
