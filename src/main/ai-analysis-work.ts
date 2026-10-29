@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AiRunConfig } from '../shared/ai'
-import type { AiDiagnostics } from '../shared/ai-diagnostics'
+import type { AiCollectionDiagnostics, AiDiagnostics } from '../shared/ai-diagnostics'
 import type { AiEvidenceQueryTrace } from '../shared/ai-evidence'
 import type { AiJobKind } from '../shared/ai-job'
 import type { AiJobStore } from './ai-job-store'
@@ -40,6 +40,7 @@ export function readAiWorkflow(directory: string, jobs?: AiJobStore, id?: string
 export class AiAnalysisWork {
   private activeCalls: AiDiagnostics['calls'] = []
   private closed = false
+  private lastCollectionUpdate = -Infinity
   private evidenceArchive?: AiEvidenceArchive
   get archive(): AiEvidenceArchive {
     if (this.closed) throw new Error('Analisi chiusa.')
@@ -145,6 +146,27 @@ export class AiAnalysisWork {
       supplied: trace.cardTargets?.filter((t) => t.status === 'supplied').length ?? 0,
       missingGameplay: trace.cardTargets?.filter((t) => t.status === 'missing-gameplay').length ?? 0,
       notSupplied: trace.cardTargets?.filter((t) => t.status === 'not-supplied').length ?? 0 })
+  }
+
+  collecting(collection: AiCollectionDiagnostics, force = false): void {
+    if (this.closed) return
+    const now = performance.now()
+    // A history event is a real page/phase update, never an artificial heartbeat.
+    // Bound writes during fast pagination, but always persist starts and endings.
+    if (!force && now - this.lastCollectionUpdate < 1000) return
+    this.lastCollectionUpdate = now
+    this.jobs.recordDiagnostics(this.id, { collection })
+    const count = collection.items !== undefined && collection.total !== undefined
+      ? `${collection.items} di ${collection.total}` : null
+    const action = collection.operation === 'dependencies'
+      ? `Verifico le schede dei mazzi già raccolti${count ? `: ${count} mazzi` : ''}.`
+      : collection.operation === 'events'
+        ? `Raccolgo i mazzi dai tornei${count ? `: ${count} partecipazioni` : ''}.`
+        : `Raccolgo le schede delle carte${count ? `: ${count} schede` : ''}.`
+    const detail = collection.stage === 'interrupted' ? `Raccolta interrotta; ${collection.pages} pagine salvate.`
+      : collection.stage === 'complete' ? `${action} Raccolta completata.`
+        : `${action}${collection.pages ? ` ${collection.pages} pagine salvate.` : ''}`
+    this.jobs.updateProgress(this.id, 'collecting', detail, '')
   }
 
   progress(done: number, total: number): void {

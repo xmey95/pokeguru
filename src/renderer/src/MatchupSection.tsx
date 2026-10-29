@@ -5,7 +5,7 @@ import type { AiConnection, AiPreferences } from '../../shared/ai'
 import type { AiJobSummary } from '../../shared/ai-job'
 import { aiJobInterruptionText, aiJobWaitingText, canResumeAiJob } from '../../shared/ai-job-lifecycle'
 import type { CatalogView } from '../../shared/catalog'
-import type { MatchupDiscussion, MatchupReport, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
+import type { MatchupDiscussion, MatchupTournamentEvidence, MetaDeck, MetaSnapshot } from '../../shared/meta-matchups'
 import type { StandardRuleAudit } from '../../shared/standard-rule-audit'
 import { evaluateStandardDeck } from '../../shared/standard-deck'
 import { localCalendarDate } from '../../shared/calendar-date'
@@ -38,11 +38,18 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const hasBaseline = baseline !== null
   const baselineKey = baseline ? `${baseline.versionId ?? baseline.rawText}:${baseline.resolutionId ?? ''}` : null
   const [snapshot, setSnapshot] = useState<MetaSnapshot | null>(null)
-  const [reports, setReports] = useState<MatchupReport[]>([])
+  const [reports, setReports] = useState<{ opponentId: string }[]>([])
   const [versions, setVersions] = useState<{ projectId: string; items: DeckVersion[] } | null>(null)
   const [historicalOpponents, setHistoricalOpponents] = useState<MetaDeck[]>([])
   const [historyKey, setHistoryKey] = useState<string | null>(null)
   const [discussions, setDiscussions] = useState<MatchupDiscussion[]>([])
+  const [discussionDetail, setDiscussionDetail] = useState<MatchupDiscussion | null>(null)
+  const [detailRefresh, setDetailRefresh] = useState(0)
+  const [detailKey, setDetailKey] = useState<string | null>(null)
+  const [currentDiscussionId, setCurrentDiscussionId] = useState<string | null>(null)
+  const [discussionMore, setDiscussionMore] = useState(false)
+  const [discussionCursor, setDiscussionCursor] = useState<{ createdAt: string; rowId: number } | undefined>()
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [discussionsKey, setDiscussionsKey] = useState<string | null>(null)
   const [reportsError, setReportsError] = useState<{ key: string; text: string } | null>(null)
   const [discussionsError, setDiscussionsError] = useState<{ key: string; text: string } | null>(null)
@@ -126,15 +133,19 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
 
   useEffect(() => {
     let active = true
-    void window.projectsApi.listDeckVersions(projectId).then((result) => {
-      if (active) setVersions({ projectId, items: result.ok ? result.value : [] })
+    setVersions(null)
+    if (baseline?.versionId) void window.projectsApi.getDeckVersion(projectId, baseline.versionId).then((result) => {
+      if (active && result.ok) setVersions({ projectId, items: result.value ? [result.value] : [] })
     }).catch(() => { if (active) setVersions(null) })
     return () => { active = false }
   }, [projectId, baselineKey])
 
   const versionLabel = (id?: string | null) => {
     const version = versions?.projectId === projectId ? versions.items.find((item) => item.id === id) : null
-    return version ? `Lista v${version.sequence}${version.label ? ` · ${version.label}` : ''}` : 'Versione della lista non disponibile'
+    const historical = discussionDetail?.deckVersionId === id ? discussionDetail : discussions.find((item) => item.deckVersionId === id)
+    const number = version?.sequence ?? historical?.baseVersionNumber
+    const label = version?.label ?? historical?.baseVersionLabel
+    return number ? `Lista v${number}${label ? ` · ${label}` : ''}` : 'Versione della lista non disponibile'
   }
 
   async function refresh(): Promise<void> {
@@ -167,7 +178,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     let active = true
     const key = `${projectId}:${snapshot.id}:${baselineKey}`
     setReportsError(null)
-    void window.projectsApi.listMatchupReports(projectId, snapshot.id).then((result) => {
+    void window.projectsApi.listMatchupReportSummaries(projectId, snapshot.id).then((result) => {
       if (!active) return
       if (result.ok) { setReports(result.value); setReportsKey(key) }
       else setReportsError({ key, text: result.error })
@@ -176,12 +187,11 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   }, [projectId, snapshot?.id, baselineKey, hasBaseline, generating, guideReload])
 
   async function reloadDiscussions(opponentId: string): Promise<void> {
-    const result = await window.projectsApi.listMatchupDiscussions(projectId, opponentId)
+    const result = await window.projectsApi.listMatchupDiscussionPage(projectId, opponentId)
     if (!result.ok) throw new Error(result.error)
-    setDiscussions(result.value)
+    setDiscussions(result.value.items); setCurrentDiscussionId(result.value.currentId); setDetailRefresh((value) => value + 1); setDiscussionMore(!!result.value.nextCursor); setDiscussionCursor(result.value.nextCursor ?? undefined)
     setDiscussionsKey(`${projectId}:${opponentId}:${snapshot?.id}:${baselineKey}`)
-    setActiveDiscussionId((old) => result.value.some((item) => item.id === old)
-      ? old : result.value.find((item) => item.current)?.id ?? result.value[0]?.id ?? null)
+    setActiveDiscussionId((old) => old ?? result.value.currentId ?? result.value.items[0]?.id ?? null)
     const historical = await window.projectsApi.listHistoricalMatchupOpponents(projectId)
     if (historical.ok) setHistoricalOpponents(historical.value)
   }
@@ -191,13 +201,13 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     let active = true
     const key = `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`
     setDiscussionsError(null)
-    void window.projectsApi.listMatchupDiscussions(projectId, selectedId).then((result) => {
+    void window.projectsApi.listMatchupDiscussionPage(projectId, selectedId).then((result) => {
       if (!active) return
       if (result.ok) {
-        setDiscussions(result.value)
+        setDiscussions(result.value.items); setCurrentDiscussionId(result.value.currentId); setDetailRefresh((value) => value + 1); setDiscussionMore(!!result.value.nextCursor); setDiscussionCursor(result.value.nextCursor ?? undefined)
         setDiscussionsKey(key)
-        setActiveDiscussionId((old) => old ?? result.value.find((item) => item.current)?.id ?? result.value[0]?.id ?? null)
-        if (activeDiscussionId && !result.value.some((item) => item.id === activeDiscussionId)) setError('Questa discussione non è più disponibile. Scegli una base disponibile oppure torna indietro.')
+        setActiveDiscussionId((old) => old ?? result.value.currentId ?? result.value.items[0]?.id ?? null)
+
       } else setDiscussionsError({ key, text: result.error })
     }).catch(() => { if (active) setDiscussionsError({ key, text: 'Impossibile leggere le discussioni Matchup.' }) })
     return () => { active = false }
@@ -220,7 +230,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
 
   useEffect(() => {
     if (aiJob?.status !== 'applied' || aiJob.projectId !== projectId || !snapshot) return
-    void window.projectsApi.listMatchupReports(projectId, snapshot.id).then((result) => {
+    void window.projectsApi.listMatchupReportSummaries(projectId, snapshot.id).then((result) => {
       if (result.ok) setReports(result.value)
     })
     if (selectedId) void reloadDiscussions(selectedId)
@@ -245,7 +255,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
     const status = await window.projectsApi.getAiJobStatus(projectId, `matchup:${projectId}`)
     if (status.ok) setAiJob(status.value)
     if (snapshot) {
-      const reports = await window.projectsApi.listMatchupReports(projectId, snapshot.id)
+      const reports = await window.projectsApi.listMatchupReportSummaries(projectId, snapshot.id)
       if (reports.ok) setReports(reports.value)
     }
     if (selectedId) await reloadDiscussions(selectedId)
@@ -349,14 +359,52 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
   const selectedInCurrentMeta = !!snapshot?.decks.some((deck) => deck.id === selectedId)
   const currentReports = reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}` ? reports : []
   const reportsLoaded = !hasBaseline || reportsKey === `${projectId}:${snapshot?.id}:${baselineKey}`
-  const guideLoaded = reportsLoaded && discussionsKey === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}`
+  const summariesLoaded = reportsLoaded && discussionsKey === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}`
   const guideError = reportsError?.key === `${projectId}:${snapshot?.id}:${baselineKey}` ? reportsError.text
     : discussionsError?.key === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}` ? discussionsError.text : null
   const visibleDiscussions = discussionsKey === `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}` ? discussions : []
-  const currentDiscussion = visibleDiscussions.find((item) => item.current)
-  const discussion = visibleDiscussions.find((item) => item.id === activeDiscussionId) ?? currentDiscussion ?? visibleDiscussions[0]
-  const report = discussion ? [...discussion.turns].reverse().find((turn) => turn.report)?.report :
-    currentReports.find((item) => item.opponentId === selectedId)
+  const currentDiscussion = currentDiscussionId ? { id: currentDiscussionId } : null
+  const detailId = activeDiscussionId ?? currentDiscussion?.id ?? visibleDiscussions[0]?.id
+  const expectedDetailKey = `${projectId}:${selectedId}:${detailId}:${discussionsKey}`
+  const discussion = detailKey === expectedDetailKey ? discussionDetail : null
+  const guideLoaded = summariesLoaded && (!detailId || detailKey === expectedDetailKey)
+  useEffect(() => {
+    if (!summariesLoaded || !detailId) { setDiscussionDetail(null); setDetailKey(null); return }
+    let active = true
+    setDetailKey(null)
+    void window.projectsApi.getMatchupDiscussionWindow(projectId, detailId).then((result) => {
+      if (!active) return
+      if (!result.ok) throw new Error(result.error)
+      if (!result.value || result.value.opponentId !== selectedId) throw new Error('Discussione non disponibile per questo avversario.')
+      setDiscussionDetail(result.value); setDetailKey(expectedDetailKey)
+    }).catch((cause) => { if (active) setDiscussionsError({ key: `${projectId}:${selectedId}:${snapshot?.id}:${baselineKey}`,
+      text: cause instanceof Error ? cause.message : 'Discussione non disponibile.' }) })
+    return () => { active = false }
+  }, [projectId, detailId, expectedDetailKey, summariesLoaded, detailRefresh])
+
+  async function loadOlderDiscussions(): Promise<void> {
+    if (historyLoading || !selectedId) return
+    setHistoryLoading(true)
+    try {
+      const result = await window.projectsApi.listMatchupDiscussionPage(projectId, selectedId, discussionCursor)
+      if (!result.ok) throw new Error(result.error)
+      setDiscussions((items) => [...items, ...result.value.items]); setDiscussionCursor(result.value.nextCursor ?? undefined)
+      setDiscussionMore(!!result.value.nextCursor)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Storico non disponibile.') }
+    finally { setHistoryLoading(false) }
+  }
+  async function loadOlderTurns(): Promise<void> {
+    if (historyLoading || !discussion) return
+    setHistoryLoading(true)
+    const id = discussion.id
+    try {
+      const result = await window.projectsApi.getMatchupTurnsBefore(projectId, id, discussion.turns[0]?.turnNo ?? 0)
+      if (!result.ok) throw new Error(result.error)
+      setDiscussionDetail((current) => current?.id === id ? { ...current, turns: [...result.value, ...current.turns] } : current)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Revisioni non disponibili.') }
+    finally { setHistoryLoading(false) }
+  }
+  const report = discussion ? [...discussion.turns].reverse().find((turn) => turn.report)?.report : undefined
   const pendingTurn = discussion?.turns.find((turn) => !turn.report)
   const asOf = localCalendarDate()
   const standard = useMemo(() => baseline ? evaluateStandardDeck(baseline, catalog,
@@ -395,7 +443,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         ? 'Nessuna guida' : 'Disponibilità da verificare'
   }))
 
-  return <section className="matchup-section" aria-label="Guide matchup del progetto" data-nav-loading={!error && !guideError && (loading || !historyLoaded || !reportsLoaded || (!!selectedId && !!snapshot && discussionsKey !== `${projectId}:${selectedId}:${snapshot.id}:${baselineKey}`))}>
+  return <section className="matchup-section" aria-label="Guide matchup del progetto" data-nav-loading={!error && !guideError && (loading || !historyLoaded || !reportsLoaded || (!!selectedId && !!snapshot && !guideLoaded))}>
     {!loading && historyLoaded && selectedId && !selected && <p className="error-banner" role="alert">Questo avversario non è più disponibile. Scegline un altro oppure torna indietro.</p>}
     <div className="panel-heading">
       <h2>Guide matchup</h2>
@@ -430,12 +478,17 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
         <div className="meta-analysis">
           {selected && <>
             {discussion && !discussion.current && <p className="matchup-freshness stale">Guida precedente · {versionLabel(report?.deckVersionId)}. Lista attuale: {versionLabel(baseline?.versionId)}. Il metagame o le corrispondenze delle carte possono essere cambiati.</p>}
-            {visibleDiscussions.length > 1 && <div className="discussion-switcher" aria-label="Discussioni Matchup">
+            {(visibleDiscussions.length > 1 || discussionMore) && <div className="discussion-switcher" aria-label="Discussioni Matchup">
               {visibleDiscussions.map((item, index) => <button type="button" key={item.id}
                 className={`secondary-button ${discussion?.id === item.id ? 'selected' : ''}`}
                 onClick={() => nav.visit({ 'matchup.discussion': item.id }, `Guide matchup · ${selected?.name ?? 'Guida'} · base ${date(item.createdAt)}`)}>
                 {item.current ? 'Base attuale' : `Storico ${index + 1}`}{item.parentId ? ' · collegata' : ''}
               </button>)}
+              {currentDiscussionId && !visibleDiscussions.some((item) => item.id === currentDiscussionId) &&
+                <button type="button" className={`secondary-button ${discussion?.id === currentDiscussionId ? 'selected' : ''}`}
+                  onClick={() => nav.visit({ 'matchup.discussion': currentDiscussionId }, 'Guide matchup · Base attuale')}>Base attuale</button>}
+              {discussionMore && <button type="button" className="secondary-button" disabled={historyLoading}
+                onClick={() => void loadOlderDiscussions()}>Carica basi precedenti</button>}
             </div>}
             {!hasBaseline ? <p className="matchup-empty">Importa una lista nel progetto per generare l’analisi di questo matchup.</p>
               : guideError ? <div className="error-banner" role="alert">{guideError} <button type="button" className="text-button"
@@ -492,7 +545,7 @@ export function MatchupSection({ projectId, baseline, onOpenAiSettings, onOpenCa
               </section>}
               {report.sampleDeckUrl && <button type="button" className="text-button" onClick={() => void window.projectsApi.openLimitless(report.sampleDeckUrl!)}>Apri la lista avversaria usata ↗</button>}
               </details>
-              {discussion && <DiscussionView discussion={discussion} feedback={feedback} onFeedback={setFeedback}
+              {discussion && <DiscussionView discussion={discussion} onOlder={() => void loadOlderTurns()} olderLoading={historyLoading} feedback={feedback} onFeedback={setFeedback}
                 onSubmit={() => void submitFeedback()} onRetry={(turnId) => void submitFeedback(turnId)}
                 onContinue={() => void continueOnCurrentBase()} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard}
                 generating={generating} inFlight={revisionInFlight} error={revisionError}

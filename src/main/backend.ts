@@ -55,6 +55,7 @@ import { localCalendarDate } from '../shared/calendar-date'
 import { safeThreadLink } from '../shared/thread-links'
 import { TournamentStore } from './tournament-store'
 import { DatabaseIntegrityError, completeDatabaseMigration, prepareDatabaseMigration } from './database-migrations'
+import { optimizeDatabase } from './database-maintenance'
 import { AiJobStore } from './ai-job-store'
 import type { AiJob } from './ai-job-store'
 import type { AiJobPhase, AiJobSummary } from '../shared/ai-job'
@@ -196,7 +197,7 @@ function resumeSavedAiJob(job: AiJob, explicit: boolean): Promise<unknown> {
   }
   const targetProject = job.kind === 'thread-ask' || job.kind === 'matchup-generate'
     ? input.args[0] : typeof input.args[0] === 'string'
-      ? projectStore.getMatchupDiscussion(input.args[0])?.projectId : null
+      ? projectStore.getMatchupDiscussion(input.args[0], true)?.projectId : null
   const targetResource = job.kind === 'thread-ask' ? input.args[1] : `matchup:${targetProject}`
   if (targetProject !== job.projectId || targetResource !== job.resourceId)
     throw new Error('Contesto di ripresa non appartenente al progetto.')
@@ -332,12 +333,13 @@ async function prepareMatchupHistory(discussion: MatchupDiscussion, config: AiRu
   work: AiAnalysisWork): Promise<MatchupDiscussion> {
   if (!projectStore) throw new Error(unavailableMessage())
   let current = discussion
-  const lastToSummarize = current.turns.length - 5
+  const lastToSummarize = (current.turnCount ?? current.turns.length) - 5
   while (lastToSummarize > current.summarizedThrough) {
     const through = Math.min(current.summarizedThrough + 5, lastToSummarize)
-    if (!current.turns[through]?.report) break
+    const batch = projectStore.getMatchupSummaryBatch(current.projectId, current.id, current.summarizedThrough + 1, through)
+    if (!batch.at(-1)?.report) break
     const summary = await work.snapshotAsync(`history-summary:${through}`,
-      () => summarizeMatchupContext(current, through, config, work.signal))
+      () => summarizeMatchupContext({ ...current, turns: batch }, through, config, work.signal))
     projectStore.saveMatchupContextSummary(current.id, summary, through)
     current = { ...current, contextSummary: summary, summarizedThrough: through }
   }
@@ -455,9 +457,10 @@ async function matchupAiQueries(request: string, deckContext: string,
     },
     { archive: work.archive, contextTexts: [stableInitial.deckContext, stableInitial.sample.cards.join('\n'), stableInitial.history ?? ''],
       signal, onTrace: (value) => work?.evidence(value),
+      onCollection: (progress, force) => work.collecting(progress, force),
       summarize: (trace) => analyzeLargeEvidence(trace, request, config, work),
       onRound: (round, queries) => { if (job) jobProgress(job, 'planning',
-        `Ricerca ${round}: ${queries} interrogazioni locali completate.`) } })
+        `Approfondimento ${round}: ${queries} ricerche locali selezionate.`) } })
   if (work) await analyzeLargeEvidence(trace, request, config, work)
   return { trace, engine }
 }
@@ -1142,6 +1145,11 @@ function registerProjectHandlers(): void {
     return withStore(() => projectStore!.listDeckVersions(projectId as string))
   })
 
+  registerHandler('deck:version-page', (projectId: unknown, before: unknown) =>
+    withStore(() => projectStore!.listDeckVersionPage(projectId as string, before as number | undefined)))
+  registerHandler('deck:get-version', (projectId: unknown, id: unknown) =>
+    withStore(() => projectStore!.getDeckVersion(projectId as string, id as string)))
+
   registerHandler('deck:annotate-version', (input: unknown): OperationResult<DeckVersion> => {
     return withStore(() => projectStore!.annotateDeckVersion(input as AnnotateDeckVersionInput))
   })
@@ -1170,6 +1178,9 @@ function registerProjectHandlers(): void {
       return { ok: false, error: 'Richiesta non autorizzata.' }
     return withStore(() => projectStore!.getDeckThreadWindow(projectId, threadId))
   })
+
+  registerHandler('deck:candidates-before', (projectId: unknown, threadId: unknown, before: unknown) =>
+    withStore(() => projectStore!.getDeckThreadCandidatesBefore(projectId as string, threadId as string, before as number)))
 
   registerHandler('deck:get-thread-before', (projectId: unknown, threadId: unknown,
     cursor: unknown): OperationResult<DeckThreadMessagePage> => {
@@ -1312,10 +1323,10 @@ function registerProjectHandlers(): void {
       typeof question !== 'string' || !question.trim() || question.length > 5000)
       return { ok: false, error: 'Scrivi prima una domanda o una modifica da valutare.' }
     return withStore(() => {
-      const thread = projectStore!.getDeckThread(projectId, threadId)
+      const thread = projectStore!.getDeckThreadForAnalysis(projectId, threadId)
       if (!thread) throw new Error('Strategia non trovata in questo progetto.')
       const base = thread.baseVersionId
-        ? projectStore!.listDeckVersions(projectId).find((version) => version.id === thread.baseVersionId) ?? null : null
+        ? projectStore!.getDeckVersion(projectId, thread.baseVersionId) : null
       return buildThreadEvidence(thread, base, question.trim(), projectStore!.listConstraints(projectId),
         catalogStore!.view(), tournamentStore?.list() ?? [], tournamentStore?.listMain() ?? [])
     })
@@ -1330,13 +1341,12 @@ function registerProjectHandlers(): void {
     const project = projectStore.get(projectId)
     if (!project) return { ok: false, error: 'Progetto non trovato.' }
     if (project.circuit !== 'WESTERN') return { ok: false, error: 'Le sessioni Codex sono disponibili solo per il circuito occidentale.' }
-    let thread = projectStore.getDeckThread(projectId, threadId)
+    let thread = projectStore.getDeckThreadForAnalysis(projectId, threadId)
     if (!thread) return { ok: false, error: 'Strategia non trovata in questo progetto.' }
     if (existingUserMessageId !== undefined && (typeof existingUserMessageId !== 'string' ||
       thread.openingAiMessageId !== existingUserMessageId ||
-      !thread.messages.some((entry) => entry.id === existingUserMessageId &&
-        entry.author === 'user' && entry.text === message.trim()) ||
-      thread.messages.some((entry) => entry.author === 'assistant')))
+      !(thread.openingAiMessage?.id === existingUserMessageId && thread.openingAiMessage.text === message.trim()) ||
+      !thread.openingAiPending))
       return { ok: false, error: 'Primo messaggio Codex non recuperabile.' }
     if (generatingDeckThreads.has(threadId)) return { ok: false, error: 'Risposta Codex già in corso per questa strategia.' }
     let job: AiJob
@@ -1354,7 +1364,7 @@ function registerProjectHandlers(): void {
       thread = work.snapshot('thread-context', [], () => thread!)
       const constraints = work.snapshot('constraints', [], () => projectStore!.listConstraints(projectId))
       const base = work.snapshot('base', [], () => thread!.baseVersionId
-        ? projectStore!.listDeckVersions(projectId).find((version) => version.id === thread!.baseVersionId) ?? null
+        ? projectStore!.getDeckVersion(projectId, thread!.baseVersionId!)
         : null)
       jobProgress(job, 'catalog', 'Raccolgo la lista e le schede del Catalogo.')
       const { engine, catalog } = createArchivedEvidenceEngine(work.archive, () => {
@@ -1376,9 +1386,10 @@ function registerProjectHandlers(): void {
           base?.rawText ?? '', thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? ''],
         eventContextTexts: thread.messages.slice(-2).map((item) => item.text),
         signal: controller.signal, onTrace: (trace) => work.evidence(trace),
+        onCollection: (progress, force) => work.collecting(progress, force),
         summarize: (trace) => analyzeLargeEvidence(trace, message.trim(), config, work),
         onRound: (round, queries) => jobProgress(job, 'planning',
-          `Ricerca ${round}: ${queries} interrogazioni locali completate.`) })
+          `Approfondimento ${round}: ${queries} ricerche locali selezionate.`) })
       await analyzeLargeEvidence(queryTrace, message.trim(), config, work)
       let evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
       const cwd = join(backendContext.temp, 'pokeguru-codex-deck')
@@ -1489,8 +1500,8 @@ function registerProjectHandlers(): void {
     return withStore(() => {
       if (!catalogStore || !input || typeof input !== 'object') throw new Error('Catalogo o richiesta non disponibile.')
       const request = input as AdoptDeckCandidateInput
-      const thread = projectStore!.getDeckThread(request.projectId, request.threadId)
-      const candidate = thread?.candidates.find((item) => item.id === request.candidateId)
+      const thread = projectStore!.getDeckThreadWindow(request.projectId, request.threadId)
+      const candidate = projectStore!.getDeckCandidate(request.projectId, request.threadId, request.candidateId)
       if (!thread || !candidate) throw new Error('Candidata non trovata in questo progetto.')
       const today = localCalendarDate()
       const review = reviewCandidate(request.projectId, candidate, catalogStore.view(),
@@ -1596,9 +1607,20 @@ function registerProjectHandlers(): void {
     catch { return { ok: false, error: 'Evidenze torneo non leggibili.' } }
   })
 
+  registerHandler('matchups:report-summaries', (projectId: unknown, metaId: unknown) =>
+    withStore(() => projectStore!.listMatchupReportSummaries(projectId as string, metaId as string)))
+
   registerHandler('matchups:list-reports', (projectId: unknown, metaId: unknown): OperationResult<MatchupReport[]> => {
     return withStore(() => projectStore!.listMatchupReports(projectId as string, metaId as string))
   })
+
+  registerHandler('matchups:discussion-page', (projectId: unknown, opponentId: unknown, before: unknown) =>
+    withStore(() => projectStore!.listMatchupDiscussionPage(projectId as string, opponentId as string,
+      before as { createdAt: string; rowId: number } | undefined)))
+  registerHandler('matchups:discussion-window', (projectId: unknown, id: unknown) =>
+    withStore(() => projectStore!.getMatchupDiscussionWindow(projectId as string, id as string)))
+  registerHandler('matchups:turns-before', (projectId: unknown, id: unknown, before: unknown) =>
+    withStore(() => projectStore!.getMatchupTurnsBefore(projectId as string, id as string, before as number)))
 
   registerHandler('matchups:list-discussions', (projectId: unknown, opponentId: unknown): OperationResult<MatchupDiscussion[]> => {
     return withStore(() => projectStore!.listMatchupDiscussions(projectId as string, opponentId as string))
@@ -1686,7 +1708,7 @@ function registerProjectHandlers(): void {
   async function runRevision(discussionId: unknown, turnId: unknown, feedback: unknown,
     override: unknown, resumedJob?: AiJob): Promise<OperationResult<MatchupDiscussion>> {
     if (!projectStore || !aiJobStore || typeof discussionId !== 'string') return { ok: false, error: 'Discussione Matchup non valida.' }
-    const discussion = projectStore.getMatchupDiscussion(discussionId)
+    const discussion = projectStore.getMatchupDiscussion(discussionId, true)
     if (!discussion || generatingProjects.has(discussion.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
     let job: AiJob
     try { job = resumedJob ? aiJobStore.resume(resumedJob.id) : aiJobStore.start('matchup-revise', discussion.projectId,
@@ -1781,7 +1803,7 @@ function registerProjectHandlers(): void {
     override: unknown, resumedJob?: AiJob): Promise<OperationResult<MatchupDiscussion>> {
     if (!projectStore || !aiJobStore || typeof discussionId !== 'string' || typeof metaId !== 'string')
       return { ok: false, error: 'Discussione Matchup non valida.' }
-    const parent = projectStore.getMatchupDiscussion(discussionId)
+    const parent = projectStore.getMatchupDiscussion(discussionId, true)
     if (!parent || generatingProjects.has(parent.projectId)) return { ok: false, error: 'Discussione non trovata o analisi già in corso.' }
     let job: AiJob
     try { job = resumedJob ? aiJobStore.resume(resumedJob.id) : aiJobStore.start('matchup-continue', parent.projectId, `matchup:${parent.projectId}`) }
@@ -1797,9 +1819,8 @@ function registerProjectHandlers(): void {
         if (parent.metaId === metaId && parent.deckHash === value.hash &&
           parent.deckVersionId === value.deckVersion?.versionId && parent.deckResolutionId === value.deckVersion?.resolutionId)
           throw new Error('Questa discussione usa già la base corrente.')
-        if (projectStore!.listMatchupDiscussions(parent.projectId, parent.opponentId)
-          .some((item) => item.metaId === metaId && item.deckHash === value.hash &&
-            item.deckVersionId === value.deckVersion?.versionId && item.deckResolutionId === value.deckVersion?.resolutionId))
+        if (projectStore!.hasMatchupDiscussionContext(parent.projectId, parent.opponentId, metaId,
+          value.hash, value.deckVersion?.versionId, value.deckVersion?.resolutionId))
           throw new Error('Esiste già una discussione per la base corrente.')
         return value
       })
@@ -1912,6 +1933,7 @@ export async function initializeBackend(): Promise<void> {
       })
     aiJobStore = new AiJobStore(databasePath)
     completeDatabaseMigration(databasePath, migration)
+    optimizeDatabase(databasePath)
     if (!hasRecoverableThreadJob())
       tournamentStore.pruneMainIntermediates(projectStore.referencedTournamentSnapshotIds())
     aiPreferencesStore = new AiPreferencesStore(backendContext.userData)

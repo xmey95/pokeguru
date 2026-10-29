@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 import { gzipSync, gunzipSync } from 'node:zlib'
 import type { AiEvidenceQueryResult } from '../shared/ai-evidence'
+import { statementCache } from './database-statements'
 
 /** Persist originals separately from query membership. No aggregate payload limit:
  * each compressed SQLite chunk is bounded, and readers walk one record at a time.
@@ -60,7 +61,19 @@ CREATE TABLE IF NOT EXISTS ai_evidence_event_index (
   object_hash TEXT NOT NULL REFERENCES ai_evidence_objects(hash),
   PRIMARY KEY (job_id, key)
 ) STRICT;
-CREATE INDEX IF NOT EXISTS ai_evidence_event_date ON ai_evidence_event_index(job_id, date DESC, placing, key);
+CREATE INDEX IF NOT EXISTS ai_evidence_event_order
+  ON ai_evidence_event_index(job_id, date DESC, placing IS NULL, placing, key);
+DROP INDEX IF EXISTS ai_evidence_event_date;
+CREATE INDEX IF NOT EXISTS ai_evidence_event_name ON ai_evidence_event_index(job_id, deck_name);
+CREATE INDEX IF NOT EXISTS ai_evidence_page_sequence ON ai_evidence_pages(job_id, search_key, sequence);
+CREATE INDEX IF NOT EXISTS ai_evidence_page_run ON ai_evidence_pages(job_id);
+CREATE INDEX IF NOT EXISTS ai_evidence_page_search ON ai_evidence_pages(job_id, search_key);
+CREATE INDEX IF NOT EXISTS ai_evidence_search_run ON ai_evidence_searches(job_id);
+CREATE INDEX IF NOT EXISTS ai_evidence_link_child ON ai_evidence_links(child_hash);
+CREATE INDEX IF NOT EXISTS ai_evidence_value_object ON ai_evidence_values(object_hash);
+CREATE INDEX IF NOT EXISTS ai_evidence_record_object ON ai_evidence_records(object_hash);
+CREATE INDEX IF NOT EXISTS ai_evidence_page_object ON ai_evidence_pages(object_hash);
+CREATE INDEX IF NOT EXISTS ai_evidence_event_object ON ai_evidence_event_index(object_hash);
 `
 
 const CHUNK_BYTES = 128 * 1024
@@ -127,23 +140,29 @@ export interface EvidenceSnapshotRow {
  * never an authorization token: callers can only traverse this run's memberships. */
 export class AiEvidenceArchive {
   private readonly db: DatabaseSync
+  private readonly prepare: ReturnType<typeof statementCache>
+  // The source inventory is immutable after capture. Keep small aggregate
+  // counts here and ordered identities in TEMP, isolated to this job/connection.
+  private readonly eventCounts = new Map<string, { slot: number; matchingLists: number; distinctDecks: number; listsInspected: number }>()
+  private eventPageCacheReady = false
   readonly id: string
   readonly projectId: string
   readonly resourceId: string
   constructor(filePath: string, owner: { id: string; projectId: string; resourceId: string }, readOnly = false) {
     this.db = new DatabaseSync(filePath, { readOnly })
+    this.prepare = statementCache(this.db)
     this.id = owner.id
     this.projectId = owner.projectId
     this.resourceId = owner.resourceId
     try {
       this.db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000')
-      const job = this.db.prepare('SELECT project_id, resource_id FROM ai_jobs WHERE id = ?')
+      const job = this.prepare('SELECT project_id, resource_id FROM ai_jobs WHERE id = ?')
         .get(owner.id) as { project_id: string; resource_id: string } | undefined
       if (!job || job.project_id !== owner.projectId || job.resource_id !== owner.resourceId)
         throw new Error('Archivio delle prove non appartenente al progetto.')
       if (!readOnly) {
         this.db.exec(AI_EVIDENCE_ARCHIVE_SCHEMA)
-        this.db.prepare('INSERT OR IGNORE INTO ai_evidence_runs(job_id, version) VALUES (?, 1)').run(this.id)
+        this.prepare('INSERT OR IGNORE INTO ai_evidence_runs(job_id, version) VALUES (?, 1)').run(this.id)
       }
     } catch (error) { this.db.close(); throw error }
   }
@@ -157,20 +176,20 @@ export class AiEvidenceArchive {
   private put(value: unknown, children: string[] = []): string {
     const body = Buffer.from(JSON.stringify(value), 'utf8')
     const hash = createHash('sha256').update(body).digest('hex')
-    const inserted = this.db.prepare('INSERT OR IGNORE INTO ai_evidence_objects(hash, bytes) VALUES (?, ?)')
+    const inserted = this.prepare('INSERT OR IGNORE INTO ai_evidence_objects(hash, bytes) VALUES (?, ?)')
       .run(hash, body.length)
     if (inserted.changes) {
-      const chunk = this.db.prepare('INSERT INTO ai_evidence_chunks(object_hash, ordinal, body) VALUES (?, ?, ?)')
+      const chunk = this.prepare('INSERT INTO ai_evidence_chunks(object_hash, ordinal, body) VALUES (?, ?, ?)')
       for (let offset = 0; offset < body.length; offset += CHUNK_BYTES)
         chunk.run(hash, offset / CHUNK_BYTES, gzipSync(body.subarray(offset, offset + CHUNK_BYTES)))
     }
-    const link = this.db.prepare('INSERT OR IGNORE INTO ai_evidence_links VALUES (?, ?)')
+    const link = this.prepare('INSERT OR IGNORE INTO ai_evidence_links VALUES (?, ?)')
     for (const child of new Set(children)) link.run(hash, child)
     return hash
   }
 
   private get<T>(hash: string): T {
-    const expected = this.db.prepare('SELECT bytes FROM ai_evidence_objects WHERE hash = ?')
+    const expected = this.prepare('SELECT bytes FROM ai_evidence_objects WHERE hash = ?')
       .get(hash) as { bytes: number } | undefined
     if (!expected) throw new Error('Prova archiviata mancante.')
     const chunks: Buffer[] = []
@@ -191,25 +210,25 @@ export class AiEvidenceArchive {
 
   /** Immutable named inputs pin the original scope, regardless of later source syncs. */
   value<T>(role: string, key: string): T | undefined {
-    const row = this.db.prepare('SELECT object_hash FROM ai_evidence_values WHERE job_id = ? AND role = ? AND key = ?')
+    const row = this.prepare('SELECT object_hash FROM ai_evidence_values WHERE job_id = ? AND role = ? AND key = ?')
       .get(this.id, role, key) as { object_hash: string } | undefined
     return row ? this.get<T>(row.object_hash) : undefined
   }
   saveValue(role: string, key: string, value: unknown): void {
     this.atomic(() => {
       const hash = this.put(value)
-      const existing = this.db.prepare('SELECT object_hash FROM ai_evidence_values WHERE job_id = ? AND role = ? AND key = ?')
+      const existing = this.prepare('SELECT object_hash FROM ai_evidence_values WHERE job_id = ? AND role = ? AND key = ?')
         .get(this.id, role, key) as { object_hash: string } | undefined
       if (existing && existing.object_hash !== hash) throw new Error('Il contesto salvato è immutabile.')
-      this.db.prepare('INSERT OR IGNORE INTO ai_evidence_values VALUES (?, ?, ?, ?)').run(this.id, role, key, hash)
+      this.prepare('INSERT OR IGNORE INTO ai_evidence_values VALUES (?, ?, ?, ?)').run(this.id, role, key, hash)
     })
   }
   *values<T>(role: string): Generator<{ key: string; value: T }> {
     let after: string | null = null
     while (true) {
-      const rows = this.db.prepare(`SELECT key, object_hash FROM ai_evidence_values
-        WHERE job_id = ? AND role = ? AND (? IS NULL OR key > ?) ORDER BY key LIMIT 64`)
-        .all(this.id, role, after, after) as { key: string; object_hash: string }[]
+      const rows = this.prepare(`SELECT key, object_hash FROM ai_evidence_values
+        WHERE job_id = ? AND role = ? ${after === null ? '' : 'AND key > ?'} ORDER BY key LIMIT 64`)
+        .all(this.id, role, ...(after === null ? [] : [after])) as { key: string; object_hash: string }[]
       if (!rows.length) return
       for (const row of rows) { after = row.key; yield { key: row.key, value: this.get<T>(row.object_hash) } }
     }
@@ -220,9 +239,9 @@ export class AiEvidenceArchive {
   captureSources(metadata: unknown, rows: Iterable<EvidenceSnapshotRow>): void {
     if (this.value('snapshot', 'sources') !== undefined) return
     this.atomic(() => {
-      const insert = this.db.prepare(`INSERT INTO ai_evidence_event_index VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      const insert = this.prepare(`INSERT INTO ai_evidence_event_index VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(job_id, key) DO NOTHING`)
-      const existing = this.db.prepare('SELECT object_hash FROM ai_evidence_event_index WHERE job_id = ? AND key = ?')
+      const existing = this.prepare('SELECT object_hash FROM ai_evidence_event_index WHERE job_id = ? AND key = ?')
       for (const row of rows) {
         const hash = this.put(row.value)
         const saved = insert.run(this.id, row.key, row.deckKey, row.date, row.placing,
@@ -230,9 +249,11 @@ export class AiEvidenceArchive {
         if (!saved.changes && (existing.get(this.id, row.key) as { object_hash: string }).object_hash !== hash)
           throw new Error('La stessa partecipazione contiene dati diversi nello snapshot degli Eventi.')
       }
-      this.db.prepare('INSERT INTO ai_evidence_values VALUES (?, ?, ?, ?)')
+      this.prepare('INSERT INTO ai_evidence_values VALUES (?, ?, ?, ?)')
         .run(this.id, 'snapshot', 'sources', this.put(metadata))
     })
+    this.eventCounts.clear()
+    if (this.eventPageCacheReady) this.db.exec('DELETE FROM temp.evidence_event_positions')
   }
   *eventNames(): Generator<string> {
     for (const row of this.db.prepare(`SELECT DISTINCT deck_name FROM ai_evidence_event_index
@@ -241,16 +262,49 @@ export class AiEvidenceArchive {
   eventPage<T>(query: { from: string; to: string; deck: string; card: string; offset: number; limit: number }):
     { rows: T[]; listsInspected: number; matchingLists: number; distinctDecks: number } {
     const where = `job_id = ? AND date >= ? AND date <= ?
-      AND instr(deck_text, ?) > 0 AND instr(cards_text, ?) > 0`
-    const args = [this.id, query.from, query.to, query.deck, query.card]
-    const counts = this.db.prepare(`SELECT count(*) AS matchingLists, count(DISTINCT deck_key) AS distinctDecks
-      FROM ai_evidence_event_index WHERE ${where}`).get(...args) as { matchingLists: number; distinctDecks: number }
-    const { listsInspected } = this.db.prepare('SELECT count(*) AS listsInspected FROM ai_evidence_event_index WHERE job_id = ?')
-      .get(this.id) as { listsInspected: number }
-    const rows = (this.db.prepare(`SELECT object_hash FROM ai_evidence_event_index WHERE ${where}
-      ORDER BY date DESC, placing IS NULL, placing, key LIMIT ? OFFSET ?`)
-      .all(...args, query.limit, query.offset) as { object_hash: string }[]).map((row) => this.get<T>(row.object_hash))
-    return { ...counts, listsInspected, rows }
+      ${query.deck ? 'AND instr(deck_text, ?) > 0' : ''} ${query.card ? 'AND instr(cards_text, ?) > 0' : ''}`
+    const args = [this.id, query.from, query.to, ...(query.deck ? [query.deck] : []), ...(query.card ? [query.card] : [])]
+    const key = JSON.stringify([query.from, query.to, query.deck, query.card])
+    if (!Number.isSafeInteger(query.offset) || query.offset < 0 || !Number.isSafeInteger(query.limit) || query.limit < 1)
+      throw new Error('Pagina degli Eventi non valida.')
+    let counts = this.eventCounts.get(key)
+    if (!counts) {
+      // Numeric offsets are part of saved AI checkpoints. Materialize only row
+      // identities once per filter, then seek by ordinal even on a deep resume.
+      // TEMP is connection-local (also on read-only archives), disk-spillable,
+      // bounded to eight filters and never duplicates an original payload.
+      if (!this.eventPageCacheReady) {
+        this.db.exec(`CREATE TEMP TABLE evidence_event_positions (
+          slot INTEGER NOT NULL, ordinal INTEGER NOT NULL, event_rowid INTEGER NOT NULL,
+          PRIMARY KEY(slot, ordinal)) WITHOUT ROWID`)
+        this.eventPageCacheReady = true
+      }
+      let slot = this.eventCounts.size
+      if (slot >= 8) {
+        const oldest = this.eventCounts.keys().next().value!
+        slot = this.eventCounts.get(oldest)!.slot
+        this.prepare('DELETE FROM temp.evidence_event_positions WHERE slot = ?').run(slot)
+        this.eventCounts.delete(oldest)
+      }
+      this.prepare(`INSERT INTO temp.evidence_event_positions
+        SELECT ?, row_number() OVER (ORDER BY date DESC, placing IS NULL, placing, key) - 1, rowid
+        FROM ai_evidence_event_index WHERE ${where}`).run(slot, ...args)
+      const matching = this.prepare(`SELECT count(*) AS matchingLists, count(DISTINCT e.deck_key) AS distinctDecks
+        FROM temp.evidence_event_positions p JOIN ai_evidence_event_index e ON e.rowid = p.event_rowid
+        WHERE p.slot = ?`).get(slot) as { matchingLists: number; distinctDecks: number }
+      const { listsInspected } = this.prepare('SELECT count(*) AS listsInspected FROM ai_evidence_event_index WHERE job_id = ?')
+        .get(this.id) as { listsInspected: number }
+      counts = { ...matching, listsInspected, slot }
+      this.eventCounts.set(key, counts)
+    }
+    this.eventCounts.delete(key)
+    this.eventCounts.set(key, counts)
+    const rows = (this.prepare(`SELECT e.object_hash FROM temp.evidence_event_positions p
+      JOIN ai_evidence_event_index e ON e.rowid = p.event_rowid
+      WHERE p.slot = ? AND p.ordinal >= ? ORDER BY p.ordinal LIMIT ?`)
+      .all(counts.slot, query.offset, query.limit) as { object_hash: string }[]).map((row) => this.get<T>(row.object_hash))
+    const { slot: _slot, ...scope } = counts
+    return { ...scope, rows }
   }
 
   search(query: unknown): EvidenceSearch {
@@ -259,12 +313,12 @@ export class AiEvidenceArchive {
         key !== 'offset' && key !== 'limit' && value !== null && value !== undefined)) : query
     const key = evidenceHash(normalized)
     const cursor = query && typeof query === 'object' && !Array.isArray(query) ? { ...query, offset: 0 } : query
-    this.db.prepare(`INSERT OR IGNORE INTO ai_evidence_searches(job_id, key, query_json, cursor_json)
+    this.prepare(`INSERT OR IGNORE INTO ai_evidence_searches(job_id, key, query_json, cursor_json)
       VALUES (?, ?, ?, ?)`).run(this.id, key, JSON.stringify(normalized), JSON.stringify(cursor))
     return this.getSearch(key)!
   }
   getSearch(key: string): EvidenceSearch | undefined {
-    const row = this.db.prepare('SELECT * FROM ai_evidence_searches WHERE job_id = ? AND key = ?')
+    const row = this.prepare('SELECT * FROM ai_evidence_searches WHERE job_id = ? AND key = ?')
       .get(this.id, key) as { key: string; query_json: string; cursor_json: string | null; pages: number; response_bytes: number } | undefined
     return row ? { key, query: JSON.parse(row.query_json), cursor: row.cursor_json === null ? null : JSON.parse(row.cursor_json),
       pages: row.pages, responseBytes: row.response_bytes } : undefined
@@ -272,20 +326,20 @@ export class AiEvidenceArchive {
   *searches(): Generator<EvidenceSearch> {
     let after = 0
     while (true) {
-      const rows = this.db.prepare('SELECT rowid, key FROM ai_evidence_searches WHERE job_id = ? AND rowid > ? ORDER BY rowid LIMIT 64')
+      const rows = this.prepare('SELECT rowid, key FROM ai_evidence_searches WHERE job_id = ? AND rowid > ? ORDER BY rowid LIMIT 64')
         .all(this.id, after) as { rowid: number; key: string }[]
       if (!rows.length) return
       for (const row of rows) { after = row.rowid; yield this.getSearch(row.key)! }
     }
   }
   lastPageMetadata(searchKey: string): { remaining?: number; offset?: number } | undefined {
-    const row = this.db.prepare(`SELECT object_hash FROM ai_evidence_pages
+    const row = this.prepare(`SELECT object_hash FROM ai_evidence_pages
       WHERE job_id = ? AND search_key = ? ORDER BY sequence DESC LIMIT 1`)
       .get(this.id, searchKey) as { object_hash: string } | undefined
     return row ? this.get<PageManifest>(row.object_hash).data : undefined
   }
   searchSummary(search: EvidenceSearch): AiEvidenceQueryResult {
-    const row = this.db.prepare(`SELECT object_hash FROM ai_evidence_pages
+    const row = this.prepare(`SELECT object_hash FROM ai_evidence_pages
       WHERE job_id = ? AND search_key = ? ORDER BY sequence DESC LIMIT 1`)
       .get(this.id, search.key) as { object_hash: string } | undefined
     const manifest = row ? this.get<PageManifest>(row.object_hash) : undefined
@@ -294,22 +348,22 @@ export class AiEvidenceArchive {
         originalBytes: search.responseBytes, completed: search.cursor === null } }
   }
   readRecord<T>(key: string): T | undefined {
-    const row = this.db.prepare('SELECT object_hash FROM ai_evidence_records WHERE job_id = ? AND key = ?')
+    const row = this.prepare('SELECT object_hash FROM ai_evidence_records WHERE job_id = ? AND key = ?')
       .get(this.id, key) as { object_hash: string } | undefined
     return row ? this.get<T>(row.object_hash) : undefined
   }
   sourceCount(): number {
-    return (this.db.prepare('SELECT count(DISTINCT source_id) AS count FROM ai_evidence_records WHERE job_id = ?')
+    return (this.prepare('SELECT count(DISTINCT source_id) AS count FROM ai_evidence_records WHERE job_id = ?')
       .get(this.id) as { count: number }).count
   }
 
   private record(key: string, kind: string, sourceId: string, data: unknown, deckKey: string | null = null): string {
     const hash = this.put(canonical(data))
-    const existing = this.db.prepare('SELECT object_hash, deck_key FROM ai_evidence_records WHERE job_id = ? AND key = ?')
+    const existing = this.prepare('SELECT object_hash, deck_key FROM ai_evidence_records WHERE job_id = ? AND key = ?')
       .get(this.id, key) as { object_hash: string; deck_key: string | null } | undefined
     if (existing && (existing.object_hash !== hash || existing.deck_key !== deckKey))
       throw new Error('Una prova è cambiata nello stesso snapshot di analisi.')
-    this.db.prepare('INSERT OR IGNORE INTO ai_evidence_records VALUES (?, ?, ?, ?, ?, ?)')
+    this.prepare('INSERT OR IGNORE INTO ai_evidence_records VALUES (?, ?, ?, ?, ?, ?)')
       .run(this.id, key, kind, sourceId, deckKey, hash)
     return hash
   }
@@ -359,7 +413,7 @@ export class AiEvidenceArchive {
   appendPage(searchKey: string, cursor: unknown, result: AiEvidenceQueryResult, next: unknown | null): boolean {
     return this.atomic(() => {
       const cursorKey = evidenceHash(cursor)
-      const prior = this.db.prepare(`SELECT fingerprint FROM ai_evidence_pages
+      const prior = this.prepare(`SELECT fingerprint FROM ai_evidence_pages
         WHERE job_id = ? AND search_key = ? AND cursor_key = ?`)
         .get(this.id, searchKey, cursorKey) as { fingerprint: string } | undefined
       if (prior) {
@@ -373,9 +427,9 @@ export class AiEvidenceArchive {
       const manifest = this.manifest(result)
       const hash = this.put(manifest, [...manifest.cards?.map((card) => card.object) ?? [],
         ...manifest.lists?.flatMap((list) => [list.cards, ...list.occurrences ?? []]) ?? []])
-      this.db.prepare('INSERT INTO ai_evidence_pages VALUES (?, ?, ?, ?, ?, ?)')
+      this.prepare('INSERT INTO ai_evidence_pages VALUES (?, ?, ?, ?, ?, ?)')
         .run(this.id, searchKey, cursorKey, search.pages, result.fingerprint, hash)
-      this.db.prepare(`UPDATE ai_evidence_searches SET cursor_json = ?, pages = pages + 1,
+      this.prepare(`UPDATE ai_evidence_searches SET cursor_json = ?, pages = pages + 1,
         response_bytes = response_bytes + ? WHERE job_id = ? AND key = ?`)
         .run(next === null ? null : JSON.stringify(next), Buffer.byteLength(JSON.stringify(result)), this.id, searchKey)
       return true
@@ -385,9 +439,9 @@ export class AiEvidenceArchive {
   *pages(searchKey?: string): Generator<AiEvidenceQueryResult> {
     let after = 0
     while (true) {
-      const rows = this.db.prepare(`SELECT rowid, object_hash FROM ai_evidence_pages
-        WHERE job_id = ? AND rowid > ? AND (? IS NULL OR search_key = ?) ORDER BY rowid LIMIT 64`)
-        .all(this.id, after, searchKey ?? null, searchKey ?? null) as { rowid: number; object_hash: string }[]
+      const rows = this.prepare(`SELECT rowid, object_hash FROM ai_evidence_pages
+        WHERE job_id = ? AND rowid > ? ${searchKey === undefined ? '' : 'AND search_key = ?'} ORDER BY rowid LIMIT 64`)
+        .all(this.id, after, ...(searchKey === undefined ? [] : [searchKey])) as { rowid: number; object_hash: string }[]
       if (!rows.length) return
       for (const row of rows) {
         after = row.rowid
@@ -398,7 +452,7 @@ export class AiEvidenceArchive {
   page(searchKey: string, sequence: number): AiEvidenceQueryResult | null {
     if (!/^[a-f0-9]{64}$/.test(searchKey) || !Number.isSafeInteger(sequence) || sequence < 0)
       throw new Error('Pagina delle prove non valida.')
-    const row = this.db.prepare(`SELECT object_hash FROM ai_evidence_pages
+    const row = this.prepare(`SELECT object_hash FROM ai_evidence_pages
       WHERE job_id = ? AND search_key = ? AND sequence = ?`).get(this.id, searchKey, sequence) as { object_hash: string } | undefined
     return row ? this.expandPage(row.object_hash) : null
   }
@@ -419,10 +473,11 @@ export class AiEvidenceArchive {
     while (true) {
       // Never keep a SQLite cursor open while an async consumer calls the model
       // or updates diagnostics through another connection to this database.
-      const rows = this.db.prepare(`SELECT * FROM ai_evidence_records WHERE job_id = ?
-        AND (? IS NULL OR kind = ?) AND (? IS NULL OR key > ?)
+      const rows = this.prepare(`SELECT * FROM ai_evidence_records WHERE job_id = ?
+        ${kind === undefined ? '' : 'AND kind = ?'} ${after === null ? '' : 'AND key > ?'}
         ${sourceIds ? `AND source_id IN (${sourceIds.map(() => '?').join(',')})` : ''}
-        ORDER BY key LIMIT 64`).all(this.id, kind ?? null, kind ?? null, after, after, ...sourceIds ?? []) as {
+        ORDER BY key LIMIT 64`).all(this.id, ...(kind === undefined ? [] : [kind]),
+          ...(after === null ? [] : [after]), ...sourceIds ?? []) as {
           key: string; kind: string; source_id: string; deck_key: string | null; object_hash: string }[]
       if (!rows.length) return
       for (const row of rows) {
@@ -432,12 +487,12 @@ export class AiEvidenceArchive {
     }
   }
   counts(): EvidenceArchiveCounts {
-    const result = this.db.prepare(`SELECT count(*) AS searches,
+    const result = this.prepare(`SELECT count(*) AS searches,
       count(*) FILTER (WHERE cursor_json IS NULL) AS completedSearches,
       coalesce(sum(pages), 0) AS pages, coalesce(sum(response_bytes), 0) AS responseBytes
       FROM ai_evidence_searches WHERE job_id = ?`).get(this.id) as Pick<EvidenceArchiveCounts,
       'searches' | 'completedSearches' | 'pages' | 'responseBytes'>
-    const counts = new Map((this.db.prepare(`SELECT kind, count(*) AS count FROM ai_evidence_records
+    const counts = new Map((this.prepare(`SELECT kind, count(*) AS count FROM ai_evidence_records
       WHERE job_id = ? GROUP BY kind`).all(this.id) as { kind: string; count: number }[])
       .map((row) => [row.kind, row.count]))
     return { ...result, cards: counts.get('card') ?? 0, decks: counts.get('deck') ?? 0,
@@ -448,7 +503,7 @@ export class AiEvidenceArchive {
   *deckStatistics(): Generator<EvidenceDeckStatistics> {
     let after = ''
     while (true) {
-      const decks = this.db.prepare(`SELECT deck_key FROM ai_evidence_records
+      const decks = this.prepare(`SELECT deck_key FROM ai_evidence_records
         WHERE job_id = ? AND kind = 'occurrence' AND deck_key > ? GROUP BY deck_key ORDER BY deck_key LIMIT 64`)
         .all(this.id, after) as { deck_key: string }[]
       if (!decks.length) return
@@ -459,7 +514,7 @@ export class AiEvidenceArchive {
           placements: [], scope: 'observed-participations-against-event-field' }
         const events = new Set<string>(), placements = new Map<number, number>()
         for (const record of this.db.prepare(`SELECT object_hash FROM ai_evidence_records
-          WHERE job_id = ? AND kind = 'occurrence' AND deck_key = ? ORDER BY key`)
+          WHERE job_id = ? AND kind = 'occurrence' AND deck_key = ?`)
           .iterate(this.id, row.deck_key) as Iterable<{ object_hash: string }>) {
           const item = this.get<{ id: string; placing?: number | null;
             record?: { wins: number; losses: number; ties: number } | null }>(record.object_hash)

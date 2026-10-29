@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { statementCache } from './database-statements'
 import type { AiJobActivityPage, AiJobActivityStep, AiJobKind, AiJobPhase, AiJobProgress, AiJobStatus, AiJobSummary } from '../shared/ai-job'
 import { readAiDiagnostics, type AiDiagnostics } from '../shared/ai-diagnostics'
 import { AI_EVIDENCE_ARCHIVE_SCHEMA } from './ai-evidence-archive'
@@ -22,7 +23,7 @@ function progress(row: { progress_json: string | null }): AiJobProgress | null {
   if (!row.progress_json) return null
   try {
     const value = JSON.parse(row.progress_json) as Partial<AiJobProgress>
-    const phases: AiJobPhase[] = ['preparing', 'catalog', 'events', 'planning',
+    const phases: AiJobPhase[] = ['preparing', 'catalog', 'events', 'planning', 'collecting',
       'analysis', 'verification', 'saving']
     if (!value || !phases.includes(value.phase!) || typeof value.detail !== 'string' ||
       (value.summary !== null && typeof value.summary !== 'string') ||
@@ -47,11 +48,13 @@ function job(row: JobRow): AiJob {
 
 export class AiJobStore {
   private readonly db: DatabaseSync
+  private readonly statement: ReturnType<typeof statementCache>
 
   constructor(readonly filePath: string) {
     mkdirSync(dirname(filePath), { recursive: true })
     this.db = new DatabaseSync(filePath)
-    this.db.exec('PRAGMA journal_mode = WAL')
+    this.statement = statementCache(this.db)
+    this.db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL')
     this.db.exec('PRAGMA foreign_keys = ON')
     this.db.exec(`CREATE TABLE IF NOT EXISTS ai_jobs (
       id TEXT PRIMARY KEY,
@@ -66,8 +69,9 @@ export class AiJobStore {
     ) STRICT;
     CREATE UNIQUE INDEX IF NOT EXISTS ai_jobs_active_resource
       ON ai_jobs(project_id, resource_id) WHERE status IN ('running', 'ready');
-    CREATE INDEX IF NOT EXISTS ai_jobs_recovery ON ai_jobs(status, updated_at);`)
-    const columns = this.db.prepare('PRAGMA table_info(ai_jobs)').all() as { name: string }[]
+    CREATE INDEX IF NOT EXISTS ai_jobs_recovery ON ai_jobs(status, updated_at);
+    CREATE INDEX IF NOT EXISTS ai_jobs_resource_history ON ai_jobs(project_id, resource_id, created_at);`)
+    const columns = this.statement('PRAGMA table_info(ai_jobs)').all() as { name: string }[]
     if (!columns.some((column) => column.name === 'progress_json'))
       this.db.exec('ALTER TABLE ai_jobs ADD COLUMN progress_json TEXT')
     this.db.exec(`CREATE TABLE IF NOT EXISTS ai_job_activity (
@@ -91,14 +95,14 @@ export class AiJobStore {
   }
 
   start(kind: AiJobKind, projectId: string, resourceId: string): AiJob {
-    const paused = this.db.prepare(`SELECT progress_json FROM ai_jobs
+    const paused = this.statement(`SELECT progress_json FROM ai_jobs
       WHERE project_id = ? AND resource_id = ? AND status = 'interrupted'`).all(projectId, resourceId) as
       { progress_json: string | null }[]
     if (paused.some((row) => progress(row)?.diagnostics?.resumable))
       throw new Error('Riprendi o annulla prima l’analisi in pausa.')
     const id = randomUUID()
     const now = new Date().toISOString()
-    this.db.prepare(`INSERT INTO ai_jobs (id, kind, project_id, resource_id, status,
+    this.statement(`INSERT INTO ai_jobs (id, kind, project_id, resource_id, status,
       request_json, result_json, created_at, updated_at, error)
       VALUES (?, ?, ?, ?, 'running', NULL, NULL, ?, ?, NULL)`)
       .run(id, kind, projectId, resourceId, now, now)
@@ -107,12 +111,12 @@ export class AiJobStore {
 
   get(id: string): AiJob | null {
     if (!/^[a-f0-9-]{36}$/i.test(id)) return null
-    const row = this.db.prepare('SELECT * FROM ai_jobs WHERE id = ?').get(id) as JobRow | undefined
+    const row = this.statement('SELECT * FROM ai_jobs WHERE id = ?').get(id) as JobRow | undefined
     return row ? job(row) : null
   }
 
   active(projectId: string, resourceId: string): AiJobSummary | null {
-    const row = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
+    const row = this.statement(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
       FROM ai_jobs WHERE project_id = ? AND resource_id = ?
       AND status IN ('running', 'ready') LIMIT 1`).get(projectId, resourceId) as JobRow | undefined
     if (!row) return null
@@ -122,7 +126,7 @@ export class AiJobStore {
   }
 
   latest(projectId: string, resourceId: string): AiJobSummary | null {
-    const row = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
+    const row = this.statement(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
       FROM ai_jobs WHERE project_id = ? AND resource_id = ?
       ORDER BY created_at DESC, rowid DESC LIMIT 1`).get(projectId, resourceId) as JobRow | undefined
     return row ? { id: row.id, kind: row.kind, projectId: row.project_id, resourceId: row.resource_id,
@@ -131,7 +135,7 @@ export class AiJobStore {
   }
 
   recent(limit = 30): AiJobSummary[] {
-    const rows = this.db.prepare(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
+    const rows = this.statement(`SELECT id, kind, project_id, resource_id, status, created_at, updated_at, error, progress_json
       FROM ai_jobs ORDER BY rowid DESC LIMIT ?`).all(limit) as unknown as JobRow[]
     return rows.map((row) => ({ id: row.id, kind: row.kind, projectId: row.project_id,
       resourceId: row.resource_id, status: row.status, createdAt: row.created_at,
@@ -139,7 +143,7 @@ export class AiJobStore {
   }
 
   updateProgress(id: string, phase: AiJobPhase, detail: string, summary?: string): void {
-    const current = this.db.prepare('SELECT status, progress_json FROM ai_jobs WHERE id = ?')
+    const current = this.statement('SELECT status, progress_json FROM ai_jobs WHERE id = ?')
       .get(id) as { status: AiJobStatus; progress_json: string | null } | undefined
     if (!current || current.status !== 'running') return
     const at = new Date().toISOString()
@@ -153,9 +157,9 @@ export class AiJobStore {
         { phase, detail: cleanDetail, at }].slice(-12) }
     this.transaction(() => {
       this.ensureActivity(id, previous)
-      this.db.prepare(`UPDATE ai_jobs SET progress_json = ?, updated_at = ?
+      this.statement(`UPDATE ai_jobs SET progress_json = ?, updated_at = ?
         WHERE id = ? AND status = 'running'`).run(JSON.stringify(next), at, id)
-      this.db.prepare(`INSERT INTO ai_job_activity (job_id, phase, detail, summary, at)
+      this.statement(`INSERT INTO ai_job_activity (job_id, phase, detail, summary, at)
         VALUES (?, ?, ?, ?, ?)`).run(id, phase, cleanDetail, cleanSummary, at)
     })
   }
@@ -174,9 +178,9 @@ export class AiJobStore {
   }
 
   private ensureActivity(id: string, previous: AiJobProgress | null): void {
-    const existing = this.db.prepare('SELECT 1 FROM ai_job_activity WHERE job_id = ? LIMIT 1').get(id)
+    const existing = this.statement('SELECT 1 FROM ai_job_activity WHERE job_id = ? LIMIT 1').get(id)
     if (existing || !previous?.steps.length) return
-    const insert = this.db.prepare(`INSERT INTO ai_job_activity (job_id, phase, detail, summary, at)
+    const insert = this.statement(`INSERT INTO ai_job_activity (job_id, phase, detail, summary, at)
       VALUES (?, ?, ?, ?, ?)`)
     previous.steps.forEach((step, index) => insert.run(id, step.phase, step.detail,
       index === previous.steps.length - 1 ? previous.summary : null, step.at))
@@ -187,27 +191,27 @@ export class AiJobStore {
     if (!/^[a-f0-9-]{36}$/i.test(jobId) ||
       before !== undefined && (!Number.isSafeInteger(before) || before < 1) ||
       !Number.isSafeInteger(limit) || limit < 1 || limit > 50) return null
-    const row = this.db.prepare(`SELECT progress_json FROM ai_jobs
+    const row = this.statement(`SELECT progress_json FROM ai_jobs
       WHERE id = ? AND project_id = ? AND resource_id = ?`).get(jobId, projectId, resourceId) as
       { progress_json: string | null } | undefined
     if (!row) return null
     const legacy = progress(row)
-    if (legacy?.steps.length && !this.db.prepare('SELECT 1 FROM ai_job_activity WHERE job_id = ? LIMIT 1').get(jobId))
+    if (legacy?.steps.length && !this.statement('SELECT 1 FROM ai_job_activity WHERE job_id = ? LIMIT 1').get(jobId))
       this.transaction(() => this.ensureActivity(jobId, legacy))
-    const entries = this.db.prepare(`SELECT id, phase, detail, summary, at FROM ai_job_activity
-      WHERE job_id = ? AND (? IS NULL OR id < ?)
-      ORDER BY id DESC LIMIT ?`).all(jobId, before ?? null, before ?? null, limit + 1) as unknown as
+    const entries = this.statement(`SELECT id, phase, detail, summary, at FROM ai_job_activity
+      WHERE job_id = ? ${before === undefined ? '' : 'AND id < ?'}
+      ORDER BY id DESC LIMIT ?`).all(jobId, ...(before === undefined ? [] : [before]), limit + 1) as unknown as
       AiJobActivityStep[]
     return { steps: entries.slice(0, limit).reverse(), hasMore: entries.length > limit }
   }
 
   recoverable(): AiJob[] {
-    return (this.db.prepare(`SELECT * FROM ai_jobs WHERE status IN ('running', 'ready')
+    return (this.statement(`SELECT * FROM ai_jobs WHERE status IN ('running', 'ready')
       ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)
   }
 
   automaticResumable(): AiJob[] {
-    return (this.db.prepare(`SELECT * FROM ai_jobs WHERE status = 'interrupted'
+    return (this.statement(`SELECT * FROM ai_jobs WHERE status = 'interrupted'
       AND json_extract(progress_json, '$.diagnostics.resumable') = 1
       AND json_extract(progress_json, '$.diagnostics.suspensionReason') = 'shutdown'
       ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)
@@ -217,49 +221,49 @@ export class AiJobStore {
    * Context, invalid content and no-progress failures keep their original state. */
   retryAfterIntervention(id: string): void {
     if (this.get(id)?.status !== 'interrupted') throw new Error('Analisi non riprendibile.')
-    this.db.prepare(`DELETE FROM ai_call_state WHERE job_id = ?
+    this.statement(`DELETE FROM ai_call_state WHERE job_id = ?
       AND json_extract(state_json, '$.status') = 'blocked'
       AND json_extract(state_json, '$.code') IN ('network', 'timeout', 'quota', 'auth',
         'cli-unavailable', 'storage', 'storage-full')`).run(id)
   }
 
   recordDiagnostics(id: string, change: AiDiagnostics): void {
-    const current = this.db.prepare('SELECT status, progress_json FROM ai_jobs WHERE id = ?')
+    const current = this.statement('SELECT status, progress_json FROM ai_jobs WHERE id = ?')
       .get(id) as { status: AiJobStatus; progress_json: string | null } | undefined
     if (!current || !['running', 'ready', 'cancelled', 'interrupted'].includes(current.status)) return
     const at = new Date().toISOString()
     const prior = progress(current) ?? { phase: 'preparing' as const, detail: 'Preparazione',
       summary: null, updatedAt: at, steps: [] }
-    this.db.prepare('UPDATE ai_jobs SET progress_json = ? WHERE id = ?')
+    this.statement('UPDATE ai_jobs SET progress_json = ? WHERE id = ?')
       .run(JSON.stringify({ ...prior, diagnostics: readAiDiagnostics({ ...prior.diagnostics, ...change }) }), id)
   }
 
   diagnostics(id: string): AiDiagnostics | undefined {
-    const row = this.db.prepare('SELECT progress_json FROM ai_jobs WHERE id = ?')
+    const row = this.statement('SELECT progress_json FROM ai_jobs WHERE id = ?')
       .get(id) as { progress_json: string | null } | undefined
     return row ? progress(row)?.diagnostics : undefined
   }
 
   callState(id: string, key: string): AiCallState | undefined {
-    const row = this.db.prepare('SELECT state_json FROM ai_call_state WHERE job_id = ? AND key = ?').get(id, key) as
+    const row = this.statement('SELECT state_json FROM ai_call_state WHERE job_id = ? AND key = ?').get(id, key) as
       { state_json: string } | undefined
     return row ? JSON.parse(row.state_json) as AiCallState : undefined
   }
   saveCallState(id: string, key: string, state: AiCallState): void {
-    this.db.prepare(`INSERT INTO ai_call_state VALUES (?, ?, ?) ON CONFLICT(job_id, key)
+    this.statement(`INSERT INTO ai_call_state VALUES (?, ?, ?) ON CONFLICT(job_id, key)
       DO UPDATE SET state_json = excluded.state_json`).run(id, key, JSON.stringify(state))
   }
   callResult<T>(id: string, key: string): { value: T } | undefined {
-    const row = this.db.prepare('SELECT result_json FROM ai_call_cache WHERE job_id = ? AND key = ?').get(id, key) as
+    const row = this.statement('SELECT result_json FROM ai_call_cache WHERE job_id = ? AND key = ?').get(id, key) as
       { result_json: string } | undefined
     return row ? { value: JSON.parse(row.result_json) as T } : undefined
   }
   saveCallResult(id: string, key: string, result: unknown): void {
-    this.db.prepare('INSERT OR IGNORE INTO ai_call_cache VALUES (?, ?, ?)').run(id, key, JSON.stringify(result))
+    this.statement('INSERT OR IGNORE INTO ai_call_cache VALUES (?, ?, ?)').run(id, key, JSON.stringify(result))
   }
 
   runtimeFacts(id: string): { requestPrepared: boolean; validatedDraft: boolean | null; resultPrepared: boolean } {
-    const row = this.db.prepare(`SELECT request_json IS NOT NULL AS requestPrepared,
+    const row = this.statement(`SELECT request_json IS NOT NULL AS requestPrepared,
       CASE WHEN json_valid(request_json) THEN json_extract(request_json, '$.validatedDraft') END AS validatedDraft,
       result_json IS NOT NULL AS resultPrepared FROM ai_jobs WHERE id = ?`).get(id) as
       { requestPrepared: number; validatedDraft: number | null; resultPrepared: number }
@@ -269,12 +273,12 @@ export class AiJobStore {
 
   suspend(id: string, error: string, reason: NonNullable<AiDiagnostics['suspensionReason']> = 'failure'): void {
     this.recordDiagnostics(id, { resumable: true, suspensionReason: reason })
-    this.db.prepare(`UPDATE ai_jobs SET status = 'interrupted', error = ?, updated_at = ?
+    this.statement(`UPDATE ai_jobs SET status = 'interrupted', error = ?, updated_at = ?
       WHERE id = ? AND status IN ('running', 'interrupted')`).run(error, new Date().toISOString(), id)
   }
 
   resume(id: string): AiJob {
-    const result = this.db.prepare(`UPDATE ai_jobs SET status = 'running', error = NULL, updated_at = ?
+    const result = this.statement(`UPDATE ai_jobs SET status = 'running', error = NULL, updated_at = ?
       WHERE id = ? AND status = 'interrupted'`).run(new Date().toISOString(), id)
     if (result.changes !== 1) throw new Error('Analisi non riprendibile.')
     this.recordDiagnostics(id, { resumable: false, failureCode: undefined, suspensionReason: undefined, automaticWait: false })
@@ -282,27 +286,27 @@ export class AiJobStore {
   }
 
   prepare(id: string, request: unknown): void {
-    const changed = this.db.prepare(`UPDATE ai_jobs SET request_json = ?, updated_at = ?
+    const changed = this.statement(`UPDATE ai_jobs SET request_json = ?, updated_at = ?
       WHERE id = ? AND status = 'running'`).run(JSON.stringify(request), new Date().toISOString(), id)
     if (changed.changes !== 1) throw new Error('Job AI non più attivo.')
   }
 
   ready(id: string, result: unknown): void {
-    const changed = this.db.prepare(`UPDATE ai_jobs SET result_json = ?, status = 'ready', updated_at = ?
+    const changed = this.statement(`UPDATE ai_jobs SET result_json = ?, status = 'ready', updated_at = ?
       WHERE id = ? AND status = 'running'`).run(JSON.stringify(result), new Date().toISOString(), id)
     if (changed.changes !== 1) throw new Error('Job AI non più attivo.')
   }
 
   transition(id: string, status: Exclude<AiJobStatus, 'running' | 'ready'>,
     error: string | null = null): void {
-    this.db.prepare(`UPDATE ai_jobs SET status = ?, error = ?, updated_at = ?,
+    this.statement(`UPDATE ai_jobs SET status = ?, error = ?, updated_at = ?,
       request_json = NULL, result_json = NULL
       WHERE id = ? AND (status IN ('running', 'ready') OR (status = 'interrupted' AND ? = 'cancelled'))`)
       .run(status, error, new Date().toISOString(), id, status)
   }
 
   noteError(id: string, error: string): void {
-    this.db.prepare(`UPDATE ai_jobs SET error = ?, updated_at = ?
+    this.statement(`UPDATE ai_jobs SET error = ?, updated_at = ?
       WHERE id = ? AND status IN ('running', 'ready')`)
       .run(error.slice(0, 500), new Date().toISOString(), id)
   }

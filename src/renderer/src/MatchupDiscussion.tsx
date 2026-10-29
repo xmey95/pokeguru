@@ -14,9 +14,11 @@ export interface RevisionInFlight {
 const date = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 const revisionLabel = (index: number) => index === 0 ? 'Guida iniziale' : `Revisione ${index}`
 
-export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, onRetry, onContinue,
+export function MatchupDiscussion({ discussion, onOlder, olderLoading, feedback, onFeedback, onSubmit, onRetry, onContinue,
   onOpenCatalogCard, cardTargets, generating, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached, aiControls }: {
   discussion: Discussion
+  onOlder(): void
+  olderLoading: boolean
   feedback: string
   onFeedback(value: string): void
   onSubmit(): void
@@ -40,7 +42,7 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
     ? { id: 'submitting', feedback: submitting.feedback, createdAt: submitting.createdAt, report: null, changeSummary: null } : null
   const latest = pending ?? optimistic ?? discussion.turns.at(-1)
   const previous = discussion.turns.filter((turn) => turn.id !== latest?.id)
-  const latestIndex = optimistic ? discussion.turns.length : discussion.turns.findIndex((turn) => turn.id === latest?.id)
+  const latestIndex = optimistic ? (discussion.turnCount ?? discussion.turns.length) : latest?.turnNo ?? discussion.turns.findIndex((turn) => turn.id === latest?.id)
   const text = (value: string, turn: MatchupTurn, list = false) => <GuideText key={`${turn.id}:${value}`} text={value} list={list}
     references={turn.report ? reportGuideReferences(turn.report, cardTargets) : []} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />
   const exchange = (turn: MatchupTurn) => <>
@@ -84,10 +86,12 @@ export function MatchupDiscussion({ discussion, feedback, onFeedback, onSubmit, 
     </button></div>}
     {absentFromMeta && <p className="content-note">Avversario assente dal meta attuale. Guida consultabile.</p>}
     {previous.length > 0 && <details className="discussion-history" id={`discussion-history-${discussion.id}`}>
-      <summary>Revisioni precedenti ({previous.length})</summary>
+      <summary>Revisioni precedenti ({Math.max(0, (discussion.turnCount ?? discussion.turns.length) - 1)})</summary>
+      {(discussion.turns[0]?.turnNo ?? 0) > 0 && <button type="button" className="secondary-button"
+        disabled={olderLoading} onClick={onOlder}>{olderLoading ? 'Caricamento…' : 'Carica revisioni precedenti'}</button>}
       <div className="discussion-history-list">
         {[...previous].reverse().map((turn) => <article className="discussion-history-item" key={turn.id}>
-          <div className="discussion-turn-heading"><span>{revisionLabel(discussion.turns.indexOf(turn))} <span className="discussion-date">· <time dateTime={turn.createdAt}>{date(turn.createdAt)}</time></span></span></div>
+          <div className="discussion-turn-heading"><span>{revisionLabel(turn.turnNo ?? discussion.turns.indexOf(turn))} <span className="discussion-date">· <time dateTime={turn.createdAt}>{date(turn.createdAt)}</time></span></span></div>
           {exchange(turn)}
           {turn.report && <details className="discussion-version" id={`discussion-version-${turn.id}`}>
             <summary>Leggi versione</summary>

@@ -73,6 +73,16 @@ jobs:
         env:
           POKEGURU_WORKER_E2E: '1'
         run: npx vitest run tests/ai-worker-responsive-electron.test.ts
+      - name: Verify local collection and paged histories on Linux
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a node tests/ai-collection-ui-live.mjs
+          xvfb-run -a node tests/history-pagination-ui.mjs
+      - name: Verify local collection and paged histories on Windows and macOS
+        if: runner.os != 'Linux'
+        run: |
+          node tests/ai-collection-ui-live.mjs
+          node tests/history-pagination-ui.mjs
       - name: Check desktop feedback flows on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/desktop-feedback-ui.mjs

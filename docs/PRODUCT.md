@@ -4,6 +4,8 @@
 
 ## Visione e confini
 
+**Manutenzione locale APP-174–176 (29-10-2026, non ancora pubblicata):** la raccolta AI distingue avanzamento e tempi di lettura/salvataggio/verifica delle schede. L'audit trasversale introduce indici mirati, paginazione più efficiente e riepiloghi Eventi compatti, pagine profonde e storici caricati a blocchi nello schema 16, con backup verificato e conservazione di originali e checkpoint. Il rapporto [DATABASE-PERFORMANCE.md](DATABASE-PERFORMANCE.md) distingue benchmark locali, verifiche funzionali e limiti di verifica; non attesta la causa esatta del rallentamento sul profilo personale.
+
 Pokéguru rende strutturato il percorso: definire un'idea di mazzo, acquisire dati affidabili, costruire o importare una lista, confrontarla con liste dei tornei dello stesso circuito competitivo, consultare punti forti, debolezze e piani di gioco per i matchup del metagame, ottenere proposte motivate tramite sessioni Codex, decidere quali adottare e iterare. L'archivio carte e i dati pubblici dei tornei sono condivisi; progetti, vincoli, conversazioni e versioni restano separati. Il prodotto copre archetipi diversi. Nelle fasi avanzate l'utente potrà scegliere il motore AI; Codex è l'unico previsto per il primo MVP.
 
 L'obiettivo comprende i due percorsi «da zero» e «da lista» e la copertura delle carte pertinenti allo Standard del circuito supportato, incluse le promo. Le vecchie stampe fuori formato non vengono acquisite per gestire la loro eventuale ammissibilità tramite ristampe correnti. Il primo incremento utilizzabile e il primo MVP sono sottoinsiemi dichiarati in `PLAN.md`.

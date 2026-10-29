@@ -50,7 +50,7 @@ export function deckThreadPrompt(thread: DeckThread, base: DeckVersion | null, q
   const sources: DeckCandidate['sources'] = evidence.sources.map(({ id, label, url }) => ({ id, label, url }))
   let lastReply = -1
   thread.messages.forEach((message, index) => { if (message.author === 'assistant') lastReply = index })
-  const pendingNotes = thread.messages.slice(lastReply + 1)
+  const pendingNotes = thread.pendingNotes ?? thread.messages.slice(lastReply + 1)
     .filter((message) => message.author === 'user' && message.id !== thread.openingAiMessageId)
     .map((message) => message.text)
   const context = {

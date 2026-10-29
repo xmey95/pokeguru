@@ -113,6 +113,8 @@ La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e
 
 ## Sviluppo
 
+Il sorgente locale include l'audit e le ottimizzazioni SQLite con schema 16, non ancora pubblicati nella v0.3.7. Il passaggio crea un backup verificato prima dell'upgrade e conserva le analisi in sospeso. Include pagine Eventi profonde indicizzate, storici caricati a blocchi e riferimenti di conservazione incrementali. Misure e limiti sono nel [rapporto sulle prestazioni del database](docs/DATABASE-PERFORMANCE.md).
+
 Servono **Node.js 24 o successivo**, npm e un ambiente grafico. Dalla radice del repository:
 
 ```sh

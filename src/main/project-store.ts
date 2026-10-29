@@ -1,11 +1,13 @@
+import { ensureMatchupSummaries } from './matchup-summary-schema'
 import { createHash, randomUUID } from 'node:crypto'
+import { ensureRetentionIndex, retainedIds } from './retention-index'
 import { collectUnusedEvidence } from './ai-evidence-archive'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { parseDeck, type DeckBaseline, type ImportDeckInput, type ParsedDeck } from '../shared/deck-import'
 import type { MatchupNote, SaveMatchupNoteInput } from '../shared/matchups'
-import type { MatchupDiscussion, MatchupReport, MetaDeck, MetaSnapshot, MatchupTurn } from '../shared/meta-matchups'
+import type { MatchupDiscussion, MatchupDiscussionPage, MatchupReport, MetaDeck, MetaSnapshot, MatchupTurn } from '../shared/meta-matchups'
 import type { CreateProjectInput, Project } from '../shared/projects'
 import type { ClearLineMappingInput, DeckLineMapping, DeckReconciliation, IdentityTotal, MappedPrint, SaveLineMappingInput } from '../shared/reconciliation'
 import type { DeckConstraint, DeleteConstraintInput, SaveConstraintInput } from '../shared/constraints'
@@ -14,6 +16,18 @@ import type { AiRunConfig } from '../shared/ai'
 import { normalizeDeckCodes } from '../shared/deck-code-normalization'
 import type { StandardRuleAudit } from '../shared/standard-rule-audit'
 import type { ThreadEvidencePacket } from '../shared/thread-evidence'
+
+interface DiscussionRow {
+  id: string; project_id: string; meta_id: string; opponent_id: string; deck_hash: string
+  content_hash: string | null; deck_version_id: string | null; deck_resolution_id: string | null
+  parent_id: string | null; created_at: string; context_summary: string; summarized_through: number
+  row_id: number; turn_count: number; base_sequence: number | null; base_label: string | null
+}
+const discussionColumns = `d.id, d.project_id, d.meta_id, d.opponent_id, d.deck_hash, d.content_hash,
+  d.deck_version_id, d.deck_resolution_id, d.parent_id, d.created_at, d.summarized_through, d.rowid AS row_id,
+  (SELECT count(*) FROM matchup_turns WHERE discussion_id = d.id) AS turn_count,
+  (SELECT sequence FROM deck_versions WHERE id = d.deck_version_id) AS base_sequence,
+  (SELECT label FROM deck_version_annotations WHERE version_id = d.deck_version_id) AS base_label`
 
 interface ThreadMessageRow {
   row_id: number
@@ -122,7 +136,7 @@ export class ProjectStore {
   constructor(filePath: string) {
     mkdirSync(dirname(filePath), { recursive: true })
     this.db = new DatabaseSync(filePath)
-    this.db.exec('PRAGMA journal_mode = WAL')
+    this.db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL')
     this.db.exec('PRAGMA foreign_keys = ON')
     const needsLegacyMigration = (this.db.prepare('PRAGMA user_version').get() as
       { user_version: number }).user_version === 0
@@ -304,6 +318,7 @@ export class ProjectStore {
         this.db.exec('COMMIT')
       } catch (error) { this.db.exec('ROLLBACK'); throw error }
     }
+    this.db.exec('CREATE INDEX IF NOT EXISTS deck_thread_messages_author ON deck_thread_messages(thread_id, author, created_at)')
     this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS deck_thread_messages_ai_turn ON deck_thread_messages(thread_id, ai_turn_id) WHERE ai_turn_id IS NOT NULL')
     const evidenceColumns = new Set((this.db.prepare('PRAGMA table_info(deck_thread_messages)').all() as { name: string }[])
       .map((row) => row.name))
@@ -377,8 +392,28 @@ export class ProjectStore {
     if (!discussionColumns.has('content_hash')) this.db.exec('ALTER TABLE matchup_discussions ADD COLUMN content_hash TEXT')
     if (!discussionColumns.has('deck_version_id')) this.db.exec('ALTER TABLE matchup_discussions ADD COLUMN deck_version_id TEXT')
     if (!discussionColumns.has('deck_resolution_id')) this.db.exec('ALTER TABLE matchup_discussions ADD COLUMN deck_resolution_id TEXT')
+    // Query paths and child-side foreign keys: avoid scanning unrelated projects
+    // for each deleted version, Thread, discussion, or evidence object.
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS deck_threads_base ON deck_threads(base_version_id);
+      CREATE INDEX IF NOT EXISTS deck_adoptions_thread ON deck_adoptions(thread_id);
+      CREATE INDEX IF NOT EXISTS deck_adoptions_candidate ON deck_adoptions(candidate_id);
+      CREATE INDEX IF NOT EXISTS deck_restores_source ON deck_restores(source_version_id);
+      CREATE INDEX IF NOT EXISTS deck_resolution_head_revision ON deck_resolution_heads(revision_id);
+      CREATE INDEX IF NOT EXISTS matchup_reports_meta ON matchup_reports(meta_id);
+      CREATE INDEX IF NOT EXISTS matchup_discussions_parent ON matchup_discussions(parent_id);
+      CREATE INDEX IF NOT EXISTS matchup_discussions_meta ON matchup_discussions(meta_id);
+      CREATE INDEX IF NOT EXISTS matchup_discussions_opponent ON matchup_discussions(project_id, opponent_id, created_at);
+      CREATE INDEX IF NOT EXISTS matchup_discussions_recent ON matchup_discussions(project_id, created_at);
+      CREATE INDEX IF NOT EXISTS matchup_discussions_context ON matchup_discussions
+        (project_id, opponent_id, meta_id, coalesce(content_hash, deck_hash), created_at);
+      CREATE INDEX IF NOT EXISTS matchup_turns_job ON matchup_turns(json_extract(report_payload, '$.jobId'));
+      CREATE INDEX IF NOT EXISTS meta_snapshots_recent ON meta_snapshots(fetched_at);
+    `)
     if (needsLegacyMigration) this.migrateMatchupReports()
     this.scopeLegacyMatchupDiscussions()
+    ensureRetentionIndex(this.db)
+    ensureMatchupSummaries(this.db)
   }
 
   private migrateDeckVersions(): void {
@@ -666,6 +701,25 @@ export class ProjectStore {
   }
 
   listDeckVersions(projectId: string): DeckVersion[] {
+    return this.readDeckVersions(projectId)
+  }
+
+  listDeckVersionPage(projectId: string, before?: number): DeckVersion[] {
+    if (before !== undefined && (!Number.isSafeInteger(before) || before < 1)) throw new Error('Cursore non valido.')
+    return this.readDeckVersions(projectId, undefined, before, 50)
+  }
+
+  getDeckVersion(projectId: string, id: string): DeckVersion | null {
+    if (typeof id !== 'string') throw new Error('Versione non valida.')
+    return this.readDeckVersions(projectId, id)[0] ?? null
+  }
+
+  countDeckVersionsWithText(projectId: string, rawText: string): number {
+    return (this.db.prepare('SELECT count(*) AS n FROM deck_versions WHERE project_id = ? AND raw_text = ?')
+      .get(projectId, rawText) as { n: number }).n
+  }
+
+  private readDeckVersions(projectId: string, id?: string, before?: number, limit?: number): DeckVersion[] {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     const rows = this.db.prepare(`SELECT v.id, v.project_id, v.sequence, v.source, v.file_name,
       v.raw_text, v.parsed_json, v.created_at, a.thread_id, a.candidate_id,
@@ -677,8 +731,9 @@ export class ProjectStore {
       LEFT JOIN deck_restores restored ON restored.version_id = v.id
       LEFT JOIN deck_versions source ON source.id = restored.source_version_id
       LEFT JOIN deck_version_annotations annotation ON annotation.version_id = v.id
-      WHERE v.project_id = ? ORDER BY v.sequence DESC`)
-      .all(projectId) as {
+      WHERE v.project_id = ? ${id === undefined ? '' : 'AND v.id = ?'} ${before === undefined ? '' : 'AND v.sequence < ?'}
+      ORDER BY v.sequence DESC ${limit ? 'LIMIT 50' : ''}`)
+      .all(projectId, ...(id === undefined ? [] : [id]), ...(before === undefined ? [] : [before])) as {
         id: string; project_id: string; sequence: number; source: 'paste' | 'file'
         file_name: string | null; raw_text: string; parsed_json: string; created_at: string
         thread_id: string | null; candidate_id: string | null
@@ -702,13 +757,13 @@ export class ProjectStore {
       typeof input.note !== 'string' || input.label.trim().length > 80 ||
       input.note.trim().length > 1000 || input.label.includes('\0') || input.note.includes('\0'))
       throw new Error('Etichetta o nota della versione non valida.')
-    const version = this.listDeckVersions(input.projectId).find((item) => item.id === input.versionId)
+    const version = this.getDeckVersion(input.projectId, input.versionId)
     if (!version) throw new Error('Versione non trovata in questo progetto.')
     this.db.prepare(`INSERT INTO deck_version_annotations (version_id, label, note, updated_at)
       VALUES (?, ?, ?, ?) ON CONFLICT(version_id) DO UPDATE SET
       label = excluded.label, note = excluded.note, updated_at = excluded.updated_at`)
       .run(input.versionId, input.label.trim(), input.note.trim(), new Date().toISOString())
-    return this.listDeckVersions(input.projectId).find((item) => item.id === input.versionId)!
+    return this.getDeckVersion(input.projectId, input.versionId)!
   }
 
   private applyResolutionSnapshot(projectId: string, resolutionId: string | null,
@@ -742,9 +797,8 @@ export class ProjectStore {
         throw new Error('La lista principale è cambiata: riapri il confronto prima di ripristinare.')
       if (input.expectedResolutionId !== undefined && head.resolutionId !== input.expectedResolutionId)
         throw new Error('Le correzioni della lista sono cambiate: riapri il confronto prima di ripristinare.')
-      const versions = this.listDeckVersions(input.projectId)
-      const target = versions.find((item) => item.id === input.versionId)
-      const current = versions.find((item) => item.id === head.versionId)
+      const target = this.getDeckVersion(input.projectId, input.versionId)
+      const current = this.getDeckVersion(input.projectId, head.versionId)
       if (!target || !current) throw new Error('Versione non trovata in questo progetto.')
       if (target.id === current.id) throw new Error('Questa versione è già la lista principale.')
       const sameText = target.rawText === current.rawText
@@ -856,8 +910,6 @@ export class ProjectStore {
       t.base_resolution_id, t.parent_thread_id, t.seed_candidate_id,
       t.ai_session_ref, t.opening_ai_message_id, t.created_at, t.updated_at, v.sequence AS base_sequence,
       h.version_id AS current_version_id, rh.revision_id AS current_resolution_id,
-      COALESCE(t.seed_candidate_text, (SELECT raw_text FROM deck_thread_candidates WHERE id = t.seed_candidate_id),
-        (SELECT raw_text FROM deck_ai_candidates WHERE id = t.seed_candidate_id)) AS seed_candidate_text,
       (SELECT id FROM (
         SELECT id, sequence FROM deck_thread_candidates WHERE thread_id = t.id
         UNION ALL SELECT id, sequence FROM deck_ai_candidates WHERE thread_id = t.id
@@ -868,7 +920,7 @@ export class ProjectStore {
       WHERE t.project_id = ? ORDER BY t.created_at DESC, t.rowid DESC`).all(projectId) as {
         id: string; project_id: string; title: string; base_version_id: string | null
         base_resolution_id: string | null; parent_thread_id: string | null
-        seed_candidate_id: string | null; seed_candidate_text: string | null
+        seed_candidate_id: string | null
         ai_session_ref: string | null; opening_ai_message_id: string | null; created_at: string; updated_at: string
         base_sequence: number | null; current_version_id: string | null
         current_resolution_id: string | null; latest_candidate_id: string | null
@@ -879,7 +931,6 @@ export class ProjectStore {
       resolutionChanged: row.base_version_id === row.current_version_id &&
         row.base_resolution_id !== null && row.base_resolution_id !== row.current_resolution_id,
       parentThreadId: row.parent_thread_id, seedCandidateId: row.seed_candidate_id,
-      seedCandidateText: row.seed_candidate_text,
       currentVersionId: row.current_version_id,
       stale: row.base_version_id !== row.current_version_id,
       aiSessionRef: row.ai_session_ref, openingAiMessageId: row.opening_ai_message_id,
@@ -888,24 +939,7 @@ export class ProjectStore {
   }
 
   referencedTournamentSnapshotIds(): Set<string> {
-    const rows = this.db.prepare(`SELECT DISTINCT json_extract(event.value, '$.snapshotId') AS id
-      FROM deck_thread_messages AS message,
-        json_each(CASE WHEN json_valid(message.evidence_json) THEN message.evidence_json
-          ELSE '{}' END, '$.events') AS event
-      WHERE json_type(event.value, '$.snapshotId') = 'text'`).all() as { id: string }[]
-    const referenced = new Set(rows.map((row) => row.id))
-    for (const [table, column] of [['deck_thread_messages', 'evidence_json'],
-      ['matchup_reports', 'payload'], ['matchup_turns', 'report_payload']] as const) {
-      for (const row of this.db.prepare(`SELECT DISTINCT json_extract(list.value, '$.snapshotId') AS id
-        FROM ${table} AS evidence,
-          json_each(CASE WHEN json_valid(evidence.${column}) THEN evidence.${column} ELSE '{}' END,
-            '$.aiQueries.requests') AS request,
-          json_each(request.value, '$.data.lists') AS list
-        WHERE json_extract(request.value, '$.query.operation') = 'events.search'
-          AND json_type(list.value, '$.snapshotId') = 'text'`).all() as { id: string }[])
-        referenced.add(row.id)
-    }
-    return referenced
+    return retainedIds(this.db, 'snapshot')
   }
 
   getDeckThread(projectId: string, threadId: string): DeckThread | null {
@@ -922,6 +956,29 @@ export class ProjectStore {
     return this.readDeckThreads(projectId, threadId, 50)[0] ?? null
   }
 
+  getDeckThreadForAnalysis(projectId: string, threadId: string): DeckThread | null {
+    const thread = this.getDeckThreadWindow(projectId, threadId)
+    if (!thread) return null
+    const last = this.db.prepare(`SELECT created_at, rowid AS row_id FROM deck_thread_messages
+      WHERE thread_id = ? AND author = 'assistant' ORDER BY created_at DESC, rowid DESC LIMIT 1`)
+      .get(threadId) as { created_at: string; row_id: number } | undefined
+    const pending = this.db.prepare(`SELECT id, text FROM deck_thread_messages WHERE thread_id = ? AND author = 'user'
+      ${last ? 'AND (created_at, rowid) > (?, ?)' : ''} ORDER BY created_at, rowid`)
+      .all(threadId, ...(last ? [last.created_at, last.row_id] : [])) as { id: string; text: string }[]
+    return { ...thread, candidates: thread.candidates.slice(-1), messages: thread.messages.slice(-12),
+      pendingNotes: pending.filter((item) => item.id !== thread.openingAiMessageId).map((item) => item.text) }
+  }
+
+  hasDeckAiTurn(projectId: string, threadId: string, turnId: string): boolean {
+    return this.hasDeckThread(projectId, threadId) && !!this.db.prepare(`SELECT 1 FROM deck_thread_messages
+      WHERE thread_id = ? AND ai_turn_id = ?`).get(threadId, turnId)
+  }
+
+  getDeckCandidate(projectId: string, threadId: string, id: string): DeckCandidate | null {
+    if (!this.hasDeckThread(projectId, threadId)) return null
+    return this.readDeckCandidates(threadId, undefined, undefined, id)[0] ?? null
+  }
+
   getDeckThreadMessagesBefore(projectId: string, threadId: string,
     cursor: DeckThreadMessageCursor): DeckThreadMessagePage {
     if (!this.hasDeckThread(projectId, threadId)) throw new Error('Strategia non trovata in questo progetto.')
@@ -929,9 +986,9 @@ export class ProjectStore {
       throw new Error('Cursore della cronologia non valido.')
     const rows = this.db.prepare(`SELECT rowid AS row_id, id, text, created_at, author, ai_config_json,
       ai_turn_id, evidence_json, cited_source_ids_json FROM deck_thread_messages
-      WHERE thread_id = ? AND (created_at < ? OR (created_at = ? AND rowid < ?))
+      WHERE thread_id = ? AND (created_at, rowid) < (?, ?)
       ORDER BY created_at DESC, rowid DESC LIMIT 50`)
-      .all(threadId, cursor.createdAt, cursor.createdAt, cursor.rowId) as unknown as ThreadMessageRow[]
+      .all(threadId, cursor.createdAt, cursor.rowId) as unknown as ThreadMessageRow[]
     return { messages: rows.reverse().map(parseThreadMessage), oldestCursor: rows.length ? messageCursor(rows[0]) : null }
   }
 
@@ -964,10 +1021,6 @@ export class ProjectStore {
     const openingMessage = recentLimit ? this.db.prepare(`SELECT rowid AS row_id, id, text, created_at, author,
       ai_config_json, ai_turn_id, evidence_json, cited_source_ids_json FROM deck_thread_messages WHERE id = ? AND thread_id = ?`) : null
     const assistantExists = recentLimit ? this.db.prepare(`SELECT 1 FROM deck_thread_messages WHERE thread_id = ? AND author = 'assistant' LIMIT 1`) : null
-    const candidates = this.db.prepare(`SELECT id, parent_candidate_id, sequence, raw_text, parsed_json, note, origin, created_at
-      FROM deck_thread_candidates WHERE thread_id = ? ORDER BY sequence`)
-    const aiCandidates = this.db.prepare(`SELECT id, parent_candidate_id, sequence, raw_text, parsed_json, note, sources_json,
-      checks_json, ai_config_json, ai_turn_id, created_at FROM deck_ai_candidates WHERE thread_id = ? ORDER BY sequence`)
     return rows.map((row) => {
       const messageRows = messages.all(row.id) as unknown as ThreadMessageRow[]
       if (recentLimit) messageRows.reverse()
@@ -992,28 +1045,49 @@ export class ProjectStore {
         openingAiMessage: openingRow ? parseThreadMessage(openingRow) : null,
         openingAiPending: Boolean(openingRow && !assistantExists!.get(row.id))
       } : {}),
-      candidates: [...(candidates.all(row.id) as {
-        id: string; parent_candidate_id: string | null; sequence: number; raw_text: string; parsed_json: string
+      candidates: this.readDeckCandidates(row.id, undefined, recentLimit),
+      ...(recentLimit ? { candidateCount: (this.db.prepare(`SELECT
+        (SELECT count(*) FROM deck_thread_candidates WHERE thread_id = ?) +
+        (SELECT count(*) FROM deck_ai_candidates WHERE thread_id = ?) AS n`).get(row.id, row.id) as { n: number }).n } : {})
+    }})
+  }
+
+  getDeckThreadCandidatesBefore(projectId: string, threadId: string, before: number): DeckCandidate[] {
+    if (!this.hasDeckThread(projectId, threadId)) throw new Error('Strategia non trovata in questo progetto.')
+    if (!Number.isSafeInteger(before) || before < 1) throw new Error('Cursore non valido.')
+    return this.readDeckCandidates(threadId, before, 50)
+  }
+
+  private readDeckCandidates(threadId: string, before?: number, limit?: number, id?: string): DeckCandidate[] {
+    const candidates = this.db.prepare(`SELECT (SELECT v.sequence FROM deck_adoptions a JOIN deck_versions v ON v.id = a.version_id
+      WHERE a.candidate_id = c.id AND a.thread_id = c.thread_id ORDER BY v.sequence DESC LIMIT 1) AS adopted_sequence,
+      id, parent_candidate_id, sequence, raw_text, parsed_json, note, origin, created_at
+      FROM deck_thread_candidates c WHERE thread_id = ? ${before === undefined ? '' : 'AND sequence < ?'} ${id === undefined ? '' : 'AND id = ?'} ORDER BY sequence ${limit ? 'DESC LIMIT 50' : 'ASC'}`)
+    const aiCandidates = this.db.prepare(`SELECT (SELECT v.sequence FROM deck_adoptions a JOIN deck_versions v ON v.id = a.version_id
+      WHERE a.candidate_id = c.id AND a.thread_id = c.thread_id ORDER BY v.sequence DESC LIMIT 1) AS adopted_sequence,
+      id, parent_candidate_id, sequence, raw_text, parsed_json, note, sources_json,
+      checks_json, ai_config_json, ai_turn_id, created_at FROM deck_ai_candidates c WHERE thread_id = ? ${before === undefined ? '' : 'AND sequence < ?'} ${id === undefined ? '' : 'AND id = ?'} ORDER BY sequence ${limit ? 'DESC LIMIT 50' : 'ASC'}`)
+    return [...(candidates.all(threadId, ...(before === undefined ? [] : [before]), ...(id === undefined ? [] : [id])) as {
+        adopted_sequence: number | null; id: string; parent_candidate_id: string | null; sequence: number; raw_text: string; parsed_json: string
         note: string; origin: 'manual'; created_at: string
       }[]).map((candidate): DeckCandidate => ({
-        id: candidate.id, parentCandidateId: candidate.parent_candidate_id,
+        adoptedVersionNumber: candidate.adopted_sequence, id: candidate.id, parentCandidateId: candidate.parent_candidate_id,
         sequence: candidate.sequence, rawText: candidate.raw_text,
         parsed: JSON.parse(candidate.parsed_json) as ParsedDeck,
         note: candidate.note, origin: candidate.origin, createdAt: candidate.created_at,
         aiConfig: null, aiTurnId: null, sources: [], checks: []
-      })), ...(aiCandidates.all(row.id) as {
-        id: string; parent_candidate_id: string | null; sequence: number; raw_text: string; parsed_json: string; note: string
+      })), ...(aiCandidates.all(threadId, ...(before === undefined ? [] : [before]), ...(id === undefined ? [] : [id])) as {
+        adopted_sequence: number | null; id: string; parent_candidate_id: string | null; sequence: number; raw_text: string; parsed_json: string; note: string
         sources_json: string; checks_json: string; ai_config_json: string; ai_turn_id: string; created_at: string
       }[]).map((candidate): DeckCandidate => ({
-        id: candidate.id, parentCandidateId: candidate.parent_candidate_id,
+        adoptedVersionNumber: candidate.adopted_sequence, id: candidate.id, parentCandidateId: candidate.parent_candidate_id,
         sequence: candidate.sequence, rawText: candidate.raw_text,
         parsed: JSON.parse(candidate.parsed_json) as ParsedDeck,
         note: candidate.note, origin: 'ai', createdAt: candidate.created_at,
         aiConfig: JSON.parse(candidate.ai_config_json) as AiRunConfig, aiTurnId: candidate.ai_turn_id,
         sources: JSON.parse(candidate.sources_json) as DeckCandidate['sources'],
         checks: JSON.parse(candidate.checks_json) as string[]
-      }))].sort((a, b) => a.sequence - b.sequence)
-    }})
+      }))].sort((a, b) => a.sequence - b.sequence).slice(limit ? -limit : 0)
   }
 
   createDeckThread(input: CreateDeckThreadInput): DeckThread {
@@ -1091,13 +1165,13 @@ export class ProjectStore {
   assignDeckAiSession(projectId: string, threadId: string, sessionId: string): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
     if (!sessionId || sessionId.length > 200) throw new Error('Sessione Codex non valida.')
-    const thread = this.getDeckThread(projectId, threadId)
+    const thread = this.getDeckThreadWindow(projectId, threadId)
     if (!thread) throw new Error('Strategia non trovata in questo progetto.')
     if (thread.aiSessionRef && thread.aiSessionRef !== sessionId) throw new Error('La strategia ha già una sessione Codex diversa.')
     this.db.prepare(`UPDATE deck_threads SET ai_session_ref = ?, updated_at = ?
       WHERE id = ? AND project_id = ? AND (ai_session_ref IS NULL OR ai_session_ref = ?)`)
       .run(sessionId, new Date().toISOString(), threadId, projectId, sessionId)
-    return this.getDeckThread(projectId, threadId)!
+    return this.getDeckThreadWindow(projectId, threadId)!
   }
 
   saveDeckAiExchange(projectId: string, threadId: string, sessionId: string,
@@ -1105,7 +1179,7 @@ export class ProjectStore {
     proposal?: { rawText: string; note: string; sources: DeckCandidate['sources']; checks: string[] },
     evidence?: ThreadEvidencePacket, citedSourceIds: string[] = [], existingUserMessageId?: string): DeckThread {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    const thread = this.getDeckThread(projectId, threadId)
+    const thread = this.getDeckThreadWindow(projectId, threadId)
     if (!thread || thread.aiSessionRef !== sessionId) throw new Error('Sessione Codex non associata a questa strategia.')
     const userText = typeof question === 'string' ? question.trim() : ''
     const aiText = typeof answer === 'string' ? answer.trim() : ''
@@ -1125,10 +1199,10 @@ export class ProjectStore {
       throw new Error('La proposta Codex non contiene una lista completa di 60 carte.')
     const now = new Date().toISOString()
     if (existingUserMessageId) {
-      const existing = thread.messages.find((message) => message.id === existingUserMessageId)
+      const existing = thread.openingAiMessage
       if (thread.openingAiMessageId !== existingUserMessageId || !existing ||
         existing.author !== 'user' || existing.text !== userText ||
-        thread.messages.some((message) => message.author === 'assistant'))
+        !thread.openingAiPending)
         throw new Error('Primo messaggio Codex non recuperabile.')
     }
     this.db.exec('BEGIN IMMEDIATE')
@@ -1154,7 +1228,7 @@ export class ProjectStore {
       this.db.prepare('UPDATE deck_threads SET updated_at = ? WHERE id = ?').run(now, threadId)
       this.db.exec('COMMIT')
     } catch (error) { this.db.exec('ROLLBACK'); throw error }
-    return this.getDeckThread(projectId, threadId)!
+    return this.getDeckThreadWindow(projectId, threadId)!
   }
 
   private nextCandidateLink(threadId: string): { sequence: number; parentId: string | null } {
@@ -1471,9 +1545,25 @@ export class ProjectStore {
   }
 
   getLatestMetaSnapshot(): MetaSnapshot | null {
-    const row = this.db.prepare('SELECT payload FROM meta_snapshots ORDER BY fetched_at DESC LIMIT 1')
+    const row = this.db.prepare('SELECT payload FROM meta_snapshots ORDER BY fetched_at DESC, rowid DESC LIMIT 1')
       .get() as { payload: string } | undefined
     return row ? { ...(JSON.parse(row.payload) as MetaSnapshot), cached: true } : null
+  }
+
+  listMatchupReportSummaries(projectId: string, metaId: string): { opponentId: string }[] {
+    const hash = this.getCurrentDeckHash(projectId), context = this.getCurrentDeckContext(projectId)
+    if (!hash || typeof metaId !== 'string' || metaId.length !== 64) return []
+    const currentMeta = this.matchupContext(projectId).meta
+    return this.db.prepare(`SELECT opponent_id AS opponentId FROM matchup_report_summaries s
+      WHERE s.project_id = ? AND s.meta_id = ? AND s.deck_hash = ? AND
+      ((s.version_id IS NOT NULL AND s.version_id = ? AND s.resolution_id IS ?) OR
+       (s.version_id IS NULL AND ? = s.meta_id AND EXISTS (
+         SELECT 1 FROM matchup_discussions d WHERE d.id = (SELECT id FROM matchup_discussions
+           WHERE project_id = s.project_id AND meta_id = s.meta_id AND opponent_id = s.opponent_id
+             AND (content_hash = s.deck_hash OR deck_hash = s.deck_hash) ORDER BY rowid DESC LIMIT 1)
+           AND (d.deck_version_id IS NULL OR d.deck_version_id = ? AND d.deck_resolution_id IS ?))))`)
+      .all(projectId, metaId, hash, context?.versionId ?? null, context?.resolutionId ?? null,
+        currentMeta ?? null, context?.versionId ?? null, context?.resolutionId ?? null) as { opponentId: string }[]
   }
 
   listMatchupReports(projectId: string, metaId: string): MatchupReport[] {
@@ -1490,7 +1580,7 @@ export class ProjectStore {
         AND meta_id = ? AND opponent_id = ? AND (content_hash = ? OR deck_hash = ?)
         ORDER BY rowid DESC LIMIT 1`).get(projectId, metaId, report.opponentId,
           report.deckHash, report.deckHash) as { id: string } | undefined
-      return discussion ? this.getMatchupDiscussion(discussion.id)?.current === true : false
+      return discussion ? this.getMatchupDiscussion(discussion.id, true)?.current === true : false
     })
   }
 
@@ -1546,7 +1636,7 @@ export class ProjectStore {
     try {
       const discussion = this.getOrCreateDiscussion(report)
       if (discussion.turns.some((turn) => !turn.report)) throw new Error('Completa o riprova il commento già in attesa.')
-      const turnNo = discussion.turns.length
+      const turnNo = discussion.turnCount ?? discussion.turns.length
       this.db.prepare(`INSERT INTO matchup_turns
         (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary)
         VALUES (?, ?, ?, NULL, ?, ?, NULL)`)
@@ -1574,7 +1664,7 @@ export class ProjectStore {
     const existing = this.db.prepare(`SELECT id FROM matchup_discussions
       WHERE project_id = ? AND meta_id = ? AND opponent_id = ? AND deck_hash = ?`)
       .get(report.projectId, report.metaId, report.opponentId, key) as { id: string } | undefined
-    if (existing) return this.getMatchupDiscussion(existing.id)!
+    if (existing) return this.getMatchupDiscussion(existing.id, true)!
     const id = randomUUID()
     this.db.prepare(`INSERT INTO matchup_discussions
       (id, project_id, meta_id, opponent_id, deck_hash, content_hash,
@@ -1582,35 +1672,90 @@ export class ProjectStore {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, report.projectId,
         report.metaId, report.opponentId, key, report.deckHash,
         report.deckVersionId ?? null, report.deckResolutionId ?? null, parentId, report.generatedAt)
-    return this.getMatchupDiscussion(id)!
+    return this.getMatchupDiscussion(id, true)!
   }
 
-  getMatchupDiscussion(id: string): MatchupDiscussion | null {
-    if (typeof id !== 'string' || id.length > 100) return null
-    const row = this.db.prepare('SELECT * FROM matchup_discussions WHERE id = ?').get(id) as {
-      id: string; project_id: string; meta_id: string; opponent_id: string; deck_hash: string
-      content_hash: string | null; deck_version_id: string | null; deck_resolution_id: string | null
-      parent_id: string | null; created_at: string; context_summary: string; summarized_through: number
-    } | undefined
-    if (!row) return null
-    const turns = this.db.prepare(`SELECT id, feedback, created_at, report_payload, change_summary FROM matchup_turns
-      WHERE discussion_id = ? ORDER BY turn_no`).all(id) as {
-      id: string; feedback: string | null; created_at: string; report_payload: string | null; change_summary: string | null
-    }[]
-    return {
-      id: row.id, projectId: row.project_id, metaId: row.meta_id, opponentId: row.opponent_id,
-      deckHash: row.content_hash ?? row.deck_hash,
-      deckVersionId: row.deck_version_id, deckResolutionId: row.deck_resolution_id,
+  private matchupContext(projectId: string) {
+    return { hash: this.getCurrentDeckHash(projectId), ref: this.getCurrentDeckContext(projectId),
+      meta: (this.db.prepare('SELECT id FROM meta_snapshots ORDER BY fetched_at DESC, rowid DESC LIMIT 1')
+        .get() as { id: string } | undefined)?.id }
+  }
+
+  private discussionFromRow(row: DiscussionRow, turns: MatchupTurn[], context = this.matchupContext(row.project_id)): MatchupDiscussion {
+    return { id: row.id, projectId: row.project_id, metaId: row.meta_id, opponentId: row.opponent_id,
+      deckHash: row.content_hash ?? row.deck_hash, deckVersionId: row.deck_version_id, deckResolutionId: row.deck_resolution_id,
       parentId: row.parent_id, createdAt: row.created_at,
-      current: this.discussionMatchesCurrentContext({ projectId: row.project_id,
-        deckHash: row.content_hash ?? row.deck_hash, deckVersionId: row.deck_version_id,
-        deckResolutionId: row.deck_resolution_id } as MatchupDiscussion) &&
-        this.getLatestMetaSnapshot()?.id === row.meta_id,
-      contextSummary: row.context_summary, summarizedThrough: row.summarized_through,
-      turns: turns.map((turn): MatchupTurn => ({ id: turn.id, feedback: turn.feedback,
-        createdAt: turn.created_at, report: turn.report_payload ? JSON.parse(turn.report_payload) as MatchupReport : null,
-        changeSummary: turn.change_summary }))
-    }
+      current: context.hash === (row.content_hash ?? row.deck_hash) && context.meta === row.meta_id &&
+        (row.deck_version_id === null || context.ref?.versionId === row.deck_version_id && context.ref.resolutionId === row.deck_resolution_id),
+      contextSummary: row.context_summary, summarizedThrough: row.summarized_through, turns,
+      turnCount: row.turn_count, baseVersionNumber: row.base_sequence, baseVersionLabel: row.base_label ?? '',
+      historyCursor: { createdAt: row.created_at, rowId: row.row_id } }
+  }
+
+  private readMatchupTurns(id: string, limit?: number, before?: number, after?: number): MatchupTurn[] {
+    const rows = this.db.prepare(`SELECT id, turn_no, feedback, created_at, report_payload, change_summary FROM matchup_turns
+      WHERE discussion_id = ? ${before === undefined ? '' : 'AND turn_no < ?'} ${after === undefined ? '' : 'AND turn_no >= ?'}
+      ORDER BY turn_no ${limit ? 'DESC LIMIT 20' : 'ASC'}`)
+      .all(id, ...(before === undefined ? [] : [before]), ...(after === undefined ? [] : [after])) as {
+        id: string; turn_no: number; feedback: string | null; created_at: string; report_payload: string | null; change_summary: string | null
+      }[]
+    if (limit) rows.reverse()
+    return rows.map((turn) => ({ id: turn.id, turnNo: turn.turn_no, feedback: turn.feedback,
+      createdAt: turn.created_at, report: turn.report_payload ? JSON.parse(turn.report_payload) as MatchupReport : null,
+      changeSummary: turn.change_summary }))
+  }
+
+  getMatchupDiscussion(id: string, recent = false): MatchupDiscussion | null {
+    if (typeof id !== 'string' || id.length > 100) return null
+    const row = this.db.prepare(`SELECT ${discussionColumns}, d.context_summary FROM matchup_discussions d WHERE d.id = ?`)
+      .get(id) as DiscussionRow | undefined
+    return row ? this.discussionFromRow(row, this.readMatchupTurns(id, recent ? 20 : undefined)) : null
+  }
+
+  getMatchupDiscussionWindow(projectId: string, id: string): MatchupDiscussion | null {
+    if (!this.db.prepare('SELECT 1 FROM matchup_discussions WHERE id = ? AND project_id = ?').get(id, projectId)) return null
+    return this.getMatchupDiscussion(id, true)
+  }
+
+  getMatchupTurnsBefore(projectId: string, id: string, before: number): MatchupTurn[] {
+    if (!Number.isSafeInteger(before) || before < 0 ||
+      !this.db.prepare('SELECT 1 FROM matchup_discussions WHERE id = ? AND project_id = ?').get(id, projectId))
+      throw new Error('Discussione o cursore non validi.')
+    return this.readMatchupTurns(id, 20, before)
+  }
+
+  getMatchupSummaryBatch(projectId: string, id: string, from: number, through: number): MatchupTurn[] {
+    if (!Number.isSafeInteger(from) || !Number.isSafeInteger(through) || from < 0 || through < from || through - from >= 5 ||
+      !this.db.prepare('SELECT 1 FROM matchup_discussions WHERE id = ? AND project_id = ?').get(id, projectId))
+      throw new Error('Intervallo della discussione non valido.')
+    return this.readMatchupTurns(id, 20, through + 1, from)
+  }
+
+  hasMatchupDiscussionContext(projectId: string, opponentId: string, metaId: string, hash: string,
+    versionId?: string | null, resolutionId?: string | null): boolean {
+    return !!this.db.prepare(`SELECT 1 FROM matchup_discussions WHERE project_id = ? AND opponent_id = ? AND meta_id = ?
+      AND coalesce(content_hash, deck_hash) = ? AND deck_version_id IS ? AND deck_resolution_id IS ? LIMIT 1`)
+      .get(projectId, opponentId, metaId, hash, versionId ?? null, resolutionId ?? null)
+  }
+
+  listMatchupDiscussionPage(projectId: string, opponentId: string, before?: { createdAt: string; rowId: number }): MatchupDiscussionPage {
+    if (!this.get(projectId)) throw new Error('Progetto non trovato.')
+    if (typeof opponentId !== 'string' || !/^\d+$/.test(opponentId)) throw new Error('Archetipo non valido.')
+    if (before && (typeof before.createdAt !== 'string' || !Number.isSafeInteger(before.rowId) || before.rowId < 1))
+      throw new Error('Cursore non valido.')
+    const rows = this.db.prepare(`SELECT ${discussionColumns}, '' AS context_summary FROM matchup_discussions d
+      WHERE d.project_id = ? AND d.opponent_id = ? ${before ? 'AND (d.created_at, d.rowid) < (?, ?)' : ''}
+      ORDER BY d.created_at DESC, d.rowid DESC LIMIT 21`)
+      .all(projectId, opponentId, ...(before ? [before.createdAt, before.rowId] : [])) as unknown as DiscussionRow[]
+    const context = this.matchupContext(projectId)
+    const current = this.db.prepare(`SELECT id FROM matchup_discussions WHERE project_id = ? AND opponent_id = ?
+      AND meta_id = ? AND coalesce(content_hash, deck_hash) = ? AND
+      (deck_version_id IS NULL OR deck_version_id = ? AND deck_resolution_id IS ?)
+      ORDER BY created_at DESC, rowid DESC LIMIT 1`)
+      .get(projectId, opponentId, context.meta ?? null, context.hash,
+        context.ref?.versionId ?? null, context.ref?.resolutionId ?? null) as { id: string } | undefined
+    const items = rows.slice(0, 20).map((row) => this.discussionFromRow(row, [], context))
+    return { items, currentId: current?.id ?? null, nextCursor: rows.length > 20 ? items.at(-1)!.historyCursor! : null }
   }
 
   listMatchupDiscussions(projectId: string, opponentId: string): MatchupDiscussion[] {
@@ -1623,23 +1768,18 @@ export class ProjectStore {
 
   listHistoricalMatchupOpponents(projectId: string): MetaDeck[] {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    const rows = this.db.prepare(`SELECT d.opponent_id, s.payload
-      FROM matchup_discussions d JOIN meta_snapshots s ON s.id = d.meta_id
-      WHERE d.project_id = ? ORDER BY d.created_at DESC, d.rowid DESC`).all(projectId) as {
-        opponent_id: string; payload: string
-      }[]
-    const decks = new Map<string, MetaDeck>()
-    for (const row of rows) {
-      if (decks.has(row.opponent_id)) continue
-      const snapshot = JSON.parse(row.payload) as MetaSnapshot
-      const deck = snapshot.decks.find((item) => item.id === row.opponent_id)
-      if (deck) decks.set(deck.id, deck)
-    }
-    return [...decks.values()]
+    const rows = this.db.prepare(`SELECT (SELECT deck.value FROM matchup_discussions d
+      JOIN meta_snapshots s ON s.id = d.meta_id, json_each(s.payload, '$.decks') deck
+      WHERE d.project_id = ? AND d.opponent_id = opponents.opponent_id
+        AND json_extract(deck.value, '$.id') = d.opponent_id
+      ORDER BY d.created_at DESC, d.rowid DESC LIMIT 1) AS payload
+      FROM (SELECT DISTINCT opponent_id FROM matchup_discussions WHERE project_id = ?) opponents`)
+      .all(projectId, projectId) as { payload: string | null }[]
+    return rows.flatMap((row) => row.payload ? [JSON.parse(row.payload) as MetaDeck] : [])
   }
 
   addMatchupFeedback(discussionId: string, feedback: string): MatchupDiscussion {
-    const discussion = this.getMatchupDiscussion(discussionId)
+    const discussion = this.getMatchupDiscussion(discussionId, true)
     if (!discussion) throw new Error('Discussione Matchup non trovata.')
     const trimmed = typeof feedback === 'string' ? feedback.trim() : ''
     if (!trimmed || trimmed.length > 5000 || trimmed.includes('\0')) throw new Error('Scrivi un commento da 1 a 5.000 caratteri.')
@@ -1650,12 +1790,12 @@ export class ProjectStore {
     this.db.prepare(`INSERT INTO matchup_turns
       (id, discussion_id, turn_no, feedback, created_at, report_payload, change_summary)
       VALUES (?, ?, ?, ?, ?, NULL, NULL)`)
-      .run(randomUUID(), discussionId, discussion.turns.length, trimmed, new Date().toISOString())
-    return this.getMatchupDiscussion(discussionId)!
+      .run(randomUUID(), discussionId, discussion.turnCount ?? discussion.turns.length, trimmed, new Date().toISOString())
+    return this.getMatchupDiscussion(discussionId, true)!
   }
 
   completeMatchupFeedback(discussionId: string, turnId: string, report: MatchupReport, changeSummary: string): MatchupDiscussion {
-    const discussion = this.getMatchupDiscussion(discussionId)
+    const discussion = this.getMatchupDiscussion(discussionId, true)
     if (!discussion || !discussion.turns.some((turn) => turn.id === turnId && turn.feedback && !turn.report))
       throw new Error('Commento Matchup in attesa non trovato.')
     if (discussion.projectId !== report.projectId || discussion.metaId !== report.metaId ||
@@ -1676,18 +1816,17 @@ export class ProjectStore {
       this.db.exec('ROLLBACK')
       throw error
     }
-    return this.getMatchupDiscussion(discussionId)!
+    return this.getMatchupDiscussion(discussionId, true)!
   }
 
   saveContinuedMatchupReport(report: MatchupReport, parentId: string): MatchupDiscussion {
-    const parent = this.getMatchupDiscussion(parentId)
+    const parent = this.getMatchupDiscussion(parentId, true)
     if (!parent || parent.projectId !== report.projectId || parent.opponentId !== report.opponentId)
       throw new Error('Discussione di origine non valida.')
     if (!this.reportMatchesSavedContext(report))
       throw new Error('La base salvata della guida non è verificabile in questo progetto.')
-    const current = this.listMatchupDiscussions(report.projectId, report.opponentId)
-      .find((item) => item.metaId === report.metaId && item.deckHash === report.deckHash &&
-        item.deckVersionId === report.deckVersionId && item.deckResolutionId === report.deckResolutionId)
+    const current = this.hasMatchupDiscussionContext(report.projectId, report.opponentId, report.metaId,
+      report.deckHash, report.deckVersionId, report.deckResolutionId)
     if (current) throw new Error('Esiste già una discussione per la base corrente.')
     this.db.exec('BEGIN IMMEDIATE')
     try {
@@ -1698,7 +1837,7 @@ export class ProjectStore {
         .run(randomUUID(), discussion.id, report.generatedAt, JSON.stringify(report), 'Rivalutazione sulla nuova lista o sul nuovo snapshot del meta.')
       this.writeLatestReport(report)
       this.db.exec('COMMIT')
-      return this.getMatchupDiscussion(discussion.id)!
+      return this.getMatchupDiscussion(discussion.id, true)!
     } catch (error) {
       this.db.exec('ROLLBACK')
       throw error
@@ -1707,9 +1846,10 @@ export class ProjectStore {
 
   saveMatchupContextSummary(discussionId: string, summary: string, through: number): void {
     if (typeof summary !== 'string' || summary.length > 8000 || !Number.isInteger(through)) throw new Error('Riepilogo non valido.')
-    const discussion = this.getMatchupDiscussion(discussionId)
-    if (!discussion || through < discussion.summarizedThrough || through >= discussion.turns.length ||
-      !discussion.turns[through].report) throw new Error('Riepilogo non valido.')
+    const discussion = this.getMatchupDiscussion(discussionId, true)
+    if (!discussion || through < discussion.summarizedThrough || through >= (discussion.turnCount ?? discussion.turns.length) ||
+      !this.db.prepare('SELECT 1 FROM matchup_turns WHERE discussion_id = ? AND turn_no = ? AND report_payload IS NOT NULL')
+        .get(discussionId, through)) throw new Error('Riepilogo non valido.')
     this.db.prepare('UPDATE matchup_discussions SET context_summary = ?, summarized_through = ? WHERE id = ?')
       .run(summary, through, discussionId)
   }
