@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 29 ottobre 2026. **Fase corrente:** I3, v0.3.8 pubblicata e verificata su main tramite APP-177; include APP-172–176 e schema 16. CI delle PR e Release verdi, pacchetti/smoke su Linux, Windows, macOS Intel e Apple Silicon. Restano firma ad hoc macOS, assenza di notarizzazione e prova Finder esterna APP-147. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
+**Aggiornato:** 29 ottobre 2026. **Fase corrente:** I3, preparazione della v0.3.9 autorizzata con APP-186; v0.3.8 pubblicata e verificata su main tramite APP-177; include APP-172–176 e schema 16. CI delle PR e Release verdi, pacchetti/smoke su Linux, Windows, macOS Intel e Apple Silicon. Restano firma ad hoc macOS, assenza di notarizzazione e prova Finder esterna APP-147. I4 non avviato. Gli stati operativi sono esclusivamente in `BACKLOG.md`.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-186 In progress (29-10-2026):** nuova release richiesta dall’utente. Preparazione v0.3.9 da dev 222c004 con APP-179–181 e APP-185; schema 16 invariato, nessuna analisi AI reale o modifica dell’app attiva. Restano verifica locale, PR di preparazione in dev, dev → main, quattro check per PR, Release e riscontro di tag, nove asset, manifest/attestazioni e checksum. Il checkout originale resta preservato.
 
 - **APP-185 completato (29-10-2026):** panoramica, aggregati deterministici, dettagli originali e contesto della lista nei nuovi workflow v3; replay reale offline 872 → 344 foglie con risultati/piazzamenti riconciliati. Typecheck, build, 377 test locali (47 esclusi), 11 test del replay, smoke/ripresa Electron e quattro check CI verdi sul commit applicativo 16885d1. [PR #115](https://github.com/xmey95/pokeguru/pull/115) verso dev autorizzata; la chiusura documentale ripete i gate e la PR conserva lo stato definitivo del merge. Contratto e limiti in [AI-EVENT-AGGREGATES.md](AI-EVENT-AGGREGATES.md). Nessuna release o modifica dell’app installata; job personale preservato. Una prova appaiata della qualità tattica resta successiva e richiede budget live autorizzato.
 
