@@ -1,0 +1,48 @@
+{
+  "release": "https://github.com/xmey95/pokeguru/releases/tag/v0.3.9",
+  "sourceSha": "fbfbd4702a1c915ef11ee1ba48e883b2d6aa863e",
+  "run": "40905473189",
+  "assets": 9,
+  "verifiedChecksumEntries": 8,
+  "packages": [
+    {
+      "platform": "linux",
+      "artifact": "Pokeguru-0.3.9-linux-x86_64.AppImage",
+      "bytes": 294344613,
+      "sha256": "002b1126d09e9f0b0b169a0b3d271741996e4159f28f2966dbb81edec4d5c866"
+    },
+    {
+      "platform": "windows",
+      "artifact": "Pokeguru-0.3.9-windows-x64-setup.exe",
+      "bytes": 226397608,
+      "sha256": "57a55b33ac166b2b1ebe3088677b90f990bf0dae28928e83595e9d4724cccad8"
+    },
+    {
+      "platform": "macos-x64",
+      "artifact": "Pokeguru-0.3.9-macos-x64.dmg",
+      "bytes": 277126589,
+      "sha256": "fb9db64eadc785e7cd55b0e770cf6d4f02d47a63b60d4155b7c4ee78fd8ded9b"
+    },
+    {
+      "platform": "macos-arm64",
+      "artifact": "Pokeguru-0.3.9-macos-arm64.dmg",
+      "bytes": 260196010,
+      "sha256": "9f0f38dc7540a69f502eeb606f07479be30cfb8e55443c09368caea842687576"
+    }
+  ],
+  "preparationPr": "https://github.com/xmey95/pokeguru/pull/116",
+  "mainPr": "https://github.com/xmey95/pokeguru/pull/117",
+  "ciRuns": [
+    "https://github.com/xmey95/pokeguru/actions/runs/40895874843",
+    "https://github.com/xmey95/pokeguru/actions/runs/40902505520"
+  ],
+  "releaseRun": "https://github.com/xmey95/pokeguru/actions/runs/40905473189",
+  "verification": "Four CI jobs succeeded on each PR; four package/smoke jobs, attest and publish succeeded. Tag equals sourceSha; all eight checksums match GitHub asset digests; downloaded manifests and checksum file hashes match; manifest version/source/run/bytes match published packages. Package bytes and signed attestations were checked by the Release workflow. The four downloaded manifest attestations were also verified independently with GitHub CLI, pinned to the release source SHA, main ref and signer workflow.",
+  "stabilizationPr": "https://github.com/xmey95/pokeguru/pull/118",
+  "stabilizationCiRun": "https://github.com/xmey95/pokeguru/actions/runs/40900343574",
+  "independentlyVerifiedManifestAttestations": 4,
+  "ciNotes": [
+    "A Windows retry-accounting test assumed disk work would finish inside a 35 ms deadline. PR #118 uses controlled time and exact 14 ms execution / 35 ms waiting assertions; application code unchanged.",
+    "The final main CI initially observed a 1736 ms renderer delay on macOS Apple Silicon; the single job passed on retry without changing thresholds. Cause remains unconfirmed and is tracked in APP-187."
+  ]
+}
