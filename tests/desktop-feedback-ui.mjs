@@ -49,6 +49,8 @@ try {
     await page.keyboard.press('Enter')
     const menu = picker.getByRole('menu')
     await menu.waitFor()
+    // Native popover visibility precedes its queued toggle event and the React focus effect.
+    await page.waitForFunction(() => document.querySelector('.project-actions-menu:popover-open button') === document.activeElement)
     assert.equal(await picker.getByRole('menuitem', { name: 'Archivia', exact: true }).evaluate(el => el === document.activeElement), true)
     const menuBounds = await menu.boundingBox()
     const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))

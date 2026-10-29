@@ -113,7 +113,7 @@ try {
   await page.getByTestId('selected-project-name').waitFor()
   await openProjectPicker(page)
   assert.equal(await page.locator('.project-option').count(), 2)
-  await page.getByRole('dialog', { name: 'Scegli progetto' }).getByRole('button', { name: /Mega Absol \/ Mega Audino/ }).click()
+  await page.getByRole('dialog', { name: 'Scegli progetto' }).locator('button.project-option').filter({ hasText: 'Mega Absol / Mega Audino' }).click()
   await expectSelected(page, 'Mega Absol / Mega Audino')
   await page.getByTestId('card-total').filter({ hasText: '2 carte' }).waitFor()
   if (!offline) {
