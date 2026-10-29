@@ -20,7 +20,18 @@ export interface AiCollectionDiagnostics {
   maxPageMs: number
 }
 
+export const evidenceMetricKinds = ['card', 'deck', 'occurrence', 'pairing', 'statistics', 'search',
+  'event-statistics', 'event-coverage', 'detail', 'other'] as const
+export interface AiEvidencePlanMetrics {
+  representation: 'event-aggregates-v1'
+  originalAnalysisRecords: number; analysisRecords: number; leafBatches: number; batchBytes: number
+  byType: { kind: typeof evidenceMetricKinds[number]; records: number; recordBytes: number; batchesTouched: number }[]
+  queries: { queryOrdinal: number; operation: 'catalog.search' | 'events.search' | 'events.overview' | 'events.details' | 'unknown';
+    pages: number; responseBytes: number; introducedRecords?: number; introducedRecordBytes?: number }[]
+}
+
 export interface AiDiagnostics {
+  evidencePlan?: AiEvidencePlanMetrics
   metrics?: AiCallMetrics
   collection?: AiCollectionDiagnostics
   failureCode?: AiFailureCode
@@ -54,6 +65,22 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   const data = value as Record<string, unknown>
   const result: AiDiagnostics = {}
+  const plan = data.evidencePlan as Partial<AiEvidencePlanMetrics> | undefined
+  const count = (n: unknown): n is number => Number.isSafeInteger(n) && Number(n) >= 0
+  if (plan?.representation === 'event-aggregates-v1' &&
+    [plan.originalAnalysisRecords, plan.analysisRecords, plan.leafBatches, plan.batchBytes].every(count) &&
+    Array.isArray(plan.byType) && Array.isArray(plan.queries)) {
+    result.evidencePlan = { representation: plan.representation, originalAnalysisRecords: plan.originalAnalysisRecords!,
+      analysisRecords: plan.analysisRecords!, leafBatches: plan.leafBatches!, batchBytes: plan.batchBytes!,
+      byType: plan.byType.filter(row => row && evidenceMetricKinds.includes(row.kind) &&
+        [row.records, row.recordBytes, row.batchesTouched].every(count)).map(row => ({ kind: row.kind,
+        records: row.records, recordBytes: row.recordBytes, batchesTouched: row.batchesTouched })),
+      queries: plan.queries.filter(row => row && ['catalog.search', 'events.search', 'events.overview', 'events.details', 'unknown'].includes(row.operation) &&
+        [row.queryOrdinal, row.pages, row.responseBytes].every(count)).map(row => ({ queryOrdinal: row.queryOrdinal,
+        operation: row.operation, pages: row.pages, responseBytes: row.responseBytes,
+        ...(count(row.introducedRecords) ? { introducedRecords: row.introducedRecords } : {}),
+        ...(count(row.introducedRecordBytes) ? { introducedRecordBytes: row.introducedRecordBytes } : {}) })) }
+  }
   const metrics = readAiCallMetrics(data.metrics)
   if (metrics) result.metrics = metrics
   if (['user', 'shutdown', 'failure', 'legacy'].includes(data.suspensionReason as string))

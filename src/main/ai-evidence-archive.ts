@@ -139,7 +139,7 @@ export interface EvidenceSnapshotRow {
 export interface EvidenceAnalysisInput {
   key: string
   fingerprint: string
-  type: 'record' | 'statistics' | 'search' | 'summary'
+  type: 'record' | 'statistics' | 'search' | 'summary' | 'aggregate'
   recordKind?: string
   sourceId?: string
   deckKey?: string | null
@@ -158,6 +158,8 @@ export class AiEvidenceArchive {
   // counts here and ordered identities in TEMP, isolated to this job/connection.
   private readonly eventCounts = new Map<string, { slot: number; matchingLists: number; distinctDecks: number; listsInspected: number }>()
   private eventPageCacheReady = false
+  private readonly detailKeys = new Map<string, string[]>()
+  private introducedForPage?: { records: number; bytes: number }
   readonly id: string
   readonly projectId: string
   readonly resourceId: string
@@ -286,6 +288,85 @@ export class AiEvidenceArchive {
   *eventNames(): Generator<string> {
     for (const row of this.db.prepare(`SELECT DISTINCT deck_name FROM ai_evidence_event_index
       WHERE job_id = ? ORDER BY deck_name`).iterate(this.id) as Iterable<{ deck_name: string }>) yield row.deck_name
+  }
+  /** Full sealed source rows, scoped to this job; no cursor survives a yield. */
+  *eventRows<T>(): Generator<T> {
+    let after = ''
+    while (true) {
+      const rows = this.prepare(`SELECT key, object_hash FROM ai_evidence_event_index
+        WHERE job_id = ? AND key > ? ORDER BY key LIMIT 128`).all(this.id, after) as { key: string; object_hash: string }[]
+      if (!rows.length) return
+      for (const row of rows) { after = row.key; yield this.get<T>(row.object_hash) }
+    }
+  }
+  /** A model can inspect originals of a collected exact deck. Identifiers from
+   * another job never authorize access, even when the object is physically shared. */
+  eventDetails(deckKey: string, offset: number, limit: number, eventId?: string): unknown {
+    const cacheKey = JSON.stringify([deckKey, eventId ?? null])
+    let keys = this.detailKeys.get(cacheKey)
+    if (!keys) {
+      const occurrences = [...this.records('occurrence')].filter((r) => r.deckKey === deckKey &&
+        (eventId === undefined || (r.data as { id?: string }).id === eventId))
+      const players = new Set(occurrences.flatMap((r) => {
+        const data = r.data as { id: string; playerId?: string | null }
+        return data.playerId ? [JSON.stringify([data.id, data.playerId])] : []
+      }))
+      keys = occurrences.map((r) => r.key)
+      for (const r of this.records('pairing')) {
+        const data = r.data as { eventId: string; player1: string; player2: string | null }
+        if (players.has(JSON.stringify([data.eventId, data.player1])) ||
+          data.player2 && players.has(JSON.stringify([data.eventId, data.player2]))) keys.push(r.key)
+      }
+      keys.sort()
+      if (this.detailKeys.size >= 8) this.detailKeys.delete(this.detailKeys.keys().next().value!)
+      this.detailKeys.set(cacheKey, keys)
+    }
+    const selected = keys.slice(offset, offset + limit).map((key) => {
+      const row = this.prepare('SELECT kind, source_id, deck_key FROM ai_evidence_records WHERE job_id = ? AND key = ?')
+        .get(this.id, key) as { kind: string; source_id: string; deck_key: string | null }
+      return { key, kind: row.kind, sourceId: row.source_id, deckKey: row.deck_key, data: this.readRecord(key) }
+    })
+    return { scope: { deckKey, eventId: eventId ?? null, totalRecords: keys.length }, records: selected,
+      offset, remaining: Math.max(0, keys.length - offset - selected.length) }
+  }
+
+  /** Materialized deterministic records are rooted by this job, in one transaction.
+   * Originals remain separate; fingerprints invalidate only changed aggregates. */
+  saveAggregateInputs(records: readonly EvidenceRecord[]): EvidenceAnalysisInput[] {
+    return this.atomic(() => records.map((record) => {
+      const fingerprint = evidenceHash(record), hash = this.put(record)
+      this.prepare('INSERT OR IGNORE INTO ai_evidence_values VALUES (?, ?, ?, ?)')
+        .run(this.id, 'aggregate-input:v1', fingerprint, hash)
+      return { key: record.key!, type: 'aggregate', fingerprint,
+        ...(record.sourceIds.length ? { sourceId: record.sourceIds[0] } : {}) }
+    }))
+  }
+  queryMetrics(): { queryOrdinal: number; operation: string; pages: number; responseBytes: number;
+    introducedRecords?: number; introducedRecordBytes?: number }[] {
+    const metrics = new Map<string, { pages: number; records: number; bytes: number }>()
+    for (const { key, value } of this.values<{ records: number; bytes: number }>('query-metrics:v1')) {
+      const search = key.split(':')[0], prior = metrics.get(search) ?? { pages: 0, records: 0, bytes: 0 }
+      prior.pages++; prior.records += value.records; prior.bytes += value.bytes; metrics.set(search, prior)
+    }
+    return [...this.searches()].map((search, index) => {
+      const metric = metrics.get(search.key)
+      return { queryOrdinal: index + 1, operation: (search.query as { operation?: string }).operation ?? 'unknown',
+        pages: search.pages, responseBytes: search.responseBytes,
+        ...(metric?.pages === search.pages ? { introducedRecords: metric.records, introducedRecordBytes: metric.bytes } : {}) }
+    })
+  }
+  supplementalEvidenceCount(): number {
+    const facts = new Set<string>()
+    for (const search of this.searches()) {
+      const operation = (search.query as { operation?: string }).operation
+      if (operation !== 'events.overview' && operation !== 'events.details') continue
+      for (const page of this.pages(search.key)) {
+        if (page.status !== 'ok') continue
+        if (operation === 'events.overview') facts.add(`overview:${search.key}`)
+        else for (const row of (page.data as { records?: { key: string }[] }).records ?? []) facts.add(`detail:${row.key}`)
+      }
+    }
+    return facts.size
   }
   eventPage<T>(query: { from: string; to: string; deck: string; card: string; offset: number; limit: number }):
     { rows: T[]; listsInspected: number; matchingLists: number; distinctDecks: number } {
@@ -421,6 +502,12 @@ export class AiEvidenceArchive {
 
   /** Hydrate a manifest member through this job's memberships, not a supplied object hash. */
   readAnalysisInput(input: EvidenceAnalysisInput): EvidenceRecord {
+    if (input.type === 'aggregate') {
+      const record = this.value<EvidenceRecord>('aggregate-input:v1', input.fingerprint)
+      if (!record || record.key !== input.key || evidenceHash(record) !== input.fingerprint)
+        throw new Error('Aggregato del manifest non disponibile per questo job.')
+      return record
+    }
     if (input.type === 'record') {
       const data = this.readRecord(input.key)
       if (data === undefined || !input.sourceId) throw new Error('Prova del manifest non disponibile.')
@@ -442,13 +529,20 @@ export class AiEvidenceArchive {
   }
 
   private record(key: string, kind: string, sourceId: string, data: unknown, deckKey: string | null = null): string {
-    const hash = this.put(canonical(data))
+    const original = canonical(data), hash = this.put(original)
     const existing = this.prepare('SELECT object_hash, deck_key FROM ai_evidence_records WHERE job_id = ? AND key = ?')
       .get(this.id, key) as { object_hash: string; deck_key: string | null } | undefined
     if (existing && (existing.object_hash !== hash || existing.deck_key !== deckKey))
       throw new Error('Una prova è cambiata nello stesso snapshot di analisi.')
-    this.prepare('INSERT OR IGNORE INTO ai_evidence_records VALUES (?, ?, ?, ?, ?, ?)')
+    const inserted = this.prepare('INSERT OR IGNORE INTO ai_evidence_records VALUES (?, ?, ?, ?, ?, ?)')
       .run(this.id, key, kind, sourceId, deckKey, hash)
+    if (inserted.changes) {
+      this.detailKeys.clear()
+      if (this.introducedForPage) {
+        this.introducedForPage.records++
+        this.introducedForPage.bytes += Buffer.byteLength(JSON.stringify({ key, sourceIds: [sourceId], data: { kind, deckKey, original } }))
+      }
+    }
     return hash
   }
 
@@ -508,7 +602,11 @@ export class AiEvidenceArchive {
       if (!search || search.cursor === null || evidenceHash(search.cursor) !== cursorKey)
         throw new Error('Cursore delle prove non corrente.')
       if (next !== null && evidenceHash(next) === cursorKey) throw new Error('La ricerca non avanza.')
-      const manifest = this.manifest(result)
+      const measured = this.value('analysis-policy', 'algorithm') === 'event-aggregates-v1'
+      const introduced = { records: 0, bytes: 0 }
+      let manifest: PageManifest
+      this.introducedForPage = measured ? introduced : undefined
+      try { manifest = this.manifest(result) } finally { this.introducedForPage = undefined }
       const hash = this.put(manifest, [...manifest.cards?.map((card) => card.object) ?? [],
         ...manifest.lists?.flatMap((list) => [list.cards, ...list.occurrences ?? []]) ?? []])
       this.prepare('INSERT INTO ai_evidence_pages VALUES (?, ?, ?, ?, ?, ?)')
@@ -516,6 +614,11 @@ export class AiEvidenceArchive {
       this.prepare(`UPDATE ai_evidence_searches SET cursor_json = ?, pages = pages + 1,
         response_bytes = response_bytes + ? WHERE job_id = ? AND key = ?`)
         .run(next === null ? null : JSON.stringify(next), Buffer.byteLength(JSON.stringify(result)), this.id, searchKey)
+      if (measured) {
+        const metric = this.put(introduced)
+        this.prepare('INSERT INTO ai_evidence_values VALUES (?, ?, ?, ?)')
+          .run(this.id, 'query-metrics:v1', `${searchKey}:${search.pages}`, metric)
+      }
       return true
     })
   }

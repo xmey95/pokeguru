@@ -71,6 +71,6 @@ it('recovers the original workflow from SQLite when temporary job files are abse
     const started = new AiAnalysisWork(f.directory, f.jobs, f.job.id, f.controller.signal, input)
     started.close()
     unlinkSync(join(f.directory, 'workflow.json'))
-    expect(readAiWorkflow(f.directory, f.jobs, f.job.id)).toEqual({ ...input, schemaVersion: 2 })
+    expect(readAiWorkflow(f.directory, f.jobs, f.job.id)).toEqual({ ...input, schemaVersion: 3 })
   } finally { f.close() }
 })
