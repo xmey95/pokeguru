@@ -190,6 +190,15 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-183** | Valutare concorrenza limitata e budget dei lotti | Prestazioni | R-07, R-11, R-14 / manutenzione I3 | P2 / M | APP-179–180; scheduler e prove di quota/ripresa | Backlog |
 | **APP-184** | Misurare query e record del job reale da 872 lotti senza interromperlo | Diagnostica/prestazioni | R-07, R-10, R-13, R-14 / manutenzione I3 | P1 / M | Richiesta del 29-10-2026; nessuna nuova chiamata AI | Done |
 | **APP-185** | Panoramica e aggregati Evento con accesso agli originali per ridurre i lotti | Qualità/prestazioni | R-06, R-07, R-10, R-13 / manutenzione I3 | P1 / L | APP-184; integrazione APP-179–181; contratto aggregati e verifica qualità | Done |
+| **APP-186** | Pubblicare la release v0.3.9 delle ottimizzazioni AI | Release | R-07, R-10, R-11, R-12, R-14 / manutenzione I3 | P1 / M | APP-179–181 e APP-185 in dev; richiesta release del 29-10-2026 | In progress |
+
+### APP-186 — Release v0.3.9 delle ottimizzazioni AI
+
+- **Ready e autorizzazione (29-10-2026):** l’utente richiede una nuova release. Base dev 222c004, ultima release pubblicata v0.3.8 su main e75c6c6. APP-179–181 e APP-185 già integrati e verificati; versione successiva 0.3.9, schema 16 invariato. Ramo task/app-186-release-0.3.9 nel checkout isolato e pulito. Unica attività principale In progress.
+- **Accettazione:** versione coerente in package e lockfile, note con benefici misurati e limiti; PR di preparazione in dev e dev → main con quattro check CI verdi; workflow Release riuscito, tag sul commit main corretto, nove asset pubblici con manifest/attestazioni e checksum riconciliati. Chiusura documentale in dev dopo la pubblicazione.
+- **Verifica prevista:** build/typecheck con Node 24, controllo della versione e test provenienza; suite e prove Electron/package sulle quattro piattaforme in CI e Release. Nessuna nuova analisi Codex reale o intervento sull’app personale in esecuzione. Non installare o riavviare automaticamente il programma.
+- **Verifica locale:** Node 24: typecheck, build e test di provenienza passati; versione 0.3.9 coerente in package e lockfile, diff verificato. Il codice applicativo conserva i 377 test e i quattro check verdi della PR #115; le PR di release ripetono i gate completi.
+- **Limiti da conservare:** 872 → 344 foglie è una misura offline sul campione APP-184, non una garanzia di qualità tattica, costo o durata. Aggregati solo nei nuovi workflow, vecchi checkpoint conservati. Firma macOS ad hoc senza notarizzazione, installer Windows senza Authenticode e prova Finder esterna APP-147 ancora aperta.
 
 ### APP-184 — Misura del job reale da 872 lotti
 
