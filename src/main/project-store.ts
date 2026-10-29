@@ -1186,9 +1186,12 @@ export class ProjectStore {
     if (!userText || userText.length > 5000 || userText.includes('\0')) throw new Error('Scrivi un messaggio da 1 a 5.000 caratteri.')
     if (!aiText || aiText.length > 10000 || aiText.includes('\0')) throw new Error('Risposta Codex non valida.')
     if (!turnId || turnId.length > 200) throw new Error('Turno Codex non valido.')
-    if (evidence && (evidence.schemaVersion !== 1 || JSON.stringify(evidence).length > 250_000 ||
+    // Evidence is assembled locally, including the original prompt and archive references.
+    // Extended analyses outgrow the former inline-only limit; preserve the complete packet.
+    if (evidence && (evidence.schemaVersion !== 1 ||
       citedSourceIds.some((id) => !evidence.sources.some((source) => source.id === id))))
       throw new Error('Evidenze del turno non valide.')
+    const evidenceJson = evidence ? JSON.stringify(evidence) : null
     if (proposal && (!proposal.rawText || proposal.rawText.length > 200_000 ||
       !proposal.note || proposal.note.length > 5000 || proposal.sources.length > 100))
       throw new Error('Proposta Codex non valida.')
@@ -1214,7 +1217,7 @@ export class ProjectStore {
           evidence_json, cited_source_ids_json)
         VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?, ?)`)
         .run(randomUUID(), threadId, aiText, now, JSON.stringify(config), turnId,
-          evidence ? JSON.stringify(evidence) : null, evidence ? JSON.stringify(citedSourceIds) : null)
+          evidenceJson, evidence ? JSON.stringify(citedSourceIds) : null)
       if (proposal && parsedProposal) {
         const next = this.nextCandidateLink(threadId)
         this.db.prepare(`INSERT INTO deck_ai_candidates

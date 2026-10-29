@@ -14,6 +14,8 @@ L'obiettivo comprende i due percorsi «da zero» e «da lista» e la copertura d
 
 ## Flussi utente
 
+**Persistenza delle analisi estese (APP-189, preparata per v0.3.10 tramite APP-190):** il salvataggio conserva integralmente il pacchetto delle evidenze prodotto dall’app, incluse traccia delle query e copia del prompt. La dimensione oltre il precedente limite di 250.000 caratteri non rende invalido un risultato con schema e citazioni corretti. Il recupero applica il risultato già pronto una sola volta, conservando il primo messaggio e senza una nuova analisi AI. La correzione richiede l’aggiornamento dalla v0.3.9.
+
 **Feedback desktop APP-165–169:** il lavoro locale delle analisi viene eseguito fuori dal processo della finestra. I Thread si possono eliminare con conferma conservando le liste adottate; una guida Matchup distingue attesa, errore e assenza verificata. La scelta del progetto avviene in una modale con ricerca e sfondo sfocato. Le integrazioni delle schede Catalogo da scansione dichiarano fonte e data, senza trattare un costo assente nella fonte come gratuito in generale.
 
 Nel Thread un unico compositore invia a Codex domande, idee e richieste di modifica. Ogni turno conserva un pensiero oppure una lista proposta; soltanto una lista completa di 60 carte che supera i controlli deterministici diventa candidata nel Thread. Una lista parziale o non verificabile resta nella conversazione con la causa, senza alterare la lista principale. Le fonti, le evidenze e la cronologia restano associate alla risposta; l'adozione dell'intera candidata richiede sempre un'azione esplicita. Senza lista iniziale si può discutere, ma il salvataggio di una candidata appartiene al percorso da lista finché I4 non completa quello da zero.

@@ -32,3 +32,9 @@ L'integrazione si applica alla lettura del Catalogo, comprese cache vecchie e nu
 La scheda e la sintesi fornita all'AI espongono la provenienza della trascrizione. I payload SQLite grezzi, le identità di gioco persistite, i vincoli e i report già salvati restano invariati. I test verificano tutti i 19 casi, la precedenza di dati nuovi, il rifiuto di stampe/payload diversi e la riapertura della cache senza riscrittura dei payload.
 
 Lettura della copia reale con il codice aggiornato: **3.275 attese, 3.275 acquisite, 3.275 gameplay completi, 0 schede mancanti**. Il numero descrive quell'inventario; non certifica nuovi set, altri errori semantici della fonte o il recupero del profilo corrotto. Il registro va rivalutato se le stampe o i testi cambiano; non è un sistema OCR automatico.
+
+## Verifica dopo reset locale — 29 ottobre 2026 (APP-188)
+
+La nuova segnalazione di 19 schede mancanti è stata confrontata con la diagnostica esportata dalla sessione corrente: versione installata **0.3.4**, precedente alla correzione pubblicata dalla 0.3.7. Il nuovo catalogo contiene 3.275 stampe, tutte acquisite il 29 ottobre, e le 19 lacune coincidono esattamente con i payload attesi dal registro.
+
+Una copia coerente dell’archivio e del WAL effettivamente aperti dal processo è stata verificata con una seconda lettura degli hash e quick_check. Il CatalogStore della v0.3.9 restituisce **3.275 gameplay completi, zero schede mancanti, 19 integrazioni** sia alla prima apertura sia alla riapertura della copia; hash dei payload grezzi invariato. Nessuna scrittura al profilo personale, nessun riavvio o installazione automatica, nessuna nuova chiamata AI. Questa prova conferma la correzione sul catalogo appena scaricato; l’installazione locale va aggiornata alla release pubblicata senza azzerare nuovamente i dati.
