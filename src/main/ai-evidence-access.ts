@@ -1,6 +1,6 @@
 import type { AiEvidenceQueryTrace } from '../shared/ai-evidence'
 import type { CatalogEvidenceMatch } from './catalog-evidence-search'
-import { AiEvidenceArchive, evidenceHash } from './ai-evidence-archive'
+import { AiEvidenceArchive, evidenceHash, type EvidenceSearch } from './ai-evidence-archive'
 
 const archives = new WeakMap<AiEvidenceQueryTrace, AiEvidenceArchive>()
 export function bindEvidenceArchive(trace: AiEvidenceQueryTrace, archive: AiEvidenceArchive): void {
@@ -8,13 +8,18 @@ export function bindEvidenceArchive(trace: AiEvidenceQueryTrace, archive: AiEvid
   refreshEvidenceArchive(trace)
 }
 export const evidenceArchive = (trace: AiEvidenceQueryTrace) => archives.get(trace)
-export function refreshEvidenceArchive(trace: AiEvidenceQueryTrace): void {
+export function refreshEvidenceArchive(trace: AiEvidenceQueryTrace, changed?: EvidenceSearch): void {
   const archive = archives.get(trace)
   if (!archive) return
   trace.archive = { version: 1, jobId: archive.id, projectId: archive.projectId,
     resourceId: archive.resourceId, ...archive.counts() }
   trace.responseBytes = trace.archive.responseBytes
-  trace.requests = [...archive.searches()].map((search) => archive.searchSummary(search))
+  if (changed) {
+    const summary = archive.searchSummary(changed)
+    const index = trace.requests.findIndex((entry) => entry.fingerprint === changed.key)
+    if (index < 0) trace.requests.push(summary)
+    else trace.requests[index] = summary
+  } else trace.requests = [...archive.searches()].map((search) => archive.searchSummary(search))
 }
 export function* evidenceCards(trace: AiEvidenceQueryTrace): Generator<CatalogEvidenceMatch> {
   const archive = archives.get(trace)

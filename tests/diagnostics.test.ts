@@ -37,6 +37,9 @@ describe('diagnostic export', () => {
     value.jobs![0].progress!.diagnostics = {
       failureCode: 'evidence-incomplete', targets: 90, supplied: 87, notSupplied: 3,
       evidenceBytes: 700_000, planningRounds: 3, batchesCompleted: 9, batchesTotal: 10,
+      collection: { operation: 'events', stage: 'cards', startedAt: '2026-10-28T10:00:00.000Z',
+        updatedAt: '2026-10-28T10:01:00.000Z', pages: 34, items: 136, total: 300, remaining: 164,
+        queryMs: 450, persistMs: 320, dependencyMs: 230, maxPageMs: 90, query: secret, key: secret },
       model: 'gpt-test', reasoningEffort: 'high', resumable: true,
       calls: [{ kind: 'batch', startedAt: '2026-10-28T10:00:00.000Z', endedAt: '2026-10-28T10:01:00.000Z',
         inputBytes: 60_000, status: 'failed', failureCode: 'timeout', privateText: secret } as never],
@@ -46,7 +49,9 @@ describe('diagnostic export', () => {
       requestPrepared: false, validatedDraft: null, resultPrepared: false, resultFilePresent: true } }
     const report = buildDiagnosticReport(value)
     expect(report.ai.recentJobs![0]).toMatchObject({ diagnostics: { failureCode: 'evidence-incomplete',
-      targets: 90, notSupplied: 3, batchesCompleted: 9 }, execution: { controllerActive: false, resultFilePresent: true } })
+      targets: 90, notSupplied: 3, batchesCompleted: 9,
+      collection: { pages: 34, items: 136, total: 300, queryMs: 450, persistMs: 320, dependencyMs: 230 } },
+      execution: { controllerActive: false, resultFilePresent: true } })
     expect(JSON.stringify(report)).not.toContain(secret)
   })
   it('measures active jobs until export and keeps final durations fixed', () => {

@@ -23,7 +23,7 @@ try {
   assert.ok(pixelRatio >= 1.9, `Scala Chromium inattesa: ${pixelRatio}`)
   await page.setViewportSize({ width: 640, height: 580 })
   const session = await page.context().newCDPSession(page)
-  for (const section of ['Lista', 'Thread', 'Matchup', 'Catalogo', 'Eventi', 'Impostazioni AI']) {
+  for (const section of ['Lista', 'Strategie', 'Guide matchup', 'Catalogo', 'Eventi', 'Impostazioni AI']) {
     const nav = page.locator('.sidebar').getByRole('button', { name: section, exact: true })
     // The previous route restores focus over two animation frames; let it finish before keyboard input.
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))

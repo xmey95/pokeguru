@@ -90,6 +90,7 @@ export interface MatchupTournamentEvidence {
 }
 
 export interface MatchupTurn {
+  turnNo?: number
   id: string
   feedback: string | null
   createdAt: string
@@ -111,5 +112,15 @@ export interface MatchupDiscussion {
   contextSummary: string
   summarizedThrough: number
   turns: MatchupTurn[]
+  turnCount?: number
+  baseVersionNumber?: number | null
+  baseVersionLabel?: string
+  historyCursor?: { createdAt: string; rowId: number }
 }
 
+
+export interface MatchupDiscussionPage {
+  items: MatchupDiscussion[]
+  currentId: string | null
+  nextCursor: { createdAt: string; rowId: number } | null
+}

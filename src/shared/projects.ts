@@ -72,6 +72,8 @@ export interface ProjectsApi {
   deleteArchived(id: string, confirmationName: string): Promise<OperationResult<boolean>>
   getBaseline(projectId: string): Promise<OperationResult<DeckBaseline | null>>
   importDeck(input: ImportDeckInput): Promise<OperationResult<DeckBaseline>>
+  listDeckVersionPage(projectId: string, before?: number): Promise<OperationResult<DeckVersion[]>>
+  getDeckVersion(projectId: string, id: string): Promise<OperationResult<DeckVersion | null>>
   listDeckVersions(projectId: string): Promise<OperationResult<DeckVersion[]>>
   annotateDeckVersion(input: AnnotateDeckVersionInput): Promise<OperationResult<DeckVersion>>
   restoreDeckVersion(input: RestoreDeckVersionInput): Promise<OperationResult<DeckBaseline>>
@@ -79,6 +81,7 @@ export interface ProjectsApi {
   listDeckThreadSummaries(projectId: string): Promise<OperationResult<DeckThreadSummary[]>>
   getDeckThread(projectId: string, threadId: string): Promise<OperationResult<DeckThread | null>>
   getDeckThreadWindow(projectId: string, threadId: string): Promise<OperationResult<DeckThread | null>>
+  getDeckThreadCandidatesBefore(projectId: string, threadId: string, before: number): Promise<OperationResult<import('./deck-threads').DeckCandidate[]>>
   getDeckThreadMessagesBefore(projectId: string, threadId: string,
     cursor: DeckThreadMessageCursor): Promise<OperationResult<DeckThreadMessagePage>>
   getAiJobStatus(projectId: string, resourceId: string): Promise<OperationResult<AiJobSummary | null>>
@@ -111,8 +114,12 @@ export interface ProjectsApi {
   deleteConstraint(input: DeleteConstraintInput): Promise<OperationResult<DeckConstraint[]>>
   getMeta(): Promise<OperationResult<MetaSnapshot>>
   getMatchupEvidence(metaId: string, opponentId: string): Promise<OperationResult<MatchupTournamentEvidence>>
+  listMatchupReportSummaries(projectId: string, metaId: string): Promise<OperationResult<{ opponentId: string }[]>>
   listMatchupReports(projectId: string, metaId: string): Promise<OperationResult<MatchupReport[]>>
   generateMatchup(projectId: string, metaId: string, opponentId: string, override?: AiPreferences | null): Promise<OperationResult<MatchupReport>>
+  listMatchupDiscussionPage(projectId: string, opponentId: string, before?: { createdAt: string; rowId: number }): Promise<OperationResult<import('./meta-matchups').MatchupDiscussionPage>>
+  getMatchupDiscussionWindow(projectId: string, id: string): Promise<OperationResult<MatchupDiscussion | null>>
+  getMatchupTurnsBefore(projectId: string, id: string, before: number): Promise<OperationResult<import('./meta-matchups').MatchupTurn[]>>
   listMatchupDiscussions(projectId: string, opponentId: string): Promise<OperationResult<MatchupDiscussion[]>>
   listHistoricalMatchupOpponents(projectId: string): Promise<OperationResult<MetaDeck[]>>
   reviseMatchup(discussionId: string, feedback: string, override?: AiPreferences | null): Promise<OperationResult<MatchupDiscussion>>

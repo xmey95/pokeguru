@@ -27,8 +27,8 @@ try {
     if (!result.ok) throw new Error(result.error)
     return result.value[0]
   })
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
+  await page.getByRole('button', { name: 'Nuova strategia', exact: true }).click()
   await page.getByLabel('Titolo').fill('Prova cancellazione')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
@@ -37,7 +37,7 @@ try {
     if (!result.ok) throw new Error(result.error)
     return result.value[0]
   }, project.id)
-  await page.getByLabel('Scrivi nel thread').fill('Rispondi in italiano con un piano generale di prova in più passaggi. Non usare strumenti.')
+  await page.getByLabel('Scrivi nella strategia').fill('Rispondi in italiano con un piano generale di prova in più passaggi. Non usare strumenti.')
   await page.getByRole('button', { name: 'Invia a Codex' }).click()
   const active = await page.waitForFunction(async ({ projectId, threadId }) => {
     const result = await window.projectsApi.getAiJobStatus(projectId, threadId)
@@ -65,7 +65,7 @@ try {
 
   application = await launch()
   page = await application.firstWindow()
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await switchThread(page, /Prova cancellazione/)
   try { await page.getByText('Risposta annullata.').waitFor({ timeout: 10000 }) }
   catch (error) {

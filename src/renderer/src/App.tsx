@@ -90,7 +90,7 @@ export function App() {
       if (version !== selectionVersion.current) return
       setSelected(project)
       const [result, versions] = await Promise.all([
-        window.projectsApi.getBaseline(id), window.projectsApi.listDeckVersions(id)
+        window.projectsApi.getBaseline(id), window.projectsApi.listDeckVersionPage(id)
       ])
       if (version !== selectionVersion.current) return
       if (!result.ok) throw new Error(result.error)
@@ -137,7 +137,7 @@ export function App() {
   }, [])
 
   async function openProject(id: string): Promise<void> {
-    nav.go({ view: 'project', projectId: id }, undefined, `${activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup'} · ${projects.find((item) => item.id === id)?.name ?? 'Progetto'}`)
+    nav.go({ view: 'project', projectId: id }, undefined, `${activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Strategie' : 'Guide matchup'} · ${projects.find((item) => item.id === id)?.name ?? 'Progetto'}`)
   }
 
   async function archiveProject(id: string): Promise<void> {
@@ -250,7 +250,7 @@ export function App() {
         return
       }
       if (selectionVersion.current !== importVersion || !nav.isCurrent()) return
-      const versions = await window.projectsApi.listDeckVersions(projectId)
+      const versions = await window.projectsApi.listDeckVersionPage(projectId)
       if (selectionVersion.current !== importVersion || !nav.isCurrent()) return
       const updated = projectWithBaseline(selected, result.value)
       setProjects((current) => current.map((project) => project.id === projectId ? updated : project))
@@ -321,7 +321,7 @@ export function App() {
       <a className="skip-link" href="#main-content">Vai al contenuto</a>
       <header className="topbar">
         <NavigationControls />
-        <span>Pokéguru <b aria-hidden="true">/</b> {view === 'project' ? activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Thread' : 'Matchup' : view === 'catalog' ? 'Catalogo' : view === 'tournament' ? 'Eventi' : 'Impostazioni AI'}</span>
+        <span>Pokéguru <b aria-hidden="true">/</b> {view === 'project' ? activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Strategie' : 'Guide matchup' : view === 'catalog' ? 'Catalogo' : view === 'tournament' ? 'Eventi' : 'Impostazioni AI'}</span>
         <span>Standard occidentale</span>
       </header>
 
@@ -339,8 +339,8 @@ export function App() {
           <nav className="workspace-nav" aria-label="Aree del progetto">
             <span className="rail-caption">Area di lavoro</span>
             <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'deck' })} title="Lista" aria-label="Lista"><Icon name="deck" /><span className="nav-label">Lista</span></button>
-            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'threads' })} title="Thread" aria-label="Thread"><Icon name="thread" /><span className="nav-label">Thread</span></button>
-            <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'matchups' })} title="Matchup" aria-label="Matchup"><Icon name="matchup" /><span className="nav-label">Matchup</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'threads' })} title="Strategie" aria-label="Strategie"><Icon name="thread" /><span className="nav-label">Strategie</span></button>
+            <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'matchups' })} title="Guide matchup" aria-label="Guide matchup"><Icon name="matchup" /><span className="nav-label">Guide matchup</span></button>
           </nav>
           <nav className="resource-nav" aria-label="Risorse globali">
             <span className="rail-caption">Risorse</span>
@@ -418,7 +418,7 @@ export function App() {
                       const updated = projectWithBaseline(selected, restored)
                       setSelected(updated)
                       setProjects((items) => items.map((item) => item.id === selected.id ? updated : item))
-                      void window.projectsApi.listDeckVersions(selected.id).then((result) => {
+                      void window.projectsApi.listDeckVersionPage(selected.id).then((result) => {
                         if (result.ok && selectionVersion.current === restoreSelectionVersion) setDeckVersions(result.value)
                       })
                     }} />
@@ -437,7 +437,7 @@ export function App() {
                   resetImportUi()
                   const updated = projectWithBaseline(selected, adopted)
                   setBaseline(adopted)
-                  void window.projectsApi.listDeckVersions(selected.id).then((result) => {
+                  void window.projectsApi.listDeckVersionPage(selected.id).then((result) => {
                     if (result.ok) setDeckVersions(result.value)
                   })
                   setDraft(adopted.rawText)
@@ -491,7 +491,7 @@ export function App() {
       }}>
         <div className="adoption-dialog" role="dialog" aria-modal="true" aria-labelledby="project-delete-title" aria-describedby="project-delete-description">
           <h2 id="project-delete-title">Elimina definitivamente “{deleteTarget.name}”?</h2>
-          <p id="project-delete-description">Questa azione cancella dall’archivio attivo il progetto, le versioni della lista, i vincoli, i Thread, le candidate, le guide Matchup e le evidenze AI collegate. Non può essere annullata. Il Catalogo e l’archivio globale Eventi restano disponibili.</p>
+          <p id="project-delete-description">Questa azione cancella dall’archivio attivo il progetto, le versioni della lista, i vincoli, le strategie, le candidate, le guide Matchup e le evidenze AI collegate. Non può essere annullata. Il Catalogo e l’archivio globale Eventi restano disponibili.</p>
           <p>Le copie di backup pre-aggiornamento già create possono ancora contenere questo progetto: vanno gestite separatamente.</p>
           <label htmlFor="project-delete-name">Scrivi esattamente <strong>{deleteTarget.name}</strong> per confermare</label>
           <input id="project-delete-name" autoFocus value={deleteName} onChange={(event) => setDeleteName(event.target.value)} autoComplete="off" />

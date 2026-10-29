@@ -60,8 +60,8 @@ export function ActivityStatus({ title, detail, state = 'working', startedAt, pr
 
 const aiStages: { label: string; phases: AiJobPhase[] }[] = [
   { label: 'Carte e tornei', phases: ['preparing', 'catalog', 'events'] },
-  { label: 'Ricerche', phases: ['planning'] },
-  { label: 'Risposta', phases: ['analysis'] },
+  { label: 'Ricerche', phases: ['planning', 'collecting'] },
+  { label: 'Analisi e risposta', phases: ['analysis'] },
   { label: 'Controllo finale', phases: ['verification', 'saving'] }
 ]
 
@@ -174,7 +174,7 @@ export function AiJobActivity({ job, title, startedAt, className = '' }: {
 }) {
   const phase = job?.progress?.phase ?? 'preparing'
   const activeIndex = aiStages.findIndex((stage) => stage.phases.includes(phase))
-  return <ActivityStatus title={title} detail={job?.progress?.detail
+  return <ActivityStatus title={phase === 'collecting' ? 'Raccolta dei dati locali…' : title} detail={job?.progress?.detail
     ? aiActivityDetail(job.progress.detail) : 'Preparo la tua richiesta…'}
     startedAt={startedAt ?? (job ? Date.parse(job.createdAt) : null)} className={`ai-job-activity ${className}`}>
     <ol className="ai-job-stages" aria-label="Fasi dell’elaborazione">

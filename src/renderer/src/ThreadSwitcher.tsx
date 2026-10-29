@@ -63,20 +63,20 @@ export function ThreadSwitcher({ threads, selected, versions, disabled, onSelect
   return <>
     <button ref={trigger} id="thread-switcher-trigger" type="button" className="workspace-switcher thread-switcher"
       popoverTarget={id} aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
-      aria-label={selected ? `Cambia thread: ${selected.title}` : 'Scegli thread'}
+      aria-label={selected ? `Cambia strategia: ${selected.title}` : 'Scegli strategia'}
       disabled={disabled || threads.length === 0}>
-      <span><strong>{selected?.title ?? 'Nessun thread'}</strong>
+      <span><strong>{selected?.title ?? 'Nessuna strategia'}</strong>
         {selected && <small>{description(selected)}</small>}</span>
       <Icon name="chevron" />
     </button>
-    <div ref={panel} id={id} popover="auto" role="dialog" aria-label="Scegli thread"
+    <div ref={panel} id={id} popover="auto" role="dialog" aria-label="Scegli strategia"
       className="project-picker workspace-picker thread-picker" onKeyDown={navigate}
       onToggle={(event) => { const next = event.newState === 'open'; setOpen(next); if (!next) setQuery('') }}
       onBlur={(event) => {
         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget) && event.relatedTarget !== trigger.current) panel.current?.hidePopover()
       }}>
-      <div className="project-picker-head"><h2>Thread</h2><span>{threads.length}</span></div>
-      <input ref={search} type="search" aria-label="Cerca thread" placeholder="Cerca un thread…" value={query} onChange={(event) => setQuery(event.target.value)} />
+      <div className="project-picker-head"><h2>Strategie</h2><span>{threads.length}</span></div>
+      <input ref={search} type="search" aria-label="Cerca strategie" placeholder="Cerca una strategia…" value={query} onChange={(event) => setQuery(event.target.value)} />
       <div className="project-picker-results">
         {filtered.length ? <ul>{filtered.map((thread) => <li key={thread.id}>
           <button type="button" className="project-option thread-option" aria-current={selected?.id === thread.id ? 'true' : undefined}
@@ -88,7 +88,7 @@ export function ThreadSwitcher({ threads, selected, versions, disabled, onSelect
             <span><strong>{thread.title}</strong><small>{description(thread)}</small></span>
             {selected?.id === thread.id && <span className="project-current">Attivo</span>}
           </button>
-        </li>)}</ul> : <p role="status">Nessun thread trovato.</p>}
+        </li>)}</ul> : <p role="status">Nessuna strategia trovata.</p>}
       </div>
     </div>
   </>

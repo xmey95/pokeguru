@@ -8,7 +8,7 @@ export interface LocationState {
   ui: Record<string, unknown>
 }
 export const routeLabel = (route: Route): string => route.view === 'project'
-  ? ({ deck: 'Lista', threads: 'Thread', matchups: 'Matchup' })[route.tab]
+  ? ({ deck: 'Lista', threads: 'Strategie', matchups: 'Guide matchup' })[route.tab]
   : ({ catalog: 'Catalogo', tournament: 'Eventi', ai: 'Impostazioni AI' })[route.view]
 export const sameRoute = (a: Route, b: Route): boolean => a.view === b.view && (a.view !== 'project' || a.tab === b.tab) && a.projectId === b.projectId
 

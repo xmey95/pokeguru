@@ -26,9 +26,9 @@ Disponibile per **Linux, Windows e macOS**, con consultazione offline dei dati g
 | **Controlla la lista** | Valuta costruzione, rotazione e ammissione alla data scelta. Distingui errori certi e casi da verificare; imposta vincoli di quantità o stampa dal dettaglio delle carte nella Lista. |
 | **Studia il metagame** | Consulta archetipi, tornei Play e Regional da Limitless, con liste disponibili, provenienza e copertura dei risultati. |
 | **Prepara i matchup** | Genera guide con punti forti, rischi, carte chiave e piano di gioco. Discuti le analisi e conserva le revisioni legate alla versione del mazzo. |
-| **Valuta alternative con l'AI** | Apri Thread indipendenti, chiedi modifiche e confronta candidate complete di 60 carte verificate dai controlli locali. Adotta manualmente l'intera lista quando sei convinto. |
+| **Valuta alternative con l'AI** | Apri strategie indipendenti, chiedi modifiche e confronta candidate complete di 60 carte verificate dai controlli locali. Adotta manualmente l'intera lista quando sei convinto. |
 
-La lista principale resta consultabile mentre lavori nei Thread o nei Matchup. Le proposte e le conversazioni dei diversi progetti rimangono separate.
+La lista principale resta consultabile mentre lavori in Strategie o nelle Guide matchup. Le proposte e le conversazioni dei diversi progetti rimangono separate.
 
 ## Installazione
 
@@ -51,7 +51,7 @@ I pacchetti includono la CLI Codex nativa: **non servono Node.js, npm o un'insta
 2. **Importa la lista.** Nella sezione **Lista**, incolla il testo o scegli un file `.txt`. Controlla quantità e righe non riconosciute. Per esplorare l'interfaccia puoi usare la [lista dimostrativa](examples/lista-demo.txt): contiene 12 carte ed è una bozza, non un mazzo pronto da giocare.
 3. **Aggiorna il Catalogo.** Usa **Aggiorna nuove carte** per acquisire schede e miniature disponibili. Torna alla Lista per consultare le carte, chiarire eventuali ambiguità e leggere l'esito Standard. Nel dettaglio di una carta puoi aggiungere i vincoli da rispettare.
 4. **Prepara le analisi.** In **Impostazioni AI**, verifica l'accesso Codex e scegli modello e livello di ragionamento, oppure lascia **Automatico**. In **Eventi** aggiorna Play e Regional per rendere disponibili le relative evidenze locali.
-5. **Studia e confronta.** In **Matchup** scegli un archetipo e genera una guida; nei **Thread** discuti la lista o chiedi una proposta. Puoi consultare i dati inviati e le fonti delle risposte. Le candidate valide restano separate finché non le adotti.
+5. **Studia e confronta.** In **Guide matchup** scegli un archetipo e genera una guida; in **Strategie** discuti la lista o chiedi una proposta. Puoi consultare i dati inviati e le fonti delle risposte. Le candidate valide restano separate finché non le adotti.
 6. **Porta con te la lista.** Usa **Copia export** dalla Lista per copiarla negli appunti. Versioni, discussioni e guide restano nel progetto alla riapertura.
 
 ## Dati locali e servizi online
@@ -70,6 +70,14 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Controlli Standard:** l'esito si riferisce alle regole versionate incluse nell'app e alle stampe effettivamente coperte. I casi mancanti o ambigui restano da verificare. Aggiornare il Catalogo non aggiorna le regole: le nuove regole arrivano con una release. L'esito non è una certificazione di legalità torneo.
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
+
+### Novità della v0.3.8
+
+Le letture del database sono più leggere: indici mirati, riepiloghi compatti e pagine Eventi profonde indicizzate riducono scansioni e lavoro ripetuto. Versioni della lista, candidate, conversazioni e guide Matchup caricano lo storico a blocchi, mantenendo raggiungibile ogni elemento e la base corrente anche quando è fuori dalla prima pagina.
+
+La raccolta delle prove AI mostra fase, avanzamento e tempi anche dopo il completamento dei lotti. I risultati salvati, gli originali e i checkpoint restano disponibili alla ripresa. Lo schema 16 conserva riferimenti e riepiloghi nella stessa transazione dei dati; prima dell'upgrade viene creato un backup verificato. Le misure locali, il costo aggiuntivo delle scritture e i limiti sono nel [rapporto sulle prestazioni](docs/DATABASE-PERFORMANCE.md).
+
+Sono incluse anche le rifiniture già integrate in `dev`: progetti in Lista compatta, sezione Strategie, Guide matchup, suono degli avvisi configurabile, riconoscimento dell'Energia Telepatica e scorrimento delle attività. Restano i limiti di firma e della prova Finder esterna descritti sopra.
 
 ### Novità della v0.3.7
 
@@ -112,6 +120,8 @@ Questa versione include piani Matchup in prosa più scorrevole e **Ricerca avanz
 La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e considera il mazzo solo quando la domanda lo richiede esplicitamente. Richiede Codex; i risultati sono temporanei e la qualità tattica resta da valutare su carte reali.
 
 ## Sviluppo
+
+La v0.3.8 include l'audit e le ottimizzazioni SQLite con schema 16. Il passaggio crea un backup verificato prima dell'upgrade e conserva le analisi in sospeso. Include pagine Eventi profonde indicizzate, storici caricati a blocchi e riferimenti di conservazione incrementali. Misure e limiti sono nel [rapporto sulle prestazioni del database](docs/DATABASE-PERFORMANCE.md).
 
 Servono **Node.js 24 o successivo**, npm e un ambiente grafico. Dalla radice del repository:
 

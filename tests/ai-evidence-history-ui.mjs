@@ -76,7 +76,7 @@ try {
   }), { ids, jobId, searchKey })
   assert.equal(denied.project.ok, false); assert.equal(denied.resource.ok, false); assert.equal(denied.sequence.ok, false)
   await switchProject(page, /Archivio prove/)
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await switchThread(page, /Analisi archiviata/)
   const message = page.locator('.thread-message').filter({ hasText: 'Risposta illustrativa' })
   await message.getByText('Fonti e dettagli', { exact: false }).click()

@@ -74,11 +74,11 @@ export async function navigationScenarios(page, application, artifacts) {
     if (!candidate.ok) throw new Error(candidate.error)
     return { projectId: project.id, threads }
   })
-  await area('Thread').click()
+  await area('Strategie').click()
   await ready()
   await switchThread(page, /Navigazione A/)
   await ready()
-  const message = page.getByLabel('Scrivi nel thread')
+  const message = page.getByLabel('Scrivi nella strategia')
   await message.fill('Bozza A da conservare')
   await page.locator('.candidate-comparison > summary').click()
   await area('Catalogo').click()
@@ -173,7 +173,7 @@ export async function navigationScenarios(page, application, artifacts) {
   })
 
   // Simulated unavailable destination; no production data is deleted.
-  await area('Thread').click()
+  await area('Strategie').click()
   await ready()
   await area('Catalogo').click()
   await ready()
@@ -195,7 +195,7 @@ export async function navigationScenarios(page, application, artifacts) {
     ipcMain.removeHandler('deck:list-thread-summaries')
     ipcMain.handle('deck:list-thread-summaries', globalThis.navigationThreadHandler)
   })
-  await area('Matchup').click()
+  await area('Guide matchup').click()
   await ready()
   await area('Catalogo').click()
   await back.click()

@@ -52,7 +52,7 @@ try {
     globalThis.markdownOpenedLinks = []
     shell.openExternal = async (url) => { globalThis.markdownOpenedLinks.push(url) }
   })
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   const assistant = page.locator('.thread-message[data-author="assistant"]')
   await assistant.waitFor()
   assert.equal(await assistant.locator('h1').innerText(), 'Piano iniziale')
@@ -94,7 +94,7 @@ try {
     })
   })
   await page.getByRole('navigation', { name: 'Aree del progetto' }).getByRole('button', { name: 'Lista', exact: true }).click()
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await assistant.getByRole('button', { name: 'Carta · Catalogo' }).press('Enter')
   try {
     await page.waitForFunction(() => document.querySelector('button[aria-label="Catalogo"]')?.getAttribute('aria-current') === 'page',

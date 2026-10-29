@@ -25,7 +25,7 @@ it('deletes only the confirmed thread, retaining adopted decks, child seeds and 
     const archive = new AiEvidenceArchive(path, job), keptArchive = new AiEvidenceArchive(path, keep)
     archive.saveValue('input', 'same', { proof: 'shared' }); keptArchive.saveValue('input', 'same', { proof: 'shared' })
     archive.close(); keptArchive.close()
-    expect(() => store.deleteDeckThread(other.id, thread.id, thread.title)).toThrow(/non trovato/)
+    expect(() => store.deleteDeckThread(other.id, thread.id, thread.title)).toThrow(/Strategia non trovata/)
     expect(() => store.deleteDeckThread(p.id, thread.id, 'wrong')).toThrow(/titolo/)
     expect(() => store.deleteDeckThread(p.id, thread.id, thread.title)).toThrow(/analisi/)
     jobs.transition(job.id, 'cancelled')

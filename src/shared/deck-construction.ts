@@ -1,7 +1,7 @@
 import type { CatalogView } from './catalog'
 import type { DeckBaseline, DeckLine } from './deck-import'
 import { suggestPrints } from './reconciliation'
-import { basicEnergyType } from './basic-energy-name'
+import { basicEnergyType, expandEnergyNameSymbols } from './basic-energy-name'
 
 export const DECK_CONSTRUCTION_SOURCE =
   'https://www.pokemon.com/uk/strategy/designing-a-deck-from-scratch'
@@ -26,7 +26,7 @@ export interface DeckConstructionEvaluation {
 }
 
 function normalizedName(name: string): string {
-  return name.normalize('NFKC').replace(/[’‘]/g, "'").trim().replace(/\s+/g, ' ').toLocaleLowerCase()
+  return expandEnergyNameSymbols(name.normalize('NFKC')).replace(/[’‘]/g, "'").trim().replace(/\s+/g, ' ').toLocaleLowerCase()
 }
 
 function isBasicEnergy(line: DeckLine, catalog: CatalogView | null): boolean {
@@ -34,7 +34,7 @@ function isBasicEnergy(line: DeckLine, catalog: CatalogView | null): boolean {
   if (!catalog) return false
   const exact = suggestPrints(line, catalog).filter((candidate) => candidate.reason === 'same-print')
   return exact.length === 1 && exact[0].print.category === 'Energy' &&
-    exact[0].print.energyType?.toLowerCase() === 'normal'
+    exact[0].print.energyType?.toLowerCase() === 'normal' && !!basicEnergyType(exact[0].print.name)
 }
 
 function basicPokemonEvidence(line: DeckLine, catalog: CatalogView | null): 'yes' | 'no' | 'unknown' {

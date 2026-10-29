@@ -6,6 +6,9 @@ import { ProjectStore } from '../src/main/project-store'
 import { parseDeck } from '../src/shared/deck-import'
 import type { CatalogPrint, CatalogView } from '../src/shared/catalog'
 import { buildDeckCards, matchupDeckContext, snapshotPrint, suggestPrints } from '../src/shared/reconciliation'
+import { prepareDeckExport } from '../src/shared/deck-export'
+import { evaluateDeckConstruction } from '../src/shared/deck-construction'
+import { currentBasicEnergy } from '../src/shared/standard-basic-energy'
 
 const folders: string[] = []
 afterEach(() => {
@@ -41,6 +44,45 @@ const catalog: CatalogView = {
 }
 
 describe('Riconciliazione APP-006', () => {
+  const telepathic: CatalogPrint = { ...printing('me03-088', 'Telepathic Psychic Energy', 'telepathic', 'Rare'),
+    category: 'Energy', energyType: 'Normal', identityBasis: 'energy-text' }
+  // TCGdex live, 29-10-2026: English name, padded localId, and an incorrect Normal energyType.
+  const energyCatalog: CatalogView = { ...catalog, prints: [telepathic] }
+  const energyBaseline = (rawText: string) => ({ projectId: 'p', importedAt: '2026-10-29T00:00:00.000Z',
+    source: 'paste' as const, fileName: null, rawText, ...parseDeck(rawText) })
+
+  it('riconosce Telepathic {P} Energy POR 88 e conserva copie, testo e stampa dopo export', () => {
+    const baseline = energyBaseline('4 Telepathic {P} Energy POR 88')
+    expect(buildDeckCards(baseline, energyCatalog)).toMatchObject([
+      { name: 'Telepathic Psychic Energy', quantity: 4, status: 'recognized', importedPrintIds: ['me03-088'] }
+    ])
+    expect(suggestPrints(baseline.lines[0], energyCatalog)).toMatchObject([
+      { print: { id: 'me03-088' }, reason: 'same-print' }
+    ])
+    expect(suggestPrints(baseline.lines[0], energyCatalog, 'Telepathic {P} Energy')[0]?.reason).toBe('same-print')
+    const exported = prepareDeckExport(baseline)
+    expect(exported.canExport).toBe(true)
+    expect(exported.text).toContain(baseline.rawText)
+    expect(buildDeckCards(energyBaseline(exported.text), energyCatalog)[0])
+      .toMatchObject({ quantity: 4, importedPrintIds: ['me03-088'] })
+    expect(currentBasicEnergy(baseline.lines[0], energyCatalog, '2026-10-29')).toBeNull()
+  })
+
+  it('non esenta Telepathic dal limite di copie neppure con energyType Normal errato alla fonte', () => {
+    const baseline = energyBaseline('3 Telepathic {P} Energy POR 88\n2 Telepathic Psychic Energy POR 88')
+    expect(evaluateDeckConstruction(baseline, energyCatalog).copyLimit.status).toBe('problem')
+    expect(evaluateDeckConstruction(baseline, energyCatalog).exceedingNames[0].quantity).toBe(5)
+  })
+
+  it('mantiene i conflitti di nome, simbolo e codice e non accetta simboli sconosciuti', () => {
+    for (const text of ['4 Telepathic {G} Energy POR 88', '4 Telepathic {X} Energy POR 88',
+      '4 Basic {P} Energy POR 88', '4 Telepathic {P} Energy POR 87', '4 Telepathic {P} Energy XYZ 88']) {
+      const baseline = energyBaseline(text)
+      expect(buildDeckCards(baseline, energyCatalog)[0].status).not.toBe('recognized')
+      expect(suggestPrints(baseline.lines[0], energyCatalog).some((item) => item.reason === 'same-print')).toBe(false)
+    }
+  })
+
   it('riconosce PR-SV e il numero Live della promo TCGdex SVP nel round trip', () => {
     const promo: CatalogPrint = { ...printing('svp-189', "N's Zorua", 'zorua-promo', 'Promo'),
       category: 'Pokemon', identityBasis: 'pokemon-text' }

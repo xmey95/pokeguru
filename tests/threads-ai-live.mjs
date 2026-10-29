@@ -52,7 +52,7 @@ async function launch() {
 }
 
 async function openThread(page, name) {
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await switchThread(page, new RegExp(name))
 }
 
@@ -80,36 +80,36 @@ try {
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
   await page.getByTestId('card-total').getByText('60 carte').waitFor()
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
+  await page.getByRole('button', { name: 'Nuova strategia', exact: true }).click()
   await page.getByLabel('Titolo').fill('Thread A')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
-  await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Nuova strategia', exact: true }).click()
   await page.getByLabel('Titolo').fill('Thread B')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
 
   if (offline) {
-    await page.getByLabel('Scrivi nel thread').fill('Valuta questa idea')
+    await page.getByLabel('Scrivi nella strategia').fill('Valuta questa idea')
     await page.getByRole('button', { name: 'Vedi dati inviati a Codex' }).first().click()
     await page.getByText('Anteprima dei dati locali').waitFor()
     await page.locator('.thread-review').last().locator('summary').first().click()
     assert.match(await page.locator('.thread-review').last().innerText(), /Carta A/)
     await page.getByRole('button', { name: 'Invia a Codex' }).click()
     await page.getByRole('alert').getByText('Codex non disponibile.', { exact: false }).waitFor()
-    assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Valuta questa idea')
+    assert.equal(await page.getByLabel('Scrivi nella strategia').inputValue(), 'Valuta questa idea')
     const result = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
     assert.equal(result.ok, true)
     assert.equal(result.value.every((thread) => thread.aiSessionRef === null && thread.messages.length === 0), true)
-    assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Valuta questa idea')
+    assert.equal(await page.getByLabel('Scrivi nella strategia').inputValue(), 'Valuta questa idea')
     await page.getByRole('button', { name: 'Annulla analisi', exact: true }).click()
-    await page.getByLabel('Scrivi nel thread').fill('Migliora la consistenza')
+    await page.getByLabel('Scrivi nella strategia').fill('Migliora la consistenza')
     await page.getByRole('button', { name: 'Vedi dati inviati a Codex' }).last().click()
     await page.getByText('Anteprima dei dati locali').waitFor()
     await page.getByRole('button', { name: 'Invia a Codex' }).click()
     await page.getByRole('alert').getByText('Codex non disponibile.', { exact: false }).waitFor()
-    assert.equal(await page.getByLabel('Scrivi nel thread').inputValue(), 'Migliora la consistenza')
+    assert.equal(await page.getByLabel('Scrivi nella strategia').inputValue(), 'Migliora la consistenza')
     const afterProposal = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
     assert.equal(afterProposal.ok, true)
     assert.equal(afterProposal.value.every((thread) => thread.candidates.length === 0), true)
@@ -117,7 +117,7 @@ try {
   } else {
     for (const [name, code] of [['Thread A', 'ALFA'], ['Thread B', 'BETA']]) {
       await switchThread(page, new RegExp(name))
-      await page.getByLabel('Scrivi nel thread').fill(`Rispondi brevemente includendo il codice ${code}.`)
+      await page.getByLabel('Scrivi nella strategia').fill(`Rispondi brevemente includendo il codice ${code}.`)
       await page.getByRole('button', { name: 'Invia a Codex' }).click()
       await page.locator('.ai-job-activity').waitFor({ timeout: 30000 })
       assert.equal(await page.locator('.ai-job-stages li').count(), 4)
@@ -143,7 +143,7 @@ try {
       if (name === 'Thread A' && activeJob.value.status === 'running') {
         const navigation = page.getByRole('navigation', { name: 'Aree del progetto' })
         await navigation.getByRole('button', { name: 'Lista', exact: true }).click()
-        await navigation.getByRole('button', { name: 'Thread', exact: true }).click()
+        await navigation.getByRole('button', { name: 'Strategie', exact: true }).click()
         await switchThread(page, /Thread A/)
         const resumed = await page.evaluate(([projectId, threadId]) =>
           window.projectsApi.getAiJobStatus(projectId, threadId), [project.id, activeJob.value.resourceId])
@@ -185,7 +185,7 @@ try {
     assert.equal(restoredJob.ok, true)
     assert.equal(restoredJob.value.status, 'applied')
     assert.ok(restoredJob.value.progress?.steps.some((step) => step.phase === 'saving'))
-    await page.getByLabel('Scrivi nel thread').fill('Continua questa conversazione in una frase.')
+    await page.getByLabel('Scrivi nella strategia').fill('Continua questa conversazione in una frase.')
     await page.getByRole('button', { name: 'Invia a Codex' }).click()
     await page.locator('.thread-message').nth(3).waitFor({ timeout: 180000 })
     const after = await page.evaluate((id) => window.projectsApi.listDeckThreads(id), project.id)
@@ -208,12 +208,12 @@ try {
         assert.ok(chosen, 'Nessun modello con due livelli di ragionamento disponibile per la prova.')
         await page.locator('.thread-ai-options > summary').click()
         await page.locator(`#thread-ai-model option[value="${chosen.id}"]`).waitFor({ state: 'attached' })
-        await page.getByLabel('Modello Codex per questo thread').selectOption(chosen.id)
+        await page.getByLabel('Modello Codex per questa strategia').selectOption(chosen.id)
         const effort = chosen.reasoningEfforts.find((item) => item.id !== chosen.defaultReasoningEffort)
           ?? chosen.reasoningEfforts[0]
-        await page.getByLabel('Ragionamento per questo thread').selectOption(effort.id)
+        await page.getByLabel('Ragionamento per questa strategia').selectOption(effort.id)
       }
-      await page.getByLabel('Scrivi nel thread').fill(
+      await page.getByLabel('Scrivi nella strategia').fill(
         `Prepara una candidata di prova: aggiungi esattamente ${count} Boss's Orders ME01 114, togli ${count} Psychic Energy SVE 005 e conserva Mega Absol ex. Restituisci l'intera lista di 60 carte usando i codici del catalogo; è una prova strutturale.`)
       await page.getByRole('button', { name: 'Invia a Codex' }).click()
       try {

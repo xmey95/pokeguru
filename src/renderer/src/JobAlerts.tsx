@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigation } from './Navigation'
+import { playNotificationSound, prepareNotificationSound } from './notification-sound'
 import type { CatalogSyncStatus } from '../../shared/catalog'
 import type { TournamentSyncProgress } from '../../shared/tournament'
 import type { MainTournamentSyncProgress } from '../../shared/main-tournament'
@@ -21,6 +22,8 @@ export function JobAlerts() {
   const ledger = useRef<AlertLedger>(readLedger()).current
   const [alerts, setAlerts] = useState<ObservedJob[]>([])
   const [expanded, setExpanded] = useState(false)
+
+  useEffect(prepareNotificationSound, [])
 
   useEffect(() => {
     let active = true
@@ -45,7 +48,10 @@ export function JobAlerts() {
         additions.push(...observeJobs(ledger, source, jobs))
       })
       try { localStorage.setItem(storageKey, JSON.stringify(ledger)) } catch { /* Session dedupe still works. */ }
-      if (additions.length) setAlerts((current) => [...current, ...additions])
+      if (additions.length) {
+        setAlerts((current) => [...current, ...additions])
+        void playNotificationSound()
+      }
       timer = window.setTimeout(() => void poll(), 5000)
     }
     void poll()
@@ -57,7 +63,7 @@ export function JobAlerts() {
     else if (job.source === 'play' || job.source === 'main')
       nav.go({ view: 'tournament' }, { 'events.source': job.source }, job.source === 'play' ? 'Eventi · Play' : 'Eventi · Regional')
     else if (job.projectId && job.aiKind?.startsWith('thread'))
-      nav.go({ view: 'project', tab: 'threads', projectId: job.projectId }, { 'thread.selected': job.resourceId }, 'Thread')
+      nav.go({ view: 'project', tab: 'threads', projectId: job.projectId }, { 'thread.selected': job.resourceId }, 'Strategie')
     else if (job.projectId) nav.go({ view: 'project', tab: 'matchups', projectId: job.projectId })
     dismiss(job.key)
   }
@@ -74,7 +80,7 @@ export function JobAlerts() {
       <strong>{job.title}</strong><p>{job.detail}</p>
       <div className="job-alert-actions">
         <button type="button" className="text-button" onClick={() => open(job)}>
-          Apri {job.source === 'catalog' ? 'Catalogo' : job.source === 'ai' ? job.aiKind?.startsWith('thread') ? 'Thread' : 'Matchup' : 'Eventi'}
+          Apri {job.source === 'catalog' ? 'Catalogo' : job.source === 'ai' ? job.aiKind?.startsWith('thread') ? 'Strategie' : 'Guide matchup' : 'Eventi'}
         </button>
         <button type="button" className="text-button" aria-label={`Chiudi avviso: ${job.title}`} onClick={() => dismiss(job.key)}>Chiudi</button>
       </div>

@@ -55,8 +55,8 @@ try {
     if (!result.ok) throw new Error(result.error)
     return result.value
   })
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  const input = page.getByLabel('Scrivi nel thread')
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
+  const input = page.getByLabel('Scrivi nella strategia')
   await input.fill('Osservazione senza lista')
   assert.ok(await page.getByRole('button', { name: 'Invia a Codex' }).isEnabled())
   assert.equal(await page.locator('.thread-composer').getByRole('radio').count(), 0)
@@ -79,7 +79,7 @@ try {
     }
     return results
   }, empty.projectId)
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await switchThread(page, /Piano A/)
   assert.equal(await page.locator('.thread-composer textarea').count(), 1)
   assert.equal(await page.locator('#thread-proposal-request').count(), 0)

@@ -59,7 +59,7 @@ describe('ProjectStore', () => {
     expect(store.hasDeckThread(other.id, thread.id)).toBe(false)
     expect(store.getDeckThreadWindow(other.id, thread.id)).toBeNull()
     expect(() => store.getDeckThreadMessagesBefore(other.id, thread.id, recent.oldestMessageCursor!))
-      .toThrow('Thread non trovato')
+      .toThrow('Strategia non trovata')
     store.close()
   })
 
@@ -209,7 +209,7 @@ describe('ProjectStore', () => {
       candidates: [{ sequence: 1, rawText: '60 Carta B MEG 2', note: 'Più veloce' }]
     })
     expect(store.listDeckThreads(first.id).find((item) => item.id === b.id)?.candidates[0].rawText).toBe('60 Carta C MEG 3')
-    expect(() => store.saveDeckCandidate({ projectId: other.id, threadId: a.id, rawText: original })).toThrow('Thread non trovato')
+    expect(() => store.saveDeckCandidate({ projectId: other.id, threadId: a.id, rawText: original })).toThrow('Strategia non trovata')
     expect(store.listDeckThreads(other.id)).toHaveLength(1)
     store.importDeck({ projectId: first.id, rawText: '60 Carta D MEG 4', source: 'paste' })
     expect(store.listDeckVersions(first.id).map((version) => version.sequence)).toEqual([2, 1])

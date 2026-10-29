@@ -5,7 +5,7 @@ import type { DeckVersion } from '../../shared/deck-threads'
 
 function versionOrigin(version: DeckVersion): string {
   if (version.restoredFrom) return `Ripristino da v${version.restoredFrom.sequence}`
-  if (version.adoption) return 'Adottata da un Thread'
+  if (version.adoption) return 'Adottata da una strategia'
   return version.source === 'file' ? `File ${version.fileName ?? '.txt'}` : 'Testo incollato'
 }
 
@@ -22,8 +22,23 @@ export function DeckHistory({ projectId, versions, onOpenChange, onRestored, onA
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [older, setOlder] = useState<DeckVersion[]>([])
+  const [more, setMore] = useState(versions.length === 50)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  useEffect(() => { setOlder([]); setMore(versions.length === 50) }, [projectId, versions[0]?.id])
+  const allVersions = [...versions, ...older]
   const current = versions[0] ?? null
-  const selected = versions.find((version) => version.id === selectedId) ?? versions[1] ?? current
+  const selected = allVersions.find((version) => version.id === selectedId) ?? versions[1] ?? current
+  async function loadOlder(): Promise<void> {
+    if (loadingOlder) return
+    setLoadingOlder(true); setError(null)
+    try {
+      const result = await window.projectsApi.listDeckVersionPage(projectId, allVersions.at(-1)?.sequence)
+      if (!result.ok) throw new Error(result.error)
+      setOlder((items) => [...items, ...result.value]); setMore(result.value.length === 50)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Storico non disponibile.') }
+    finally { setLoadingOlder(false) }
+  }
   useEffect(() => {
     setLabel(selected?.label ?? '')
     setNote(selected?.note ?? '')
@@ -40,6 +55,7 @@ export function DeckHistory({ projectId, versions, onOpenChange, onRestored, onA
       const result = await window.projectsApi.annotateDeckVersion({ projectId,
         versionId: selected.id, label, note })
       if (!result.ok) throw new Error(result.error)
+      setOlder((items) => items.map((item) => item.id === result.value.id ? result.value : item))
       onAnnotated(result.value)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Nota non salvata.') }
     finally { setBusy(false) }
@@ -60,15 +76,17 @@ export function DeckHistory({ projectId, versions, onOpenChange, onRestored, onA
   }
 
   return <><details className="deck-history deck-reference-item" onToggle={(event) => onOpenChange(event.currentTarget.open)}>
-    <summary><span className="deck-reference-label">Versioni della lista ({versions.length})</span><span className="deck-reference-description">Confronta, annota o ripristina una versione</span></summary>
+    <summary><span className="deck-reference-label">Versioni della lista ({current?.sequence ?? 0})</span><span className="deck-reference-description">Confronta, annota o ripristina una versione</span></summary>
     {!current || !selected ? <p>Nessuna versione salvata.</p> : <div className="deck-history-body">
       <p className="content-note">La lista principale resta visibile nel pannello. Scegli una versione per leggerla e confrontarla.</p>
       <label htmlFor="deck-history-version">Versione da consultare</label>
       <select id="deck-history-version" value={selected.id} onChange={(event) => setSelectedId(event.target.value)}>
-        {versions.map((version) => <option key={version.id} value={version.id}>
+        {allVersions.map((version) => <option key={version.id} value={version.id}>
           v{version.sequence}{version.id === current.id ? ' · corrente' : ''}{version.label ? ` · ${version.label}` : ''}
         </option>)}
       </select>
+      {more && <button type="button" className="secondary-button" disabled={loadingOlder}
+        onClick={() => void loadOlder()}>{loadingOlder ? 'Caricamento…' : 'Carica versioni precedenti'}</button>}
       <p><strong>v{selected.sequence}</strong> · {versionOrigin(selected)} · {new Intl.DateTimeFormat('it-IT',
         { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(selected.createdAt))}</p>
       {!selected.resolutionKnown && <p className="content-note">Le correzioni d’identità di questa versione storica non sono ricostruibili dall’archivio precedente. Un ripristino lascia quelle righe da verificare.</p>}

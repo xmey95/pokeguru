@@ -3,7 +3,23 @@ export const aiFailureCodes = ['unknown', 'cancelled', 'paused', 'timeout', 'aut
   'batch-too-large', 'query-limit', 'cli-unavailable', 'context-limit', 'quota', 'storage-full', 'no-progress'] as const
 export type AiFailureCode = typeof aiFailureCodes[number]
 
+export interface AiCollectionDiagnostics {
+  operation: 'catalog' | 'events' | 'dependencies'
+  stage: 'reading' | 'saving' | 'cards' | 'page' | 'complete' | 'interrupted'
+  startedAt: string
+  updatedAt: string
+  pages: number
+  items?: number
+  total?: number
+  remaining?: number
+  queryMs: number
+  persistMs: number
+  dependencyMs: number
+  maxPageMs: number
+}
+
 export interface AiDiagnostics {
+  collection?: AiCollectionDiagnostics
   failureCode?: AiFailureCode
   model?: string | null
   reasoningEffort?: string | null
@@ -49,6 +65,19 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
     result.reasoningEffort = data.reasoningEffort as string | null
   const timestamp = (input: unknown): input is string => typeof input === 'string' &&
     /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(input) && Number.isFinite(Date.parse(input))
+  const collection = data.collection as Record<string, unknown> | undefined
+  if (collection && ['catalog', 'events', 'dependencies'].includes(collection.operation as string) &&
+    ['reading', 'saving', 'cards', 'page', 'complete', 'interrupted'].includes(collection.stage as string) &&
+    timestamp(collection.startedAt) && timestamp(collection.updatedAt) &&
+    ['pages', 'queryMs', 'persistMs', 'dependencyMs', 'maxPageMs'].every((key) =>
+      Number.isSafeInteger(collection[key]) && Number(collection[key]) >= 0)) {
+    result.collection = { operation: collection.operation as AiCollectionDiagnostics['operation'],
+      stage: collection.stage as AiCollectionDiagnostics['stage'], startedAt: collection.startedAt,
+      updatedAt: collection.updatedAt, pages: Number(collection.pages), queryMs: Number(collection.queryMs),
+      persistMs: Number(collection.persistMs), dependencyMs: Number(collection.dependencyMs), maxPageMs: Number(collection.maxPageMs) }
+    for (const key of ['items', 'total', 'remaining'] as const)
+      if (Number.isSafeInteger(collection[key]) && Number(collection[key]) >= 0) result.collection[key] = Number(collection[key])
+  }
   if (timestamp(data.nextRetryAt)) result.nextRetryAt = data.nextRetryAt
   if (Array.isArray(data.calls)) result.calls = data.calls.slice(-40).flatMap((entry) => {
     if (!entry || typeof entry !== 'object' ||

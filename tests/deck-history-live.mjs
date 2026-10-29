@@ -28,8 +28,8 @@ try {
   await page.getByRole('button', { name: 'Salva lista' }).click()
   await page.locator('#deck-import').waitFor({ state: 'detached' })
 
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
-  await page.getByRole('button', { name: 'Nuovo thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
+  await page.getByRole('button', { name: 'Nuova strategia', exact: true }).click()
   await page.getByLabel('Titolo').fill('Prima prova')
   await page.getByRole('button', { name: 'Salva nota senza AI' }).click()
   await page.locator('#new-thread-form').waitFor({ state: 'detached' })
@@ -54,11 +54,11 @@ try {
   await page.locator('.deck-companion').waitFor()
   assert.match(await page.locator('.deck-companion').textContent(), /v2/)
 
-  await page.getByRole('button', { name: 'Thread', exact: true }).click()
+  await page.getByRole('button', { name: 'Strategie', exact: true }).click()
   await page.locator('.thread-candidate.featured .candidate-comparison > summary').click()
   await page.locator('.thread-candidate.featured').getByRole('button',
-    { name: 'Continua in un thread dalla lista attuale' }).click()
-  await page.getByText('Thread collegato a un percorso precedente.', { exact: false }).waitFor()
+    { name: 'Continua in una strategia dalla lista attuale' }).click()
+  await page.getByText('Strategia collegata a un percorso precedente.', { exact: false }).waitFor()
   await page.locator('.seed-candidate > summary').click()
   assert.equal(await page.locator('.seed-candidate pre').textContent(), second)
   assert.equal(await page.locator('.manual-candidate').count(), 0)
