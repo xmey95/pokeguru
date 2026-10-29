@@ -2,6 +2,8 @@
 
 ## Esito e perimetro
 
+**Distribuzione successiva all’audit:** ottimizzazioni APP-174–176 incluse nella [v0.3.8](https://github.com/xmey95/pokeguru/releases/tag/v0.3.8), con schema 16, quattro CI/package/smoke e attestazioni verificati in APP-177. I risultati sotto restano le misure locali originali, non misure dei profili personali. Dettagli in [RELEASE-0.3.8-VERIFICATION.json](RELEASE-0.3.8-VERIFICATION.json).
+
 L'analisi ha trovato costi evitabili nel database **e nel codice che lo interroga**. I problemi principali sono controlli delle chiavi esterne senza indici, paginazioni che rileggono le righe precedenti, ordinamenti non coperti, ricostruzione ripetuta dei riepiloghi AI e lettura di grandi JSON per mostrare piccoli riepiloghi Evento. Non emerge la necessità di cambiare motore di database.
 
 Intervento locale APP-174, esteso su richiesta dell'utente a tutta l'app; requisiti R-01, R-02, R-03, R-06, R-07, R-10, R-13, R-14. Base Git `f3d287508deed43faf9574076d3d139770819367`, ramo `task/app-172-desktop-refinements`, con lavoro locale APP-172/173/174 già presente e conservato. Nessun merge, rilascio o upgrade del profilo personale eseguito. La versione applicativa resta 0.3.7; il primo audit introduce schema 15; il completamento APP-175/176 porta il sorgente a **schema 16**, successivo allo schema 14 della release pubblicata.
