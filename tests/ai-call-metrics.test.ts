@@ -2,13 +2,19 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
-import { expect, it } from 'vitest'
+import { setTimeout as retrySleep } from 'node:timers/promises'
+import { expect, it, vi } from 'vitest'
 import { AiAnalysisWork, analyzeLargeEvidence } from '../src/main/ai-analysis-work'
 import { AiJobStore } from '../src/main/ai-job-store'
 import { ProjectStore } from '../src/main/project-store'
 import { AiFailure } from '../src/main/ai-failure'
 import type { AiRunConfig } from '../src/shared/ai'
 import type { AiEvidenceQueryTrace } from '../src/shared/ai-evidence'
+
+vi.mock('node:timers/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:timers/promises')>()
+  return { ...actual, setTimeout: vi.fn(actual.setTimeout) }
+})
 
 const config: AiRunConfig = { provider: 'codex', source: 'global', model: 'gpt-test', reasoningEffort: 'high' }
 const usage = { input_tokens: 100, cached_input_tokens: 25, output_tokens: 10 }
@@ -57,24 +63,33 @@ it('keeps all attempts and phase totals beyond 40, reopens without charging cach
 
 it('counts retries separately, preserves observed usage before validation, and separates waits from execution', async () => {
   const f = fixture()
+  const realSleep = (await vi.importActual<typeof import('node:timers/promises')>('node:timers/promises')).setTimeout
+  vi.useFakeTimers()
+  // Bridge the native Promise timer to the controlled clock only in this case.
+  vi.mocked(retrySleep).mockImplementation((delay, value) =>
+    new Promise((resolve) => setTimeout(() => resolve(value), delay)))
   try {
     let attempts = 0
-    const value = await f.work.run('planning', 'retry', config, async (reportUsage) => {
+    const pending = f.work.run('planning', 'retry', config, async (reportUsage) => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 7))
       if (++attempts === 1) { reportUsage(usage); throw new AiFailure('network', 'PRIVATE-FAILURE', 35) }
       return { queries: [] }
     })
+    await vi.runAllTimersAsync()
+    const value = await pending
     expect(value).toEqual({ queries: [] })
     const metrics = f.jobs.callMetrics(f.job.id)!
     expect(metrics.totals).toMatchObject({ attempts: 2, failed: 1, succeeded: 1, usageKnownAttempts: 1,
       usage: null, observedUsage: { inputTokens: 100, cachedInputTokens: 25, outputTokens: 10 } })
-    expect(metrics.totals.waitingMs).toBeGreaterThanOrEqual(20)
+    expect(metrics.totals.waitingMs).toBe(35)
+    expect(metrics.totals.executionMs).toBe(14)
     const records = f.jobs.callAttempts(f.job.id).map((entry) => entry.attempt)
     expect(metrics.totals.executionMs).toBe(records.reduce((sum, attempt) => sum + attempt.executionMs!, 0))
     expect(records.find((attempt) => attempt.status === 'succeeded')!.usage).toBeNull()
     await f.work.run('history', 'history', config, async (reportUsage) => { reportUsage(usage); return 'summary' })
     expect(f.jobs.callMetrics(f.job.id)?.phases.history).toMatchObject({ attempts: 1, succeeded: 1,
       usage: { inputTokens: 100, cachedInputTokens: 25, outputTokens: 10 } })
-  } finally { f.close() }
+  } finally { vi.mocked(retrySleep).mockImplementation(realSleep); vi.useRealTimers(); f.close() }
 })
 
 it('publishes cache and attempt once, recovers an unfinished invocation without fabricating its duration', async () => {
