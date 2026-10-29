@@ -189,7 +189,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-182** | Valutare effort per fase e rappresentazione delle sintesi | Ricerca AI | R-07, R-10, R-11 / manutenzione I3 | P2 / M | APP-179–181; casi, margine qualità e budget live definiti | Backlog |
 | **APP-183** | Valutare concorrenza limitata e budget dei lotti | Prestazioni | R-07, R-11, R-14 / manutenzione I3 | P2 / M | APP-179–180; scheduler e prove di quota/ripresa | Backlog |
 | **APP-184** | Misurare query e record del job reale da 872 lotti senza interromperlo | Diagnostica/prestazioni | R-07, R-10, R-13, R-14 / manutenzione I3 | P1 / M | Richiesta del 29-10-2026; nessuna nuova chiamata AI | Done |
-| **APP-185** | Panoramica e aggregati Evento con accesso agli originali per ridurre i lotti | Qualità/prestazioni | R-06, R-07, R-10, R-13 / manutenzione I3 | P1 / L | APP-184; integrazione APP-179–181; contratto aggregati e verifica qualità | In progress |
+| **APP-185** | Panoramica e aggregati Evento con accesso agli originali per ridurre i lotti | Qualità/prestazioni | R-06, R-07, R-10, R-13 / manutenzione I3 | P1 / L | APP-184; integrazione APP-179–181; contratto aggregati e verifica qualità | Done |
 
 ### APP-184 — Misura del job reale da 872 lotti
 
@@ -204,7 +204,7 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 
 - **Risultato:** panoramica Eventi senza filtro obbligatorio, aggregati per lista esatta/evento/avversario con denominatori e lacune, dettagli originali paginati, contesto della base nelle foglie e contabilità per query/tipo. Contratto e limiti in [AI-EVENT-AGGREGATES.md](AI-EVENT-AGGREGATES.md).
 - **Accettazione misurata:** replay offline del campione APP-184: 872 → 344 foglie (−60,55%), 51.974.677 → 20.036.920 byte (−61,45%). Tutti i 7.343 aggregati riconciliati per risultati/piazzamenti; 16.212 partecipazioni, 69.364 abbinamenti unici e 80.405 lati giocatore. Obiettivo ≤350 raggiunto senza un tetto che scarti dati. [Metriche](AI-EVENT-AGGREGATES-METRICS.json).
-- **Verifiche e consegna:** typecheck, build e suite finale Node 24 passati (377 test, 47 esclusi). Prova Electron di ripresa automatica passata su profilo temporaneo. Originali e workflow v2 preservati; nessuna chiamata AI reale. Lo stato resta In progress fino alla chiusura delle verifiche e alla preparazione della consegna autorizzata.
+- **Done e consegna:** typecheck, build e suite Node 24 passati (377 test, 47 esclusi); replay privato: 11 test passati. Smoke Electron offline e ripresa automatica passati su profili temporanei. Quattro check CI verdi sul commit applicativo 16885d1 ([run 40889614642](https://github.com/xmey95/pokeguru/actions/runs/40889614642)): Ubuntu, Windows, macOS Intel e Apple Silicon, incluse prove desktop, recupero e pacchetti. Consegna autorizzata tramite [PR #115](https://github.com/xmey95/pokeguru/pull/115) verso dev; anche la chiusura documentale attraversa i gate prima del merge. La PR e la cronologia Git registrano esito definitivo e commit di integrazione. Originali e workflow v2 preservati; nessuna chiamata AI reale.
 - **Limiti:** non dimostrata l’equivalenza della qualità tattica né una riduzione proporzionale di token/costi/durata. Una prova appaiata reale richiede un successivo budget autorizzato. Nessuna modifica dell’app installata, main o release.
 
 
