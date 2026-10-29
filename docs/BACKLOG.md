@@ -194,6 +194,8 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 
 ### APP-186 — Release v0.3.9 delle ottimizzazioni AI
 
+- **Correzione del gate CI:** nella PR #117 il test Windows della contabilità attendeva almeno 20 ms da un retry reale di 35 ms; la scrittura SQLite e la diagnostica possono esaurire la scadenza prima del timer, rendendo corretto il valore zero. Il test ora controlla il tempo virtuale: due esecuzioni da 7 ms e un’attesa da 35 ms, verificate esattamente. Nessuna soglia di produzione o codice applicativo modificato. Typecheck, 14 test mirati e suite completa locale (377 passati, 47 esclusi) superati.
+
 - **Ready e autorizzazione (29-10-2026):** l’utente richiede una nuova release. Base dev 222c004, ultima release pubblicata v0.3.8 su main e75c6c6. APP-179–181 e APP-185 già integrati e verificati; versione successiva 0.3.9, schema 16 invariato. Ramo task/app-186-release-0.3.9 nel checkout isolato e pulito. Unica attività principale In progress.
 - **Accettazione:** versione coerente in package e lockfile, note con benefici misurati e limiti; PR di preparazione in dev e dev → main con quattro check CI verdi; workflow Release riuscito, tag sul commit main corretto, nove asset pubblici con manifest/attestazioni e checksum riconciliati. Chiusura documentale in dev dopo la pubblicazione.
 - **Verifica prevista:** build/typecheck con Node 24, controllo della versione e test provenienza; suite e prove Electron/package sulle quattro piattaforme in CI e Release. Nessuna nuova analisi Codex reale o intervento sull’app personale in esecuzione. Non installare o riavviare automaticamente il programma.
