@@ -4,6 +4,10 @@
 
 ## Decisioni
 
+### T-177 — Release v0.3.8 dal dev verificato
+
+Il 29-10-2026 l'utente autorizza merge dev→main e pubblicazione delle ottimizzazioni DB. Incremento patch 0.3.8, schema 16 già introdotto e verificato in APP-174–176; inclusi i miglioramenti APP-172/173 presenti in dev. Si mantengono branch protetti e quattro check obbligatori per ogni PR, più package/smoke, manifest e attestazioni del workflow Release sul commit main. I risultati locali non sostituiscono le prove dei runner. Restano dichiarati i limiti di firma ad hoc, notarizzazione e Finder esterno. Nessun cambiamento ai parametri di durabilità o ai dati personali durante la pubblicazione.
+
 ### T-176 — Pagine profonde, storici e riferimenti derivati (APP-175/176)
 
 Il 29-10-2026 l'utente autorizza il completamento dei residui dell'audit. I cursori numerici delle analisi salvate restano immutati: una proiezione TEMP degli identificativi ordinati consente l'accesso per ordinale, senza rieseguire OFFSET e filtri testuali a ogni pagina. Si conservano `instr`, Unicode e ordine dei nulli; la cache ha otto filtri per connessione e può usare storage temporaneo SQLite. Gli storici mutabili usano cursori per sequenza o coppia data/rowid, con finestre UI/IPC esplicite e caricamento dei dettagli selezionati. La base corrente Matchup è individuata separatamente dalla pagina più recente. Le numerazioni delle revisioni diventano assolute anche nei batch di riepilogo AI.

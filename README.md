@@ -71,6 +71,14 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Novità della v0.3.8
+
+Le letture del database sono più leggere: indici mirati, riepiloghi compatti e pagine Eventi profonde indicizzate riducono scansioni e lavoro ripetuto. Versioni della lista, candidate, conversazioni e guide Matchup caricano lo storico a blocchi, mantenendo raggiungibile ogni elemento e la base corrente anche quando è fuori dalla prima pagina.
+
+La raccolta delle prove AI mostra fase, avanzamento e tempi anche dopo il completamento dei lotti. I risultati salvati, gli originali e i checkpoint restano disponibili alla ripresa. Lo schema 16 conserva riferimenti e riepiloghi nella stessa transazione dei dati; prima dell'upgrade viene creato un backup verificato. Le misure locali, il costo aggiuntivo delle scritture e i limiti sono nel [rapporto sulle prestazioni](docs/DATABASE-PERFORMANCE.md).
+
+Sono incluse anche le rifiniture già integrate in `dev`: progetti in Lista compatta, sezione Strategie, Guide matchup, suono degli avvisi configurabile, riconoscimento dell'Energia Telepatica e scorrimento delle attività. Restano i limiti di firma e della prova Finder esterna descritti sopra.
+
 ### Novità della v0.3.7
 
 La preparazione delle analisi Codex viene eseguita in un worker separato, così puoi continuare a usare la finestra durante le operazioni sui dati. Il Catalogo integra da scansioni verificate le 19 schede incomplete individuate su Windows: 16 costi di attacco gratuiti e tre effetti Trainer omessi dalla fonte, con provenienza visibile.
@@ -113,7 +121,7 @@ La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e
 
 ## Sviluppo
 
-Il sorgente locale include l'audit e le ottimizzazioni SQLite con schema 16, non ancora pubblicati nella v0.3.7. Il passaggio crea un backup verificato prima dell'upgrade e conserva le analisi in sospeso. Include pagine Eventi profonde indicizzate, storici caricati a blocchi e riferimenti di conservazione incrementali. Misure e limiti sono nel [rapporto sulle prestazioni del database](docs/DATABASE-PERFORMANCE.md).
+La v0.3.8 include l'audit e le ottimizzazioni SQLite con schema 16. Il passaggio crea un backup verificato prima dell'upgrade e conserva le analisi in sospeso. Include pagine Eventi profonde indicizzate, storici caricati a blocchi e riferimenti di conservazione incrementali. Misure e limiti sono nel [rapporto sulle prestazioni del database](docs/DATABASE-PERFORMANCE.md).
 
 Servono **Node.js 24 o successivo**, npm e un ambiente grafico. Dalla radice del repository:
 
