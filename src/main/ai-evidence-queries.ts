@@ -321,7 +321,9 @@ export function aiEvidenceForPrompt(trace: AiEvidenceQueryTrace): unknown {
     const pages = archive ? [...archive.pages()] : trace.requests
     const originals = pages.flatMap((page) => (page.data as { matches?: CatalogEvidenceMatch[] } | null)?.matches ?? [])
     recordEvidenceDelivery(trace, originals)
-    const { deliveredCards: _delivery, ...context } = trace
+    // Every original is already included in this small prompt. Reconstructing
+    // focus bookkeeping must not invalidate an otherwise identical cached call.
+    const { deliveredCards: _delivery, focusedPrintIds: _focus, ...context } = trace
     return { ...context, ...(archive ? { durationMs: 0 } : {}), ...queryPagesForPrompt(pages) }
   }
   const focused = new Set(trace.focusedPrintIds ?? [])

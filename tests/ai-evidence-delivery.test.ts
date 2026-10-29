@@ -97,6 +97,17 @@ it('the registry describes the latest serialized payload and is excluded from ev
   expect(JSON.stringify(direct)).not.toContain('deliveredCards')
 })
 
+it('keeps a complete small prompt stable when focus bookkeeping is reconstructed on resume', () => {
+  const { trace, engine } = fixture()
+  delete trace.analysis
+  const original = aiEvidenceForPrompt(trace)
+  prepareEvidenceDelivery(trace, engine, [])
+  expect(aiEvidenceForPrompt(trace)).toEqual(original)
+  prepareEvidenceDelivery(trace, engine, ['Card a'])
+  expect(aiEvidenceForPrompt(trace)).toEqual(original)
+  expect(trace.deliveredCards?.map((card) => card.printId)).toEqual(['a', 'b'])
+})
+
 it('exact printed-rule duplication is reversible while errata and missing fields remain explicit', () => {
   const original = card('a')
   expect(cardForPrompt(original)).toMatchObject({ printedGameplayRef: 'gameplay' })
