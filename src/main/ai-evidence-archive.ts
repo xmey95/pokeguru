@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { gzipSync, gunzipSync } from 'node:zlib'
 import type { AiEvidenceQueryResult } from '../shared/ai-evidence'
 import { statementCache } from './database-statements'
+import type { EvidenceRecord } from './ai-evidence-partition'
 
 /** Persist originals separately from query membership. No aggregate payload limit:
  * each compressed SQLite chunk is bounded, and readers walk one record at a time.
@@ -135,6 +136,18 @@ export interface EvidenceSnapshotRow {
   key: string; deckKey: string; date: string; placing: number | null
   deckName: string; deckText: string; cardsText: string; value: unknown
 }
+export interface EvidenceAnalysisInput {
+  key: string
+  fingerprint: string
+  type: 'record' | 'statistics' | 'search' | 'summary'
+  recordKind?: string
+  sourceId?: string
+  deckKey?: string | null
+}
+export interface EvidenceAnalysisInventory {
+  snapshotHash: string | null
+  inputs: EvidenceAnalysisInput[]
+}
 
 /** A capability bound to one existing job, project and resource. Object hashes are
  * never an authorization token: callers can only traverse this run's memberships. */
@@ -213,6 +226,21 @@ export class AiEvidenceArchive {
     const row = this.prepare('SELECT object_hash FROM ai_evidence_values WHERE job_id = ? AND role = ? AND key = ?')
       .get(this.id, role, key) as { object_hash: string } | undefined
     return row ? this.get<T>(row.object_hash) : undefined
+  }
+  /** Latest immutable checkpoint for this job only; used to extend an analysis manifest. */
+  latestValue<T>(role: string): T | undefined {
+    const row = this.prepare(`SELECT object_hash FROM ai_evidence_values
+      WHERE job_id = ? AND role = ? ORDER BY rowid DESC LIMIT 1`).get(this.id, role) as
+      { object_hash: string } | undefined
+    return row ? this.get<T>(row.object_hash) : undefined
+  }
+  hasLegacyAnalysisCheckpoint(): boolean {
+    return !!this.prepare(`SELECT 1 FROM ai_evidence_values
+      WHERE job_id = ? AND role LIKE 'analysis:%' LIMIT 1`).get(this.id) ||
+      !!this.prepare(`SELECT 1 FROM ai_call_cache WHERE job_id = ?
+        AND json_type(result_json, '$.summary') = 'text'
+        AND json_type(result_json, '$.limitations') = 'text'
+        AND json_type(result_json, '$.sourceIds') = 'array' LIMIT 1`).get(this.id)
   }
   saveValue(role: string, key: string, value: unknown): void {
     this.atomic(() => {
@@ -355,6 +383,62 @@ export class AiEvidenceArchive {
   sourceCount(): number {
     return (this.prepare('SELECT count(DISTINCT source_id) AS count FROM ai_evidence_records WHERE job_id = ?')
       .get(this.id) as { count: number }).count
+  }
+
+  /** Read only identities and content hashes, never compressed originals. The order
+   * matches archivedRecords: originals, per-deck statistics, then query summaries. */
+  analysisInventory(): EvidenceAnalysisInventory {
+    const records = this.prepare(`SELECT key, kind, source_id, deck_key, object_hash
+      FROM ai_evidence_records WHERE job_id = ? ORDER BY key`).all(this.id) as {
+        key: string; kind: string; source_id: string; deck_key: string | null; object_hash: string }[]
+    const inputs: EvidenceAnalysisInput[] = records.map((row) => ({ key: row.key,
+      type: 'record', fingerprint: evidenceHash(row), recordKind: row.kind,
+      sourceId: row.source_id, deckKey: row.deck_key }))
+    const byKey = new Map(records.map((row) => [row.key, row]))
+    const occurrences = new Map<string, typeof records>()
+    for (const row of records) if (row.kind === 'occurrence' && row.deck_key !== null) {
+      const prior = occurrences.get(row.deck_key) ?? []
+      prior.push(row); occurrences.set(row.deck_key, prior)
+    }
+    for (const [deckKey, rows] of [...occurrences].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0))
+      inputs.push({ key: `statistics:${deckKey}`, type: 'statistics', deckKey,
+        fingerprint: evidenceHash([byKey.get(`deck:${deckKey}`) ?? null, rows]) })
+    const pages = new Map<string, unknown[]>()
+    for (const row of this.prepare(`SELECT search_key, sequence, cursor_key, fingerprint, object_hash
+      FROM ai_evidence_pages WHERE job_id = ? ORDER BY search_key, sequence`).all(this.id) as
+      { search_key: string; sequence: number; cursor_key: string; fingerprint: string; object_hash: string }[]) {
+      const prior = pages.get(row.search_key) ?? []
+      prior.push(row); pages.set(row.search_key, prior)
+    }
+    for (const row of this.prepare(`SELECT key, query_json, cursor_json, pages, response_bytes
+      FROM ai_evidence_searches WHERE job_id = ? ORDER BY rowid`).all(this.id) as
+      { key: string; query_json: string; cursor_json: string | null; pages: number; response_bytes: number }[])
+      inputs.push({ key: `search:${row.key}`, type: 'search', fingerprint: evidenceHash([row, pages.get(row.key) ?? []]) })
+    const snapshot = this.prepare(`SELECT object_hash FROM ai_evidence_values
+      WHERE job_id = ? AND role = 'snapshot' AND key = 'sources'`).get(this.id) as { object_hash: string } | undefined
+    return { snapshotHash: snapshot?.object_hash ?? null, inputs }
+  }
+
+  /** Hydrate a manifest member through this job's memberships, not a supplied object hash. */
+  readAnalysisInput(input: EvidenceAnalysisInput): EvidenceRecord {
+    if (input.type === 'record') {
+      const data = this.readRecord(input.key)
+      if (data === undefined || !input.sourceId) throw new Error('Prova del manifest non disponibile.')
+      return { key: input.key, sourceIds: [input.sourceId],
+        data: { kind: input.recordKind, deckKey: input.deckKey, original: data } }
+    }
+    if (input.type === 'statistics' && input.deckKey) {
+      const statistic = this.deckStatistics(input.deckKey).next().value
+      if (!statistic) throw new Error('Statistiche del manifest non disponibili.')
+      const deck = this.readRecord<{ cards: string[] }>(`deck:${input.deckKey}`)
+      return { key: input.key, sourceIds: [], data: { ...statistic, cards: deck?.cards } }
+    }
+    if (input.type === 'search') {
+      const search = this.getSearch(input.key.slice('search:'.length))
+      if (!search) throw new Error('Ricerca del manifest non disponibile.')
+      return { key: input.key, sourceIds: [], data: this.searchSummary(search) }
+    }
+    throw new Error('Elemento del manifest non valido.')
   }
 
   private record(key: string, kind: string, sourceId: string, data: unknown, deckKey: string | null = null): string {
@@ -500,12 +584,13 @@ export class AiEvidenceArchive {
   }
   /** Exact counts over unique participation identities, not sums of query pages
    * or model summaries. A field record is never a winrate against the user's deck. */
-  *deckStatistics(): Generator<EvidenceDeckStatistics> {
+  *deckStatistics(onlyDeckKey?: string): Generator<EvidenceDeckStatistics> {
     let after = ''
     while (true) {
       const decks = this.prepare(`SELECT deck_key FROM ai_evidence_records
-        WHERE job_id = ? AND kind = 'occurrence' AND deck_key > ? GROUP BY deck_key ORDER BY deck_key LIMIT 64`)
-        .all(this.id, after) as { deck_key: string }[]
+        WHERE job_id = ? AND kind = 'occurrence' AND deck_key > ? ${onlyDeckKey === undefined ? '' : 'AND deck_key = ?'}
+        GROUP BY deck_key ORDER BY deck_key LIMIT 64`)
+        .all(this.id, after, ...(onlyDeckKey === undefined ? [] : [onlyDeckKey])) as { deck_key: string }[]
       if (!decks.length) return
       for (const row of decks) {
         after = row.deck_key

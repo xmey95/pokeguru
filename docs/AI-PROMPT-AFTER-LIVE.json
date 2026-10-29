@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "corpusVersion": "app179-181-fidelity-v1",
+  "graderVersion": "app179-181-factual-checks-v2",
+  "label": "candidate",
+  "kind": "real-codex-final-prompt-fidelity",
+  "config": {
+    "provider": "codex",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null,
+    "source": "global"
+  },
+  "configHash": "61fa2fef21853e700ca8a0f875f82b30fd62a6bdfcf7a563d913adb63f8930ba",
+  "calls": 1,
+  "inputBytes": 19299,
+  "promptSha256": "2591c94ebaf37f43672697e53671764cd0834e6e21ad65a4d4fb6fa21fdbc90b",
+  "outputBytes": 1784,
+  "elapsedMs": 15434,
+  "usage": {
+    "inputTokens": 17164,
+    "cachedInputTokens": 0,
+    "outputTokens": 462
+  },
+  "checks": [
+    {
+      "id": "Q1",
+      "passed": true,
+      "detail": "Real Budew: zero Energy, 10 damage, opponent Items from hand next turn; no blanket Trainer prohibition."
+    },
+    {
+      "id": "Q2",
+      "passed": true,
+      "detail": "Same name, two printings with different draw counts remain distinct."
+    },
+    {
+      "id": "Q3",
+      "passed": true,
+      "detail": "6/3/1 and denominator 10 are field results, not this user matchup winrate."
+    },
+    {
+      "id": "Q4",
+      "passed": true,
+      "detail": "Missing attack cost cannot be silently converted to zero or a legality claim."
+    },
+    {
+      "id": "Q5",
+      "passed": true,
+      "detail": "Both conflicting source values and their unresolved status survive."
+    },
+    {
+      "id": "Q6",
+      "passed": true,
+      "detail": "Overlapping query memberships do not create a second independent observation."
+    },
+    {
+      "id": "sources",
+      "passed": true,
+      "detail": "All decisive fixture sources are retained and no foreign source is cited."
+    }
+  ],
+  "reply": "Q1 — Budew (sv08.5-004): Itchy Pollen costs no Energy, deals 10 damage, and prevents the opponent from playing Item cards from their hand during their next turn. It does not prohibit every Trainer card.\n\nQ2 — Synthetic Courier has two distinct print identities: qa02-alpha draws 2 cards; qa02-beta draws 3 cards. Their matching names do not establish equivalent effects.\n\nQ3 — The observed tournament record is 6 wins, 3 losses and 1 tie across 10 matches against the event field. This is not a winrate against the user's deck. The same participation retrieved multiple times counts once.\n\nQ4 — Synthetic Unknown (qa04-unknown) has an attack with 50 damage, but its attack cost is null: unknown, not proven free. The supplied fixture establishes no legality verdict.\n\nQ5 — Synthetic Observation A reports a maximum of 2 uses; Synthetic Observation B reports a maximum of 3 uses. B's supplied gameplay includes its applied erratum and takes precedence over its uncorrected printed text. The conflict between A and B remains unresolved by the supplied sources; both claims must be retained.\n\nQ6 — Synthetic Duplicate (qa06-duplicate) says “Draw 1 card.” Its appearances in overlapping query results represent one distinct printing, not independent observations. Repeated query memberships likewise add no independent evidence for the other supplied printings.\n\nThe synthetic fixtures make no claim about real cards or legality. These data do not establish tactics or a matchup winrate.",
+  "sourceIds": [
+    "card:sv08.5-004",
+    "card:qa02-alpha",
+    "card:qa02-beta",
+    "list:quality-field",
+    "card:qa04-unknown",
+    "card:qa05-a",
+    "card:qa05-b",
+    "card:qa06-duplicate"
+  ],
+  "limitations": "Six targeted factual probes, one real curated printing; no statistical or tactical non-inferiority claim. Offline mode is an oracle and measures neither model behavior nor model latency."
+}

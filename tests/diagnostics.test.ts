@@ -4,6 +4,7 @@ import { readDiagnosticIncidents, writeDiagnosticIncidents } from '../src/main/d
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { emptyAiCallTotals } from '../src/shared/ai-call-metrics'
 
 const secret = 'PRIVATE-DECK-CHAT-TOKEN-PATH'
 
@@ -32,6 +33,22 @@ function input(): DiagnosticInput {
 }
 
 describe('diagnostic export', () => {
+  it('exports complete numeric phase totals, strips telemetry identifiers and keeps missing usage null', () => {
+    const value = input()
+    const totals = { ...emptyAiCallTotals(), attempts: 51, succeeded: 50, failed: 1,
+      observedExecutionMs: 1250, waitingMs: 3000, usageKnownAttempts: 50,
+      observedUsage: { inputTokens: 5000, cachedInputTokens: 1000, outputTokens: 500, secret },
+      usage: { inputTokens: 5000, cachedInputTokens: 1000, outputTokens: 500 },
+      prompt: secret, callKey: secret }
+    value.jobs![0].progress!.diagnostics = { metrics: { schemaVersion: 1, totals,
+      phases: { batch: totals, [secret]: totals }, attempts: [{ id: secret, prompt: secret }] } } as never
+    const metrics = buildDiagnosticReport(value).ai.recentJobs![0].diagnostics?.metrics
+    expect(metrics?.totals).toMatchObject({ attempts: 51, succeeded: 50, failed: 1, executionMs: 1250,
+      waitingMs: 3000, usage: null, observedUsage: { inputTokens: 5000, cachedInputTokens: 1000, outputTokens: 500 } })
+    expect(metrics?.phases.batch).toEqual(metrics?.totals)
+    expect(JSON.stringify(metrics)).not.toContain(secret)
+    expect(metrics).not.toHaveProperty('attempts')
+  })
   it('exports persistent failure and batch metrics with live executor state, never raw payloads', () => {
     const value = input()
     value.jobs![0].progress!.diagnostics = {

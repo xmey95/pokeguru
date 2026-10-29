@@ -13,7 +13,8 @@ import { AiFailure } from './ai-failure'
 
 /** An isolated, ephemeral structured call. The app validates the result before using it. */
 export async function runStructuredCodex(prompt: string, config: AiRunConfig,
-  schema: unknown, signal?: AbortSignal, onSummary?: (summary: string) => void): Promise<unknown> {
+  schema: unknown, signal?: AbortSignal, onSummary?: (summary: string) => void,
+  onUsage?: (usage: AiTokenUsage | null) => void): Promise<unknown> {
   if (signal?.aborted) throw new Error('Operazione Codex annullata.')
   const directory = mkdtempSync(join(tmpdir(), 'pokeguru-query-plan-'))
   const schemaPath = join(directory, 'schema.json')
@@ -67,6 +68,8 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
       child.on('close', (code) => {
         clearTimeout(timer)
         signal?.removeEventListener('abort', abort)
+        // A completed provider turn can still fail exit/output validation below.
+        try { onUsage?.(usage) } catch (error) { reject(error); return }
         if (signal?.aborted) return reject(new Error('Operazione Codex annullata.'))
         if (timedOut) return reject(new AiFailure('timeout', 'Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati.'))
         if (code !== 0) return reject(codexFailure(stderr))
@@ -84,6 +87,7 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
 
 /** The existing Matchup/Thread query planner keeps its fixed schema. */
 export function planEvidenceQueriesWithCodex(prompt: string, config: AiRunConfig,
-  signal?: AbortSignal, onSummary?: (summary: string) => void): Promise<unknown> {
-  return runStructuredCodex(prompt, config, AI_QUERY_PLAN_SCHEMA, signal, onSummary)
+  signal?: AbortSignal, onSummary?: (summary: string) => void,
+  onUsage?: (usage: AiTokenUsage | null) => void): Promise<unknown> {
+  return runStructuredCodex(prompt, config, AI_QUERY_PLAN_SCHEMA, signal, onSummary, onUsage)
 }

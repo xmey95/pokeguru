@@ -1,0 +1,561 @@
+{
+  "schemaVersion": 1,
+  "corpusVersion": "app179-181-fidelity-v1",
+  "kind": "real-codex-factual-fidelity",
+  "label": "candidate-recovered",
+  "recovered": true,
+  "config": {
+    "provider": "codex",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null,
+    "source": "global"
+  },
+  "configHash": "61fa2fef21853e700ca8a0f875f82b30fd62a6bdfcf7a563d913adb63f8930ba",
+  "node": null,
+  "platform": null,
+  "recoveryRuntime": {
+    "node": "v24.19.0",
+    "platform": "win32"
+  },
+  "fixtureDirectory": "C:\\Users\\federico.grasso\\Workspace\\ALTRO\\pokeguru\\.verify\\app-179-181-ai-efficiency\\.verify\\ai-quality-fixture-Uw7YyK",
+  "jobCreatedAt": "2026-10-29T11:53:38.885Z",
+  "jobUpdatedAt": "2026-10-29T11:55:05.962Z",
+  "maxInvocations": 12,
+  "recovery": {
+    "readOnly": true,
+    "newModelInvocations": 0,
+    "checkpointCount": 3,
+    "reason": "The original candidate report was overwritten by an unintended second baseline test. Restored exact final answers and per-attempt measurements from the candidate SQLite fixture.",
+    "phaseAssignment": "Sequential successful attempts; the first checkpoint records five calls, its identical-generation replay adds zero, and the two remaining attempts precede the changed-generation checkpoint.",
+    "unavailable": [
+      "original harness end-to-end elapsedMs",
+      "original raw outputBytes",
+      "runtime of original process"
+    ],
+    "verification": "Checkpoint compressed chunks, byte lengths and SHA-256 verified; all seven attempts succeeded with usage and the pinned requested configuration. Grader rerun unchanged; original gameplay delivery rechecked read-only."
+  },
+  "limitations": "Small factual-fidelity corpus; not statistical or tactical non-inferiority. recordedModelExecutionMs excludes local preparation/verification and cannot be compared directly to baseline elapsedMs. Effective service defaults were not observed.",
+  "recordedMetrics": {
+    "schemaVersion": 1,
+    "coverage": "recorded-attempts",
+    "totals": {
+      "attempts": 7,
+      "running": 0,
+      "succeeded": 7,
+      "failed": 0,
+      "interrupted": 0,
+      "cacheHits": 9,
+      "inputBytes": 171617,
+      "executionMs": 86773,
+      "observedExecutionMs": 86773,
+      "incompleteTimingAttempts": 0,
+      "waitingMs": 0,
+      "usage": {
+        "inputTokens": 88548,
+        "cachedInputTokens": 62720,
+        "outputTokens": 2375
+      },
+      "observedUsage": {
+        "inputTokens": 88548,
+        "cachedInputTokens": 62720,
+        "outputTokens": 2375
+      },
+      "usageKnownAttempts": 7
+    },
+    "phases": {
+      "batch": {
+        "attempts": 5,
+        "running": 0,
+        "succeeded": 5,
+        "failed": 0,
+        "interrupted": 0,
+        "cacheHits": 8,
+        "inputBytes": 156878,
+        "executionMs": 56046,
+        "observedExecutionMs": 56046,
+        "incompleteTimingAttempts": 0,
+        "waitingMs": 0,
+        "usage": {
+          "inputTokens": 62405,
+          "cachedInputTokens": 44800,
+          "outputTokens": 1156
+        },
+        "observedUsage": {
+          "inputTokens": 62405,
+          "cachedInputTokens": 44800,
+          "outputTokens": 1156
+        },
+        "usageKnownAttempts": 5
+      },
+      "synthesis": {
+        "attempts": 2,
+        "running": 0,
+        "succeeded": 2,
+        "failed": 0,
+        "interrupted": 0,
+        "cacheHits": 1,
+        "inputBytes": 14739,
+        "executionMs": 30727,
+        "observedExecutionMs": 30727,
+        "incompleteTimingAttempts": 0,
+        "waitingMs": 0,
+        "usage": {
+          "inputTokens": 26143,
+          "cachedInputTokens": 17920,
+          "outputTokens": 1219
+        },
+        "observedUsage": {
+          "inputTokens": 26143,
+          "cachedInputTokens": 17920,
+          "outputTokens": 1219
+        },
+        "usageKnownAttempts": 2
+      }
+    }
+  },
+  "attempts": [
+    {
+      "kind": "batch",
+      "callKey": "7426b77421ba5b7d4cda69b6cef7ceb1c825fc16bf9c74667253638bb9d1bdcd",
+      "startedAt": "2026-10-29T11:53:38.925Z",
+      "endedAt": "2026-10-29T11:53:48.390Z",
+      "status": "succeeded",
+      "inputBytes": 42982,
+      "executionMs": 9462,
+      "usage": {
+        "inputTokens": 12400,
+        "cachedInputTokens": 8960,
+        "outputTokens": 167
+      },
+      "requested": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": null
+      },
+      "effective": {
+        "model": null,
+        "reasoningEffort": null
+      }
+    },
+    {
+      "kind": "batch",
+      "callKey": "6e0e7e94b937fef5a4e9be47c1ab0cead80d996150966f273275d8eabbd65863",
+      "startedAt": "2026-10-29T11:53:48.410Z",
+      "endedAt": "2026-10-29T11:53:59.448Z",
+      "status": "succeeded",
+      "inputBytes": 43094,
+      "executionMs": 11036,
+      "usage": {
+        "inputTokens": 12438,
+        "cachedInputTokens": 8960,
+        "outputTokens": 222
+      },
+      "requested": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": null
+      },
+      "effective": {
+        "model": null,
+        "reasoningEffort": null
+      }
+    },
+    {
+      "kind": "batch",
+      "callKey": "043aac910f011ff20ce98686f089b8c18ce6d1f7730e4889a93502962aa9ded0",
+      "startedAt": "2026-10-29T11:53:59.465Z",
+      "endedAt": "2026-10-29T11:54:10.574Z",
+      "status": "succeeded",
+      "inputBytes": 43040,
+      "executionMs": 11108,
+      "usage": {
+        "inputTokens": 12411,
+        "cachedInputTokens": 8960,
+        "outputTokens": 233
+      },
+      "requested": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": null
+      },
+      "effective": {
+        "model": null,
+        "reasoningEffort": null
+      }
+    },
+    {
+      "kind": "batch",
+      "callKey": "fc9d443e29e448cbc999b84776684331a9df52ef3092230e268cd04f740a7d63",
+      "startedAt": "2026-10-29T11:54:10.588Z",
+      "endedAt": "2026-10-29T11:54:23.584Z",
+      "status": "succeeded",
+      "inputBytes": 25173,
+      "executionMs": 12995,
+      "usage": {
+        "inputTokens": 13097,
+        "cachedInputTokens": 8960,
+        "outputTokens": 331
+      },
+      "requested": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": null
+      },
+      "effective": {
+        "model": null,
+        "reasoningEffort": null
+      }
+    },
+    {
+      "kind": "synthesis",
+      "callKey": "83931f2f4138dea2ce589246a1e76da3d371b203fcae8191085abff8ec2950ac",
+      "startedAt": "2026-10-29T11:54:23.604Z",
+      "endedAt": "2026-10-29T11:54:38.035Z",
+      "status": "succeeded",
+      "inputBytes": 6810,
+      "executionMs": 14430,
+      "usage": {
+        "inputTokens": 12952,
+        "cachedInputTokens": 8960,
+        "outputTokens": 590
+      },
+      "requested": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": null
+      },
+      "effective": {
+        "model": null,
+        "reasoningEffort": null
+      }
+    },
+    {
+      "kind": "batch",
+      "callKey": "b5eaea2ea9b90de742ab62eb96aa2f409ce8c418b0a3e3c7eed18e3bcd77d939",
+      "startedAt": "2026-10-29T11:54:38.179Z",
+      "endedAt": "2026-10-29T11:54:49.627Z",
+      "status": "succeeded",
+      "inputBytes": 2589,
+      "executionMs": 11445,
+      "usage": {
+        "inputTokens": 12059,
+        "cachedInputTokens": 8960,
+        "outputTokens": 203
+      },
+      "requested": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": null
+      },
+      "effective": {
+        "model": null,
+        "reasoningEffort": null
+      }
+    },
+    {
+      "kind": "synthesis",
+      "callKey": "9867a272a2df8381667c54d218309b26573a0a20a5d48270f8daa1e85a7ad579",
+      "startedAt": "2026-10-29T11:54:49.646Z",
+      "endedAt": "2026-10-29T11:55:05.945Z",
+      "status": "succeeded",
+      "inputBytes": 7929,
+      "executionMs": 16297,
+      "usage": {
+        "inputTokens": 13191,
+        "cachedInputTokens": 8960,
+        "outputTokens": 629
+      },
+      "requested": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": null
+      },
+      "effective": {
+        "model": null,
+        "reasoningEffort": null
+      }
+    }
+  ],
+  "rows": [
+    {
+      "step": "initial",
+      "calls": 5,
+      "elapsedMs": null,
+      "recordedModelExecutionMs": 59031,
+      "firstAttemptAt": "2026-10-29T11:53:38.925Z",
+      "lastAttemptAt": "2026-10-29T11:54:38.035Z",
+      "inputBytes": 161099,
+      "outputBytes": null,
+      "usageCalls": 5,
+      "usage": {
+        "inputTokens": 63298,
+        "cachedInputTokens": 44800,
+        "outputTokens": 1543
+      },
+      "uniqueSourceCount": 8,
+      "checks": [
+        {
+          "id": "Q1",
+          "passed": true,
+          "detail": "Real Budew: zero Energy, 10 damage, opponent Items from hand next turn; no blanket Trainer prohibition."
+        },
+        {
+          "id": "Q2",
+          "passed": true,
+          "detail": "Same name, two printings with different draw counts remain distinct."
+        },
+        {
+          "id": "Q3",
+          "passed": true,
+          "detail": "6/3/1 and denominator 10 are field results, not this user matchup winrate."
+        },
+        {
+          "id": "Q4",
+          "passed": true,
+          "detail": "Missing attack cost cannot be silently converted to zero or a legality claim."
+        },
+        {
+          "id": "Q5",
+          "passed": true,
+          "detail": "Both conflicting source values and their unresolved status survive."
+        },
+        {
+          "id": "Q6",
+          "passed": true,
+          "detail": "Overlapping query memberships do not create a second independent observation."
+        },
+        {
+          "id": "sources",
+          "passed": true,
+          "detail": "All decisive fixture sources are retained and no foreign source is cited."
+        }
+      ],
+      "originalChecks": [
+        {
+          "printId": "sv08.5-004",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-alpha",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-beta",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa04-unknown",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-a",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-b",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa06-duplicate",
+          "exactGameplayDelivered": true
+        }
+      ],
+      "originalChecksReverifiedAfterRecovery": true,
+      "summary": "Q1: Budew (sv08.5-004), Itchy Pollen: no Energy cost, 10 damage; prevents the opponent from playing Item cards from their hand during their next turn, not every Trainer card. Provenance: a real printing transcribed in a local supplement checked on 2026-10-28, without new online verification.\nQ2: Synthetic Courier qa02-alpha says “Draw 2 cards.”; qa02-beta says “Draw 3 cards.” These are distinct print identities with different effects. Both are marked comparableGameplay=true and dated 2026-10-28; that flag and their shared name do not establish gameplay equivalence.\nQ3: Synthetic field archetype participation dated 2026-10-28: 5th place, 6 wins, 3 losses, 1 tie across 10 matches against the event field. Deduplicated statistics: 1 participation, 1 event, 1 available record. Discovery through two queries counts once. The associated list contains 60 Synthetic Energy (qa 1). These field results do not establish a winrate against the user deck.\nQ4: Synthetic Unknown, print qa04-unknown: Unknown Attack has damage “50”, cost null and effect null. Its cost is unknown, not established as free; no legality verdict is supplied.\nQ5: Observation A (qa05-a) reports a maximum of 2 uses; observation B (qa05-b) reports a maximum of 3 uses. The supplied statements explicitly identify the conflict and leave it unresolved. Preserve both observation claims, not a verified common rule.\nQ6: Synthetic Duplicate (qa06-duplicate) says “Draw 1 card.” Overlapping query appearances represent one distinct printing, not two independent observations; repeated query memberships do not increase evidence counts.",
+      "limitations": "Evidence here consists of prior AI summaries, not newly supplied original records or independent sources. Their batch-local absences are partly filled by the other supplied summaries; Q5 remains unresolved. Synthetic records are invented evaluation fixtures, not evidence about real cards or legality. Apart from Q3’s list quantity and deduplicated participation statistics, no deck quantities, frequencies, placements or statistical denominators are supplied. No user-deck matchup results, tactics or legality findings are established; do not invent a matchup winrate. Completed search metadata supplies no additional card contents or observations. Padding is inert.",
+      "sourceIds": [
+        "card:sv08.5-004",
+        "list:quality-field",
+        "card:qa02-alpha",
+        "card:qa02-beta",
+        "card:qa04-unknown",
+        "card:qa05-a",
+        "card:qa05-b",
+        "card:qa06-duplicate"
+      ]
+    },
+    {
+      "step": "identical_replay",
+      "calls": 0,
+      "elapsedMs": null,
+      "recordedModelExecutionMs": 0,
+      "firstAttemptAt": null,
+      "lastAttemptAt": null,
+      "inputBytes": 0,
+      "outputBytes": null,
+      "usageCalls": 0,
+      "usage": null,
+      "uniqueSourceCount": 8,
+      "checks": [
+        {
+          "id": "Q1",
+          "passed": true,
+          "detail": "Real Budew: zero Energy, 10 damage, opponent Items from hand next turn; no blanket Trainer prohibition."
+        },
+        {
+          "id": "Q2",
+          "passed": true,
+          "detail": "Same name, two printings with different draw counts remain distinct."
+        },
+        {
+          "id": "Q3",
+          "passed": true,
+          "detail": "6/3/1 and denominator 10 are field results, not this user matchup winrate."
+        },
+        {
+          "id": "Q4",
+          "passed": true,
+          "detail": "Missing attack cost cannot be silently converted to zero or a legality claim."
+        },
+        {
+          "id": "Q5",
+          "passed": true,
+          "detail": "Both conflicting source values and their unresolved status survive."
+        },
+        {
+          "id": "Q6",
+          "passed": true,
+          "detail": "Overlapping query memberships do not create a second independent observation."
+        },
+        {
+          "id": "sources",
+          "passed": true,
+          "detail": "All decisive fixture sources are retained and no foreign source is cited."
+        }
+      ],
+      "originalChecks": [
+        {
+          "printId": "sv08.5-004",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-alpha",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-beta",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa04-unknown",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-a",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-b",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa06-duplicate",
+          "exactGameplayDelivered": true
+        }
+      ],
+      "originalChecksReverifiedAfterRecovery": true,
+      "summary": "Q1: Budew (sv08.5-004), Itchy Pollen: no Energy cost, 10 damage; prevents the opponent from playing Item cards from their hand during their next turn, not every Trainer card. Provenance: a real printing transcribed in a local supplement checked on 2026-10-28, without new online verification.\nQ2: Synthetic Courier qa02-alpha says “Draw 2 cards.”; qa02-beta says “Draw 3 cards.” These are distinct print identities with different effects. Both are marked comparableGameplay=true and dated 2026-10-28; that flag and their shared name do not establish gameplay equivalence.\nQ3: Synthetic field archetype participation dated 2026-10-28: 5th place, 6 wins, 3 losses, 1 tie across 10 matches against the event field. Deduplicated statistics: 1 participation, 1 event, 1 available record. Discovery through two queries counts once. The associated list contains 60 Synthetic Energy (qa 1). These field results do not establish a winrate against the user deck.\nQ4: Synthetic Unknown, print qa04-unknown: Unknown Attack has damage “50”, cost null and effect null. Its cost is unknown, not established as free; no legality verdict is supplied.\nQ5: Observation A (qa05-a) reports a maximum of 2 uses; observation B (qa05-b) reports a maximum of 3 uses. The supplied statements explicitly identify the conflict and leave it unresolved. Preserve both observation claims, not a verified common rule.\nQ6: Synthetic Duplicate (qa06-duplicate) says “Draw 1 card.” Overlapping query appearances represent one distinct printing, not two independent observations; repeated query memberships do not increase evidence counts.",
+      "limitations": "Evidence here consists of prior AI summaries, not newly supplied original records or independent sources. Their batch-local absences are partly filled by the other supplied summaries; Q5 remains unresolved. Synthetic records are invented evaluation fixtures, not evidence about real cards or legality. Apart from Q3’s list quantity and deduplicated participation statistics, no deck quantities, frequencies, placements or statistical denominators are supplied. No user-deck matchup results, tactics or legality findings are established; do not invent a matchup winrate. Completed search metadata supplies no additional card contents or observations. Padding is inert.",
+      "sourceIds": [
+        "card:sv08.5-004",
+        "list:quality-field",
+        "card:qa02-alpha",
+        "card:qa02-beta",
+        "card:qa04-unknown",
+        "card:qa05-a",
+        "card:qa05-b",
+        "card:qa06-duplicate"
+      ]
+    },
+    {
+      "step": "overlapping_query_memberships",
+      "calls": 2,
+      "elapsedMs": null,
+      "recordedModelExecutionMs": 27742,
+      "firstAttemptAt": "2026-10-29T11:54:38.179Z",
+      "lastAttemptAt": "2026-10-29T11:55:05.945Z",
+      "inputBytes": 10518,
+      "outputBytes": null,
+      "usageCalls": 2,
+      "usage": {
+        "inputTokens": 25250,
+        "cachedInputTokens": 17920,
+        "outputTokens": 832
+      },
+      "uniqueSourceCount": 8,
+      "checks": [
+        {
+          "id": "Q1",
+          "passed": true,
+          "detail": "Real Budew: zero Energy, 10 damage, opponent Items from hand next turn; no blanket Trainer prohibition."
+        },
+        {
+          "id": "Q2",
+          "passed": true,
+          "detail": "Same name, two printings with different draw counts remain distinct."
+        },
+        {
+          "id": "Q3",
+          "passed": true,
+          "detail": "6/3/1 and denominator 10 are field results, not this user matchup winrate."
+        },
+        {
+          "id": "Q4",
+          "passed": true,
+          "detail": "Missing attack cost cannot be silently converted to zero or a legality claim."
+        },
+        {
+          "id": "Q5",
+          "passed": true,
+          "detail": "Both conflicting source values and their unresolved status survive."
+        },
+        {
+          "id": "Q6",
+          "passed": true,
+          "detail": "Overlapping query memberships do not create a second independent observation."
+        },
+        {
+          "id": "sources",
+          "passed": true,
+          "detail": "All decisive fixture sources are retained and no foreign source is cited."
+        }
+      ],
+      "originalChecks": [
+        {
+          "printId": "sv08.5-004",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-alpha",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa02-beta",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa04-unknown",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-a",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa05-b",
+          "exactGameplayDelivered": true
+        },
+        {
+          "printId": "qa06-duplicate",
+          "exactGameplayDelivered": true
+        }
+      ],
+      "originalChecksReverifiedAfterRecovery": true,
+      "summary": "Q1: Budew (sv08.5-004), Itchy Pollen: no Energy cost, 10 damage; prevents the opponent from playing Item cards from their hand during their next turn, not every Trainer card. Provenance: a real printing transcribed in a local supplement checked on 2026-10-28, without new online verification.\nQ2: Synthetic Courier qa02-alpha says “Draw 2 cards.”; qa02-beta says “Draw 3 cards.” These are distinct print identities with different effects; their shared name does not establish gameplay equivalence. Both are marked comparableGameplay=true and dated 2026-10-28; that flag does not erase the difference.\nQ3: Synthetic field archetype participation dated 2026-10-28 placed 5th, with 6 wins, 3 losses and 1 tie across 10 matches against the event field. Deduplicated statistics: 1 participation, 1 event, 1 available record. Discovery through two queries counts once. The associated list contains 60 Synthetic Energy (qa 1). These results do not establish a winrate against the user deck.\nQ4: Synthetic Unknown, print qa04-unknown, has Unknown Attack, damage \"50\", cost null and effect null. Its cost is unknown, not proven free; no legality verdict is supplied.\nQ5: Observation A (qa05-a) reports a maximum of 2 uses; observation B (qa05-b) reports a maximum of 3 uses. Both claims must remain: the supplied statements identify a conflict that the sources do not resolve. These are observation claims, not independently verified rules.\nQ6: Synthetic Duplicate, print qa06-duplicate, says “Draw 1 card.” Overlapping query appearances represent one distinct printing, not two independent observations. Repeated query memberships add no evidence.\nThe Synthetic records are invented evaluation fixtures, not evidence about real cards or legality. Padding is inert.",
+      "limitations": "The supplied material consists of prior AI summaries, not original records or new independent sources. Their batch-local omissions are addressed only through other supplied summaries; the underlying records cannot be rechecked here. Q5 remains unresolved. No user-deck matchup results, matchup winrate, tactics or legality conclusions are supported. No additional deck frequencies or statistical denominators are supplied. Completed-search metadata supplies no missing card contents or independent observations: catalog.search “overlapping query” reports 1 page, remaining 0, originalBytes 20695; events.search “Synthetic Energy” reports 1 page, remaining 0, originalBytes 1325. Those metadata entries contain no result records or source IDs and establish no result counts. Deduplicated original statistics take precedence over inferred counts.",
+      "sourceIds": [
+        "card:sv08.5-004",
+        "list:quality-field",
+        "card:qa02-alpha",
+        "card:qa02-beta",
+        "card:qa04-unknown",
+        "card:qa05-a",
+        "card:qa05-b",
+        "card:qa06-duplicate"
+      ]
+    }
+  ]
+}
