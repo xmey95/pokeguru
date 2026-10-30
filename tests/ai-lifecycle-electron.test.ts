@@ -14,6 +14,7 @@ import { createArchivedEvidenceEngine } from '../src/main/ai-evidence-snapshot'
 import { runAiEvidenceQueries, threadEvidenceWithQueries } from '../src/main/ai-evidence-queries'
 import { buildThreadEvidence } from '../src/main/thread-evidence'
 import { deckThreadPrompt } from '../src/main/deck-ai'
+import { runThreadDecision } from '../src/main/ai-thread-decision'
 import type { AiRunConfig } from '../src/shared/ai'
 
 const config: AiRunConfig = { provider: 'codex', source: 'global', model: null, reasoningEffort: null }
@@ -51,7 +52,7 @@ it.skipIf(process.env.POKEGURU_LIFECYCLE_E2E !== '1')('resumes on Electron reope
           args: [owner, thread.id, question, null, null] }))
       }
       const work = new AiAnalysisWork(directory, jobs, job.id, new AbortController().signal,
-        { kind: 'thread-ask', args: [owner, thread.id, question, null, null] })
+        { schemaVersion: name === 'crashed' ? 5 : 4, kind: 'thread-ask', args: [owner, thread.id, question, null, null] })
       try {
         work.snapshot('reference-date', [], () => '2026-10-28')
         work.snapshot('config', [], () => config)
@@ -62,12 +63,21 @@ it.skipIf(process.env.POKEGURU_LIFECYCLE_E2E !== '1')('resumes on Electron reope
           window: { from: '2026-10-01', to: '2026-10-28' }, play: [], main: [] }))
         const initial = work.snapshot('initial-evidence', [], () => buildThreadEvidence(thread, null, question, [], frozen, [], []))
         const trace = await runAiEvidenceQueries(question, initial, engine,
-          async () => ({ queries: [], continueAfterResults: false, uncertainty: '' }), { archive: work.archive })
+          async (_prompt, trace) => {
+            if (name !== 'crashed') return { queries: [], continueAfterResults: false, uncertainty: '' }
+            const packet = threadEvidenceWithQueries(initial, trace)
+            const context = deckThreadPrompt(thread, null, question, [], frozen, packet, '2026-10-28')
+            return runThreadDecision(work, config, context, packet, trace, async () => ({
+              sessionId: `session-${name}`, turnId: `turn-${name}`, usage: null,
+              value: { action: 'answer', queries: [], continueAfterResults: false, uncertainty: '',
+                answer: { kind: 'thought', reply: `Risultato conservato ${name}.`, rawText: '', sourceIds: [] } }
+            }))
+          }, { archive: work.archive })
         const evidence = threadEvidenceWithQueries(initial, trace)
         const context = deckThreadPrompt(thread, null, question, [], frozen, evidence, '2026-10-28')
         const key = createHash('sha256').update(JSON.stringify(['analysis', context.prompt, config])).digest('hex')
         if (reason === 'wait') jobs.saveCallState(job.id, key, { status: 'waiting', failures: 1, code: 'quota', nextAttemptAt: Date.now() + 3600_000 })
-        else await work.run('analysis', context.prompt, config, async () => ({ sessionId: `session-${name}`, turnId: `turn-${name}`,
+        else if (name !== 'crashed') await work.run('analysis', context.prompt, config, async () => ({ sessionId: `session-${name}`, turnId: `turn-${name}`,
           value: { kind: 'thought', reply: `Risultato conservato ${name}.`, rawText: '', sourceIds: [] }, usage: null }))
         if (reason !== 'running' && reason !== 'legacy') jobs.suspend(job.id, 'Fixture interrupted', reason === 'wait' ? 'shutdown' : reason)
         return { id: job.id, thread: thread.id, project: owner, key, directory }
