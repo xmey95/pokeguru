@@ -71,6 +71,12 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Novità della v0.3.11
+
+Le nuove analisi AI partono da statistiche complete degli Eventi e approfondiscono gli originali necessari alla richiesta. Le domande circoscritte ricevono risposte proporzionate; modello e livello di ragionamento restano quelli scelti. I controlli su carte, fonti e candidate e l'adozione manuale della lista rimangono attivi.
+
+Nel confronto live sui cinque casi, quattro risultano più rapidi: il totale passa da 20m44s a 3m47s, con 46 → 12 chiamate. È un campione congelato di 32 partecipazioni, non una garanzia sui tempi di ogni analisi; la domanda puntuale su carta non migliora. I lavori già avviati mantengono algoritmo e checkpoint precedenti. Schema 16 invariato. [Note e limiti](docs/RELEASE-0.3.11.md).
+
 ### Correzione della v0.3.10
 
 Le Strategie con evidenze estese non vengono più bloccate da «Evidenze del turno non valide» al salvataggio. Risposta, candidata ammissibile e fonti sono conservate integralmente, mantenendo i controlli di validità.
@@ -135,7 +141,7 @@ La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e
 
 ## Sviluppo
 
-Il ramo APP-191 sperimenta il flusso AI con statistiche complete e recupero mirato degli originali. Contratto, confronto sui cinque compiti e limiti sono nel [rapporto di verifica](docs/AI-DECISION-FLOW.md); non è ancora una release.
+Il flusso AI APP-191 è incluso nella v0.3.11. Contratto, confronto sui cinque compiti e limiti sono nel [rapporto di verifica](docs/AI-DECISION-FLOW.md).
 
 La v0.3.9 aggiunge riuso delle analisi e aggregati Evento sullo schema 16 della v0.3.8. Conserva i workflow precedenti e non introduce migrazioni SQLite. Misure, contratto e limiti sono nel [rapporto sugli aggregati](docs/AI-EVENT-AGGREGATES.md); le ottimizzazioni SQLite precedenti sono documentate nel [rapporto sul database](docs/DATABASE-PERFORMANCE.md).
 

@@ -1,6 +1,6 @@
 # APP-191 — Flusso AI proporzionato alla domanda
 
-Ramo `task/app-191-ai-decision-flow`, base dev `524b69b` (v0.3.10). Implementazione e verifica autorizzate il 30 ottobre 2026; nessun merge o rilascio incluso. Il checkout originale e il profilo personale non sono modificati.
+Ramo `task/app-191-ai-decision-flow`, base dev `524b69b` (v0.3.10). Implementazione e verifica autorizzate il 30 ottobre 2026. L'integrazione e il rilascio successivamente autorizzati sono tracciati in APP-193 per la v0.3.11; questo rapporto descrive le prove APP-191. Il checkout originale e il profilo personale non sono modificati.
 
 ## Contratto
 

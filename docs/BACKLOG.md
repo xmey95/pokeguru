@@ -197,6 +197,14 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-190** | Integrare APP-189 in dev e pubblicare v0.3.10 | Release | R-07, R-11, R-12, R-14 | P1 / M | Correzione locale verificata e richiesta esplicita di integrazione/release | Done |
 | **APP-191** | Analisi guidata dalla decisione e confronto live su cinque compiti | Qualità/prestazioni | R-06, R-07, R-08, R-10, R-13, R-14 / I3 | P1 / M | Base dev 524b69b; APP-179–185 integrati; autorizzazione del 30-10-2026 | Done |
 | **APP-192** | Ridurre i passaggi obbligatori nelle domande AI puntuali | Prestazioni | R-07, R-14 / I3 | P2 / M | Risultati APP-191; definire percorso diretto e fallback con controlli invariati | Backlog |
+| **APP-193** | Integrare APP-191 in dev e pubblicare v0.3.11 | Release | R-07, R-08, R-11, R-12, R-14 / I3 | P1 / M | APP-191 verificato; autorizzazione esplicita del 30-10-2026 | In progress |
+
+### APP-193 — Release v0.3.11 del flusso AI
+
+- **Ready e avvio (30-10-2026):** autorizzati integrazione in dev e nuova release. Ramo `task/app-193-release-0.3.11` sul commit APP-191 `42f36c1`, base dev `524b69b`; main/tag v0.3.10 `0d93764`. Unica attività principale In progress. Checkout originale e dati personali conservati.
+- **Accettazione:** versione e note 0.3.11 coerenti; ripresa delle analisi e controlli delle candidate invariati; CI delle PR dev e main su quattro piattaforme; Release completa, tag/commit, quattro pacchetti, checksum, provenienza e attestazioni verificati. Registrazione finale in dev.
+- **Perimetro:** distribuzione del lavoro APP-191 e adeguamento delle fixture al contratto v4, senza nuove chiamate AI. APP-192 e limiti delle misure restano espliciti. Schema DB 16, workflow esistenti v1–v3 preservati.
+- **Verifiche locali di integrazione:** typecheck/build v0.3.11 e test di provenienza passati; entrambe le prove Electron di lifecycle e reattività worker passate (30,25 s complessivi), su profili temporanei e senza inferenza. Fixture del planner aggiornata con `uncertainty` richiesto dal workflow v4. Restano validi i 387 test ordinari e le verifiche APP-191; la suite completa verrà rieseguita dalla CI per ogni piattaforma.
 
 ### APP-192 — Domande puntuali
 
