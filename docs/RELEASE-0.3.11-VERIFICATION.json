@@ -1,0 +1,83 @@
+{
+  "release": "https://github.com/xmey95/pokeguru/releases/tag/v0.3.11",
+  "sourceSha": "7c89a3ba6a8231ffec7bb6af337ff5c29caed326",
+  "run": "41058980469",
+  "assets": 9,
+  "verifiedChecksumEntries": 8,
+  "packages": [
+    {
+      "platform": "linux",
+      "artifact": "Pokeguru-0.3.11-linux-x86_64.AppImage",
+      "bytes": 294352938,
+      "sha256": "e6e8ddd4d027a0c6a1ce5a5b1848d6c8b65eb7757f0ad60be6c810535f6dd16b"
+    },
+    {
+      "platform": "windows",
+      "artifact": "Pokeguru-0.3.11-windows-x64-setup.exe",
+      "bytes": 226402014,
+      "sha256": "f0a4887929ab30e907c90a11689e09fda267ae9ed8a7f8d7b131da893a2a3a38"
+    },
+    {
+      "platform": "macos-x64",
+      "artifact": "Pokeguru-0.3.11-macos-x64.dmg",
+      "bytes": 277140547,
+      "sha256": "739fae9c773ee78a1e41b5bb769e79ddc833a2f3390222d9fc065f4f0475c600"
+    },
+    {
+      "platform": "macos-arm64",
+      "artifact": "Pokeguru-0.3.11-macos-arm64.dmg",
+      "bytes": 260219166,
+      "sha256": "a2785daf6c4dde1075ac520acad94b9d57fe10f1b41c1f2009c25a1c758c9c7a"
+    }
+  ],
+  "releaseRun": "https://github.com/xmey95/pokeguru/actions/runs/41058980469",
+  "verifiedJobs": [
+    {
+      "name": "Package (macos-15-intel)",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41058980469/job/124073599731"
+    },
+    {
+      "name": "Package (ubuntu-24.04)",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41058980469/job/124073599771"
+    },
+    {
+      "name": "Package (macos-15)",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41058980469/job/124073599799"
+    },
+    {
+      "name": "Package (windows-2022)",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41058980469/job/124073599956"
+    },
+    {
+      "name": "Attest release packages",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41058980469/job/124076476471"
+    },
+    {
+      "name": "Publish GitHub release",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41058980469/job/124076688656"
+    }
+  ],
+  "preparationPr": "https://github.com/xmey95/pokeguru/pull/123",
+  "mainPr": "https://github.com/xmey95/pokeguru/pull/124",
+  "ciRuns": [
+    "https://github.com/xmey95/pokeguru/actions/runs/41055853049",
+    "https://github.com/xmey95/pokeguru/actions/runs/41057494013"
+  ],
+  "verification": "Four CI jobs succeeded on each PR; four package/smoke jobs, attest and publish succeeded. Tag equals sourceSha; all eight checksums match GitHub asset digests; downloaded manifests and checksum file hashes match; manifest version/source/run/bytes match published packages. Package bytes and signed attestations were checked by the Release workflow. The four downloaded manifest attestations were independently verified with GitHub CLI, pinned to source SHA, main ref and signer workflow.",
+  "independentlyVerifiedManifestAttestations": 4,
+  "verificationNotes": [
+    "Three initial parallel local checks (Linux and both Macs) could not initialize the Sigstore/public-good verifier; the same checks passed on a sequential retry. Windows passed initially. No release files changed."
+  ],
+  "publishedAt": "2026-10-30T13:03:22Z",
+  "localIntegrationChecks": [
+    "npm run build (includes typecheck)",
+    "node --test tests/release-provenance-check.mjs",
+    "Lifecycle Electron and worker responsiveness: 2 passed, isolated profiles, no inference"
+  ]
+}
