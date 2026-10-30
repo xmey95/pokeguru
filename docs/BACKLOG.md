@@ -196,8 +196,13 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-189** | Salvare e recuperare Strategie con evidenze oltre il vecchio limite | Persistenza / correzione | R-07, R-11, R-14 | P1 / S | Diagnostica e risultato reale ready della v0.3.9 | Done |
 | **APP-190** | Integrare APP-189 in dev e pubblicare v0.3.10 | Release | R-07, R-11, R-12, R-14 | P1 / M | Correzione locale verificata e richiesta esplicita di integrazione/release | Done |
 | **APP-191** | Analisi guidata dalla decisione e confronto live su cinque compiti | Qualità/prestazioni | R-06, R-07, R-08, R-10, R-13, R-14 / I3 | P1 / M | Base dev 524b69b; APP-179–185 integrati; autorizzazione del 30-10-2026 | Done |
-| **APP-192** | Ridurre i passaggi obbligatori nelle domande AI puntuali | Prestazioni | R-07, R-14 / I3 | P2 / M | Risultati APP-191; definire percorso diretto e fallback con controlli invariati | Backlog |
+| **APP-192** | Ridurre i passaggi obbligatori nelle domande AI puntuali | Prestazioni | R-07, R-08, R-14 / I3 | P2 / M | APP-191/193; autorizzazione del 30-10-2026, contratto e confronto definiti sotto | Done |
 | **APP-193** | Integrare APP-191 in dev e pubblicare v0.3.11 | Release | R-07, R-08, R-11, R-12, R-14 / I3 | P1 / M | APP-191 verificato; autorizzazione esplicita del 30-10-2026 | Done |
+| **APP-194** | Distinguere in modo univoco Item e Tool nella terminologia italiana AI | Qualità | R-07, R-10 / I3 | P2 / S | Rilievo comune ai due bracci APP-192; definire corpus e criteri | Backlog |
+
+### APP-194 — Terminologia dei tipi Trainer
+
+Nel confronto ampio APP-192 sia v4 sia v5 usano genericamente «Strumento» per Air Balloon, tecnicamente Oggetto Pokémon/Tool. Le domande specifiche su Budew distinguono correttamente Item e Supporter, ma la terminologia generica può confondere quando si parla del blocco Item. Valutare glossario/informazioni strutturate per Item = Strumento, Tool = Oggetto Pokémon, Supporter = Aiuto e Stadium = Stadio, con prova su domande italiane e preservazione dei nomi originali. Non avviato nell'ottimizzazione della latenza.
 
 ### APP-193 — Release v0.3.11 del flusso AI
 
@@ -209,6 +214,11 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 - **Verifiche locali di integrazione:** typecheck/build v0.3.11 e test di provenienza passati; entrambe le prove Electron di lifecycle e reattività worker passate (30,25 s complessivi), su profili temporanei e senza inferenza. Fixture del planner aggiornata con `uncertainty` richiesto dal workflow v4. Restano validi i 387 test ordinari e le verifiche APP-191; la suite completa verrà rieseguita dalla CI per ogni piattaforma.
 
 ### APP-192 — Domande puntuali
+
+- **Esito locale (30-10-2026):** workflow v5 per nuovi turni Strategie, prima risposta/ricerca unificata, checkpoint e registro dei testi originali preservati; v1–v4 e guide invariati. 393 test, typecheck/build, preflight e lifecycle Electron passati. Confronto live completato con 18 osservazioni e 32 chiamate: mediana Budew 19,55 → 14,62 s (−25,22%), protezioni 15,97 → 12,63 s (−20,86%); sei domande puntuali da 12 a 6 chiamate. Ricerca necessaria eseguita e candidate vincolate/ampie verificate; cinque probe negativi respinti. Nessuna regressione nei criteri puntuali; rilievo terminologico comune nel caso ampio registrato in APP-194. [Rapporto](AI-FOCUSED-FLOW.md) e [metriche](AI-FOCUSED-METRICS.json). Campione ridotto, nessuna prova universale di equivalenza qualitativa; nessun merge, rilascio o modifica del profilo personale. Le note seguenti descrivono avvio e antecedenti.
+
+- **Ready e avvio (30-10-2026):** autorizzati ottimizzazione e verifica dei tempi/qualità. Worktree isolato `task/app-192-focused-ai` da dev `e98f68c` (v0.3.11). Nei soli nuovi turni Strategie la prima chiamata può rispondere con gli originali già consegnati oppure chiedere ricerche locali; l'esito passa dagli stessi controlli di carte, citazioni, candidate e persistenza. Nessuna classificazione lessicale che salti le verifiche; le guide mantengono v4 e i job già avviati restano nel contratto precedente.
+- **Accettazione e verifica:** ripresa della risposta diretta senza ripetere chiamate, revisione obbligatoria delle nuove carte anche dopo crash, fallback di ricerca, rifiuto fonti/candidate invalide. Confronto live appaiato v4/v5 sullo snapshot già autorizzato con gpt-6.1-sol ed effort invariato: almeno tre ripetizioni della domanda originale, altri due casi puntuali (anche con storico), casi di ricerca necessaria e modifica con vincoli. Registrare tutte le osservazioni, mediana e qualità con criteri espliciti; nessuna garanzia universale dedotta dal campione. Budget iniziale massimo 40 chiamate nel runner, output privati locali. Nessun merge o nuova release incluso in questo incremento.
 
 APP-191 misura ancora due chiamate per la domanda sulle regole di una carta: 21,7 s contro 19,1 s del baseline. Valutare un unico turno capace di rispondere quando gli originali sono sufficienti o chiedere prove quando mancano, mantenendo schema, citazioni, controllo delle nuove carte e contesto storico. Prima di Ready servono criteri di instradamento, fallback e una prova ripetuta della latenza; una singola osservazione non separa rumore del servizio e costo strutturale. Non avviato nell'incremento APP-191.
 

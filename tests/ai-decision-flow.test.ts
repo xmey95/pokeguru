@@ -27,7 +27,7 @@ function fixture(rows: EvidenceEventRow[]) {
   const folder = mkdtempSync(resolve('.verify/decision-test-')), file = join(folder, 'data.sqlite')
   const projects = new ProjectStore(file), jobs = new AiJobStore(file)
   const project = projects.create({ name: 'Decision', format: 'STANDARD' }), job = jobs.start('thread-ask', project.id, 'resource')
-  const input = { kind: 'thread-ask' as const, args: [project.id, 'resource', 'question'] }
+  const input = { schemaVersion: 4 as const, kind: 'thread-ask' as const, args: [project.id, 'resource', 'question'] }
   let controller = new AbortController()
   let work = new AiAnalysisWork(join(folder, 'job'), jobs, job.id, controller.signal, input)
   work.archive.captureSources({ catalog, window }, rows.map(value => ({ key: evidenceOccurrenceIdentity(value),

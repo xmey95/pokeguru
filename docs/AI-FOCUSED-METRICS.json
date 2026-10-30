@@ -1,0 +1,515 @@
+{
+  "task": "APP-192",
+  "comparison": "v0.3.11 workflow v4 versus unified-first-turn v5",
+  "model": "gpt-6.1-sol",
+  "reasoningEffort": null,
+  "transport": "Production persistent Codex CLI turns, ephemeral legacy planners",
+  "frozenParticipations": 32,
+  "referenceDate": "2026-10-29",
+  "initialPairedCases": 8,
+  "additionalBroadRegressionPairs": 1,
+  "repeatedFocusedPairs": 6,
+  "invocations": 32,
+  "invocationBudget": 40,
+  "groups": [
+    {
+      "group": "budew",
+      "v4": {
+        "observations": 3,
+        "elapsedMs": [
+          19547,
+          18149,
+          19630
+        ],
+        "medianMs": 19547,
+        "calls": [
+          2,
+          2,
+          2
+        ]
+      },
+      "v5": {
+        "observations": 3,
+        "elapsedMs": [
+          14041,
+          14903,
+          14617
+        ],
+        "medianMs": 14617,
+        "calls": [
+          1,
+          1,
+          1
+        ]
+      },
+      "medianReductionPercent": 25.22
+    },
+    {
+      "group": "candidate",
+      "v4": {
+        "observations": 1,
+        "elapsedMs": [
+          21466
+        ],
+        "medianMs": 21466,
+        "calls": [
+          2
+        ]
+      },
+      "v5": {
+        "observations": 1,
+        "elapsedMs": [
+          16270
+        ],
+        "medianMs": 16270,
+        "calls": [
+          1
+        ]
+      },
+      "medianReductionPercent": 24.21
+    },
+    {
+      "group": "general",
+      "v4": {
+        "observations": 1,
+        "elapsedMs": [
+          86132
+        ],
+        "medianMs": 86132,
+        "calls": [
+          4
+        ]
+      },
+      "v5": {
+        "observations": 1,
+        "elapsedMs": [
+          44605
+        ],
+        "medianMs": 44605,
+        "calls": [
+          2
+        ]
+      },
+      "medianReductionPercent": 48.21
+    },
+    {
+      "group": "history",
+      "v4": {
+        "observations": 1,
+        "elapsedMs": [
+          15154
+        ],
+        "medianMs": 15154,
+        "calls": [
+          2
+        ]
+      },
+      "v5": {
+        "observations": 1,
+        "elapsedMs": [
+          11543
+        ],
+        "medianMs": 11543,
+        "calls": [
+          1
+        ]
+      },
+      "medianReductionPercent": 23.83
+    },
+    {
+      "group": "protection",
+      "v4": {
+        "observations": 2,
+        "elapsedMs": [
+          16042,
+          15889
+        ],
+        "medianMs": 15965.5,
+        "calls": [
+          2,
+          2
+        ]
+      },
+      "v5": {
+        "observations": 2,
+        "elapsedMs": [
+          12573,
+          12696
+        ],
+        "medianMs": 12634.5,
+        "calls": [
+          1,
+          1
+        ]
+      },
+      "medianReductionPercent": 20.86
+    },
+    {
+      "group": "research",
+      "v4": {
+        "observations": 1,
+        "elapsedMs": [
+          36599
+        ],
+        "medianMs": 36599,
+        "calls": [
+          3
+        ]
+      },
+      "v5": {
+        "observations": 1,
+        "elapsedMs": [
+          18793
+        ],
+        "medianMs": 18793,
+        "calls": [
+          2
+        ]
+      },
+      "medianReductionPercent": 48.65
+    }
+  ],
+  "samples": [
+    {
+      "case": "budew-1",
+      "group": "budew",
+      "variant": "v4",
+      "elapsedMs": 19547,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 65182,
+      "cachedInputTokens": 0,
+      "outputTokens": 330
+    },
+    {
+      "case": "budew-1",
+      "group": "budew",
+      "variant": "v5",
+      "elapsedMs": 14041,
+      "calls": 1,
+      "revisions": 0,
+      "directAnswer": true,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 34279,
+      "cachedInputTokens": 0,
+      "outputTokens": 317
+    },
+    {
+      "case": "budew-2",
+      "group": "budew",
+      "variant": "v4",
+      "elapsedMs": 18149,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 65188,
+      "cachedInputTokens": 0,
+      "outputTokens": 349
+    },
+    {
+      "case": "budew-2",
+      "group": "budew",
+      "variant": "v5",
+      "elapsedMs": 14903,
+      "calls": 1,
+      "revisions": 0,
+      "directAnswer": true,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 34279,
+      "cachedInputTokens": 0,
+      "outputTokens": 331
+    },
+    {
+      "case": "budew-3",
+      "group": "budew",
+      "variant": "v4",
+      "elapsedMs": 19630,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 65198,
+      "cachedInputTokens": 0,
+      "outputTokens": 341
+    },
+    {
+      "case": "budew-3",
+      "group": "budew",
+      "variant": "v5",
+      "elapsedMs": 14617,
+      "calls": 1,
+      "revisions": 0,
+      "directAnswer": true,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 34273,
+      "cachedInputTokens": 0,
+      "outputTokens": 321
+    },
+    {
+      "case": "candidate",
+      "group": "candidate",
+      "variant": "v4",
+      "elapsedMs": 21466,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": true,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 62689,
+      "cachedInputTokens": 0,
+      "outputTokens": 535
+    },
+    {
+      "case": "candidate",
+      "group": "candidate",
+      "variant": "v5",
+      "elapsedMs": 16270,
+      "calls": 1,
+      "revisions": 0,
+      "directAnswer": true,
+      "candidateAccepted": true,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 32975,
+      "cachedInputTokens": 0,
+      "outputTokens": 488
+    },
+    {
+      "case": "general",
+      "group": "general",
+      "variant": "v4",
+      "elapsedMs": 86132,
+      "calls": 4,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": true,
+      "planningRounds": 3,
+      "eventQueries": 5,
+      "inputTokens": 272636,
+      "cachedInputTokens": 0,
+      "outputTokens": 2380
+    },
+    {
+      "case": "general",
+      "group": "general",
+      "variant": "v5",
+      "elapsedMs": 44605,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": true,
+      "planningRounds": 1,
+      "eventQueries": 2,
+      "inputTokens": 142527,
+      "cachedInputTokens": 0,
+      "outputTokens": 1475
+    },
+    {
+      "case": "history",
+      "group": "history",
+      "variant": "v4",
+      "elapsedMs": 15154,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 61713,
+      "cachedInputTokens": 0,
+      "outputTokens": 325
+    },
+    {
+      "case": "history",
+      "group": "history",
+      "variant": "v5",
+      "elapsedMs": 11543,
+      "calls": 1,
+      "revisions": 0,
+      "directAnswer": true,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 32508,
+      "cachedInputTokens": 0,
+      "outputTokens": 325
+    },
+    {
+      "case": "protection-1",
+      "group": "protection",
+      "variant": "v4",
+      "elapsedMs": 16042,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 61678,
+      "cachedInputTokens": 8960,
+      "outputTokens": 313
+    },
+    {
+      "case": "protection-1",
+      "group": "protection",
+      "variant": "v5",
+      "elapsedMs": 12573,
+      "calls": 1,
+      "revisions": 0,
+      "directAnswer": true,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 32472,
+      "cachedInputTokens": 0,
+      "outputTokens": 328
+    },
+    {
+      "case": "protection-2",
+      "group": "protection",
+      "variant": "v4",
+      "elapsedMs": 15889,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 61701,
+      "cachedInputTokens": 9344,
+      "outputTokens": 302
+    },
+    {
+      "case": "protection-2",
+      "group": "protection",
+      "variant": "v5",
+      "elapsedMs": 12696,
+      "calls": 1,
+      "revisions": 0,
+      "directAnswer": true,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 0,
+      "inputTokens": 32478,
+      "cachedInputTokens": 0,
+      "outputTokens": 311
+    },
+    {
+      "case": "research",
+      "group": "research",
+      "variant": "v4",
+      "elapsedMs": 36599,
+      "calls": 3,
+      "revisions": 1,
+      "directAnswer": false,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 3,
+      "inputTokens": 334981,
+      "cachedInputTokens": 78592,
+      "outputTokens": 1243
+    },
+    {
+      "case": "research",
+      "group": "research",
+      "variant": "v5",
+      "elapsedMs": 18793,
+      "calls": 2,
+      "revisions": 0,
+      "directAnswer": false,
+      "candidateAccepted": false,
+      "planningRounds": 1,
+      "eventQueries": 2,
+      "inputTokens": 162036,
+      "cachedInputTokens": 0,
+      "outputTokens": 689
+    }
+  ],
+  "focusedTotals": {
+    "v4": {
+      "elapsedMs": 104411,
+      "calls": 12,
+      "inputTokens": 380660,
+      "cachedInputTokens": 18304,
+      "outputTokens": 1960
+    },
+    "v5": {
+      "elapsedMs": 80373,
+      "calls": 6,
+      "inputTokens": 200289,
+      "cachedInputTokens": 0,
+      "outputTokens": 1933
+    }
+  },
+  "primaryTotals": {
+    "v4": {
+      "elapsedMs": 162476,
+      "calls": 17,
+      "inputTokens": 778330,
+      "cachedInputTokens": 96896,
+      "outputTokens": 3738
+    },
+    "v5": {
+      "elapsedMs": 115436,
+      "calls": 9,
+      "inputTokens": 395300,
+      "cachedInputTokens": 0,
+      "outputTokens": 3110
+    }
+  },
+  "allTotals": {
+    "v4": {
+      "elapsedMs": 248608,
+      "calls": 21,
+      "inputTokens": 1050966,
+      "cachedInputTokens": 96896,
+      "outputTokens": 6118
+    },
+    "v5": {
+      "elapsedMs": 160041,
+      "calls": 11,
+      "inputTokens": 537827,
+      "cachedInputTokens": 0,
+      "outputTokens": 4585
+    }
+  },
+  "candidateExactReplacementVerified": true,
+  "negativeValidationChecksPerObservation": 5,
+  "quality": {
+    "reviewedResponses": 18,
+    "focusedResponsesMeetingRubric": 12,
+    "contextualResearchResponsesMeetingRubric": 2,
+    "exactReplacementCandidates": 2,
+    "broadRegressionCandidates": 2,
+    "broadFrequencyClaimsIndependentlyReconciled": {
+      "Dawn": 12,
+      "BraveBangle": 8
+    },
+    "broadDamageCalculationChecked": "60 + 20*10 + 30 = 290 before Weakness/Resistance and other modifiers",
+    "commonMinorFinding": "Both broad responses use generic Italian Strumento for Air Balloon, technically an Oggetto Pokemon/Tool; this is not evidence about Item-lock. Focused Item/Supporter distinctions are correct in both arms."
+  },
+  "limitations": [
+    "Small paired repeated sample; no statistical quality equivalence.",
+    "No full-corpus end-to-end latency or network acquisition measured.",
+    "History case uses an identical synthetic pending note.",
+    "No model/effort reduction, production prompt tuning or best-of selection after observing results.",
+    "Quality rubric is manually reviewed against supplied originals; not competitive performance testing.",
+    "Private payloads, answers, identifiers and source fingerprints are excluded from this metrics file."
+  ]
+}

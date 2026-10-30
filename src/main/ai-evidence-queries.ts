@@ -220,7 +220,7 @@ export function extendAiEvidenceForText(trace: AiEvidenceQueryTrace, engine: AiE
 
 /** Execute read-only local queries, beginning with exact names found in the full context. */
 export async function runAiEvidenceQueries(request: string, initialEvidence: unknown,
-  engine: AiEvidenceEngine, plan: (prompt: string) => Promise<unknown>,
+  engine: AiEvidenceEngine, plan: (prompt: string, trace: AiEvidenceQueryTrace) => Promise<unknown>,
   options: { contextTexts?: string[]; eventContextTexts?: string[];
     archive?: AiEvidenceArchive;
     summarize?: (trace: AiEvidenceQueryTrace) => Promise<void>;
@@ -323,7 +323,7 @@ export async function runAiEvidenceQueries(request: string, initialEvidence: unk
     if (baseline === undefined) options.archive?.saveValue('planning-baseline', String(round), before)
     if (prior === undefined && !decision) await options.summarize?.(trace)
     const raw = prior ?? await plan(decision ? decisionPlanningPrompt(request, initialEvidence, engine, trace)
-      : aiQueryPlanningPrompt(request, initialEvidence, engine, trace.requests, planningFindings(trace)))
+      : aiQueryPlanningPrompt(request, initialEvidence, engine, trace.requests, planningFindings(trace)), trace)
     const value = raw && typeof raw === 'object' && !Array.isArray(raw)
       ? raw as { queries?: unknown; continueAfterResults?: unknown; uncertainty?: unknown; __usage?: unknown } : null
     const usage = readAiTokenUsage(value?.__usage)

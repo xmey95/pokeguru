@@ -141,6 +141,8 @@ La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e
 
 ## Sviluppo
 
+APP-192 ottimizza localmente i nuovi turni Strategie: risposta o ricerca nella prima chiamata, con controlli invariati. Nelle prove ripetute, mediana Budew −25,22% e protezioni −20,86%. [Verifica e limiti](docs/AI-FOCUSED-FLOW.md); non ancora incluso nella release scaricabile.
+
 Il flusso AI APP-191 è incluso nella v0.3.11. Contratto, confronto sui cinque compiti e limiti sono nel [rapporto di verifica](docs/AI-DECISION-FLOW.md).
 
 La v0.3.9 aggiunge riuso delle analisi e aggregati Evento sullo schema 16 della v0.3.8. Conserva i workflow precedenti e non introduce migrazioni SQLite. Misure, contratto e limiti sono nel [rapporto sugli aggregati](docs/AI-EVENT-AGGREGATES.md); le ottimizzazioni SQLite precedenti sono documentate nel [rapporto sul database](docs/DATABASE-PERFORMANCE.md).
