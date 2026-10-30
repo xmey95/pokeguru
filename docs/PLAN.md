@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 30 ottobre 2026. **Fase corrente:** I3, v0.3.11 pubblicata e verificata; APP-192 completato e rilascio v0.3.12 autorizzato in APP-195. Schema 16 invariato. In corso integrazione e verifica sulle quattro piattaforme; limiti di firma/Finder APP-147, indagine APP-187 e terminologia APP-194 restano aperti. I4 non avviato. Gli stati operativi sono esclusivamente in BACKLOG.md.
+**Aggiornato:** 30 ottobre 2026. **Fase corrente:** I3, v0.3.12 pubblicata e verificata su main tramite APP-195; include APP-192 per le domande AI puntuali. Nuovi turni Strategie v5, guide v4, job precedenti e schema 16 conservati. CI delle PR, Release, pacchetti e provenienza verificati sulle quattro piattaforme. Limiti di firma/Finder APP-147, indagine APP-187 e terminologia APP-194 restano aperti. I4 non avviato. Gli stati operativi sono esclusivamente in BACKLOG.md.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-195 completato (30-10-2026):** La [v0.3.12](https://github.com/xmey95/pokeguru/releases/tag/v0.3.12) è pubblicata sul merge main `9ee6af1c76e99bae812f4e21f6212c8d105c0a15`. [PR #126](https://github.com/xmey95/pokeguru/pull/126) verso dev e [PR #127](https://github.com/xmey95/pokeguru/pull/127) verso main con quattro check verdi ciascuna. [CI dev](https://github.com/xmey95/pokeguru/actions/runs/41069900576), [CI main](https://github.com/xmey95/pokeguru/actions/runs/41071529534), [Release](https://github.com/xmey95/pokeguru/actions/runs/41073406249). Verificati quattro package/smoke, attestazione e pubblicazione, tag sul commit atteso, nove asset, otto checksum confrontati con i digest GitHub, hash dei quattro manifest scaricati e del file checksum, versione/commit/run/dimensioni. Quattro attestazioni dei manifest verificate anche localmente sul commit e workflow attesi. [Rapporto](RELEASE-0.3.12-VERIFICATION.json). Note di rilascio pubblicate. Nessuna modifica al profilo personale o nuova inferenza. Chiusura documentale sul ramo `task/app-195-release-verification` verso dev; nessun nuovo push in main. Checkout principale e lavoro parallelo sulle guide conservati. Le note di preparazione seguenti sono storiche.
 
 - **APP-195 in corso (30-10-2026):** autorizzati integrazione APP-192 in dev e rilascio v0.3.12. Ramo `task/app-195-release-0.3.12` da APP-192 `d81c70f`, base dev `e98f68c`; versione e note preparate. Prossimi passi: build e provenienza locali, CI delle PR dev/main, pubblicazione e verifica dei nove asset. Nessuna nuova inferenza necessaria; checkpoint v1–v4 e schema 16 preservati. Checkout principale e lavoro parallelo sulle guide conservati. Questa autorizzazione supera il limite locale delle note APP-192 seguenti.
 
