@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 29 ottobre 2026. **Fase corrente:** I3, v0.3.10 pubblicata e verificata su main tramite APP-190; include la correzione APP-189 al salvataggio e recupero delle Strategie, schema 16 invariato. CI delle PR, Release, pacchetti e provenienza verificati sulle quattro piattaforme. Restano i limiti di firma e prova Finder esterna APP-147. I4 non avviato. Gli stati operativi sono esclusivamente in BACKLOG.md.
+**Aggiornato:** 30 ottobre 2026. **Fase corrente:** I3, v0.3.11 pubblicata e verificata su main tramite APP-193; include il flusso AI APP-191, schema 16 invariato. CI delle PR, Release, pacchetti e provenienza verificati sulle quattro piattaforme. Domanda puntuale APP-192 ancora da ottimizzare; limiti di firma/Finder APP-147 e indagine APP-187 restano aperti. I4 non avviato. Gli stati operativi sono esclusivamente in BACKLOG.md.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-193 completato (30-10-2026):** La [v0.3.11](https://github.com/xmey95/pokeguru/releases/tag/v0.3.11) è pubblicata sul merge main `7c89a3ba6a8231ffec7bb6af337ff5c29caed326`. [PR #123](https://github.com/xmey95/pokeguru/pull/123) verso dev e [PR #124](https://github.com/xmey95/pokeguru/pull/124) verso main con quattro check verdi ciascuna. [CI dev](https://github.com/xmey95/pokeguru/actions/runs/41055853049), [CI main](https://github.com/xmey95/pokeguru/actions/runs/41057494013), [Release](https://github.com/xmey95/pokeguru/actions/runs/41058980469). Verificati quattro package/smoke, attestazione e pubblicazione, tag sul commit atteso, nove asset, otto checksum confrontati con i digest GitHub, hash dei quattro manifest scaricati e del file checksum, versione/commit/run/dimensioni. Quattro attestazioni dei manifest verificate anche localmente sul commit e workflow attesi. [Rapporto](RELEASE-0.3.11-VERIFICATION.json). Note di rilascio pubblicate. Nessuna modifica al profilo personale o nuova chiamata AI. Chiusura documentale sul ramo `task/app-193-release-verification` verso dev; nessun nuovo push in main. APP-192 non avviato. Le note di preparazione seguenti sono storiche.
 
 - **APP-193 in corso (30-10-2026):** autorizzati integrazione APP-191 in dev e rilascio v0.3.11. Ramo `task/app-193-release-0.3.11` da APP-191 `42f36c1` su dev `524b69b`. Versione e note preparate; prossimi passi: verifica ripresa Electron, gate delle PR dev/main, pubblicazione e verifica asset. L'autorizzazione supera il limite locale della nota APP-191 seguente. Schema 16 invariato; nessuna modifica al profilo personale. APP-192 non avviato.
 
