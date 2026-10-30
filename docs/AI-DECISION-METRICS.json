@@ -1,0 +1,427 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-30",
+  "baselineRevision": "524b69b",
+  "model": "gpt-6.1-sol",
+  "reasoningEffort": null,
+  "liveSampleParticipations": 32,
+  "pairedObservationsPerCase": 1,
+  "methodology": "Production prompts, collection and validators; frozen real card/event inputs, synthetic previous guide/meta labels, ephemeral CLI final turns in both variants. Not a statistical non-inferiority test or full-corpus end-to-end benchmark.",
+  "retestReason": "The initial paired comparison exposed an avoidable revision after Fezandipiti ex was abbreviated to the distinct Fezandipiti. Complete names and concise, task-proportionate output guidance were added without weakening card verification. All five candidate cases were rerun once; the baseline was retained and the initial results are included, not selected by fastest outcome.",
+  "results": [
+    {
+      "case": "card",
+      "baseline": {
+        "elapsedMs": 19144,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 157835,
+        "inputTokens": 71010,
+        "cachedInputTokens": 0,
+        "outputTokens": 370
+      },
+      "initialCandidate": {
+        "elapsedMs": 24480,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 139305,
+        "inputTokens": 64960,
+        "cachedInputTokens": 0,
+        "outputTokens": 553
+      },
+      "candidate": {
+        "elapsedMs": 21723,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 140273,
+        "inputTokens": 65208,
+        "cachedInputTokens": 0,
+        "outputTokens": 327
+      },
+      "elapsedReductionPercent": -13.47
+    },
+    {
+      "case": "replacement",
+      "baseline": {
+        "elapsedMs": 147277,
+        "calls": 7,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": true,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 5,
+        "answerCalls": 1,
+        "promptBytes": 356572,
+        "inputTokens": 189769,
+        "cachedInputTokens": 26880,
+        "outputTokens": 5627
+      },
+      "initialCandidate": {
+        "elapsedMs": 22815,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": true,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 131244,
+        "inputTokens": 62477,
+        "cachedInputTokens": 0,
+        "outputTokens": 629
+      },
+      "candidate": {
+        "elapsedMs": 20952,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": true,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 132212,
+        "inputTokens": 62715,
+        "cachedInputTokens": 0,
+        "outputTokens": 563
+      },
+      "elapsedReductionPercent": 85.77
+    },
+    {
+      "case": "general",
+      "baseline": {
+        "elapsedMs": 570710,
+        "calls": 22,
+        "planningRounds": 5,
+        "draftRevisions": 0,
+        "candidateAccepted": true,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 5,
+        "summaryCalls": 16,
+        "answerCalls": 1,
+        "promptBytes": 811180,
+        "inputTokens": 510211,
+        "cachedInputTokens": 116480,
+        "outputTokens": 19722
+      },
+      "initialCandidate": {
+        "elapsedMs": 60955,
+        "calls": 3,
+        "planningRounds": 2,
+        "draftRevisions": 0,
+        "candidateAccepted": true,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 2,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 427795,
+        "inputTokens": 172470,
+        "cachedInputTokens": 0,
+        "outputTokens": 1896
+      },
+      "candidate": {
+        "elapsedMs": 84000,
+        "calls": 4,
+        "planningRounds": 3,
+        "draftRevisions": 0,
+        "candidateAccepted": true,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 3,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 650507,
+        "inputTokens": 255854,
+        "cachedInputTokens": 18688,
+        "outputTokens": 2266
+      },
+      "elapsedReductionPercent": 85.28
+    },
+    {
+      "case": "matchup",
+      "baseline": {
+        "elapsedMs": 433004,
+        "calls": 13,
+        "planningRounds": 2,
+        "draftRevisions": 0,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 2,
+        "summaryCalls": 10,
+        "answerCalls": 1,
+        "promptBytes": 559626,
+        "inputTokens": 320299,
+        "cachedInputTokens": 80640,
+        "outputTokens": 13151
+      },
+      "initialCandidate": {
+        "elapsedMs": 79395,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 191734,
+        "inputTokens": 79832,
+        "cachedInputTokens": 0,
+        "outputTokens": 2648
+      },
+      "candidate": {
+        "elapsedMs": 48585,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 192702,
+        "inputTokens": 80060,
+        "cachedInputTokens": 0,
+        "outputTokens": 1459
+      },
+      "elapsedReductionPercent": 88.78
+    },
+    {
+      "case": "revision",
+      "baseline": {
+        "elapsedMs": 73753,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 140267,
+        "inputTokens": 65829,
+        "cachedInputTokens": 0,
+        "outputTokens": 2448
+      },
+      "initialCandidate": {
+        "elapsedMs": 137342,
+        "calls": 3,
+        "planningRounds": 1,
+        "draftRevisions": 1,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 2,
+        "promptBytes": 290485,
+        "inputTokens": 120513,
+        "cachedInputTokens": 0,
+        "outputTokens": 5359
+      },
+      "candidate": {
+        "elapsedMs": 51244,
+        "calls": 2,
+        "planningRounds": 1,
+        "draftRevisions": 0,
+        "candidateAccepted": false,
+        "negativeCandidatesRejected": true,
+        "planningCalls": 1,
+        "summaryCalls": 0,
+        "answerCalls": 1,
+        "promptBytes": 193808,
+        "inputTokens": 80368,
+        "cachedInputTokens": 0,
+        "outputTokens": 1509
+      },
+      "elapsedReductionPercent": 30.52
+    }
+  ],
+  "totals": {
+    "baseline": {
+      "elapsedMs": 1243888,
+      "calls": 46,
+      "summaryCalls": 31,
+      "inputTokens": 1157118,
+      "cachedInputTokens": 224000,
+      "outputTokens": 41318
+    },
+    "initialCandidate": {
+      "elapsedMs": 324987,
+      "calls": 12,
+      "summaryCalls": 0,
+      "inputTokens": 500252,
+      "cachedInputTokens": 0,
+      "outputTokens": 11085
+    },
+    "candidate": {
+      "elapsedMs": 226504,
+      "calls": 12,
+      "summaryCalls": 0,
+      "inputTokens": 544205,
+      "cachedInputTokens": 18688,
+      "outputTokens": 6124
+    },
+    "elapsedReductionPercent": 81.79
+  },
+  "completeSnapshotReplay": {
+    "schemaVersion": 1,
+    "results": [
+      {
+        "filter": {
+          "deckName": "Toucannon"
+        },
+        "elapsedMs": 16427,
+        "profileBytes": 75896,
+        "matchingParticipations": 756,
+        "distinctDecks": 462,
+        "distinctPrintLines": 252,
+        "selectedLists": 4,
+        "distributionsReconciled": true,
+        "coverage": {
+          "kind": "event-aggregation-coverage",
+          "uniqueParticipations": 756,
+          "uniquePairings": 3466,
+          "resolvedSelectedPlayerSides": 3496,
+          "unassociatedPairings": 0,
+          "ambiguousSelectedSides": 0,
+          "missingDeckKeys": 0,
+          "rules": [
+            "Field records are not matchup records.",
+            "Matchup rows count player sides; never sum both sides as unique matches.",
+            "Denominator is wins + losses + ties. Byes, double losses, unresolved and invalid outcomes are reported separately.",
+            "Opponents use source labels only when their complete list and player identity are known.",
+            "All individual records remain in the job archive and events.details can retrieve them."
+          ]
+        }
+      },
+      {
+        "filter": {
+          "cardName": "Dragapult ex"
+        },
+        "elapsedMs": 26844,
+        "profileBytes": 117286,
+        "matchingParticipations": 12726,
+        "distinctDecks": 5697,
+        "distinctPrintLines": 478,
+        "selectedLists": 4,
+        "distributionsReconciled": true,
+        "coverage": {
+          "kind": "event-aggregation-coverage",
+          "uniqueParticipations": 12726,
+          "uniquePairings": 56948,
+          "resolvedSelectedPlayerSides": 64040,
+          "unassociatedPairings": 0,
+          "ambiguousSelectedSides": 0,
+          "missingDeckKeys": 0,
+          "rules": [
+            "Field records are not matchup records.",
+            "Matchup rows count player sides; never sum both sides as unique matches.",
+            "Denominator is wins + losses + ties. Byes, double losses, unresolved and invalid outcomes are reported separately.",
+            "Opponents use source labels only when their complete list and player identity are known.",
+            "All individual records remain in the job archive and events.details can retrieve them."
+          ]
+        }
+      },
+      {
+        "filter": {
+          "cardName": "Raging Bolt ex"
+        },
+        "elapsedMs": 24896,
+        "profileBytes": 103897,
+        "matchingParticipations": 2699,
+        "distinctDecks": 1150,
+        "distinctPrintLines": 236,
+        "selectedLists": 4,
+        "distributionsReconciled": true,
+        "coverage": {
+          "kind": "event-aggregation-coverage",
+          "uniqueParticipations": 2699,
+          "uniquePairings": 12496,
+          "resolvedSelectedPlayerSides": 12789,
+          "unassociatedPairings": 0,
+          "ambiguousSelectedSides": 0,
+          "missingDeckKeys": 0,
+          "rules": [
+            "Field records are not matchup records.",
+            "Matchup rows count player sides; never sum both sides as unique matches.",
+            "Denominator is wins + losses + ties. Byes, double losses, unresolved and invalid outcomes are reported separately.",
+            "Opponents use source labels only when their complete list and player identity are known.",
+            "All individual records remain in the job archive and events.details can retrieve them."
+          ]
+        }
+      },
+      {
+        "filter": {
+          "cardName": "Gardevoir ex"
+        },
+        "elapsedMs": 25184,
+        "profileBytes": 32233,
+        "matchingParticipations": 64,
+        "distinctDecks": 62,
+        "distinctPrintLines": 201,
+        "selectedLists": 4,
+        "distributionsReconciled": true,
+        "coverage": {
+          "kind": "event-aggregation-coverage",
+          "uniqueParticipations": 64,
+          "uniquePairings": 253,
+          "resolvedSelectedPlayerSides": 253,
+          "unassociatedPairings": 0,
+          "ambiguousSelectedSides": 0,
+          "missingDeckKeys": 0,
+          "rules": [
+            "Field records are not matchup records.",
+            "Matchup rows count player sides; never sum both sides as unique matches.",
+            "Denominator is wins + losses + ties. Byes, double losses, unresolved and invalid outcomes are reported separately.",
+            "Opponents use source labels only when their complete list and player identity are known.",
+            "All individual records remain in the job archive and events.details can retrieve them."
+          ]
+        }
+      }
+    ],
+    "limit": "Offline complete-snapshot representation; zero AI calls. Timing excludes source snapshot capture and model generation."
+  },
+  "validation": {
+    "unitTestsPassed": 387,
+    "unitTestsSkipped": 50,
+    "testFilesPassed": 80,
+    "testFilesSkipped": 40,
+    "targetedAfterDetailsProvenance": {
+      "passed": 25,
+      "skipped": 1
+    },
+    "typecheck": true,
+    "build": true,
+    "electronOffline": [
+      "threads-ai-live --offline",
+      "electron-smoke --offline"
+    ],
+    "realFixtureNegativeProbes": [
+      "61 cards",
+      "60 cards violating exact constraint",
+      "60 cards with two ACE SPEC",
+      "unknown print",
+      "unknown source"
+    ]
+  },
+  "exclusions": "No personal project/job identifiers, tournament URLs, prompts, deck lists, responses or credentials. The failed pilot is excluded from paired timing and retained privately."
+}

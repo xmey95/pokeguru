@@ -5,6 +5,7 @@ import { AiEvidenceArchive, evidenceOccurrenceIdentity, exactDeckIdentity } from
 import { createAiEvidenceEngine, evidenceEventRows, normalizedEvidenceText,
   type EvidenceEventRow } from './ai-evidence-engine'
 import { eventOverview, type EventCoverage } from './ai-event-aggregates'
+import { DECISION_POLICY, decisionEventDetails, decisionEventSearch } from './ai-decision-events'
 
 interface SourceSnapshot { catalog: CatalogView; window: { from: string; to: string }; eventCoverage?: EventCoverage[] }
 
@@ -45,11 +46,16 @@ export function createArchivedEvidenceEngine(archive: AiEvidenceArchive,
     archive.captureSources({ catalog, window, eventCoverage }, rows())
     snapshot = { catalog, window, eventCoverage }
   }
+  const decisionProfiles = archive.value('analysis-policy', 'algorithm') === DECISION_POLICY
   const engine = createAiEvidenceEngine(snapshot.catalog, [], [], snapshot.window, {
+    decisionProfiles,
     names: () => archive.eventNames(),
     overview: (from, to) => eventOverview(archive.eventRows<EvidenceEventRow>(), from, to, snapshot.eventCoverage),
-    details: (deckKey, offset, limit, eventId) => archive.eventDetails(deckKey, offset, limit, eventId),
+    details: (deckKey, offset, limit, eventId) => decisionProfiles
+      ? decisionEventDetails(archive, deckKey, offset, limit, eventId)
+      : archive.eventDetails(deckKey, offset, limit, eventId),
     search(query) {
+      if (decisionProfiles) return decisionEventSearch(archive, query)
       const { rows, ...scope } = archive.eventPage<EvidenceEventRow>({
         from: query.from!, to: query.to!, deck: normalizedEvidenceText(query.deckName ?? ''),
         card: normalizedEvidenceText(query.cardName ?? ''), offset: query.offset!, limit: query.limit! })

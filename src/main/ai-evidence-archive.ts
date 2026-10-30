@@ -290,14 +290,20 @@ export class AiEvidenceArchive {
       WHERE job_id = ? ORDER BY deck_name`).iterate(this.id) as Iterable<{ deck_name: string }>) yield row.deck_name
   }
   /** Full sealed source rows, scoped to this job; no cursor survives a yield. */
-  *eventRows<T>(): Generator<T> {
+  *eventRows<T>(deckKey?: string): Generator<T> {
     let after = ''
     while (true) {
       const rows = this.prepare(`SELECT key, object_hash FROM ai_evidence_event_index
-        WHERE job_id = ? AND key > ? ORDER BY key LIMIT 128`).all(this.id, after) as { key: string; object_hash: string }[]
+        WHERE job_id = ? AND key > ? ${deckKey === undefined ? '' : 'AND deck_key = ?'} ORDER BY key LIMIT 128`)
+        .all(this.id, after, ...(deckKey === undefined ? [] : [deckKey])) as { key: string; object_hash: string }[]
       if (!rows.length) return
       for (const row of rows) { after = row.key; yield this.get<T>(row.object_hash) }
     }
+  }
+  eventRow<T>(key: string): T | undefined {
+    const row = this.prepare('SELECT object_hash FROM ai_evidence_event_index WHERE job_id = ? AND key = ?')
+      .get(this.id, key) as { object_hash: string } | undefined
+    return row ? this.get<T>(row.object_hash) : undefined
   }
   /** A model can inspect originals of a collected exact deck. Identifiers from
    * another job never authorize access, even when the object is physically shared. */
@@ -416,12 +422,12 @@ export class AiEvidenceArchive {
     return { ...scope, rows }
   }
 
-  search(query: unknown): EvidenceSearch {
+  search(query: unknown, pageScoped = false): EvidenceSearch {
     const normalized = query && typeof query === 'object' && !Array.isArray(query)
       ? Object.fromEntries(Object.entries(query).filter(([key, value]) =>
-        key !== 'offset' && key !== 'limit' && value !== null && value !== undefined)) : query
+        (pageScoped || key !== 'offset' && key !== 'limit') && value !== null && value !== undefined)) : query
     const key = evidenceHash(normalized)
-    const cursor = query && typeof query === 'object' && !Array.isArray(query) ? { ...query, offset: 0 } : query
+    const cursor = query && typeof query === 'object' && !Array.isArray(query) ? { ...query, ...(pageScoped ? {} : { offset: 0 }) } : query
     this.prepare(`INSERT OR IGNORE INTO ai_evidence_searches(job_id, key, query_json, cursor_json)
       VALUES (?, ?, ?, ?)`).run(this.id, key, JSON.stringify(normalized), JSON.stringify(cursor))
     return this.getSearch(key)!

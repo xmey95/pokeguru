@@ -135,6 +135,8 @@ La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e
 
 ## Sviluppo
 
+Il ramo APP-191 sperimenta il flusso AI con statistiche complete e recupero mirato degli originali. Contratto, confronto sui cinque compiti e limiti sono nel [rapporto di verifica](docs/AI-DECISION-FLOW.md); non è ancora una release.
+
 La v0.3.9 aggiunge riuso delle analisi e aggregati Evento sullo schema 16 della v0.3.8. Conserva i workflow precedenti e non introduce migrazioni SQLite. Misure, contratto e limiti sono nel [rapporto sugli aggregati](docs/AI-EVENT-AGGREGATES.md); le ottimizzazioni SQLite precedenti sono documentate nel [rapporto sul database](docs/DATABASE-PERFORMANCE.md).
 
 Servono **Node.js 24 o successivo**, npm e un ambiente grafico. Dalla radice del repository:

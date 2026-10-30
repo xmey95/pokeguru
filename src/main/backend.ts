@@ -191,7 +191,7 @@ function resumeSavedAiJob(job: AiJob, explicit: boolean): Promise<unknown> {
   const input = readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id)
   const runner = input && input.kind === job.kind ? resumeRunners.get(job.kind) : null
   if (!runner || !input) throw new Error('Contesto di ripresa non disponibile.')
-  if (input.schemaVersion !== 2 && input.schemaVersion !== 3) {
+  if (input.schemaVersion !== 2 && input.schemaVersion !== 3 && input.schemaVersion !== 4) {
     const message = 'Questa analisi proviene da una versione che non salvava tutti gli input. Gli esiti completati restano disponibili; annulla il lavoro e avvia una nuova analisi sui dati attuali.'
     aiJobStore.suspend(job.id, message, 'legacy')
     throw new Error(message)
@@ -235,7 +235,7 @@ async function recoverAiJobs(): Promise<void> {
       if (activeAiControllers.has(job.id)) continue
       try {
         const workflow = job.status === 'running' ? readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id) : null
-        if (job.status === 'running' && workflow && (workflow.schemaVersion === 2 || workflow.schemaVersion === 3 ||
+        if (job.status === 'running' && workflow && (workflow.schemaVersion === 2 || workflow.schemaVersion === 3 || workflow.schemaVersion === 4 ||
           (job.request as { validatedDraft?: boolean } | null)?.validatedDraft !== true)) {
           const voluntary = job.progress?.diagnostics?.suspensionReason === 'user'
           aiJobStore.suspend(job.id, voluntary ? 'Analisi in pausa su tua richiesta.'
@@ -455,7 +455,8 @@ async function matchupAiQueries(request: string, deckContext: string,
   const trace = await runAiEvidenceQueries(request, stableInitial, engine,
     (prompt) => {
       const execute = (reportUsage?: (usage: unknown) => void) => planEvidenceQueriesWithCodex(prompt, config, signal,
-        job ? jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.') : undefined, reportUsage)
+        job ? jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.') : undefined, reportUsage,
+        engine.describe().eventQueryMode === 'decision-profiles')
       return work ? work.run('planning', prompt, config, execute) : execute()
     },
     { archive: work.archive, contextTexts: [stableInitial.deckContext, stableInitial.sample.cards.join('\n'), stableInitial.history ?? ''],
@@ -1384,7 +1385,8 @@ function registerProjectHandlers(): void {
       const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
         engine, (prompt) => work.run('planning', prompt, config,
           (reportUsage) => planEvidenceQueriesWithCodex(prompt, config, controller.signal,
-            jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.'), reportUsage)),
+            jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.'), reportUsage,
+            engine.describe().eventQueryMode === 'decision-profiles')),
         { archive: work.archive, contextTexts: [thread.title, ...thread.messages.slice(-12).map((item) => item.text),
           base?.rawText ?? '', thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? ''],
         eventContextTexts: thread.messages.slice(-2).map((item) => item.text),
