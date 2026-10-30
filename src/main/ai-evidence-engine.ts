@@ -17,7 +17,7 @@ export type AiEvidenceQuery =
 
 export interface AiEvidenceEngine {
   describe(): { operations: string[]; catalog: { syncedAt: string | null;
-    expected: number; indexed: number; gameplay: number }; eventWindow: { from: string; to: string } }
+    expected: number; indexed: number; gameplay: number }; eventWindow: { from: string; to: string }; eventQueryMode?: 'decision-profiles' }
   /** Resolve exact card names in discussion text to representative local prints.
    * Distinct rules remain distinct even when the printed name is the same. */
   cardTargets(text: string): { name: string; printIds: string[] }[]
@@ -158,6 +158,7 @@ export function* evidenceEventRows(play: Iterable<TournamentSnapshot>,
 }
 
 export interface EvidenceEventSource {
+  decisionProfiles?: boolean
   names(): Iterable<string>
   search(query: Extract<AiEvidenceQuery, { operation: 'events.search' }>): unknown
   overview?(from: string, to: string): unknown
@@ -189,7 +190,8 @@ export function createAiEvidenceEngine(catalog: CatalogView, play: TournamentSna
   return {
     describe: () => ({ operations: ['catalog.search', 'events.search', ...(!events || events.overview ? ['events.overview'] : []), ...(events?.details ? ['events.details'] : [])],
       catalog: { syncedAt: catalog.syncedAt, expected: scope.expected,
-        indexed: scope.indexed, gameplay: scope.withGameplay }, eventWindow: window }),
+        indexed: scope.indexed, gameplay: scope.withGameplay }, eventWindow: window,
+      ...(events?.decisionProfiles ? { eventQueryMode: 'decision-profiles' as const } : {}) }),
     cardTargets(text) {
       const normalizedText = ` ${normalized(text)} `
       let remaining = normalizedText

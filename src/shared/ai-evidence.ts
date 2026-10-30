@@ -46,7 +46,7 @@ export interface AiEvidenceQueryTrace {
   schemaVersion: 1
   engine: { operations: string[]; catalog: { syncedAt: string | null;
     expected: number; indexed: number; gameplay: number };
-    eventWindow: { from: string; to: string } }
+    eventWindow: { from: string; to: string }; eventQueryMode?: 'decision-profiles' }
   requests: AiEvidenceQueryResult[]
   durationMs: number
   responseBytes: number

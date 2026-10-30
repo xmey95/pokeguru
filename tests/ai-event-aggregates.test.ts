@@ -121,7 +121,7 @@ it('materializes exact aggregates without repeated lists and restores the same m
 it('uses the aggregate policy only for new workflows and includes the immutable base context in leaf prompts', async () => {
   const f = fixture()
   const work = new AiAnalysisWork(join(f.folder, f.job.id), f.jobs, f.job.id, new AbortController().signal,
-    { kind: 'thread-ask', args: [f.project.id, 'resource', 'Improve'] })
+      { schemaVersion: 3, kind: 'thread-ask', args: [f.project.id, 'resource', 'Improve'] })
   try {
     expect(readAiWorkflow(work.directory, f.jobs, f.job.id)?.schemaVersion).toBe(3)
     work.snapshot('base', [], () => ({ rawText: cards.join('\n') })); work.snapshot('reference-date', [], () => '2026-10-29')
@@ -214,7 +214,7 @@ it('keeps matchup outcomes separated by event and excludes ambiguous selected id
 
 it('resumes aggregate analysis after a completed leaf without repeating that model call', async () => {
   const f = fixture(), controller = new AbortController(), directory = join(f.folder, f.job.id)
-  let work = new AiAnalysisWork(directory, f.jobs, f.job.id, controller.signal, { kind: 'thread-ask', args: [] })
+  let work = new AiAnalysisWork(directory, f.jobs, f.job.id, controller.signal, { schemaVersion: 3, kind: 'thread-ask', args: [] })
   try {
     const query = { operation: 'catalog.search', terms: ['large fixture'] }, search = f.archive.search(query)
     const data = { matches: Array.from({ length: 4 }, (_, i) => ({ printId: `fixture-${i}`, effect: 'rule '.repeat(8000) })), remaining: 0 }

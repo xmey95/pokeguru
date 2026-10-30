@@ -7,7 +7,7 @@ import type { AiRunConfig } from '../shared/ai'
 import { readAiTokenUsage, type AiTokenUsage } from '../shared/ai-evidence'
 import { CODEX_ISOLATION_ARGS } from './codex-isolation'
 import { codexLauncher } from './codex-setup'
-import { AI_QUERY_PLAN_SCHEMA } from './ai-evidence-queries'
+import { AI_QUERY_PLAN_SCHEMA, AI_DECISION_PLAN_SCHEMA } from './ai-evidence-queries'
 import { codexReasoningSummary } from './codex-progress'
 import { AiFailure } from './ai-failure'
 
@@ -85,9 +85,9 @@ export async function runStructuredCodex(prompt: string, config: AiRunConfig,
   } finally { rmSync(directory, { recursive: true, force: true }) }
 }
 
-/** The existing Matchup/Thread query planner keeps its fixed schema. */
+/** Legacy jobs retain their schema; decision jobs also explain the research uncertainty. */
 export function planEvidenceQueriesWithCodex(prompt: string, config: AiRunConfig,
   signal?: AbortSignal, onSummary?: (summary: string) => void,
-  onUsage?: (usage: AiTokenUsage | null) => void): Promise<unknown> {
-  return runStructuredCodex(prompt, config, AI_QUERY_PLAN_SCHEMA, signal, onSummary, onUsage)
+  onUsage?: (usage: AiTokenUsage | null) => void, decisionFlow = false): Promise<unknown> {
+  return runStructuredCodex(prompt, config, decisionFlow ? AI_DECISION_PLAN_SCHEMA : AI_QUERY_PLAN_SCHEMA, signal, onSummary, onUsage)
 }

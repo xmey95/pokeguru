@@ -62,7 +62,7 @@ it.skipIf(process.env.POKEGURU_LIFECYCLE_E2E !== '1')('resumes on Electron reope
           window: { from: '2026-10-01', to: '2026-10-28' }, play: [], main: [] }))
         const initial = work.snapshot('initial-evidence', [], () => buildThreadEvidence(thread, null, question, [], frozen, [], []))
         const trace = await runAiEvidenceQueries(question, initial, engine,
-          async () => ({ queries: [], continueAfterResults: false }), { archive: work.archive })
+          async () => ({ queries: [], continueAfterResults: false, uncertainty: '' }), { archive: work.archive })
         const evidence = threadEvidenceWithQueries(initial, trace)
         const context = deckThreadPrompt(thread, null, question, [], frozen, evidence, '2026-10-28')
         const key = createHash('sha256').update(JSON.stringify(['analysis', context.prompt, config])).digest('hex')
