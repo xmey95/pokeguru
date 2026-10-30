@@ -47,6 +47,14 @@ export function archiveReferences(trace: AiEvidenceQueryTrace): NonNullable<AiEv
     if (record.kind === 'occurrence') references.set(record.sourceId, { id: record.sourceId,
       label: `${data.deck} · ${data.name} · ${data.date}`, url: data.listUrl ?? null, fingerprint: evidenceHash(record.data) })
   }
+  if (archive.value('analysis-policy', 'algorithm') === 'decision-evidence-v1') {
+    for (const page of archive.pages()) {
+      const data = page.data as { profileSource?: NonNullable<AiEvidenceQueryTrace['references']>[number];
+        recordSources?: NonNullable<AiEvidenceQueryTrace['references']> }
+      if (data.profileSource) references.set(data.profileSource.id, data.profileSource)
+      for (const source of data.recordSources ?? []) references.set(source.id, source)
+    }
+  }
   trace.references = [...references.values()]
   return trace.references
 }

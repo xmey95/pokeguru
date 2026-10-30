@@ -50,6 +50,18 @@ it('selection does not claim delivery and an unprovided original still requires 
   expect(draftNeedsEvidenceReview(trace, engine, 'Card a')).toBe(true)
 })
 
+it('decision profiles still require review for a missing or changed original', () => {
+  const { trace, engine } = fixture()
+  trace.engine.eventQueryMode = 'decision-profiles'
+  delete trace.analysis
+  aiEvidenceForPrompt(trace)
+  expect(draftNeedsEvidenceReview(trace, engine, 'Card a')).toBe(false)
+  expect(draftNeedsEvidenceReview(trace, engine, 'Card missing')).toBe(true)
+  const data = trace.requests[0].data as { matches: CatalogEvidenceMatch[] }
+  data.matches[0] = card('a', 'A changed rule requires another review.')
+  expect(draftNeedsEvidenceReview(trace, engine, 'Card a')).toBe(true)
+})
+
 it('seeds original delivery from the task, summary mentions and cited print IDs', () => {
   const { trace, engine } = fixture()
   trace.analysis!.summary = 'Card a is decisive.'

@@ -13,5 +13,5 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "tests/**/*.ts", "electron.vite.config.ts"]
+  "include": ["src", "tests/**/*.ts", "scripts/ai-decision-evaluation.test.ts", "electron.vite.config.ts"]
 }
