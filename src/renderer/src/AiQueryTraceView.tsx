@@ -63,7 +63,7 @@ export function AiQueryTraceView({ trace }: { trace: AiEvidenceQueryTrace }) {
   return <details className="ai-query-trace"><summary>Query automatiche al motore · {trace.requests.length}</summary>
     <p>{trace.planningRounds} {trace.planningRounds === 1 ? 'passaggio' : 'passaggi'} di scelta · {trace.responseBytes.toLocaleString('it-IT')} byte di risultati · {Math.round(trace.durationMs / 1000)} s.
       {trace.exhausted ? ' Limite di query o di risposta raggiunto.' : ''}</p>
-    {trace.plannerUsage && <p>Token per scegliere le query: {trace.plannerUsage.inputTokens} input ({trace.plannerUsage.cachedInputTokens} dalla cache), {trace.plannerUsage.outputTokens} output.</p>}
+    {trace.plannerUsage && <p>Token per valutare le prove: {trace.plannerUsage.inputTokens} input ({trace.plannerUsage.cachedInputTokens} dalla cache), {trace.plannerUsage.outputTokens} output.</p>}
     <p>Le ricerche sono state eseguite sui dati locali. Una corrispondenza testuale non dimostra che tutte le carte pertinenti siano state trovate.</p>
     {targets.length > 0 && <details><summary>Schede nominate riconosciute nel Catalogo · {supplied}/{targets.length} consegnate con testo confrontabile</summary>
       <ul>{targets.map((item) => <li key={item.name}>{item.name}: {item.status === 'supplied'

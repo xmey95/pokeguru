@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest'
+import { restoreFirstThreadAnswer, type FirstThreadAnswer } from '../src/main/ai-thread-decision'
 import type { AiEvidenceQueryTrace } from '../src/shared/ai-evidence'
 import type { CatalogEvidenceMatch } from '../src/main/catalog-evidence-search'
 import type { AiEvidenceEngine } from '../src/main/ai-evidence-engine'
@@ -41,6 +42,16 @@ function expandCard(input: unknown): unknown {
   }
   return value
 }
+
+it('restores the direct call delivery so a newly collected draft card still requires review after reopening', () => {
+  const { trace, engine } = fixture()
+  const first = { deliveredCards: [{ printId: 'a', fingerprint: deliveredCardFingerprint(card('a')) }] } as FirstThreadAnswer
+  // A resumed serializer can see both cards, although the first call only saw a.
+  trace.deliveredCards = [card('a'), card('b')].map(c => ({ printId: c.printId, fingerprint: deliveredCardFingerprint(c) }))
+  restoreFirstThreadAnswer(trace, first)
+  expect(draftNeedsEvidenceReview(trace, engine, 'Card b')).toBe(true)
+  expect(draftNeedsEvidenceReview(trace, engine, 'Card a')).toBe(false)
+})
 
 it('selection does not claim delivery and an unprovided original still requires review', () => {
   const { trace, engine } = fixture()

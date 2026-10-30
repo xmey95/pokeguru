@@ -17,7 +17,7 @@ import { prepareEvidenceManifest, prepareSummaryManifest, readEvidenceBatch, rea
 import { eventAnalysisContext, eventPlanMetrics, prepareEventAnalysisInventory } from './ai-event-analysis'
 import { DECISION_POLICY } from './ai-decision-events'
 
-export interface AiWorkflowInput { schemaVersion?: 1 | 2 | 3 | 4; kind: AiJobKind; args: unknown[] }
+export interface AiWorkflowInput { schemaVersion?: 1 | 2 | 3 | 4 | 5; kind: AiJobKind; args: unknown[] }
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
 function save(path: string, value: unknown): void {
@@ -36,7 +36,7 @@ export function readAiWorkflow(directory: string, jobs?: AiJobStore, id?: string
   if (!input && existsSync(path)) input = JSON.parse(readFileSync(path, 'utf8')) as AiWorkflowInput
   if (!input) return null
   if (!['thread-ask', 'matchup-generate', 'matchup-revise', 'matchup-continue'].includes(input.kind) ||
-    !Array.isArray(input.args) || ![undefined, 1, 2, 3, 4].includes(input.schemaVersion)) throw new Error('Contesto di ripresa non valido.')
+    !Array.isArray(input.args) || ![undefined, 1, 2, 3, 4, 5].includes(input.schemaVersion)) throw new Error('Contesto di ripresa non valido.')
   return input
 }
 
@@ -60,10 +60,12 @@ export class AiAnalysisWork {
     readonly id: string, readonly signal: AbortSignal, input?: AiWorkflowInput) {
     mkdirSync(directory, { recursive: true })
     if (input) {
-      const workflow = readAiWorkflow(directory, jobs, id) ?? { ...input, schemaVersion: input.schemaVersion ?? 4 as const }
+      const workflow = readAiWorkflow(directory, jobs, id) ?? { ...input,
+        schemaVersion: input.schemaVersion ?? (input.kind === 'thread-ask' ? 5 as const : 4 as const) }
       this.archive.saveValue('workflow', 'input', workflow)
       if (workflow.schemaVersion === 3) this.archive.saveValue('analysis-policy', 'algorithm', 'event-aggregates-v1')
-      if (workflow.schemaVersion === 4) this.archive.saveValue('analysis-policy', 'algorithm', DECISION_POLICY)
+      if (workflow.schemaVersion === 4 || workflow.schemaVersion === 5)
+        this.archive.saveValue('analysis-policy', 'algorithm', DECISION_POLICY)
       if (!existsSync(join(directory, 'workflow.json'))) save(join(directory, 'workflow.json'), workflow)
     }
     jobs.recoverCallMetrics(id)

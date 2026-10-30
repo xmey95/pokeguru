@@ -22,6 +22,7 @@ import { AiPreferencesStore, resolveAiConfig } from './ai-preferences'
 import { CodexControl } from './codex-control'
 import { CodexSetup } from './codex-setup'
 import { deckThreadPrompt, DECK_THREAD_SCHEMA, readDeckThreadTurn } from './deck-ai'
+import { firstThreadAnswer, restoreFirstThreadAnswer, runThreadDecision, usesThreadDecision } from './ai-thread-decision'
 import { buildThreadEvidence } from './thread-evidence'
 import { createAiEvidenceEngine, type AiEvidenceEngine } from './ai-evidence-engine'
 import { createArchivedEvidenceEngine } from './ai-evidence-snapshot'
@@ -191,7 +192,7 @@ function resumeSavedAiJob(job: AiJob, explicit: boolean): Promise<unknown> {
   const input = readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id)
   const runner = input && input.kind === job.kind ? resumeRunners.get(job.kind) : null
   if (!runner || !input) throw new Error('Contesto di ripresa non disponibile.')
-  if (input.schemaVersion !== 2 && input.schemaVersion !== 3 && input.schemaVersion !== 4) {
+  if (input.schemaVersion !== 2 && input.schemaVersion !== 3 && input.schemaVersion !== 4 && input.schemaVersion !== 5) {
     const message = 'Questa analisi proviene da una versione che non salvava tutti gli input. Gli esiti completati restano disponibili; annulla il lavoro e avvia una nuova analisi sui dati attuali.'
     aiJobStore.suspend(job.id, message, 'legacy')
     throw new Error(message)
@@ -235,7 +236,7 @@ async function recoverAiJobs(): Promise<void> {
       if (activeAiControllers.has(job.id)) continue
       try {
         const workflow = job.status === 'running' ? readAiWorkflow(aiArtifactDirectory(job.id), aiJobStore, job.id) : null
-        if (job.status === 'running' && workflow && (workflow.schemaVersion === 2 || workflow.schemaVersion === 3 || workflow.schemaVersion === 4 ||
+        if (job.status === 'running' && workflow && (workflow.schemaVersion === 2 || workflow.schemaVersion === 3 || workflow.schemaVersion === 4 || workflow.schemaVersion === 5 ||
           (job.request as { validatedDraft?: boolean } | null)?.validatedDraft !== true)) {
           const voluntary = job.progress?.diagnostics?.suspensionReason === 'user'
           aiJobStore.suspend(job.id, voluntary ? 'Analisi in pausa su tua richiesta.'
@@ -1381,12 +1382,33 @@ function registerProjectHandlers(): void {
           tournamentStore?.iterate() ?? [], tournamentStore?.iterateMain() ?? []))
       await yieldAiPreparation(controller.signal)
       jobProgress(job, 'events', 'Collego le liste e i risultati degli Eventi pertinenti.')
-      jobProgress(job, 'planning', 'Codex seleziona le ricerche locali utili alla domanda.')
+      const cwd = join(backendContext.temp, 'pokeguru-codex-deck')
+      mkdirSync(cwd, { recursive: true })
+      let sessionRef = currentSession ?? thread.aiSessionRef
+      const directDecision = usesThreadDecision(work)
+      jobProgress(job, 'planning', directDecision ? 'Codex valuta le prove e prepara la risposta o le ricerche necessarie.' :
+        'Codex seleziona le ricerche locali utili alla domanda.')
       const queryTrace = await runAiEvidenceQueries(message.trim(), initialEvidence,
-        engine, (prompt) => work.run('planning', prompt, config,
-          (reportUsage) => planEvidenceQueriesWithCodex(prompt, config, controller.signal,
+        engine, (prompt, trace) => {
+          if (directDecision && trace.planningRounds === 0) {
+            prepareEvidenceDelivery(trace, engine, [message.trim(), base?.rawText ?? '',
+              thread!.candidates.at(-1)?.rawText ?? thread!.seedCandidateText ?? '',
+              ...thread!.messages.slice(-12).map(item => item.text)])
+            const packet = threadEvidenceWithQueries(initialEvidence, trace)
+            const context = deckThreadPrompt(thread!, base, message.trim(), constraints, catalog, packet, referenceDate)
+            return runThreadDecision(work, config, context, packet, trace,
+              (combinedPrompt, schema, reportUsage) => codexControl.jsonTurn(sessionRef, cwd, combinedPrompt, config, schema,
+                { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id), signal: controller.signal,
+                  onUsage: reportUsage, onSummary: jobSummary(job, 'planning', 'Codex valuta le prove disponibili.'),
+                  onSessionStarted: (id) => {
+                    if (!sessionRef) projectStore!.assignDeckAiSession(projectId, threadId, id)
+                    sessionRef = id
+                  } }))
+          }
+          return work.run('planning', prompt, config, (reportUsage) => planEvidenceQueriesWithCodex(prompt, config, controller.signal,
             jobSummary(job, 'planning', 'Codex sceglie le ricerche pertinenti.'), reportUsage,
-            engine.describe().eventQueryMode === 'decision-profiles')),
+            engine.describe().eventQueryMode === 'decision-profiles'))
+        },
         { archive: work.archive, contextTexts: [thread.title, ...thread.messages.slice(-12).map((item) => item.text),
           base?.rawText ?? '', thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? ''],
         eventContextTexts: thread.messages.slice(-2).map((item) => item.text),
@@ -1400,21 +1422,24 @@ function registerProjectHandlers(): void {
         thread.candidates.at(-1)?.rawText ?? thread.seedCandidateText ?? '',
         ...thread.messages.slice(-12).map((item) => item.text)])
       let evidence = threadEvidenceWithQueries(initialEvidence, queryTrace)
-      const cwd = join(backendContext.temp, 'pokeguru-codex-deck')
-      mkdirSync(cwd, { recursive: true })
       let context = deckThreadPrompt(thread, base, message.trim(),
         constraints, catalog, evidence, referenceDate)
       evidence.promptAudit = makeAiPromptAudit(context.prompt)
       aiJobStore.prepare(job.id, { schemaVersion: 2, validatedDraft: false,
         message: message.trim(), config, evidence,
         sources: context.sources, existingUserMessageId })
-      let sessionRef = currentSession ?? thread.aiSessionRef
+      const firstAnswer = firstThreadAnswer(work)
       let result: Awaited<ReturnType<typeof codexControl.jsonTurn>> | null = null
       for (let attempt = 0; attempt < 4; attempt++) {
         jobProgress(job, 'analysis', attempt ? `Codex rielabora la risposta con nuove schede (${attempt + 1}/4).` :
           'Codex elabora la risposta con le prove raccolte.')
         const answerStarted = Date.now()
-        result = await work.run('analysis', context.prompt, config, (reportUsage) => codexControl.jsonTurn(sessionRef, cwd, context.prompt, config,
+        if (attempt === 0 && firstAnswer) {
+          result = firstAnswer.result
+          context = { prompt: firstAnswer.prompt, sources: firstAnswer.sources }
+          evidence.sources = firstAnswer.evidenceSources
+          restoreFirstThreadAnswer(queryTrace, firstAnswer)
+        } else result = await work.run('analysis', context.prompt, config, (reportUsage) => codexControl.jsonTurn(sessionRef, cwd, context.prompt, config,
           DECK_THREAD_SCHEMA, { jobId: job.id, jobDirectory: aiArtifactDirectory(job.id),
             signal: controller.signal, onUsage: reportUsage,
             onSummary: jobSummary(job, 'analysis', 'Codex elabora la risposta con le prove raccolte.'),
@@ -1423,7 +1448,8 @@ function registerProjectHandlers(): void {
               sessionRef = id
             } }))
         sessionRef = result.sessionId
-        evidence.promptAudit = makeAiPromptAudit(context.prompt, Date.now() - answerStarted, result.usage)
+        evidence.promptAudit = makeAiPromptAudit(context.prompt,
+          attempt === 0 && firstAnswer ? firstAnswer.durationMs : Date.now() - answerStarted, result.usage)
         const draft = result.value as { reply?: unknown; rawText?: unknown }
         const added = extendAiEvidenceForText(queryTrace, engine,
           [draft.reply, draft.rawText].filter((part): part is string => typeof part === 'string').join('\n'))
