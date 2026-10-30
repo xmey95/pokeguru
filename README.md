@@ -71,6 +71,12 @@ L'archivio è in `data/pokeguru.sqlite` nella cartella dati dell'app. Prima dell
 - **Fonti e analisi:** il Catalogo usa TCGdex; metagame ed eventi provengono da Limitless. La copertura dipende dai dati disponibili e le guide AI possono contenere errori. Quota del meta, piazzamenti e risultati contro il campo non sono il winrate del tuo mazzo.
 - **Import/export:** il percorso è verificato con round trip locale e campioni in Limitless. Il formato di copia è predisposto per Pokémon TCG Live; l'importazione diretta nel client non è ancora verificata.
 
+### Novità della v0.3.12
+
+Nei nuovi turni Strategie, la prima chiamata AI può rispondere quando i testi originali forniti bastano oppure chiedere le ricerche necessarie. Restano i controlli su fonti, carte, candidate e vincoli, inclusa la revisione delle nuove carte citate.
+
+Nel campione ripetuto, la mediana della domanda su Budew passa da 19,55 a 14,62 s (−25,22%); quella sulle protezioni da 15,97 a 12,63 s (−20,86%). Le sei prove puntuali passano da 12 a 6 chiamate. I lavori già avviati e le guide mantengono il proprio flusso; schema 16 invariato. [Note, verifiche e limiti](docs/RELEASE-0.3.12.md).
+
 ### Novità della v0.3.11
 
 Le nuove analisi AI partono da statistiche complete degli Eventi e approfondiscono gli originali necessari alla richiesta. Le domande circoscritte ricevono risposte proporzionate; modello e livello di ragionamento restano quelli scelti. I controlli su carte, fonti e candidate e l'adozione manuale della lista rimangono attivi.
@@ -141,7 +147,7 @@ La ricerca avanzata usa le schede locali, mostra copertura e risultati incerti e
 
 ## Sviluppo
 
-APP-192 ottimizza localmente i nuovi turni Strategie: risposta o ricerca nella prima chiamata, con controlli invariati. Nelle prove ripetute, mediana Budew −25,22% e protezioni −20,86%. [Verifica e limiti](docs/AI-FOCUSED-FLOW.md); non ancora incluso nella release scaricabile.
+APP-192 è incluso nella v0.3.12: risposta o ricerca nella prima chiamata dei nuovi turni Strategie, con controlli invariati. Nelle prove ripetute, mediana Budew −25,22% e protezioni −20,86%. [Verifica e limiti](docs/AI-FOCUSED-FLOW.md).
 
 Il flusso AI APP-191 è incluso nella v0.3.11. Contratto, confronto sui cinque compiti e limiti sono nel [rapporto di verifica](docs/AI-DECISION-FLOW.md).
 

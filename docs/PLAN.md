@@ -1,6 +1,6 @@
 # Piano incrementale
 
-**Aggiornato:** 30 ottobre 2026. **Fase corrente:** I3, v0.3.11 pubblicata e verificata su main tramite APP-193; include il flusso AI APP-191, schema 16 invariato. CI delle PR, Release, pacchetti e provenienza verificati sulle quattro piattaforme. Domanda puntuale APP-192 ancora da ottimizzare; limiti di firma/Finder APP-147 e indagine APP-187 restano aperti. I4 non avviato. Gli stati operativi sono esclusivamente in BACKLOG.md.
+**Aggiornato:** 30 ottobre 2026. **Fase corrente:** I3, v0.3.11 pubblicata e verificata; APP-192 completato e rilascio v0.3.12 autorizzato in APP-195. Schema 16 invariato. In corso integrazione e verifica sulle quattro piattaforme; limiti di firma/Finder APP-147, indagine APP-187 e terminologia APP-194 restano aperti. I4 non avviato. Gli stati operativi sono esclusivamente in BACKLOG.md.
 
 ## Obiettivo e soglie
 
@@ -108,6 +108,8 @@ Al termine di ciascun incremento, mostrare il percorso utente, registrare eviden
 - **Vincoli:** un solo task principale `In progress`; profili di prova isolati, dati personali intatti e risultati live distinti dalle fixture. Ogni task aggiorna il proprio esito nel backlog e questa sezione alla chiusura. I4 e la prossima release non sono parte del checkpoint.
 
 ## Ripresa
+
+- **APP-195 in corso (30-10-2026):** autorizzati integrazione APP-192 in dev e rilascio v0.3.12. Ramo `task/app-195-release-0.3.12` da APP-192 `d81c70f`, base dev `e98f68c`; versione e note preparate. Prossimi passi: build e provenienza locali, CI delle PR dev/main, pubblicazione e verifica dei nove asset. Nessuna nuova inferenza necessaria; checkpoint v1–v4 e schema 16 preservati. Checkout principale e lavoro parallelo sulle guide conservati. Questa autorizzazione supera il limite locale delle note APP-192 seguenti.
 
 - **APP-192 completato localmente (30-10-2026):** ramo `task/app-192-focused-ai` da dev `e98f68c`, nuovo turno Strategie v5 che può rispondere nella prima chiamata o richiedere ricerche. Controlli e checkpoint precedenti preservati, guide v4 invariate. 393 test, build/typecheck, lifecycle Electron e 18 osservazioni live passati. Mediana Budew −25,22%, protezioni −20,86%; sei prove puntuali da 12 a 6 chiamate. [Rapporto e limiti](AI-FOCUSED-FLOW.md). APP-194 registra una terminologia generica già presente nei due bracci; non avviato. Pronto per revisione, nessun merge/release; v0.3.11 resta la versione pubblicata. Checkout principale e lavoro parallelo sulle guide conservati. La nota di avvio seguente è storica.
 

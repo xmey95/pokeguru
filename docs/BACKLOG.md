@@ -199,6 +199,15 @@ Dimensioni relative: **S** contenuto, **M** medio, **L** epica da scomporre prim
 | **APP-192** | Ridurre i passaggi obbligatori nelle domande AI puntuali | Prestazioni | R-07, R-08, R-14 / I3 | P2 / M | APP-191/193; autorizzazione del 30-10-2026, contratto e confronto definiti sotto | Done |
 | **APP-193** | Integrare APP-191 in dev e pubblicare v0.3.11 | Release | R-07, R-08, R-11, R-12, R-14 / I3 | P1 / M | APP-191 verificato; autorizzazione esplicita del 30-10-2026 | Done |
 | **APP-194** | Distinguere in modo univoco Item e Tool nella terminologia italiana AI | Qualità | R-07, R-10 / I3 | P2 / S | Rilievo comune ai due bracci APP-192; definire corpus e criteri | Backlog |
+| **APP-195** | Integrare APP-192 in dev e pubblicare v0.3.12 | Release | R-07, R-08, R-11, R-12, R-14 / I3 | P1 / M | APP-192 verificato; autorizzazione esplicita del 30-10-2026 | In progress |
+
+### APP-195 — Release v0.3.12 delle domande AI puntuali
+
+- **Verifiche locali di integrazione:** build v0.3.12, typecheck e test di provenienza passati; il controllo rifiuta pacchetti alterati e provenienza da un'altra esecuzione. Le verifiche APP-192 (393 test, lifecycle Electron e confronto live) restano valide; la CI riesegue suite completa, integrazioni e pacchetti sulle quattro piattaforme prima dei merge.
+
+- **Ready e avvio (30-10-2026):** integrazione e rilascio esplicitamente richiesti. Ramo `task/app-195-release-0.3.12` dal commit APP-192 `d81c70f`, base dev `e98f68c`; main/tag v0.3.11 `7c89a3b`. Unica attività principale In progress; checkout principale e dati personali conservati.
+- **Accettazione:** versione e note 0.3.12 coerenti; CI dev/main sulle quattro piattaforme; Release completa; tag/commit, quattro pacchetti, checksum, provenienza e attestazioni verificati; esito registrato in dev.
+- **Perimetro:** distribuzione di APP-192 già verificato con 393 test, typecheck/build, lifecycle Electron e confronto live di 18 osservazioni. Nessuna nuova inferenza; nuovo turno Strategie v5, guide v4 e job v1–v4 conservati, schema DB 16 invariato. Candidate e originali restano soggetti agli stessi controlli. APP-194, APP-147 e APP-187 non fanno parte di questo rilascio.
 
 ### APP-194 — Terminologia dei tipi Trainer
 
