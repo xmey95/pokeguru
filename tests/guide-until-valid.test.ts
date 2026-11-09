@@ -157,10 +157,12 @@ it('completes three independent case repair rounds, keeps negatives, seals, pers
    const output=resolve(process.env.POKEGURU_UNTIL_VALID_TEST_OUTPUT)
    if(!output.startsWith(resolve('.verify')+sep))throw Error('Only isolated verification output is allowed')
    const peakRssMiB=process.resourceUsage().maxRSS/1024
-   expect(coldMs).toBeLessThan(60000);expect(warmMs).toBeLessThan(10000);expect(peakRssMiB).toBeLessThanOrEqual(768)
+   // Preserve every observation even when a resource assertion fails. The
+   // database export still requires all of the unchanged limits to pass.
    mkdirSync(dirname(output),{recursive:true})
-   const db=new DatabaseSync(f.file,{readOnly:true});try{await backup(db,output)}finally{db.close()}
    writeFileSync(output+'.metrics.json',JSON.stringify({coldMs,warmMs,peakRssMiB,calls,negativeOpinions:negatives.length,repairs:readGuideDelivery(work.archive).repairs,syntheticProviderOnly:true,completeReadersAndPersistence:true},null,2))
+   expect(coldMs).toBeLessThan(60000);expect(warmMs).toBeLessThan(10000);expect(peakRssMiB).toBeLessThanOrEqual(768)
+   const db=new DatabaseSync(f.file,{readOnly:true});try{await backup(db,output)}finally{db.close()}
   }
  }finally{work.close();f.close()}
 },240000)
