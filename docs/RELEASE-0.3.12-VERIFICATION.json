@@ -1,0 +1,87 @@
+{
+  "release": "https://github.com/xmey95/pokeguru/releases/tag/v0.3.12",
+  "sourceSha": "9ee6af1c76e99bae812f4e21f6212c8d105c0a15",
+  "run": "41073406249",
+  "assets": 9,
+  "verifiedChecksumEntries": 8,
+  "packages": [
+    {
+      "platform": "linux",
+      "artifact": "Pokeguru-0.3.12-linux-x86_64.AppImage",
+      "bytes": 294356923,
+      "sha256": "44a44921385988e548fd89043b50c4119f40855e4762a7b1d2b80cd99dd414be"
+    },
+    {
+      "platform": "windows",
+      "artifact": "Pokeguru-0.3.12-windows-x64-setup.exe",
+      "bytes": 226403445,
+      "sha256": "c8829ce2c2335e548ade37a9a1786835e7020f83a3233f26079d7158214083a5"
+    },
+    {
+      "platform": "macos-x64",
+      "artifact": "Pokeguru-0.3.12-macos-x64.dmg",
+      "bytes": 277149273,
+      "sha256": "ed7ef054246ab5f8671e03da7344aff32e72464ea0ce3fc8e7b145475069c6f7"
+    },
+    {
+      "platform": "macos-arm64",
+      "artifact": "Pokeguru-0.3.12-macos-arm64.dmg",
+      "bytes": 260217433,
+      "sha256": "ccf9a8ca05990af42939d77359883f362e0daf278212600c733a24b2717da855"
+    }
+  ],
+  "releaseRun": "https://github.com/xmey95/pokeguru/actions/runs/41073406249",
+  "verifiedJobs": [
+    {
+      "name": "Package (ubuntu-24.04)",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41073406249/job/124123109670"
+    },
+    {
+      "name": "Package (macos-15-intel)",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41073406249/job/124123109985"
+    },
+    {
+      "name": "Package (windows-2022)",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41073406249/job/124123110083"
+    },
+    {
+      "name": "Package (macos-15)",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41073406249/job/124123110278"
+    },
+    {
+      "name": "Attest release packages",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41073406249/job/124126797417"
+    },
+    {
+      "name": "Publish GitHub release",
+      "conclusion": "success",
+      "url": "https://github.com/xmey95/pokeguru/actions/runs/41073406249/job/124127064071"
+    }
+  ],
+  "preparationPr": "https://github.com/xmey95/pokeguru/pull/126",
+  "mainPr": "https://github.com/xmey95/pokeguru/pull/127",
+  "ciRuns": [
+    "https://github.com/xmey95/pokeguru/actions/runs/41069900576",
+    "https://github.com/xmey95/pokeguru/actions/runs/41071529534"
+  ],
+  "verification": "Four CI jobs succeeded on each PR; four package/smoke jobs, attest and publish succeeded. Tag equals sourceSha; all eight checksums match GitHub asset digests; downloaded manifests and checksum file hashes match; manifest version/source/run/bytes match published packages. Package bytes and signed attestations were checked by the Release workflow. The four downloaded manifest attestations were independently verified with GitHub CLI, pinned to source SHA, main ref and signer workflow.",
+  "independentlyVerifiedManifestAttestations": 4,
+  "publishedAt": "2026-10-30T14:47:22Z",
+  "localIntegrationChecks": [
+    "npm run build (includes typecheck)",
+    "node tests/release-provenance-check.mjs"
+  ],
+  "app192Checks": [
+    "393 ordinary tests passed",
+    "Electron lifecycle: v5 first-answer recovery and preceding workflows, isolated profiles",
+    "18 live observations, 32 model calls; source and candidate checks preserved; limited frozen sample"
+  ],
+  "operationalNotes": [
+    "GitHub returned transient 502 errors during PR operations; each state was checked before retry. Main PR was created through REST after GraphQL errors."
+  ]
+}

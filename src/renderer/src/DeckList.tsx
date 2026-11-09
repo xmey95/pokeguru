@@ -37,8 +37,8 @@ function cardStatus(status: 'recognized' | 'unverified' | 'ambiguous' | 'outside
     catalog.scope.kind === 'sample' ? 'Nessuna corrispondenza nel campione' : 'Nessuna corrispondenza locale'
 }
 
-export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importOpen, footer }: {
-  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport(): void; importOpen: boolean; footer?: ReactNode
+export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importOpen, footer, readOnly = false }: {
+  projectId: string; baseline: DeckBaseline; onOpenCatalog(): void; onImport?: () => void; importOpen: boolean; footer?: ReactNode; readOnly?: boolean
 }) {
   const preview = useCardPreview()
   const dismissPreview = useDismissCardPreview()
@@ -149,7 +149,7 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
   function cardDetail(card: DeckCardEntry) {
     return <div className="deck-card-detail">
       <CardOverview card={card} onOpenCatalog={onOpenCatalog} />
-      {card.identityId && <CardConstraints identityId={card.identityId} name={card.name} />}
+      {!readOnly && card.identityId && <CardConstraints identityId={card.identityId} name={card.name} />}
       {card.staleCorrection && <p className="diagnostics">Una correzione precedente non corrisponde più al catalogo locale. Controlla l’identità prima di usarla nell’analisi.</p>}
       {card.status === 'ambiguous' && <p className="content-note">Le righe restano separate finché non confermi l’identità.</p>}
       <details className="deck-import-details"><summary>Testo importato e controlli</summary>
@@ -205,8 +205,8 @@ export function DeckList({ projectId, baseline, onOpenCatalog, onImport, importO
           </div>
         </div>
         <div className="deck-heading-actions">
-          <ExportButton baseline={baseline} />
-          {!importOpen && <button id="deck-import-trigger" type="button" className="secondary-button" onClick={onImport}>Importa / sostituisci</button>}
+          {!readOnly && <ExportButton baseline={baseline} />}
+          {onImport && !importOpen && <button id="deck-import-trigger" type="button" className="secondary-button" onClick={onImport}>Importa / sostituisci</button>}
         </div>
       </div>
       {standardDeck.problems.length > 0 && <ul className="standard-problems" aria-label="Problemi accertati">{standardDeck.problems.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}

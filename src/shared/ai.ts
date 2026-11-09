@@ -15,6 +15,7 @@ export interface AiConnection {
   account: 'chatgpt' | 'apiKey' | 'other' | null
   plan: string | null
   models: AiModel[]
+  quota?:import('./ai-limits').AiQuota
 }
 
 export interface CodexSetupStatus {

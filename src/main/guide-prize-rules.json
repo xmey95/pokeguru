@@ -1,0 +1,34 @@
+{
+  "version": "prize-evidence-2026-11-05.1",
+  "availableFrom": "2025-09-26",
+  "checkedAt": "2026-11-05",
+  "scope": "Western Pokémon TCG. Base Knock Out Prize rules and modern Pokémon ex / Mega Evolution Pokémon ex. Not Standard admission, not Pokémon TCG Pocket, not older Mega Pokémon-EX. Card effects and other Rule Boxes require their own evidence; these base amounts do not override modifiers or prove a KO, promotion or win.",
+  "entries": [
+    {
+      "id": "rules:prizes:knock-out-1",
+      "label": "Official Pokémon TCG rulebook — Knock Out Prize to hand",
+      "url": "https://www.pokemon.com/static-assets/content-assets/cms2/pdf/trading-card-game/rulebook/par_rulebook_en.pdf",
+      "locator": "Printed page 14, attacking, step C",
+      "appliesTo": "Default award after a Pokémon is Knocked Out; a special Rule Box or card effect can change the amount.",
+      "excerpt": "That player’s opponent takes 1 of their own Prize cards and puts it into their hand."
+    },
+    {
+      "id": "rules:prizes:pokemon-ex-2",
+      "label": "Official Pokémon TCG rulebook — modern Pokémon ex",
+      "url": "https://assets.pokemon.com/assets/cms2/pdf/trading-card-game/rulebook/pal_rulebook_en.pdf",
+      "locator": "Appendix 1: Pokémon ex",
+      "appliesTo": "Modern Pokémon ex; Mega Evolution Pokémon ex use their separate three-Prize rule. Do not apply merely because a name contains a similar substring.",
+      "excerpt": "When one of your Pokémon ex is Knocked Out, your opponent takes 2 Prize cards."
+    },
+    {
+      "id": "rules:prizes:mega-evolution-ex-3",
+      "label": "The Pokémon Company International — Mega Evolution Series announcement",
+      "url": "https://press.pokemon.com/en/Mighty-Mega-Evolution-Pokemon-Return-in-Pokemon-Trading-Card-Game-Mega",
+      "locator": "26 September 2025, paragraph beginning When put into play",
+      "publishedAt": "2025-09-26",
+      "appliesTo": "Modern Mega Evolution Pokémon ex in the Mega Evolution Series, including Basic, Stage 1 and Stage 2. Not older Mega Evolution Pokémon-EX.",
+      "subjectExcerpt": "Mega Evolution Pokémon ex",
+      "excerpt": "but give up three Prize cards when Knocked Out."
+    }
+  ]
+}

@@ -1,0 +1,805 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-195",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "verificationBasis": "Archived tested-code and original campaign inputs. Review-context correction in the checkout was made after campaign completion and was not tested live.",
+  "sealedFiles": 32,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh generation per pilot matchup; no previous guide and no editorial patch. Version 5 projects inventories, hands and transitions from movement ledgers; all previous gates retained.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 458266,
+      "outputTokens": 52857,
+      "cachedInputTokens": 18688,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 923660,
+      "elapsedMs": 925583,
+      "startedAt": "2026-10-30T17:13:01.185Z",
+      "endedAt": "2026-10-30T17:28:26.768Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a: a-evolution: pescata non presente nella lista.",
+              "scenario-a:a-direct: a-evolution: pescata non presente nella lista.",
+              "scenario-a:a-evolution: a-evolution: pescata non presente nella lista.",
+              "scenario-a: pescata specifica Dragapultants:sv06-130:ReconDirective omessa dalle risorse della replica.",
+              "scenario-b: b-direct-gust: pescata non presente nella lista.",
+              "scenario-b: b-evolution-gust: pescata non presente nella lista.",
+              "scenario-b:b-direct-gust: b-direct-gust: pescata non presente nella lista.",
+              "scenario-b:b-direct-gust: b-evolution-gust: pescata non presente nella lista.",
+              "scenario-b: pescata specifica Boss-versus-Genesect:me01-114:turn6 omessa dalle risorse della replica.",
+              "scenario-b:b-evolution-gust: b-direct-gust: pescata non presente nella lista.",
+              "scenario-b:b-evolution-gust: b-evolution-gust: pescata non presente nella lista.",
+              "scenario-b: pescata specifica Dragapult-versus-Genesect:sv06-130:ReconDirective omessa dalle risorse della replica."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 57,
+              "calculations": 16,
+              "transitions": 37
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Il registro conserva inventory, state, setupDraws, returnedToDeck, setupHistory, handAfter e steps con before/after/prizesTaken, tutti vietati dal contratto v5. Anche la ritirata è duplicata in calculations.",
+                "correction": "Eliminare i campi contabili derivati, comprese le copie nei rami alternativi. Conservare setupLedger e lineEvents come unico registro e descrivere la ritirata esclusivamente in retreatCosts.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:sv06-128"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Anche questo scenario mantiene tutti i campi contabili sostituiti dal contratto v5 e un conto di ritirata in calculations.",
+                "correction": "Rimuovere inventory, state, setupDraws, returnedToDeck, setupHistory, handAfter e steps con i relativi sotto-campi, anche dalle alternative; mantenere il costo della ritirata soltanto in retreatCosts.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:sv06-128"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "specificDraws contiene «Dragapultants:sv06-130:ReconDirective», che non è un printId della lista e produce gli errori locali segnalati.",
+                "correction": "Usare «sv06-130» come identità della pescata specifica; mantenere origine, turno e condizioni in access e sequence. Verificare nuovamente il ramo e il confronto.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-129",
+                  "card:sv06-130"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "specificDraws usa un identificatore composto inesistente. Inoltre il ramo acquisisce e conserva Dragapult ex tramite Recon Directive, ma requiredCards e specificDraws non coprono questa risorsa dichiarata nella sequenza.",
+                "correction": "Sostituire l'identificatore composto con «me01-114». Eliminare la Recon Directive superflua oppure includere «sv06-130» nelle risorse aggiuntive e nelle pescate specifiche necessarie a conservare quel Pokémon.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-114",
+                  "card:sv06-129",
+                  "card:sv06-130"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Entrambe le identità in specificDraws sono stringhe composte assenti dalla lista, quindi il confronto non supera i controlli locali.",
+                "correction": "Usare i printId «me01-114» e «sv06-130», lasciando la descrizione dei rispettivi accessi nei campi testuali; rivalidare il ramo e tutte le omissioni.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-114",
+                  "card:sv06-130"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "La replica prende Dragapult ex con Recon Directive e dichiara di conservarlo, ma requiredCards comprende soltanto Psychic Energy e specificDraws è vuoto. Il ramo non contabilizza lo sviluppo effettivamente dichiarato.",
+                "correction": "Per una replica diretta essenziale, omettere Recon Directive e la conservazione di Dragapult ex. In alternativa contabilizzare la copia aggiuntiva e la relativa acquisizione specifica.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-129",
+                  "card:sv06-130"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "La continuità dipende da rinunce nostre non motivate: al turno 3 Mist Energy resta in mano anziché preparare Trumbeak B; al turno 5 il secondo Toucannon cercato non evolve B, rinunciando anche ad Aerial Draw. Entrambe le azioni sono disponibili. La necessità della Mist Energy pescata al turno 7 è quindi creata dalla linea scelta.",
+                "correction": "Confrontare la preparazione energetica di B al turno 3 e la sua evoluzione al turno 5. Aggiornare registro, pescate, risorse e repliche; motivare eventuali rinunce con un vantaggio concreto. Rivalutare Crushing Hammer sul ricambio qualora riceva anticipatamente Energia.",
+                "sourceIds": [
+                  "card:sv05-161",
+                  "card:me05-067",
+                  "card:me05-094",
+                  "card:me03-071"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "La conservazione di Toucannon A non è verificata contro tutta la mano avversaria: tre Crushing Hammer possono tentare di scartare Legacy Energy prima di Phantom Dive. Con almeno una testa l'avversario può mandare KO l'attaccante prendendo un Premio e conservando Boss's Orders. Inoltre il secondo Toucannon potrebbe già evolvere e usare Aerial Draw al turno 5.",
+                "correction": "Aggiungere il confronto strategico con Crushing Hammer seguito dal KO diretto, esplicitando gli esiti delle monete senza presentarli come garantiti. Adeguare tesi e pivot alla possibile perdita dell'attaccante; verificare anche l'evoluzione anticipata di B e le relative pescate. Il confronto sul solo bersaglio Genesect può restare, ma non dimostra che la linea principale regga alla migliore replica plausibile.",
+                "sourceIds": [
+                  "card:me03-071",
+                  "card:sv06-167",
+                  "card:sv06-130",
+                  "card:me01-114",
+                  "card:me05-094"
+                ]
+              }
+            ],
+            "checks": [
+              "Le mani iniziali contengono sette carte per lato e i Premi iniziali sei per lato.",
+              "I movimenti descritti del setup rispettano le disponibilità delle due liste selezionate; non emergono copie eccedenti.",
+              "Verificati i danni principali: 70, 180, 200 e 140; Dragapult ex resta a 180 PS dopo il secondo Feather Rondo.",
+              "Verificati costi degli attacchi, evoluzioni naturali e ritirata di Dreepy.",
+              "KO dell'Attivo, promozioni e gust mantengono correttamente separati i cambi di Panchina.",
+              "Battle Cage protegge dai segnalini di Phantom Dive; Genesect con Air Balloon impedisce Unfair Stamp finché resta in gioco.",
+              "Le omissioni dichiarate non evidenziano una replica deterministica più economica contro i bersagli scelti nelle pescate fissate; restano da correggere completezza e realismo delle linee."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 57,
+              "calculations": 16,
+              "transitions": 38
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "resources sottoconta Boss's Orders: una copia è nei Premi iniziali e vi rimane, mentre una seconda viene pescata dal mazzo con Aerial Draw al turno 7. Sono due copie fisiche distinte, non una.",
+                "correction": "Portare resources di me02.5-256 per ours a 2 e ricontrollare le quantità sull'unione delle copie fisiche effettivamente dichiarate.",
+                "sourceIds": [
+                  "our-list",
+                  "card:me02.5-256"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "resources sottoconta due carte: Boss's Orders richiede 2 copie (una nei Premi e una pescata al turno 7); Battle Cage richiede 3 copie (Stadio iniziale, copia nei Premi e copia pescata al turno 7). Sono dichiarate rispettivamente 1 e 2.",
+                "correction": "Impostare resources di ours a 2 per me02.5-256 e a 3 per me02-116, mantenendo distinti i percorsi delle copie nel registro.",
+                "sourceIds": [
+                  "our-list",
+                  "card:me02.5-256",
+                  "card:me02-116"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Il contenuto conserva tutti i campi contabili vietati dal contratto v5: inventory, state, setupDraws, returnedToDeck, setupHistory, steps, before, after, prizesTaken e handAfter, anche nelle alternative. Inoltre calculations contiene ancora il conto della ritirata già rappresentata in retreatCosts. changeSummary dichiara erroneamente che siano stati rimossi.",
+                "correction": "Eliminare i campi derivati dal contenuto principale e dai rami; conservare setupLedger e lineEvents come registro unico. Eliminare da calculations la voce con retreatCostId a-retreat-dreepy, mantenendo retreatCosts. Aggiornare changeSummary al risultato effettivo.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:sv06-128"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Anche questo scenario conserva i campi contabili sostituiti dal contratto v5, compresi handAfter negli eventi e steps completi nelle alternative. Il conto della ritirata è duplicato in calculations e retreatCosts.",
+                "correction": "Rimuovere inventory, state, setupDraws, returnedToDeck, setupHistory, steps e tutti i relativi before, after, prizesTaken e handAfter. Conservare soltanto i registri dei movimenti e rimuovere da calculations la voce con retreatCostId b-retreat-dreepy.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:sv06-128"
+                ]
+              }
+            ],
+            "checks": [
+              "Riconteggiate le liste selezionate: our-list e opponent-1 contengono entrambe 60 carte.",
+              "Ripercorsi setup, mani residue e movimenti principali: evoluzioni naturali, assegnazioni, costi di Crispin, KO e promozioni risultano raggiungibili nelle pescate e monete dichiarate.",
+              "Verificati Feather Rondo da 180 e 140, Phantom Dive da 200, protezione di Battle Cage e riduzione Premi di Legacy Energy.",
+              "Ricontrollate le rimozioni delle repliche minime: senza Dragapult ex oppure senza Psychic Energy il massimo sul Toucannon scelto resta 70 nelle acquisizioni dichiarate; Hammer non è necessario al KO.",
+              "Verificati gli accessi avversari: Poké Pad non cerca Pokémon ex; nessun recupero o ricerca concatenata aggiuntiva è disponibile nella mano residua dichiarata della replica minima.",
+              "I due casi collegano due nostri turni con una replica intermedia; dimostrano continuità condizionata, non una vittoria né ottimalità competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "09306dae2e2e18fa3809f91d2f5749fa5d35ff0cb8fb785b5e8ae13ada5f269c",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "4272774a6d798328ab124abd749dbe68c6086ccc2a48102164447a9872a7a28b",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "5c51432979b98a568c8b6a671903f556d20e22e71507869772c70c588e20bce7",
+        "f3599dc02fe4cd0c804a89ba5a9b61d13836a19ef41d800d3c19f23444529f73"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "6d2d54f36915e44591f5027a424a3441c36c298d74c3092d2d650a94d6ae0aa8"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "01aed9583b144adbe8187690967c56b5f47d5f394b0433153e734c0a607cac52"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "50f33d478c1113ae0d35155b0f8dede27202ba564f74545eec0749a137e4191a"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "d9dd4b8bf944ee5c14dfb400254f0bc06fffca4f36d9f5070866dc267f7de0cd"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "d899406b2d1a566d009b73c59adae5b24e65cb85a4f2c2db11feddaa7acd2536"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 6,
+      "failedCalls": 1,
+      "inputTokens": 525416,
+      "outputTokens": 53843,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 969536,
+      "elapsedMs": 972034,
+      "startedAt": "2026-10-30T17:13:01.547Z",
+      "endedAt": "2026-10-30T17:29:13.581Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 4,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a: a-direct: pescata non presente nella lista.",
+              "scenario-a: a-festival: pescata non presente nella lista.",
+              "scenario-a:a-direct: a-direct: pescata non presente nella lista.",
+              "scenario-a:a-direct: a-festival: pescata non presente nella lista.",
+              "scenario-a: pescata specifica BasicGrassEnergy:mee-009 omessa dalle risorse della replica.",
+              "scenario-a:a-festival: a-direct: pescata non presente nella lista.",
+              "scenario-a:a-festival: a-festival: pescata non presente nella lista.",
+              "scenario-b: b-develop: pescata non presente nella lista.",
+              "scenario-b:b-direct: b-develop: pescata non presente nella lista.",
+              "scenario-b:b-develop: b-develop: pescata non presente nella lista.",
+              "scenario-b: pescata specifica PokPad:me03-081 omessa dalle risorse della replica."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 41,
+              "calculations": 13,
+              "transitions": 39
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "claim-rondo",
+                "message": "La formula è corretta, ma tre Pokémon nostri e cinque avversari in Panchina producono 220 danni, non 200.",
+                "correction": "Correggere il risultato in 220 e distinguere questa posizione da quella del turno 5 dello scenario A, che produce 180.",
+                "sourceIds": [
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Calculations, explanation, opponentResponse e developmentEvents riportano ancora cinque Pokémon avversari in Panchina e colpi da 100 dopo la promozione. Il registro ne lascia quattro: i colpi sono da 80, il totale è 160 e Feather Rondo del turno 5 infligge 180.",
+                "correction": "Allineare tutti i conti e le descrizioni al registro: 80 per Do the Wave, 160 complessivi e 180 per Feather Rondo del turno 5. La soglia del bersaglio resta 150 PS; 160 è il danno della replica.",
+                "sourceIds": [
+                  "card:sv06-018",
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "È falsa l'esclusione di Gladion's Final Battle: dopo evoluzioni e assegnazione la mano avversaria è vuota. Boom Boom Groove può cercare Gladion come unica carta; giocandolo, un singolo Do the Wave infligge 80+80=160 e manda KO Toucannon senza Festival Grounds.",
+                "correction": "Aggiungere questo ramo completo al confronto, con movimenti, risorse e prove di omissione. Confrontarlo con Festival Grounds: entrambi raggiungono il KO, mentre lo Stadium conserva il doppio attacco per i turni successivi. Correggere spiegazione, replica e pivot.",
+                "sourceIds": [
+                  "card:me05-077",
+                  "card:sv06-015",
+                  "card:sv06-018",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "La prova di omissione di Basic Grass Energy dichiara remainingDamage=0, ma descrive essa stessa una linea raggiungibile da 80: Boom Boom Groove cerca Night Stretcher, che recupera l'Energia scartata con Applin.",
+                "correction": "Impostare remainingDamage almeno a 80 e ricontrollare tutte le rimozioni considerando ricerca, recupero e Gladion's Final Battle. Non presentare il valore zero come massimo raggiungibile.",
+                "sourceIds": [
+                  "card:sv06-015",
+                  "card:me02.5-196",
+                  "card:sv06-018",
+                  "card:me05-077"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Resources sottoconta Toucannon: vengono usate tre copie fisiche, comprese quella cercata al turno 5. Inoltre le pescate specifiche usano 'BasicGrassEnergy:mee-009', che non è il printId della carta e causa gli errori locali.",
+                "correction": "Portare Toucannon a tre copie e usare il printId esatto mee-009 nelle pescate specifiche, coerentemente con requiredCards. Ricontare tutte le risorse sui singoli rami.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:mee-009",
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Al turno 3 Aerial Draw trova Rare Candy quando il secondo Toucannon è già in mano e il Pikipek in Panchina è evolvibile. Rimandare l'evoluzione al turno 5 rinuncia gratuitamente a un'Aerial Draw utile nel turno 3; l'audit non giustifica questa scelta.",
+                "correction": "Evolvere il secondo Toucannon nel turno 3 e usare o motivare concretamente la sua Aerial Draw. Ricostruire le pescate conseguenti, il registro, le risorse e tutti i prefissi alternativi senza conservare artificialmente la sequenza precedente.",
+                "sourceIds": [
+                  "card:me01-175",
+                  "card:me05-094",
+                  "our-list"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Resources riporta due Hassel, ma la linea ne utilizza quattro fisicamente distinti: due presi dai Premi e due pescati con Aerial Draw. La pesca specifica 'PokPad:me03-081' non identifica una stampa della lista.",
+                "correction": "Portare Hassel a quattro copie nella linea attuale e normalizzare la pesca specifica a me03-081, già presente in requiredCards. Ricalcolare dopo la revisione dello sviluppo del turno 3.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:sv06-205",
+                  "card:me03-081"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Lo scenario conserva i campi contabili duplicati vietati dal contratto v5, inclusi inventory, state, setupDraws, returnedToDeck, setupHistory, steps e handAfter. Contiene inoltre un calcolo di ritirata in calculations nonostante retreatCosts sia già presente.",
+                "correction": "Mantenere il registro unico e i dati tattici richiesti, eliminando i campi duplicati anche dalle opzioni. Lasciare il costo della ritirata esclusivamente in retreatCosts.",
+                "sourceIds": [
+                  "card:me01-166",
+                  "card:me02.5-250",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Anche questo scenario e le sue alternative conservano inventory, state, setupDraws, returnedToDeck, setupHistory, steps e handAfter, contrari al registro unico v5.",
+                "correction": "Eliminare i riepiloghi contabili duplicati e derivare le zone soltanto da openingHands, openingPrizes, setupLedger.events e lineEvents.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "rules"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorse le mani iniziali e i movimenti dei due setup: sette carte iniziali e sei Premi per lato; nessun movimento da zona priva della carta rilevato nei registri principali.",
+              "Verificati Rare Candy, costi degli attacchi, promozioni separate, riduzione dei Premi con Legacy Energy e conteggi delle Panchine.",
+              "Ricalcolata la replica di scenario A dalla mano completa: Gladion's Final Battle è giocabile come ultima carta dopo Boom Boom Groove.",
+              "Verificata nello scenario B l'assenza di accesso immediato a Festival Grounds con la mano dichiarata; rilevata una rinuncia utile nello sviluppo nostro.",
+              "Gli errori dichiarati nelle limitations restano errori da correggere e non costituiscono validazione."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 41,
+              "calculations": 16,
+              "transitions": 30
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "La prova di omissione di sv06-018 dichiara remainingDamage=0, mentre la stessa spiegazione riconosce correttamente Tumbling Attack fino a 30 danni sul Toucannon. Il valore numerico contraddice la verifica descritta.",
+                "correction": "Ricalcolare la prova e indicare 30 come massimo condizionato a testa, distinguendolo dai 10 danni con croce. Eliminare il commento interlocutorio dalla motivazione.",
+                "sourceIds": [
+                  "card:sv06-017",
+                  "card:sv06-018"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "L'omissione di Gladion's Final Battle non abbassa il massimo raggiungibile sotto soglia: Thwackey può cercare Festival Grounds e ottenere comunque 160 danni. remainingDamage=80 considera deliberatamente un insieme ristretto di carte, anziché la migliore replica ancora accessibile richiesta dal contratto.",
+                "correction": "Registrare 160 nella rimozione di Gladion e riformulare la dimostrazione di minimalità intorno agli accessi alternativi realmente disponibili. Non presentare questa omissione come prova superata; se il formato non permette di rappresentare la necessità disgiuntiva, dichiarare la verifica incompleta.",
+                "sourceIds": [
+                  "card:sv06-015",
+                  "card:sv06-018",
+                  "card:sv06-149",
+                  "card:me05-077"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "claim-omission-scope",
+                "message": "La limitazione delle omissioni alle sole altre risorse del pacchetto introduce un'eccezione incompatibile con la richiesta di cercare la migliore alternativa raggiungibile da mano, mazzo e scarti. Dichiararla come assunzione non rende valida la prova.",
+                "correction": "Rimuovere questa convenzione e descrivere esplicitamente la sostituibilità fra Festival Grounds e Gladion's Final Battle, senza usarla per escludere alternative dalle verifiche.",
+                "sourceIds": [
+                  "card:sv06-015",
+                  "card:sv06-149",
+                  "card:me05-077"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "L'audit del turno 1 afferma che Fan Rotom non ha una ricerca immediata, ma Poké Pad è appena stato pescato e può cercarlo. Fan Rotom può entrare in Panchina e usare subito Fan Call nel primo turno personale. Conservare Poké Pad senza confrontare questo sviluppo omette un'Abilità utile e sostiene artificialmente la posizione con una sola nostra Panchina.",
+                "correction": "Confrontare esplicitamente Poké Pad → Fan Rotom → Fan Call con la conservazione di Poké Pad. Scegliere una linea motivata e aggiornare registro, pescate ipotizzate, risorse, danni e repliche se si sviluppa Fan Rotom. Correggere comunque l'affermazione sull'assenza di ricerca.",
+                "sourceIds": [
+                  "card:me03-113",
+                  "card:me02.5-250",
+                  "our-list"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Al turno 5 Trumbeak è ancora in mano e Pikipek C è in gioco dal turno 1. È quindi disponibile un'evoluzione utile immediata, omessa mentre il testo presenta il terzo Toucannon come privo di accesso all'evoluzione. Questo rinvia gratuitamente lo sviluppo della continuità.",
+                "correction": "Inserire l'evoluzione Pikipek C → Trumbeak nel registro del turno 5 oppure motivarne concretamente la rinuncia. Aggiornare sviluppo e pivot: il terzo Toucannon può essere preparato per il turno successivo tramite Trumbeak, pur richiedendo ancora un'Energia.",
+                "sourceIds": [
+                  "card:me05-066",
+                  "card:me05-067",
+                  "card:me05-094"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorse le mani iniziali e i movimenti dichiarati dei due setup e dei rami alternativi.",
+              "Verificati i danni principali 220/80/160/180 nello scenario A e 140/40/60/140 nello scenario B.",
+              "Verificati separazione fra KO e promozione, riduzione di Legacy Energy e prerequisito di ultima carta per Gladion.",
+              "Ricontrollati accessi tramite Poké Pad, Fan Call, Boom Boom Groove e Night Stretcher.",
+              "La revisione riguarda esclusivamente gli scenari e non costituisce certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "5ff6ff921c3ea0ad28f73fc0435d25704a8e964e2162524ecf6d5429631932fb",
+          "message": "scenario-a: sviluppo non collegato al turno del registro."
+        }
+      ],
+      "derivedTactics": [
+        {
+          "hash": "230e8aeb152079c48f63c1f85dfe80d74f1f06659b369f9f3a23871eb9834462",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "7b3a4f296e62853bc00804727ee6ea9ec65ad686e4a2189f78c61a357f0cb1f6",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "1b5315a264422ef576d02548622174340e31075334440c9a1725cefef2bd07ed",
+        "6fc60e01b5afa635ff5f1db9de7eea6628f39f011a40406348c8b54b35adc361"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "e8fdf73681a8bd69693647f8241f4a7be7b5a6702e89e1e913712a8182301e2d"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "5ff6ff921c3ea0ad28f73fc0435d25704a8e964e2162524ecf6d5429631932fb"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "cc5664e02b4b8503787a88fe6b0a7368456c9486e364a4b3cb75b2b34c541f44"
+        },
+        {
+          "sequence": 4,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "558989d3f182588107a3875a72cba31c970140e1eddd25c3dce9c8476085500e"
+        },
+        {
+          "sequence": 5,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "884528345d285174735ebb9d06cb8601002618a04e0c88a5e4932b66224d552e"
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "4c5ad55b64abbea391aee54228a68d70d8fb1d8b817778c28c87132726009182"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 298269,
+      "outputTokens": 41568,
+      "cachedInputTokens": 46080,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 797028,
+      "elapsedMs": 798316,
+      "startedAt": "2026-10-30T17:13:01.821Z",
+      "endedAt": "2026-10-30T17:26:20.137Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a: a-sviluppo: pescata non presente nella lista.",
+              "scenario-a:a-diretta: a-sviluppo: pescata non presente nella lista.",
+              "scenario-a:a-sviluppo: a-sviluppo: pescata non presente nella lista.",
+              "scenario-a: pescata specifica Chikorita omessa dalle risorse della replica.",
+              "scenario-b: b-sviluppo: pescata non presente nella lista.",
+              "scenario-b:b-diretta: b-sviluppo: pescata non presente nella lista.",
+              "scenario-b:b-sviluppo: b-sviluppo: pescata non presente nella lista.",
+              "scenario-b: pescata specifica Chikorita omessa dalle risorse della replica."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 56,
+              "calculations": 11,
+              "transitions": 29
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Nel turno 4 Drakloak viene conservato senza motivo, benché Dreepy sia in Panchina dal setup. Evolverlo e usare Recon Directive è disponibile e utile per preparare la continuità dopo Smolder-sault. La linea rinuncia gratuitamente allo sviluppo che il contratto richiede di dimostrare.",
+                "correction": "Inserire l'evoluzione di Dreepy in Drakloak e valutare Recon Directive prima dell'attacco, dichiarando la carta ottenuta e aggiornando registro, risorse, audit e sviluppo. Dimostrare come viene preparato il prossimo attaccante, senza promettere pescate garantite.",
+                "sourceIds": [
+                  "card:sv06-128",
+                  "card:sv06-129",
+                  "card:sv09-024"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "specificDraws contiene il nome «Chikorita» invece dell'identità di stampa verificabile. Il controllo locale non riesce quindi a collegare la pescata alla lista e al requisito già dichiarato in requiredCards.",
+                "correction": "Identificare la pescata specifica con me02.5-008 nel formato previsto dal campo, coerentemente con requiredCards e con il movimento deck→hand. Ripetere il controllo su tutti i rami indipendenti.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me02.5-008"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "specificDraws contiene «Chikorita», che il controllo locale non riconosce come stampa della lista selezionata, nonostante requiredCards riporti correttamente me02.5-008.",
+                "correction": "Usare me02.5-008 come identità della pescata specifica nel formato previsto, mantenendola coerente con requiredCards e lineEvents; verificare nuovamente tutti i rami.",
+                "sourceIds": [
+                  "opponent-2",
+                  "card:me02.5-008"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Sono presenti campi contabili duplicati vietati dal contratto v5: inventory, state, setupDraws, returnedToDeck, setupHistory, steps e handAfter, anche nelle alternative. Il registro non costituisce quindi l'unica rappresentazione dello stato.",
+                "correction": "Consegnare soltanto openingHands, openingPrizes, setupLedger.events e lineEvents come contabilità; rimuovere i campi derivati anche dalle opzioni. Conservare positionNotes, audit, resources e developmentEvents coerenti con il registro.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Anche questo scenario conserva inventari, stati, transizioni e conteggi delle mani duplicati, contrari al registro unico v5.",
+                "correction": "Rimuovere inventory, state, setupDraws, returnedToDeck, setupHistory, steps, before, after, prizesTaken e handAfter da scenario e alternative; lasciare che siano derivati dai movimenti.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-2"
+                ]
+              }
+            ],
+            "checks": [
+              "Ricostruite le mani: sette carte iniziali e sei Premi per lato; i movimenti descritti nelle linee principali risultano disponibili nelle rispettive zone.",
+              "Verificati Solar Cutter su Budew, Smolder-sault con Debolezza Fire e Phantom Dive con sei segnalini separati: conti coerenti.",
+              "Verificati Rare Candy, evoluzioni Grass sotto Forest of Vitality, assegnazioni e blocco Item nelle posizioni dichiarate.",
+              "KO, Premi e promozioni principali sono separati correttamente; nessuna ritirata viene effettivamente eseguita.",
+              "Solar Cutter è già una replica sufficiente senza carte aggiuntive: omissionTests vuoto è coerente con requiredCards vuoto.",
+              "Nella mano avversaria registrata non sono disponibili recuperi o ricerche concatenabili prima del KO; Bug Catching Set viene ottenuta soltanto al termine dell'attacco.",
+              "La revisione riguarda i casi forniti e non certifica ottimalità competitiva universale."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 56,
+              "calculations": 12,
+              "transitions": 31
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Il caso contiene ancora i campi contabili vietati dal contratto v5: inventory, state, setupDraws, returnedToDeck, setupHistory, steps e handAfter, anche nei rami alternativi. Sono duplicazioni del registro unico; changeSummary ne dichiara erroneamente la rimozione.",
+                "correction": "Eliminare questi campi dal caso e da tutte le opzioni di replyComparison, inclusi before, after e prizesTaken contenuti negli steps. Conservare setupLedger, lineEvents, positionNotes e developmentEvents come rappresentazione autoritativa; aggiornare changeSummary alla modifica effettiva.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Anche questo caso mantiene inventory, state, setupDraws, returnedToDeck, setupHistory, steps e handAfter, comprese le alternative. Il contratto v5 richiede che queste informazioni siano derivate dall'app, senza una seconda rappresentazione contabile.",
+                "correction": "Rimuovere i campi contabili duplicati dall'intero scenario e dai rami alternativi, inclusi before, after e prizesTaken. Mantenere il percorso delle carte esclusivamente in setupLedger e lineEvents e i riferimenti di sviluppo in developmentEvents.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-2"
+                ]
+              }
+            ],
+            "checks": [
+              "Ricostruite le mani iniziali: sette carte per lato e sei Premi in ciascun caso; pescate, assegnazioni e movimenti dichiarati risultano disponibili nelle liste selezionate.",
+              "Verificati blocco Item, evoluzioni tramite Forest of Vitality, Rare Candy, Recon Directive e costi degli attacchi nelle sequenze registrate.",
+              "Verificati Solar Cutter da 30, Smolder-sault da 400 per Debolezza Fire, Phantom Dive da 200 e Chikorita con 10 PS residui.",
+              "KO dell'Attivo, acquisizione dei Premi e promozione sono separati correttamente; nessuna Panchina supera cinque Pokémon.",
+              "Solar Cutter raggiunge la soglia senza carte aggiuntive: omissionTests vuoto è coerente. Nella replica sviluppata la mano prima dell'attacco contiene soltanto Forest of Vitality; gli Item presi come Premio non consentono azioni successive all'attacco.",
+              "Considerati gli accessi a Meowth ex, Supporter, recuperi e accelerazioni: nelle pescate dichiarate non risultano disponibili prima del KO di Budew. Traverse Time resta un'alternativa di sviluppo che rinuncia al KO immediato, non una replica con meno requisiti per quel KO.",
+              "Le conclusioni restano limitate alle pescate ipotizzate e non dimostrano vittoria, sopravvivenza al turno successivo o ottimalità competitiva universale."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [],
+      "projectedStates": [
+        "737bb0cedf1cc2d7bececf0695fa345f03792644e43dc26bb4a5bc8c02aefb62",
+        "cccb079e621dda160e9cc36ad3646e3fc6d1d3a193210e982245db2d23a4e997"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "3b6fccb5f884b29c894c77037b55d09d27c261a68c5d281e1d2182eb7eed4162"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "7d66e5c250f7ada98823444511191dfbc51bc63a5e4b1ec41781c7de749d2fdf"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "88983297a2376492504d0bca03a86412bafa0c1203d80bd2f4bd5dc066ff942a"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "81bdd9e5a29cedab71abb76119986e5b11910e9a0ea79b9f8e12faa8893d1a1a"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "76f7a49141be8bbc27ad71a822011f84c213f54ed308ae8c856ee778e4085cbd"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 16,
+  "passed": 0
+}

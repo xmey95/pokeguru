@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } f
 import type { AiJobActivityStep, AiJobPhase, AiJobSummary } from '../../shared/ai-job'
 import { aiActivityDetail } from './ai-activity-text'
 import { AiActivitySummary } from './AiActivitySummary'
+import {AiBudgetStatus} from './AiLimits'
 
 export function Spinner() {
   return <span className="loading-spinner" aria-hidden="true" />
@@ -186,5 +187,6 @@ export function AiJobActivity({ job, title, startedAt, className = '' }: {
       <strong>Sintesi di Codex</strong><AiActivitySummary text={job.progress.summary} />
     </div>}
     {job && <AiJobTrace job={job} />}
+    <AiBudgetStatus job={job} />
   </ActivityStatus>
 }

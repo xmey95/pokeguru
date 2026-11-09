@@ -1,0 +1,256 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-199",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "verificationBasis": "Archived tested-code and original campaign inputs. Corrected draw instructions included before freeze; v9 physical-copy resources, turn blocks and explicit Energy paths.",
+  "sealedFiles": 37,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh autonomous generation per matchup; no previous guide or editorial patch. Version 9 derives physical-copy resource maxima and development, expands typed alternating turns with mandatory draws and the next attack, validates declared Energy paths and hosts. All previous gates retained.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 268497,
+      "outputTokens": 13483,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 284902,
+      "elapsedMs": 286109,
+      "startedAt": "2026-10-30T20:25:29.126Z",
+      "endedAt": "2026-10-30T20:30:15.235Z",
+      "error": "scenario-a-continuity-unvalidated: ramo unvalidated incompleto fino all’attacco successivo.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "041ced4e10dee1ad8a391dcbc8c7af88edfa6bd5a66536443e81d73caee7d128",
+          "message": "scenario-a-continuity-unvalidated: ramo unvalidated incompleto fino all’attacco successivo."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "inputHash": "041ced4e10dee1ad8a391dcbc8c7af88edfa6bd5a66536443e81d73caee7d128",
+          "message": "scenario-a-continuity-unvalidated: ramo unvalidated incompleto fino all’attacco successivo."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "ac79cdbfe5210209e52942b52852731834d516af394ef0a0387b736c605673f9"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "041ced4e10dee1ad8a391dcbc8c7af88edfa6bd5a66536443e81d73caee7d128"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "4708b8f00a1d5812baddfacf3701a1d0e7142f520340f388684ad6dddd6b3cec"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 278496,
+      "outputTokens": 20104,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 435922,
+      "elapsedMs": 437109,
+      "startedAt": "2026-10-30T20:25:29.285Z",
+      "endedAt": "2026-10-30T20:32:46.394Z",
+      "error": "scenario-stadium: attacco non presente nella scheda dell’Attivo.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "32dd0ef5035a346dd882469d03b8ff93b35a520f4b7165dd0b73694cf941db6c",
+          "message": "scenario-stadium: attacco non presente nella scheda dell’Attivo."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "inputHash": "32dd0ef5035a346dd882469d03b8ff93b35a520f4b7165dd0b73694cf941db6c",
+          "message": "scenario-stadium: attacco non presente nella scheda dell’Attivo."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "54e2afce2e6b83ea628cec6078bf8963ad0d0c51ddfc56d28fea6d22f57c0b87"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "32dd0ef5035a346dd882469d03b8ff93b35a520f4b7165dd0b73694cf941db6c"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "f732d5f29e3aa58765c6a131360c17c18cd944dd84c6076d4f2e80c7fb89ffc6"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 415776,
+      "outputTokens": 49580,
+      "cachedInputTokens": 113536,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 827055,
+      "elapsedMs": 828093,
+      "startedAt": "2026-10-30T20:25:29.425Z",
+      "endedAt": "2026-10-30T20:39:17.518Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a: manca prova di rimozione per me01-117.",
+              "scenario-a: manca prova di rimozione per sv07-012.",
+              "scenario-a: manca prova di rimozione per me02.5-008.",
+              "scenario-a:a-attack: manca prova di rimozione per me01-117.",
+              "scenario-a:a-attack: manca prova di rimozione per sv07-012.",
+              "scenario-a:a-attack: manca prova di rimozione per me02.5-008.",
+              "scenario-a:a-attack: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-a:a-develop: manca prova di rimozione per me01-117.",
+              "scenario-a:a-develop: manca prova di rimozione per sv07-012.",
+              "scenario-a:a-develop: manca prova di rimozione per me02.5-008.",
+              "scenario-a:a-develop: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-a: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-b:b-defend: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-b:b-attack: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-b: un cambio di Panchina/Premi richiede un evento esplicito, non other."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 43,
+              "calculations": 11,
+              "transitions": 42
+            }
+          },
+          "review": null,
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a:a-attack: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-a:a-defend: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-a: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-b:b-attack: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-b:b-defend: un cambio di Panchina/Premi richiede un evento esplicito, non other.",
+              "scenario-b: un cambio di Panchina/Premi richiede un evento esplicito, non other."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 47,
+              "calculations": 18,
+              "transitions": 59
+            }
+          },
+          "review": null,
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "5405255bec05f253dc217aa3067bbadb3f76d30c843d0bd14c6d070709933292",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "e12d1e1e9f992a3a5c5f686c0835a708cfb5e838a1183109c1e7ef1490071a93",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "bd85aaa46495f13590a73f98ed257d4acdd03c59ebcc3aa6653728693280305d",
+        "cd79395fe8b3ecf896be1890ef29451fd738bc29c157f285614f0fe50d9ddfa7"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "7e460525d2945d2b10183f3f8c2d84f56e0a831b09ae887f24151ef6a7b85029"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "d87afb6a5ef26bbaa03d790ce2c43150d4146952bf8aab133478e1074d37184b"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "cea27dcf77544a2ed5d78f7ac1c1680595fb1bbdfe786f9a61508d3e137ce742"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "5892659b6b145a9fc3eef668e851cb73b2c861ebfcd445f5d8665272391277db"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "55885b16f3040505cfcae2364eb450d1a691316885beef67f9485f13b8c8e7fb"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 11,
+  "passed": 0
+}

@@ -1,0 +1,951 @@
+{
+  "task": "APP-205",
+  "associatedTask": "APP-204",
+  "date": "2026-10-31",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "promptVersion": "matchup-guide-14",
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "manualCorrections": 0,
+  "diagnosticCalls": 0,
+  "estimateOnly": true,
+  "sealedFiles": 50,
+  "changedSealedFiles": [],
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 398,
+    "externalSkipped": 44,
+    "targetedTests": 69,
+    "typecheck": "pass",
+    "build": "pass",
+    "offlineBudgetReplay": "pass"
+  },
+  "postCampaignChanges": {
+    "paths": [
+      "src\\main\\matchup-guide-generation.ts"
+    ],
+    "reason": "After the sealed campaign: identical prompt timeout retry reuses immutable context; estimates remain per invocation and unit-plan keys include their changing budgets. One real timeout exposed this bug. Local regression only; no further model calls.",
+    "evidence": "post-campaign-fix.json",
+    "testsPassed": 399,
+    "externalSkipped": 44,
+    "typecheck": "pass",
+    "build": "pass"
+  },
+  "policy": {
+    "inputTarget": 96000,
+    "inputMaximum": 128000,
+    "totalEnvelope": 176000,
+    "margin": 8192,
+    "requestBytes": 500000,
+    "responseCharacters": 100000
+  },
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "jobId": "df9e1792-8e1e-47a1-a53f-ce8b9fcf9644",
+      "startedAt": "2026-10-31T09:37:11.557Z",
+      "endedAt": "2026-10-31T09:58:22.503Z",
+      "passed": false,
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T09:37:12.253Z",
+          "endedAt": "2026-10-31T09:38:09.750Z",
+          "status": "succeeded",
+          "inputHash": "e4e79650f395142b65bfc6c04662d9f152b1ffa3d366c23533a8a2345eefecb5",
+          "inputBytes": 172816,
+          "durationMs": 57494,
+          "usage": {
+            "inputTokens": 65991,
+            "cachedInputTokens": 0,
+            "outputTokens": 3255
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T09:38:09.994Z",
+          "endedAt": "2026-10-31T09:44:54.639Z",
+          "status": "succeeded",
+          "inputHash": "f968e3fbb5e4e36827f6538b46323c49ff982338ec4b535af83e079f2304063f",
+          "inputBytes": 175165,
+          "durationMs": 404639,
+          "usage": {
+            "inputTokens": 77207,
+            "cachedInputTokens": 0,
+            "outputTokens": 21372
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T09:44:54.863Z",
+          "endedAt": "2026-10-31T09:53:12.308Z",
+          "status": "failed",
+          "inputHash": "1a02ce2465db6fc4f8e9d4495263f9e7a0c1e36320bc45fc3f1be0ea6d4deee8",
+          "inputBytes": 175284,
+          "durationMs": 497446,
+          "usage": {
+            "inputTokens": 77245,
+            "cachedInputTokens": 0,
+            "outputTokens": 25115
+          }
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T09:53:13.654Z",
+          "endedAt": "2026-10-31T09:56:48.151Z",
+          "status": "succeeded",
+          "inputHash": "83f9f0a1621d0aceaa3e1d9e7c6fd19255bd34a2e274c1f30ccf4a11b93ffde9",
+          "inputBytes": 221563,
+          "durationMs": 214489,
+          "usage": {
+            "inputTokens": 90460,
+            "cachedInputTokens": 0,
+            "outputTokens": 19737
+          }
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-1-part-1",
+          "startedAt": "2026-10-31T09:56:51.577Z",
+          "endedAt": "2026-10-31T09:57:38.809Z",
+          "status": "succeeded",
+          "inputHash": "4b8ae6e3752e07b568d89a5680fc501a19a52c78ef68fe3bdb10cdd6f97884d5",
+          "inputBytes": 293084,
+          "durationMs": 47226,
+          "usage": {
+            "inputTokens": 101054,
+            "cachedInputTokens": 0,
+            "outputTokens": 1209
+          }
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-1-part-2",
+          "startedAt": "2026-10-31T09:57:39.363Z",
+          "endedAt": "2026-10-31T09:58:22.455Z",
+          "status": "succeeded",
+          "inputHash": "56287587ad313b1a3c4a6f1cda120d608430a0050ee656c58984f0b7647b8da1",
+          "inputBytes": 294569,
+          "durationMs": 43088,
+          "usage": {
+            "inputTokens": 101301,
+            "cachedInputTokens": 0,
+            "outputTokens": 1093
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 54737,
+          "estimatedInput": 63354,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 172816,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 68167,
+          "estimatedInput": 92449,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 175165,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3261614629957799,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 68202,
+          "estimatedInput": 92495,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 82917,
+          "margin": 8192,
+          "bytes": 175284,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.3261614629957799,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "shared",
+          "visibleTokens": 81419,
+          "estimatedInput": 110023,
+          "reservedOutput": 30138,
+          "estimatedResponseCharacters": 91787,
+          "margin": 8192,
+          "bytes": 221563,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 5,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.3261614629957799,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "review-scenarios-1-part-1",
+          "units": 1,
+          "encoding": "shared",
+          "visibleTokens": 89910,
+          "estimatedInput": 121284,
+          "reservedOutput": 8000,
+          "estimatedResponseCharacters": 12000,
+          "margin": 8192,
+          "bytes": 293084,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 4,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.3261614629957799,
+          "family": "review",
+          "estimateOnly": true
+        },
+        {
+          "stage": "review-scenarios-1-part-2",
+          "units": 1,
+          "encoding": "shared",
+          "visibleTokens": 90156,
+          "estimatedInput": 121610,
+          "reservedOutput": 8000,
+          "estimatedResponseCharacters": 12000,
+          "margin": 8192,
+          "bytes": 294569,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 3,
+          "reservedCalls": 2,
+          "calibrationFactor": 1.3261614629957799,
+          "family": "review",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [
+        {
+          "stage": "review-scenarios-1",
+          "groups": [
+            [
+              "scenario-1"
+            ],
+            [
+              "scenario-2"
+            ]
+          ],
+          "fullRequest": {
+            "stage": "review-scenarios-1",
+            "units": 2,
+            "encoding": "shared",
+            "visibleTokens": 126261,
+            "estimatedInput": 169491,
+            "reservedOutput": 10000,
+            "estimatedResponseCharacters": 12000,
+            "margin": 8192,
+            "bytes": 412344,
+            "fits": false,
+            "fitsTarget": false,
+            "remainingCalls": 4,
+            "reservedCalls": 2,
+            "calibrationFactor": 1.3261614629957799,
+            "family": "review",
+            "estimateOnly": true
+          },
+          "reserve": 2,
+          "maximum": 8
+        }
+      ],
+      "reviews": [
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-1-part-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 1,
+              "quantities": 26,
+              "calculations": 11,
+              "transitions": 26
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-1",
+                "message": "Il confronto del setup omette una replica concreta che impedisce la preparazione dimostrata. Nel turno 2, dopo Crispin sulla riserva, l'avversario può assegnare manualmente Fire al Dreepy attivo, scartarla per ritirarsi verso Budew e usare Itchy Pollen. Nel nostro turno 3 Rare Candy è quindi bloccata: il Toucannon registrato non può essere preparato. Se Fan Rotom elimina Budew, nel turno 4 l'avversario può promuovere il Dreepy con Psychic, evolverlo e assegnargli Fire per Dragon Headbutt. Non basta confrontare il danno immediato di Budew con quello di Drakloak.",
+                "correction": "Confrontare esplicitamente questa sequenza con il setup scelto, includendo Energia persa, blocco di Rare Candy, Premi e sviluppo. Riformulare la posizione come condizionata anche alla scelta avversaria di non applicare questo blocco, oppure ricostruire un setup che prepari legalmente il successore contro tale alternativa.",
+                "sourceIds": [
+                  "card:sv07-133",
+                  "card:sv06-128",
+                  "card:me02.5-016",
+                  "card:me01-175",
+                  "card:sv06-129",
+                  "card:mee-010",
+                  "card:mee-013"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-1",
+                "message": "Il confronto della migliore replica si arresta prima di rivalutare tutti gli accessi. Il Drakloak appena evoluto in Panchina può usare una propria Recon Directive nello stesso turno; l'Abilità del Drakloak poi evoluto in Dragapult ex non consuma quella della riserva. Inoltre restano Ultra Ball e Psychic in mano: l'ordine alternativo che conserva Crushing Hammer come costo permette ulteriori ricerche, comprese Fezandipiti ex con Flip the Script disponibile dopo il KO di Budew o Meowth ex per un Supporter. Queste opportunità possono cambiare sviluppo e disturbo della nostra mano; la limitazione generale sulle pescate non sostituisce il confronto richiesto.",
+                "correction": "Completare il confronto con la seconda Recon Directive e con le catene Ultra Ball–Fezandipiti ex/Meowth ex, dichiarando costi e distribuzioni condizionali senza garantire pescate favorevoli. Aggiornare il ramo preferito e il nostro seguito se emergono risposte migliori, oppure motivare concretamente la conservazione delle risorse rispetto agli accessi disponibili.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me01-131",
+                  "card:me02.5-142",
+                  "card:me03-062",
+                  "card:sv06-165",
+                  "opponent-1"
+                ]
+              }
+            ],
+            "checks": [
+              "Valutato esclusivamente scenario-1 e le sue repliche, espandendo i riferimenti del dizionario.",
+              "Verificati testi delle stampe, assegnazioni, evoluzioni, ritirate, KO, Premi e danni dichiarati.",
+              "La minima Dragon Headbutt senza nuove carte raggiunge correttamente 70 danni; omissionTests vuoto è coerente.",
+              "Le alternative omesse impediscono di approvare il confronto strategico, anche con saldi contabili coerenti."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-1-part-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 1,
+              "quantities": 28,
+              "calculations": 12,
+              "transitions": 20
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "Il turnAudit del turno 2 esclude erroneamente Assault Landing. Prima dell'assegnazione, Mist Energy è in mano: assegnandola a Fan Rotom e ritirando gratuitamente Genesect con Air Balloon, Assault Landing infligge 70 con Battle Cage presente e manda KO il Dreepy Attivo già carico di Fire. La rinuncia viene motivata soltanto rispetto a Double Stab e lascia gratuitamente intatta la prima linea avversaria.",
+                "correction": "Confrontare esplicitamente questo KO immediato con l'assegnazione a Pikipek, includendo Premio, Fire persa e sviluppo dei due lati. Correggere l'esclusione nel turnAudit e giustificare concretamente la preparazione scelta; se cambia il setup, ricostruire posizione, pescate e continuazioni dipendenti.",
+                "sourceIds": [
+                  "card:me02.5-250",
+                  "card:sv05-161",
+                  "card:me01-166",
+                  "card:sv06-128",
+                  "card:me02-116"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "Il confronto del nostro turno 8 non valuta tutti i recuperi disponibili. Nella linea principale e nella diretta, Night Stretcher può recuperare Fan Rotom oppure il Pikipek appena scartato e metterlo nel quarto posto libero della Panchina: Feather Rondo sale a 160. Nei richiami, Genesect o Patrat recuperati possono essere rimessi subito in Panchina; nel ramo Genesect è disponibile anche Air Balloon appena pescato, che ripristina ACE Nullifier. I rami si fermano invece al recupero in mano senza confrontare danno e ripristino delle protezioni.",
+                "correction": "Confrontare questi sviluppi con il recupero di Toucannon conservato in mano, motivando il valore concreto della futura evoluzione rispetto ai 20 danni aggiuntivi e alle protezioni ripristinate. Aggiornare i rami scelti, i danni residui e le conclusioni dipendenti; il salvataggio del Dragapult ex può restare valido, ma va verificato contro il miglior contrattacco raggiungibile.",
+                "sourceIds": [
+                  "card:me01-173",
+                  "card:me05-094",
+                  "card:me02.5-250",
+                  "card:me05-066",
+                  "card:sv06.5-040",
+                  "card:me04-070",
+                  "card:me01-166"
+                ]
+              }
+            ],
+            "checks": [
+              "Valutato esclusivamente scenario-2, con le fonti e le quattro repliche consegnate.",
+              "Verificati evoluzioni, assegnazioni, ritirate, protezione di Battle Cage e conteggi dei danni delle linee registrate.",
+              "La minima dichiarata usa zero nuove carte: omissionTests vuoto è coerente.",
+              "Le alternative individuate richiedono una nuova verifica dei testi e dei registri dipendenti."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "633f6f785f511bf3738afd4b937b84225d831414b76c16fa6bff5e8a397c8878",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "9a6a95625b1bec25cff259717c7f6cd46488e92faf7d7629de07c56347cc361f",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "3665fe5ce8c67962f3cec597f6f4f0c4fa448d6b53b7dbadf87becfab6253467",
+        "a9425b8b941dea17ccac3161ed3e3a226bb308e7bea33bc2db26ff7bf6898659"
+      ],
+      "invalidResponses": [
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "inputHash": "1a02ce2465db6fc4f8e9d4495263f9e7a0c1e36320bc45fc3f1be0ea6d4deee8",
+          "message": "scenario-2: me03-115 ×1 non disponibile in ours/deck. Evento turno 8 ours: Pescata di inizio turno: Sacred Ash.. Disponibilità effettiva: active=0, bench=0, evolution=0, attached=0, hand=0, discard=0, prizes=1, deck=0, stadium=0, lost=0. Non inventare un accesso: correggere il percorso dichiarato e la sua fonte, oppure cambiare linea."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 6,
+      "inputTokens": 513258,
+      "outputTokens": 71781,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 1271
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "jobId": "2551ce86-9f8d-4c3a-a414-ffdcd1468b4a",
+      "startedAt": "2026-10-31T09:37:12.289Z",
+      "endedAt": "2026-10-31T09:49:33.397Z",
+      "passed": false,
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T09:37:12.503Z",
+          "endedAt": "2026-10-31T09:38:13.569Z",
+          "status": "succeeded",
+          "inputHash": "a5d9a14040d69fbefed9c45c260c70aa044412326a000192f0305ddf5a08f463",
+          "inputBytes": 178954,
+          "durationMs": 61067,
+          "usage": {
+            "inputTokens": 67804,
+            "cachedInputTokens": 0,
+            "outputTokens": 2554
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T09:38:13.896Z",
+          "endedAt": "2026-10-31T09:42:06.967Z",
+          "status": "succeeded",
+          "inputHash": "6c864af1b5a049b44b85cb06c5085a263f491d6e11e02393a58e61f574b0da9f",
+          "inputBytes": 177775,
+          "durationMs": 233059,
+          "usage": {
+            "inputTokens": 78322,
+            "cachedInputTokens": 0,
+            "outputTokens": 24833
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T09:42:07.279Z",
+          "endedAt": "2026-10-31T09:48:13.972Z",
+          "status": "succeeded",
+          "inputHash": "4bd7279df04267f48dd879c79d96d3674d8a1345de640ad54c09b02f0c2b8073",
+          "inputBytes": 177944,
+          "durationMs": 366689,
+          "usage": {
+            "inputTokens": 78361,
+            "cachedInputTokens": 0,
+            "outputTokens": 20877
+          }
+        },
+        {
+          "sequence": 4,
+          "stage": "review-scenarios-1-part-1",
+          "startedAt": "2026-10-31T09:48:17.088Z",
+          "endedAt": "2026-10-31T09:48:57.649Z",
+          "status": "succeeded",
+          "inputHash": "a4751f2004b7b0f9fcca4d1cd10c3f65dfaa8a2f924ad1597a65eebe7ce94f09",
+          "inputBytes": 302828,
+          "durationMs": 40556,
+          "usage": {
+            "inputTokens": 103582,
+            "cachedInputTokens": 0,
+            "outputTokens": 1064
+          }
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-1-part-2",
+          "startedAt": "2026-10-31T09:48:58.266Z",
+          "endedAt": "2026-10-31T09:49:33.377Z",
+          "status": "succeeded",
+          "inputHash": "ed471023f1dcee19bb85d776e2e9cac470a4b248e03a1edb2db822e712d0d22a",
+          "inputBytes": 287361,
+          "durationMs": 35106,
+          "usage": {
+            "inputTokens": 98988,
+            "cachedInputTokens": 0,
+            "outputTokens": 963
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 56546,
+          "estimatedInput": 65380,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 178954,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 69325,
+          "estimatedInput": 93488,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 177775,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.319003996746012,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 69366,
+          "estimatedInput": 93543,
+          "reservedOutput": 29800,
+          "estimatedResponseCharacters": 90254,
+          "margin": 8192,
+          "bytes": 177944,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.319003996746012,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "review-scenarios-1-part-1",
+          "units": 1,
+          "encoding": "shared",
+          "visibleTokens": 92434,
+          "estimatedInput": 123969,
+          "reservedOutput": 8000,
+          "estimatedResponseCharacters": 12000,
+          "margin": 8192,
+          "bytes": 302828,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 5,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.319003996746012,
+          "family": "review",
+          "estimateOnly": true
+        },
+        {
+          "stage": "review-scenarios-1-part-2",
+          "units": 1,
+          "encoding": "shared",
+          "visibleTokens": 87840,
+          "estimatedInput": 117910,
+          "reservedOutput": 8000,
+          "estimatedResponseCharacters": 12000,
+          "margin": 8192,
+          "bytes": 287361,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 4,
+          "reservedCalls": 2,
+          "calibrationFactor": 1.319003996746012,
+          "family": "review",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [
+        {
+          "stage": "review-scenarios-1",
+          "groups": [
+            [
+              "scenario-1"
+            ],
+            [
+              "scenario-2"
+            ]
+          ],
+          "fullRequest": {
+            "stage": "review-scenarios-1",
+            "units": 2,
+            "encoding": "shared",
+            "visibleTokens": 125795,
+            "estimatedInput": 167973,
+            "reservedOutput": 10000,
+            "estimatedResponseCharacters": 12000,
+            "margin": 8192,
+            "bytes": 412405,
+            "fits": false,
+            "fitsTarget": false,
+            "remainingCalls": 5,
+            "reservedCalls": 2,
+            "calibrationFactor": 1.319003996746012,
+            "family": "review",
+            "estimateOnly": true
+          },
+          "reserve": 2,
+          "maximum": 8
+        }
+      ],
+      "reviews": [
+        {
+          "sequence": 4,
+          "stage": "review-scenarios-1-part-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 1,
+              "quantities": 23,
+              "calculations": 12,
+              "transitions": 26
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-1",
+                "message": "Il confronto omette una replica migliore raggiungibile senza pescate aggiuntive: evolvere Applin in Dipplin, usare Poké Pad per Thwackey, evolverlo e cercare Gladion's Final Battle con Boom Boom Groove. A quel punto Gladion è l'unica carta in mano ed è giocabile. Ogni Do the Wave infligge 80+80=160: il primo mette KO Toucannon, il secondo mette KO qualsiasi successore disponibile, incluso Trumbeak carico. L'avversario prende due Premi e interrompe il seguito registrato con Trumbeak. La ricerca dello Stadium non può essere preferita senza confrontare questo vantaggio concreto.",
+                "correction": "Aggiungere un ramo completo con Gladion, entrambi i KO, Premi e promozioni, e ricostruire il nostro turno successivo dalla posizione risultante. Rivalutare preferredReplyId, conclusione, sviluppo e pivot. La minima economica può restare direct, ma deve essere distinta dalla migliore replica.",
+                "sourceIds": [
+                  "card:me03-081",
+                  "card:sv06-015",
+                  "card:me05-077",
+                  "card:sv06-018",
+                  "card:sv06-149",
+                  "card:me05-067"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-1",
+                "message": "La scelta iniziale di Toucannon non è sostenuta dal confronto con Assault Landing. Assegnando la seconda Mist Energy a Fan Rotom invece che a Trumbeak, Rotom può prendere lo stesso Premio su Applin con 70 danni, conservando Toucannon carico in Panchina e Rare Candy già investita nel suo sviluppo. La maggiore fragilità di Rotom non basta a preferire Toucannon: contro la replica diretta da 80+80, Rotom cade al primo attacco e Toucannon promosso sopravvive al secondo con 80 danni, mentre nella linea scelta Toucannon viene perso. Anche questa alternativa va poi verificata contro l'accesso a Gladion.",
+                "correction": "Confrontare l'assegnazione a Rotom prima di fissare l'ordine delle azioni, contabilizzando attaccanti conservati, Energie perse, Premi e attacco successivo contro le migliori repliche. Motivare concretamente la scelta di Toucannon oppure modificare posizione e tesi.",
+                "sourceIds": [
+                  "card:me02.5-250",
+                  "card:sv05-161",
+                  "card:me05-094",
+                  "card:sv06-017",
+                  "card:sv06-018",
+                  "card:me05-077"
+                ]
+              }
+            ],
+            "checks": [
+              "Valutato esclusivamente scenario-1 e le relative fonti e repliche.",
+              "Verificati apertura, setup, evoluzioni, ritirate gratuite, danni principali e successione dichiarata.",
+              "Il test senza Dipplin conserva un testimone positivo da 30 danni entro zero nuove carte.",
+              "Individuato accesso deterministico a Gladion dalla mano dichiarata, senza assumere pescate favorevoli."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-1-part-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 1,
+              "quantities": 25,
+              "calculations": 10,
+              "transitions": 25
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "Il confronto trascura Trumbeak, già in mano: nel turno 4 si può usare Rare Candy sul Pikipek carico e poi evolvere ordinariamente l'altro Pikipek in Trumbeak. Nel turno 6 quel Trumbeak può evolvere nel Toucannon già cercato senza una seconda Rare Candy. La replica non obbliga quindi al consumo evolutivo dichiarato.",
+                "correction": "Confrontare questa sequenza prima di fissare la tesi; aggiornare registro, seguito, risorse e motivazioni eliminando l'indispensabilità della seconda Rare Candy. Rivalutare il vantaggio concreto della difesa rispetto alla migliore diretta.",
+                "sourceIds": [
+                  "card:me05-067",
+                  "card:me05-094",
+                  "card:me01-175",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "Dopo il KO di Toucannon al secondo Do the Wave, promuovere Fan Rotom e pagarne successivamente la ritirata è dominato dalla promozione diretta del Pikipek destinato a evolvere. Quest'ultimo può diventare Toucannon nell'Attivo, ricevere Mist Energy e attaccare, conservando l'Energia di Fan Rotom. Il registro sceglie dunque una perdita evitabile senza un vantaggio concreto.",
+                "correction": "Dimostrare il seguito con promozione diretta del successore, verificando anche la preparazione anticipata di Trumbeak. Rimuovere la ritirata evitabile e aggiornare consumi, calcoli e confronto con il KO ottenibile direttamente da Fan Rotom.",
+                "sourceIds": [
+                  "card:me05-066",
+                  "card:me05-067",
+                  "card:me05-094",
+                  "card:me01-175",
+                  "card:me02.5-250",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "positionNotes e state riportano Dipplin a 80/80 PS, mentre il setup gli assegna Growing Grass Energy e la conserva durante l'evoluzione. Nella posizione decisionale Dipplin ha quindi 100 PS e nessun danno, come correttamente presuppone il calcolo di Assault Landing.",
+                "correction": "Correggere la rappresentazione dello stato decisionale a 100/100 PS e verificare che tutte le soglie e descrizioni derivate includano il bonus persistente di Growing Grass Energy.",
+                "sourceIds": [
+                  "card:sv06-018",
+                  "card:me03-086"
+                ]
+              }
+            ],
+            "checks": [
+              "Esaminato esclusivamente scenario-2 con le fonti e le tre repliche consegnate.",
+              "Verificati apertura, preparazione, assegnazioni, evoluzioni, danni, KO, Premi e quantità impiegate.",
+              "Confermati i 50 danni per Do the Wave contro Genesect, i 70 di Assault Landing, gli 80 per attacco della replica e i 200 di Feather Rondo.",
+              "Il KO minimo di Fan Rotom richiede zero nuove carte; omissionTests vuoto è coerente.",
+              "Individuate alternative di evoluzione e promozione che migliorano il seguito dichiarato."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "95646286373815e6e19e1a4a9f64551fadca3fdf3e3f5dd8f2cf8a6e61761635",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "bc72417d6f73376179ae4e8595df61f2affd29be225dc03b6b202092737e3123",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "a1c830c8051f3ce5f504dc8393b99193c4536081cef86817ee503585b6827603",
+        "bbfc7b562bc28d2ba74f9ed0a9e5a4d36d24b38aef9d12bdf6e74e570cf2ec57"
+      ],
+      "invalidResponses": [],
+      "savedReports": 0,
+      "attemptCount": 5,
+      "inputTokens": 427057,
+      "outputTokens": 50291,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 741
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "jobId": "dbf42457-0b17-4c72-8007-748cf7651449",
+      "startedAt": "2026-10-31T09:37:12.536Z",
+      "endedAt": "2026-10-31T09:53:00.314Z",
+      "passed": false,
+      "error": "Il contesto salvato è immutabile.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T09:37:12.703Z",
+          "endedAt": "2026-10-31T09:38:11.438Z",
+          "status": "succeeded",
+          "inputHash": "6ef3afad2459544451e8e6b4ed27ece2f70613eff58e68bb8428d25641ab52d5",
+          "inputBytes": 93223,
+          "durationMs": 58738,
+          "usage": {
+            "inputTokens": 39921,
+            "cachedInputTokens": 0,
+            "outputTokens": 2395
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T09:38:11.739Z",
+          "endedAt": "2026-10-31T09:42:59.026Z",
+          "status": "succeeded",
+          "inputHash": "840a53bffeeb42b05c890763ff43d98c8d764795d41f9dc9525edc75bfdb489a",
+          "inputBytes": 121930,
+          "durationMs": 287274,
+          "usage": {
+            "inputTokens": 60377,
+            "cachedInputTokens": 0,
+            "outputTokens": 15518
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T09:42:59.221Z",
+          "endedAt": "2026-10-31T09:52:59.268Z",
+          "status": "failed",
+          "inputHash": "d9fb2aca7b34a9b7089aaec4f3a80024c6c2039a95039da9227356bd89193686",
+          "inputBytes": 122029,
+          "durationMs": 600047,
+          "usage": null
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 28664,
+          "estimatedInput": 34152,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 93223,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 51405,
+          "estimatedInput": 80801,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 121930,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.5319948367289982,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 51436,
+          "estimatedInput": 80848,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 65067,
+          "margin": 8192,
+          "bytes": 122029,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.5319948367289982,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 51436,
+          "estimatedInput": 80848,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 65067,
+          "margin": 8192,
+          "bytes": 122029,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.5319948367289982,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "9b60685a39bf4cc9770bb2cf81fb9027b6d9d0223d03564ad4af98e8e805749a",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "a4f1b021b0fe1074e3416ab720a062e34629db0a3445784088c1f92d40f12fde"
+      ],
+      "invalidResponses": [],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 100298,
+      "outputTokens": 17913,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "elapsedSeconds": 948
+    }
+  ],
+  "passed": 0,
+  "actualCalls": 14,
+  "inputTokens": 1040613,
+  "outputTokens": 139985,
+  "callsWithoutUsage": 1,
+  "unissuedTokenPlans": 1,
+  "elapsedSeconds": 1271
+}

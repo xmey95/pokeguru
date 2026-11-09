@@ -1,0 +1,1155 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-194",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "sealedFiles": 31,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh generation per pilot matchup; no previous guide and no editorial patch. Scenarios-first v4 pipeline, audited setup choices, explicit development resources and independent reply transitions, all previous gates retained.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 6,
+      "failedCalls": 1,
+      "inputTokens": 406514,
+      "outputTokens": 53498,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 1506290,
+      "elapsedMs": 1508481,
+      "startedAt": "2026-10-30T16:37:52.241Z",
+      "endedAt": "2026-10-30T17:03:00.722Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 4,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "sc-continuity: rc-cont-develop: pescata non presente nella lista.",
+              "sc-continuity:rc-cont-direct: rc-cont-develop: pescata non presente nella lista.",
+              "sc-continuity:rc-cont-develop: rc-cont-develop: pescata non presente nella lista.",
+              "sc-continuity: pescata specifica Crispin:ostante omessa dalle risorse della replica.",
+              "sc-continuity: pescata specifica Drakloak:prima-Recon-Directive omessa dalle risorse della replica.",
+              "sc-continuity: pescata specifica Basic-Darkness-Energy:seconda-Recon-Directive omessa dalle risorse della replica.",
+              "sc-prize-route: rc-prize-crispin: pescata non presente nella lista.",
+              "sc-prize-route:rc-prize-direct: rc-prize-crispin: pescata non presente nella lista.",
+              "sc-prize-route:rc-prize-crispin: rc-prize-crispin: pescata non presente nella lista.",
+              "sc-prize-route: pescata specifica Crispin omessa dalle risorse della replica."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 33,
+              "calculations": 13,
+              "transitions": 19
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "blocking",
+                "targetId": "sc-continuity",
+                "message": "La sequenza delle due Recon Directive è irraggiungibile. Nell'inventario esiste una sola Basic Darkness Energy nel mazzo: l'altra è nei Premi. La prima Recon Directive mette quell'unica copia in fondo; la seconda non può trovarla immediatamente in cima senza un rimescolamento intermedio.",
+                "correction": "Ricostruire due coppie di carte raggiungibili rispettando le due copie fisiche di Darkness e l'ordine degli effetti. Aggiornare insieme steps, assumptions, resources, mani, development e ramo rc-cont-develop.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-129",
+                  "card:mee-015"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-continuity",
+                "message": "La migliore replica non è verificata: la seconda Recon Directive offre Ultra Ball, che può scartare carte disponibili e cercare Meowth ex. Last-Ditch Catch apre l'accesso a un Supporter. L'assunzione che escluda queste catene dopo un rimescolamento non risolve la catena già disponibile nella coppia dichiarata.",
+                "correction": "Confrontare esplicitamente il prelievo di Ultra Ball e la catena verso Meowth ex, pagando due scarti e verificando spazio in Panchina, Supporter ancora disponibile e risultati delle eventuali pescate. Ridimensionare la conclusione favorevole se la continuità dipende dall'esito di quelle pescate.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me01-131",
+                  "card:me03-062",
+                  "card:me01-119",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-prize-route",
+                "message": "La descrizione esclude erroneamente l'accesso a Ultra Ball, Meowth ex e Supporter di pesca. Recon Directive vede proprio Ultra Ball: prima di giocare Crispin, l'avversario può prenderla, scartare per esempio Fire e Boss's Orders, cercare Meowth ex e accedere a Lillie's Determination, Judge o altro Supporter. Anche la prova senza Crispin trascura questo accesso.",
+                "correction": "Ricalcolare la replica e le omissionTests includendo questa catena dalla mano completa. Dichiarare le pescate necessarie e distinguere il KO deterministico dalla possibilità condizionata di sviluppo o disturbo; aggiornare opponentResponse e pivot.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me01-131",
+                  "card:me03-062",
+                  "card:me01-119",
+                  "card:me03-076",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-continuity",
+                "message": "specificDraws contiene identificatori che non corrispondono a carte della lista, incluso «Crispin:ostante». Le etichette con suffissi impediscono inoltre di riconciliare le pescate con requiredCards.",
+                "correction": "Usare le identità esatte delle carte nel formato accettato dal contratto, senza suffissi descrittivi. Spostare il contesto dell'accesso in sequence/access e riallineare le pescate alla sequenza corretta.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv07-133",
+                  "card:sv06-129",
+                  "card:mee-015"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-prize-route",
+                "message": "La pescata specifica «Crispin» non viene riconciliata dal controllo locale con la carta richiesta. Inoltre il ramo presenta Recon Directive come facoltativa, mentre la linea principale la esegue e dichiara Darkness in mano: manca una scelta univoca per validare il ramo completo.",
+                "correction": "Normalizzare specificDraws all'identità esatta sv07-133 nel formato richiesto e rendere deterministico il ramo: eseguire Recon Directive descrivendone il risultato oppure ometterla e riportare la mano risultante coerente.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv07-133",
+                  "card:sv06-129"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-prize-route",
+                "message": "calculations contiene due conti di ritirata con terms=[0], espressamente vietati dall'estensione v3. Le medesime ritirate sono già dichiarate in retreatCosts.",
+                "correction": "Rimuovere entrambe le calculations di ritirata e conservare le dichiarazioni in retreatCosts con printedCost=0 e adjustments=[].",
+                "sourceIds": [
+                  "card:me02.5-016"
+                ]
+              }
+            ],
+            "checks": [
+              "Le mani iniziali contengono sette carte per lato e i Premi iniziali sei; i movimenti del setup e handAfter coincidono con gli inventari iniziali.",
+              "Gli inventari iniziali rispettano le quantità delle due liste selezionate e le soglie delle carte fuori da mazzo e Premi.",
+              "Evoluzioni naturali, blocco degli Item, costi degli attacchi e danni principali 70/70/140 sono coerenti con le schede.",
+              "Le transizioni principali distinguono correttamente gust, KO dell'Attivo e promozione, mantenendo i Premi rimasti.",
+              "La verifica delle repliche rileva una sequenza di pescata impossibile e catene di ricerca non valutate; i vantaggi strategici dichiarati richiedono nuova revisione.",
+              "Revisione limitata agli scenari; nessuna certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "sc-prize-route:rc-prize-search: ingresso non disponibile: me03-062."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 34,
+              "calculations": 15,
+              "transitions": 21
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "sc-continuity",
+                "message": "La migliore replica non è verificata completamente: Ultra Ball può cercare Fezandipiti ex invece di Meowth ex. Dopo il KO di Budew, Flip the Script è disponibile e apre tre carte ulteriori, le cui identità non sono specificate. Non basta osservare che Ultra Ball è già stata usata per Meowth ex nella linea scelta.",
+                "correction": "Aggiungere un ramo indipendente Ultra Ball → Fezandipiti ex, pagando gli scarti dalla mano completa, dichiarando le tre pescate e ricalcolando accessi, attacchi e disturbo. Verificare anche l'ordine Flip the Script prima di eventuali Supporter. Rivalutare la preferenza per lo sviluppo e la tenuta della continuazione.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-131",
+                  "card:me02.5-142"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-prize-route",
+                "message": "Le omissioni e la conclusione escludono recuperi sulla base delle sole pescate di Lillie's Determination e Judge, ma non verificano Ultra Ball → Fezandipiti ex → Flip the Script. Il KO del Dreepy abilita questa alternativa, che potrebbe fornire Night Stretcher e ulteriori accessi alla Psychic scartata.",
+                "correction": "Verificare separatamente questo ramo con tre pescate esplicite, costi e passi completi. Ricalcolare ogni omissione consentendo il miglior riordino, compresa l'assegnazione manuale prima di scartare la Fire per Ultra Ball quando possibile. Aggiornare minimumReplyId e pivot se emerge una replica con meno requisiti.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-131",
+                  "card:me02.5-142",
+                  "card:me02.5-196",
+                  "card:sv06-129"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-prize-route",
+                "message": "calculations contiene ancora due conti di ritirata con terms=[0], nonostante il contratto v3 e changeSummary dichiarino la loro rimozione.",
+                "correction": "Eliminare entrambi i conti di ritirata da calculations. Conservare le due dichiarazioni in retreatCosts con printedCost=0 e adjustments=[], lasciando all'app il calcolo derivato.",
+                "sourceIds": [
+                  "card:me02.5-016"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-prize-route",
+                "message": "Il controllo locale segnala ancora «ingresso non disponibile: me03-062». La prosa dichiara la ricerca con Ultra Ball, ma il ramo non supera la verifica dell'accesso fisico alla carta.",
+                "correction": "Rendere verificabile il movimento di Meowth ex dal mazzo alla mano prima dello step bench, mantenendo espliciti Ultra Ball e i due scarti. Rieseguire la validazione del ramo e risolvere la discrepanza senza aggiungere copie o cambiare arbitrariamente l'inventario.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-131",
+                  "card:me03-062"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "sc-prize-route",
+                "message": "Il ramo conserva gratuitamente due Buddy-Buddy Poffin e due Poké Pad, pur potendo sviluppare nuove linee. Dimostrare soltanto che questi ingressi non aumentano il danno immediato non verifica la migliore replica strategica richiesta dal contratto v4.",
+                "correction": "Sviluppare concretamente la migliore Panchina raggiungibile dalle otto carte dichiarate, con benchEntries, risorse e passi atomici. Valutare la successiva conversione in attacco e confrontarla con la linea Crispin, oppure motivare un costo concreto che renda preferibile conservare ciascun accesso.",
+                "sourceIds": [
+                  "card:sv05-144",
+                  "card:me03-081",
+                  "card:sv06-128",
+                  "card:sv06-129"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorse le mani iniziali, le pescate e i movimenti del setup: i conteggi handAfter dichiarati risultano coerenti.",
+              "Controllati i danni principali: Assault Landing 70; Dragon Headbutt 70; Feather Rondo 160 e 140 nelle rispettive posizioni.",
+              "Controllate le transizioni principali: gust conserva la Panchina; KO dell'Attivo e promozione sono separati; Premi attribuiti al lato corretto.",
+              "Verificata la disponibilità dell'evoluzione naturale durante Item lock e delle condizioni dello Stadio per Assault Landing.",
+              "La revisione non costituisce una certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "40fadc85c0c75a7f88b2403197ac34e488253abd994717613425231293e23375",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "4f1be8567dc4bdc10ad1a4e09c09129385537e27a9ea15ccb2636ffb138ec360",
+          "origin": "compiler-v3"
+        }
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "64febe7edae31b627123bb8632e5da07f363945db130268740538f0d1f6d1e1f"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "476e56c52cc8a6697335ba8fa0475ae29b604ff181a37dbdf0a0e7ffd7c79ae9"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "476e56c52cc8a6697335ba8fa0475ae29b604ff181a37dbdf0a0e7ffd7c79ae9"
+        },
+        {
+          "sequence": 4,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "e7e7d9b86313dc6b4f34e566725f2a64c6501e0e89e66bb59889117569f5ef97"
+        },
+        {
+          "sequence": 5,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "b264fb54bfb2536797d9706d65b1b267c546c4a25d30da22af8903455a45bbea"
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "5b68d916a0a1aaed406a4f63e556c3b7e1d47635f020dd9597fe7175478f0671"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 6,
+      "failedCalls": 1,
+      "inputTokens": 374231,
+      "outputTokens": 16608,
+      "cachedInputTokens": 9344,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 1093072,
+      "elapsedMs": 1094834,
+      "startedAt": "2026-10-30T16:37:52.944Z",
+      "endedAt": "2026-10-30T16:56:07.778Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "sc-stadium-continuity: scenario privo di passaggi, conti, fonti o risorse di uno dei lati.",
+              "sc-stadium-continuity: registro iniziale ours, servono 7 carte in hand.",
+              "sc-stadium-continuity: registro iniziale opponent, servono 7 carte in hand.",
+              "sc-stadium-continuity: registro iniziale ours, servono 6 carte in prizes.",
+              "sc-stadium-continuity: registro iniziale opponent, servono 6 carte in prizes.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me05-094|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me05-067|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me02.5-250|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me04-070|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me05-066|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv06-186|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv10-185|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv06.5-040|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me02-116|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-173|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me02.5-256|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-175|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-166|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-167|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me03-113|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv06-205|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-184|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me03-115|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv05-161|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv09-159|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv06-167|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-017|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-126|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-018|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-014|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-015|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-044|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv08.5-021|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv05-023|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv05-024|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv10-010|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me02.5-039|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me01-119|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me05-077|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me01-114|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-155|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-154|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me03-081|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv05-144|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me01-131|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me02.5-196|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-163|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me02.5-212|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me01-130|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv10.5w-080|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me02.5-181|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-149|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|mee-009|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me03-086|deck.",
+              "sc-stadium-continuity: sviluppo da dimostrare su almeno due nostri turni con replica intermedia.",
+              "sc-stadium-continuity: replica non-validata senza transizioni verificabili.",
+              "sc-stadium-continuity: replica non-validata-2 senza transizioni verificabili.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me05-094.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me05-067.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me02.5-250.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me04-070.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me05-066.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv06-186.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv10-185.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv06.5-040.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me02-116.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-173.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me02.5-256.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-175.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-166.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-167.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me03-113.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv06-205.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-184.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me03-115.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv05-161.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv09-159.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv06-167.",
+              "sc-stadium-continuity: ours, zone iniziali incoerenti con il campo/Premi.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-017.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-126.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-018.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-014.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-015.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-044.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv08.5-021.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv05-023.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv05-024.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv10-010.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me02.5-039.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me01-119.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me05-077.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me01-114.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-155.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-154.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me03-081.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv05-144.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me01-131.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me02.5-196.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-163.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me02.5-212.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me01-130.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv10.5w-080.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me02.5-181.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-149.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per mee-009.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me03-086.",
+              "sc-stadium-continuity: opponent, zone iniziali incoerenti con il campo/Premi.",
+              "sc-engine-target: scenario privo di passaggi, conti, fonti o risorse di uno dei lati.",
+              "sc-engine-target: registro iniziale ours, servono 7 carte in hand.",
+              "sc-engine-target: registro iniziale opponent, servono 7 carte in hand.",
+              "sc-engine-target: registro iniziale ours, servono 6 carte in prizes.",
+              "sc-engine-target: registro iniziale opponent, servono 6 carte in prizes.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me05-094|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me05-067|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me02.5-250|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me04-070|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me05-066|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv06-186|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv10-185|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv06.5-040|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me02-116|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-173|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me02.5-256|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-175|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-166|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-167|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me03-113|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv06-205|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-184|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me03-115|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv05-161|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv09-159|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv06-167|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-017|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-126|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-018|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-014|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-015|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-044|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv08.5-021|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv05-023|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv05-024|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv10-010|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me02.5-039|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me01-119|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me05-077|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me01-114|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-155|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-154|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me03-081|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv05-144|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me01-131|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me02.5-196|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-163|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me02.5-212|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me01-130|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv10.5w-080|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me02.5-181|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-149|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|mee-009|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me03-086|deck.",
+              "sc-engine-target: sviluppo da dimostrare su almeno due nostri turni con replica intermedia.",
+              "sc-engine-target: replica non-validata senza transizioni verificabili.",
+              "sc-engine-target: replica non-validata-2 senza transizioni verificabili.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me05-094.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me05-067.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me02.5-250.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me04-070.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me05-066.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv06-186.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv10-185.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv06.5-040.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me02-116.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-173.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me02.5-256.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-175.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-166.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-167.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me03-113.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv06-205.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-184.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me03-115.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv05-161.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv09-159.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv06-167.",
+              "sc-engine-target: ours, zone iniziali incoerenti con il campo/Premi.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-017.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-126.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-018.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-014.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-015.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-044.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv08.5-021.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv05-023.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv05-024.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv10-010.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me02.5-039.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me01-119.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me05-077.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me01-114.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-155.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-154.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me03-081.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv05-144.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me01-131.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me02.5-196.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-163.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me02.5-212.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me01-130.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv10.5w-080.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me02.5-181.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-149.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per mee-009.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me03-086.",
+              "sc-engine-target: opponent, zone iniziali incoerenti con il campo/Premi."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 0,
+              "calculations": 4,
+              "transitions": 0
+            }
+          },
+          "review": {
+            "verdict": "incomplete",
+            "findings": [
+              {
+                "severity": "blocking",
+                "targetId": "sc-stadium-continuity",
+                "message": "Lo scenario è un segnaposto: state non descrive una posizione, inventory è vuoto e openingHands/openingPrizes non assegnano le 7 carte iniziali e i 6 Premi per lato. L'evento senza movimenti e con entrambe le mani a zero non ricostruisce alcuna partita. Non è possibile verificare quantità, raggiungibilità, costi o legalità.",
+                "correction": "Costruire una posizione concreta usando esclusivamente our-list e opponent-1. Assegnare tutte le 60 carte per lato, dichiarare le zone nascoste come ipotesi e ricostruire dal setup ogni movimento e mano residua fino a inventory e state. Compilare turnAudit per ogni turno, motivando attacchi e Abilità utilizzati o disponibili.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:me05-094",
+                  "card:sv06-015",
+                  "card:sv06-018"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "sc-stadium-continuity",
+                "message": "steps, resources e development sono vuoti; le due repliche riportano soltanto valori segnaposto. La soglia 150 non è collegata a un bersaglio presente nello stato. Non è dimostrata né la continuità dopo Battle Cage né la migliore risposta avversaria: Boom Boom Groove può cercare Festival Grounds anche senza quello Stadio in gioco.",
+                "correction": "Dimostrare due nostri turni con replica intermedia mediante passaggi atomici, risorse fisiche e accessi espliciti. Confrontare dallo stesso stato una replica diretta e una con ricerca/recupero, includendo il ripristino di Festival Grounds, gli attaccanti disponibili e la reale giocabilità di Gladion's Final Battle dalla mano completa. Inserire tutti i passaggi dei rami, calcoli, ingressi e ritirate effettive; identificare la replica minima e verificarne ogni rimozione prima di formulare il pivot.",
+                "sourceIds": [
+                  "card:me02-116",
+                  "card:sv06-015",
+                  "card:sv06-149",
+                  "card:sv06-018",
+                  "card:me05-077",
+                  "card:me02.5-196",
+                  "card:sv06-155"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "sc-engine-target",
+                "message": "Manca interamente lo stato di partita verificabile. Inventario, mani iniziali, Premi e movimenti sono vuoti; setupHistory dichiara esplicitamente che la ricostruzione non è completata. Non si possono controllare bersagli, evoluzioni, danni, carte consumate o risorse ancora accessibili.",
+                "correction": "Ricostruire un secondo stato realistico e strategicamente distinto usando our-list e opponent-1, con 7 carte iniziali e 6 Premi per lato, inventari completi da 60 carte e registro coerente di pescate, ricerche, scarti, assegnazioni, evoluzioni e Premi presi. Specificare PS e danni di ogni Pokémon e verificare ogni turno in turnAudit.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:me02.5-256",
+                  "card:me05-094",
+                  "card:sv06-015"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "sc-engine-target",
+                "message": "La decisione fra colpire il motore e colpire l'attaccante non è dimostrata: mancano azioni, conti e sviluppo successivo. Le repliche vuote non consentono di confrontare Dipplin, Seaking, ricerche concatenate o recuperi immediati, né di stabilire quando cambiare piano.",
+                "correction": "Costruire una sequenza su due nostri turni con la migliore replica plausibile intermedia. Verificare dalla mano completa e dalle zone disponibili almeno due risposte distinte contro un bersaglio concreto, con steps completi per ciascun ramo. Considerare Boom Boom Groove, Poké Pad, Night Stretcher, Lana's Aid e lo sviluppo degli attaccanti consentito dalla lista; dimostrare costi, danni, Premi, promozioni e continuità. Derivare la scelta del bersaglio e il pivot dai risultati, includendo i test di rimozione della replica minima.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me02.5-256",
+                  "card:sv06-015",
+                  "card:me03-081",
+                  "card:me02.5-196",
+                  "card:sv06-155",
+                  "card:sv06-018",
+                  "card:sv08.5-021"
+                ]
+              }
+            ],
+            "checks": [
+              "Revisione limitata agli scenari; nessuna richiesta di capitoli o esercizi.",
+              "Entrambi gli opponentListId identificano la lista completa opponent-1.",
+              "Confermata direttamente la natura di segnaposto di entrambi gli scenari e l'assenza delle ricostruzioni richieste.",
+              "Non verificabili quantità negli inventari, legalità delle sequenze, migliori repliche e utilità strategica: mancano gli stati e le azioni.",
+              "Il timing Spiky Energy/Festival Lead resta escluso dalle dimostrazioni.",
+              "Nessuno scenario approvato; questa revisione non costituisce una certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "sc-stadium-continuity: scenario privo di passaggi, conti, fonti o risorse di uno dei lati.",
+              "sc-stadium-continuity: registro iniziale ours, servono 7 carte in hand.",
+              "sc-stadium-continuity: registro iniziale opponent, servono 7 carte in hand.",
+              "sc-stadium-continuity: registro iniziale ours, servono 6 carte in prizes.",
+              "sc-stadium-continuity: registro iniziale opponent, servono 6 carte in prizes.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me05-094|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me05-067|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me02.5-250|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me04-070|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me05-066|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv06-186|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv10-185|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv06.5-040|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me02-116|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-173|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me02.5-256|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-175|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-166|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-167|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me03-113|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv06-205|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me01-184|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|me03-115|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv05-161|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv09-159|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per ours|sv06-167|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-017|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-126|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-018|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-014|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-015|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-044|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv08.5-021|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv05-023|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv05-024|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv10-010|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me02.5-039|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me01-119|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me05-077|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me01-114|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-155|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-154|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me03-081|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv05-144|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me01-131|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me02.5-196|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-163|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me02.5-212|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me01-130|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv10.5w-080|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me02.5-181|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|sv06-149|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|mee-009|deck.",
+              "sc-stadium-continuity: registro finale non coincide con inventory per opponent|me03-086|deck.",
+              "sc-stadium-continuity: sviluppo da dimostrare su almeno due nostri turni con replica intermedia.",
+              "sc-stadium-continuity: replica non-verificata senza transizioni verificabili.",
+              "sc-stadium-continuity: replica alternativa-non-verificata senza transizioni verificabili.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me05-094.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me05-067.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me02.5-250.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me04-070.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me05-066.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv06-186.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv10-185.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv06.5-040.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me02-116.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-173.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me02.5-256.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-175.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-166.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-167.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me03-113.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv06-205.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me01-184.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per me03-115.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv05-161.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv09-159.",
+              "sc-stadium-continuity: ours, inventario iniziale incompleto o eccedente per sv06-167.",
+              "sc-stadium-continuity: ours, zone iniziali incoerenti con il campo/Premi.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-017.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-126.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-018.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-014.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-015.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-044.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv08.5-021.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv05-023.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv05-024.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv10-010.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me02.5-039.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me01-119.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me05-077.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me01-114.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-155.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-154.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me03-081.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv05-144.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me01-131.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me02.5-196.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-163.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me02.5-212.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me01-130.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv10.5w-080.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me02.5-181.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per sv06-149.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per mee-009.",
+              "sc-stadium-continuity: opponent, inventario iniziale incompleto o eccedente per me03-086.",
+              "sc-stadium-continuity: opponent, zone iniziali incoerenti con il campo/Premi.",
+              "sc-engine-target: scenario privo di passaggi, conti, fonti o risorse di uno dei lati.",
+              "sc-engine-target: registro iniziale ours, servono 7 carte in hand.",
+              "sc-engine-target: registro iniziale opponent, servono 7 carte in hand.",
+              "sc-engine-target: registro iniziale ours, servono 6 carte in prizes.",
+              "sc-engine-target: registro iniziale opponent, servono 6 carte in prizes.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me05-094|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me05-067|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me02.5-250|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me04-070|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me05-066|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv06-186|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv10-185|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv06.5-040|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me02-116|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-173|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me02.5-256|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-175|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-166|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-167|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me03-113|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv06-205|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me01-184|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|me03-115|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv05-161|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv09-159|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per ours|sv06-167|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-017|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-126|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-018|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-014|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-015|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-044|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv08.5-021|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv05-023|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv05-024|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv10-010|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me02.5-039|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me01-119|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me05-077|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me01-114|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-155|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-154|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me03-081|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv05-144|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me01-131|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me02.5-196|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-163|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me02.5-212|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me01-130|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv10.5w-080|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me02.5-181|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|sv06-149|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|mee-009|deck.",
+              "sc-engine-target: registro finale non coincide con inventory per opponent|me03-086|deck.",
+              "sc-engine-target: sviluppo da dimostrare su almeno due nostri turni con replica intermedia.",
+              "sc-engine-target: replica non-verificata senza transizioni verificabili.",
+              "sc-engine-target: replica alternativa-non-verificata senza transizioni verificabili.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me05-094.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me05-067.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me02.5-250.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me04-070.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me05-066.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv06-186.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv10-185.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv06.5-040.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me02-116.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-173.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me02.5-256.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-175.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-166.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-167.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me03-113.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv06-205.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me01-184.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per me03-115.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv05-161.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv09-159.",
+              "sc-engine-target: ours, inventario iniziale incompleto o eccedente per sv06-167.",
+              "sc-engine-target: ours, zone iniziali incoerenti con il campo/Premi.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-017.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-126.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-018.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-014.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-015.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-044.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv08.5-021.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv05-023.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv05-024.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv10-010.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me02.5-039.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me01-119.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me05-077.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me01-114.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-155.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-154.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me03-081.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv05-144.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me01-131.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me02.5-196.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-163.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me02.5-212.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me01-130.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv10.5w-080.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me02.5-181.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per sv06-149.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per mee-009.",
+              "sc-engine-target: opponent, inventario iniziale incompleto o eccedente per me03-086.",
+              "sc-engine-target: opponent, zone iniziali incoerenti con il campo/Premi."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 0,
+              "calculations": 4,
+              "transitions": 0
+            }
+          },
+          "review": {
+            "verdict": "incomplete",
+            "findings": [
+              {
+                "severity": "blocking",
+                "targetId": "sc-stadium-continuity",
+                "message": "Lo scenario è un segnaposto: state non descrive una partita, inventory e resources sono vuoti, mancano le 7 carte iniziali e i 6 Premi per lato. L'evento senza movimenti e handAfter=0 non ricostruisce alcuna posizione. steps, turnAudit e development sono vuoti; le due repliche con danno zero non sono linee raggiungibili dimostrate. Non sono quindi verificabili legalità, conservazione delle 60 carte per lato, migliore risposta o continuità strategica.",
+                "correction": "Ricostruire lo scenario contro la sola opponent-1: assegnare tutte le carte delle due liste, dichiarare le zone nascoste come ipotesi e registrare dal setup ogni movimento con mani residue coerenti. Derivare stato e inventario dal registro; verificare ogni turno del setup. Aggiungere una linea atomica su almeno due nostri turni con replica intermedia, risorse fisiche e conti completi. Confrontare due risposte distinte dallo stesso stato, includendo accessi tramite Thwackey, ricerche e recuperi disponibili; verificare Gladion sulla mano completa. Determinare la replica minima con prove di rimozione e fondare il pivot su quella minaccia. Compilare benchEntries e retreatCosts quando applicabili, mantenendo escluso il timing Spiky/Festival irrisolto.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:me05-094",
+                  "card:sv06-015",
+                  "card:sv06-018",
+                  "card:me05-077",
+                  "card:me02.5-196",
+                  "card:sv09-159"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "sc-engine-target",
+                "message": "Anche questo scenario contiene soltanto dichiarazioni di incompletezza. Nessuna carta è assegnata alle zone, nessuna storia raggiunge lo stato e nessuna transizione dimostra la scelta fra motore e attaccante. Il confronto delle repliche non identifica attaccanti, accessi o costi reali. Non è dimostrata una seconda decisione strategicamente distinta né la conversione del tempo guadagnato in attacchi successivi.",
+                "correction": "Costruire una posizione completa e distinta dal primo scenario usando esclusivamente our-list e opponent-1. Fornire mani iniziali di 7 carte, Premi iniziali di 6 e registro completo fino all'inventario di 60 carte per lato, con danni, assegnazioni, evoluzioni e mani coerenti. Dimostrare concretamente il valore del bersaglio scelto su due nostri turni con la migliore replica intermedia plausibile. Valutare dalla mano completa anche ricerca concatenata, recuperi e attaccanti alternativi, senza equiparare l'assenza dalla mano all'inaccessibilità. Ogni alternativa deve avere steps autonomi completi, pescate necessarie esplicite, conti, Premi e promozioni separati; verificare la replica minima mediante omissionTests e aggiornare il pivot.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:me02.5-256",
+                  "card:sv06-015",
+                  "card:sv06-018",
+                  "card:sv08.5-021",
+                  "card:me03-081",
+                  "card:me02.5-196",
+                  "card:sv06-155"
+                ]
+              }
+            ],
+            "checks": [
+              "Revisione limitata agli scenari; capitoli ed esercizi non richiesti in questa fase.",
+              "Entrambi gli scenari selezionano opponent-1, senza introdurre una lista composita.",
+              "Confermata direttamente l'assenza di inventari, setup completi, transizioni e sviluppo verificabile: i rilievi locali bloccanti restano aperti.",
+              "Impossibile verificare quantità impiegate, aritmetica delle linee, timing, KO/Premi/promozioni e migliore replica in assenza di posizioni e azioni concrete.",
+              "Il timing Spiky Energy/Festival Lead resta esplicitamente escluso; nessuno scenario è validato."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "6365e884e22f16f31fc91da5efb0ac4a5745050cd17515fd15316c1c8f834bc2"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "cf82348967a307fcfd342742310fc3ca7adfc67c8d455d1b4947be15988c9b1b"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "001fe3627d28593892c6488033fe502308580bd535549bddf0a9a0a01b98e770"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "failed",
+          "inputHash": "ba35473aeec06a2cff76724143a83e954a0614eefc22bfa7ad7766ff7becb515"
+        },
+        {
+          "sequence": 5,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "ba35473aeec06a2cff76724143a83e954a0614eefc22bfa7ad7766ff7becb515"
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "ad5f8f4e296a26ac841cd5cd7e2ee24a6ebb52d6e6a71748b8eb584e0f2ddacc"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 277398,
+      "outputTokens": 52172,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 1001817,
+      "elapsedMs": 1002855,
+      "startedAt": "2026-10-30T16:37:53.240Z",
+      "endedAt": "2026-10-30T16:54:36.095Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a: a-reply-development: pescata non presente nella lista.",
+              "scenario-a:a-reply-direct: a-reply-development: pescata non presente nella lista.",
+              "scenario-a:a-reply-development: a-reply-development: pescata non presente nella lista.",
+              "scenario-a: pescata specifica Dipplin:sv06-018 omessa dalle risorse della replica.",
+              "scenario-b: b-reply-development: pescata non presente nella lista.",
+              "scenario-b:b-reply-direct: b-reply-development: pescata non presente nella lista.",
+              "scenario-b:b-reply-development: b-reply-development: pescata non presente nella lista.",
+              "scenario-b: pescata specifica Hydrappleex:sv07-014 omessa dalle risorse della replica."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 45,
+              "calculations": 17,
+              "transitions": 28
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "specificDraws contiene «Dipplin:sv06-018», che non è un printId della lista. La carta è presente in requiredCards, ma il riferimento malformato impedisce di riconciliare la pescata e produce gli errori locali.",
+                "correction": "Usare «sv06-018» in specificDraws, mantenendo separatamente nome e spiegazione della pescata. Ripetere i controlli sulla replica e sullo scenario.",
+                "sourceIds": [
+                  "opponent-3",
+                  "card:sv06-018"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "specificDraws contiene «Hydrappleex:sv07-014», anziché il printId presente nella lista. La relativa copia è già dichiarata in requiredCards: occorre correggere il riferimento, senza aggiungere una seconda copia.",
+                "correction": "Usare «sv07-014» in specificDraws e verificare nuovamente la riconciliazione fra pescata, requiredCards e risorse.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv07-014"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "L'omissionTest della Grass non ricalcola la migliore linea dallo stato dichiarato: la mano contiene due Grass. Togliendone una, Celebi può ancora ricevere l'altra e infliggere 30. Il testo sostituisce la rimozione richiesta con l'azzeramento astratto del requisito e dichiara quindi remainingDamage=0 senza dimostrarlo.",
+                "correction": "Applicare la rimozione di una copia allo stato completo e riportare remainingDamage=30 con la Grass residua. Esplicitare che il requisito funzionale di una Grass è minimo, ma che la sua indispensabilità per rimozione fisica non è dimostrabile in questa posizione. Non presentare il test corrente come superato e non alterare artificialmente l'apertura per eliminare la ridondanza.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-012",
+                  "card:mee-009"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Al turno 5 viene conservata inutilizzata Buddy-Buddy Poffin mentre la nostra Panchina è vuota. Nel mazzo restano due Dreepy e un Torchic ricercabili. Giocarla prima di attaccare sviluppa due successori senza compromettere Rare Candy, Crispin o Phantom Dive. La conclusione «senza Panchina» dipende quindi da una rinuncia gratuita a una risorsa utile, vietata dal contratto v4, e rende artificiosamente peggiore il seguito.",
+                "correction": "Giocare Poffin al turno 5 e scegliere due ingressi motivati fra i Base effettivamente disponibili. Aggiungere lo step bench con due benchEntries, aggiornare mano, resources, development, spiegazione e pivot. Rivalutare la migliore risposta avversaria con quei bersagli e con tutta la sua mano, comprese ricerca, recupero e Boss's Orders; mantenere la valutazione sfavorevole soltanto nella misura ancora dimostrata.",
+                "sourceIds": [
+                  "our-list",
+                  "card:sv05-144",
+                  "card:sv06-128",
+                  "card:sv10-040",
+                  "card:me01-114"
+                ]
+              }
+            ],
+            "checks": [
+              "Esaminati i due setupLedger: mani iniziali di sette, Premi iniziali di sei, pescate e mani residue coincidono con gli inventari iniziali dichiarati.",
+              "Gli inventari iniziali ricostruiscono le 60 carte delle rispettive liste selezionate; non occorre combinare liste avversarie.",
+              "Verificati i conti dichiarati: Debolezza Fire, conservazione dei danni evolvendo, Wild Growth e danno di Myriad Leaf Shower.",
+              "Le transizioni principali separano KO e promozione e attribuiscono correttamente i Premi al lato opposto al Pokémon mandato KO.",
+              "Le evoluzioni Grass concatenate avvengono dopo il primo turno avversario con Forest of Vitality; non risultano ritirate effettive da registrare.",
+              "Il confronto immediato su Budew non costituisce una verifica minima autonoma della successiva minaccia su Blaziken; tale limite è dichiarato.",
+              "La revisione riguarda esclusivamente gli scenari e non costituisce una certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-b: il KO resta raggiungibile senza una copia di mee-009: requisito superfluo nella replica minima.",
+              "scenario-b:b-reply-direct: il KO resta raggiungibile senza una copia di mee-009: requisito superfluo nella replica minima.",
+              "scenario-b:b-reply-development: il KO resta raggiungibile senza una copia di mee-009: requisito superfluo nella replica minima."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 45,
+              "calculations": 20,
+              "transitions": 31
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "La replica indicata come minima non supera il test obbligatorio: togliendo una copia di mee-009 resta l'altra Grass in mano e Solar Cutter infligge ancora 30. Dichiarare il limite non soddisfa il contratto.",
+                "correction": "Ricostruire il confronto su una minaccia strategicamente significativa con requisiti effettivamente indispensabili, verificando tutte le alternative dalla mano completa. Aggiornare minimumReplyId e omissionTests; non alterare artificiosamente l'apertura per eliminare la ridondanza.",
+                "sourceIds": [
+                  "card:me01-012",
+                  "card:mee-009",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "La minaccia minima dopo Phantom Dive è sottostimata: Ogerpon ha già quattro Grass, equivalenti a otto Energie, e Dragapult ha due Energie. Myriad Leaf Shower infligge già 30 + 240 + 60 = 330, sufficienti contro 320 PS. La quinta Grass e Ripening Charge migliorano cura e danno, ma non sono necessari al KO. Il pivot continua invece a presentare l'assegnazione aggiuntiva come soglia sufficiente da sorvegliare.",
+                "correction": "Esplicitare il KO diretto da 330 senza nuove assegnazioni né carte aggiuntive. Separarlo dalla linea preferibile con Ripening Charge, che cura e porta a 390. Aggiornare calculations, opponentResponse, pivot e development del turno 5 distinguendo requisito minimo e sviluppo facoltativo.",
+                "sourceIds": [
+                  "card:sv06-025",
+                  "card:me01-010",
+                  "card:sv06-130",
+                  "card:sv07-014"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "claim-b-next-threat",
+                "message": "Il claim descrive correttamente la linea da 390, ma omette la replica meno esigente decisiva per la valutazione: con le quattro Grass già assegnate Ogerpon manda già KO Dragapult per 330.",
+                "correction": "Dichiarare prima il KO da 330 senza risorse aggiuntive; presentare Ripening Charge con la Grass conservata come miglioramento facoltativo per curare Ogerpon e infliggere 390.",
+                "sourceIds": [
+                  "card:sv06-025",
+                  "card:me01-010",
+                  "card:sv06-130",
+                  "card:sv07-014"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "L'unico effetto di Buddy-Buddy Poffin è già suddiviso in due step bench. L'estensione v3 richiede uno step con il risultato complessivo e due benchEntries; la suddivisione in transizioni +1 compete all'app.",
+                "correction": "Unire gli step principali 15 e 16 in un solo step bench, con ourBench da 0 a 2 e due benchEntries, uno per sv06-128 e uno per sv10-040. Descrivere una sola volta gioco, scarto e ricerca di Poffin; aggiornare gli stepIndexes successivi.",
+                "sourceIds": [
+                  "card:sv05-144",
+                  "our-list"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi openingHands, openingPrizes ed eventi del setup: mani iniziali, pescate e mani residue coincidono con gli inventari dichiarati.",
+              "Verificate le quantità iniziali delle due coppie di liste selezionate e gli accessi descritti nelle linee principali.",
+              "Verificati costi degli attacchi, evoluzioni con Forest of Vitality e Rare Candy, assegnazioni indipendenti e conteggi di danni.",
+              "Verificate le transizioni di KO, Premi e promozione: il KO dell'Attivo conserva la quantità in Panchina fino alla promozione.",
+              "Ricontrollata indipendentemente la rimozione della Grass e individuata una replica successiva con meno requisiti contro Dragapult.",
+              "Nessun effetto Festival o dipendente dal tratto Tera è necessario alle linee esaminate."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "4978f35a2fdeaa9d9681d23ee750272171d94bb1adde197b26a049c7b5e4b774",
+          "origin": "compiler-v3"
+        }
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "1e4959e75d05068c4256efb402f6c92195d809fc9e8111133a7b668c6f4b8587"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "62326a58f93549b0bc250d5ff3e0370a859fdc25b8f68e76ebcf067290408479"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "284d8659a1afb9cedd8a575116d6d29218d09e30898e75d5f1ffd8c666b5235d"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "2100b45a66c82a512f4b25d65984f2489a96d56eeaa99bbed0b079497301935a"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "023573b72d578b4044b444ce34ba469ff636c759adc5867b1be79ee1f01884bd"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 17,
+  "passed": 0
+}

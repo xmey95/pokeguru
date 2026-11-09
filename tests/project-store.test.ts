@@ -23,6 +23,15 @@ afterEach(() => {
 })
 
 describe('ProjectStore', () => {
+  it('reads saved opaque opponent IDs locally without allowing unknown IDs or crossing projects',()=>{
+    const path=databasePath(),store=new ProjectStore(path),project=store.create({name:'Imported archive',format:'STANDARD'}),other=store.create({name:'Other project',format:'STANDARD'}),opponentId='imported:unrelated-archetype-72'
+    store.importDeck({projectId:project.id,rawText:'1 Carta A',source:'paste'});store.importDeck({projectId:other.id,rawText:'1 Carta B',source:'paste'})
+    store.saveMetaSnapshot({id:'c'.repeat(64),fetchedAt:'2026-10-23T00:00:00.000Z',sourceUrl:'https://limitlesstcg.com/decks',period:'Archived fixture',circuit:'WESTERN',format:'STANDARD',cached:true,decks:[{id:opponentId,name:'Archived opponent',points:0,share:0,url:'https://limitlesstcg.com/decks/284'}]})
+    const report:MatchupReport={projectId:project.id,metaId:'c'.repeat(64),opponentId,deckHash:store.getCurrentDeckHash(project.id)!,generatedAt:'2026-10-23T00:05:00.000Z',sampleDeckUrl:null,strengths:'A',weaknesses:'B',ourKeyCards:'Carta A',theirKeyCards:'',strategy:'Archived plan',limitations:'Synthetic fixture'}
+    store.saveMatchupReport(report);store.close()
+    const reopened=new ProjectStore(path)
+    try{expect(reopened.listMatchupDiscussionPage(project.id,opponentId).items).toHaveLength(1);expect(reopened.listMatchupDiscussions(project.id,opponentId)[0].turns[0].report).toEqual(report);expect(()=>reopened.listMatchupDiscussionPage(other.id,opponentId)).toThrow('Archetipo non valido');expect(()=>reopened.listMatchupDiscussions(project.id,'unknown:archetype')).toThrow('Archetipo non valido');expect(reopened.listMatchupDiscussions(other.id,'284')).toEqual([])}finally{reopened.close()}
+  })
   it('legge la cronologia del thread a pagine senza perdere messaggi con data identica', () => {
     const path = databasePath()
     const store = new ProjectStore(path)

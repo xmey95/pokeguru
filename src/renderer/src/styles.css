@@ -804,4 +804,37 @@ button > .loading-spinner { width: 14px; height: 14px; flex-basis: 14px; margin-
 .job-alert p { margin: 4px 0 0; color: var(--ink-secondary); font-size: var(--text-sm); line-height: 1.45; overflow-wrap: anywhere; }
 .job-alert-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 6px; }
 .job-alert-actions .text-button { margin: 0; }
+.deep-matchup-guide { width: 100%; min-width: 0; line-height: 1.65; overflow-wrap: anywhere; }
+.deep-guide-intro { color: var(--ink-secondary); font-size: var(--text-sm); }
+.deep-guide-index { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 16px 0; border-block: 1px solid var(--line); }
+.deep-guide-index .text-button { text-align: left; }
+.deep-matchup-guide .deep-guide-chapter { display: block; padding: 24px 0; border-bottom: 1px solid var(--line); }
+.deep-guide-chapter > h3 { margin-top: 0; scroll-margin-top: 24px; }
+.matchup-fields .deep-matchup-guide .guide-body p { margin-bottom: 12px; line-height: 1.7; }
+.deep-guide-chapter h4 { font-size: 1.05rem; margin: 20px 0 10px; }
+.deep-guide-chapter h5 { font-size: 1rem; margin: 20px 0 8px; }
+.deep-guide-scenario, .deep-guide-exercise { padding: 16px 20px; margin: 16px 0; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.deep-guide-scenario > h4, .deep-guide-exercise > h4 { margin-top: 0; }
+.deep-guide-steps { padding-left: 24px; }
+.deep-guide-steps > li { padding-left: 4px; margin-block: 12px; }
+.deep-guide-calculations { max-width: 100%; overflow-x: auto; margin: 16px 0; }
+.deep-guide-calculations table { width: 100%; border-collapse: collapse; text-align: left; }
+.deep-guide-calculations th, .deep-guide-calculations td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.deep-matchup-guide details { margin-block: 12px; }
+.deep-matchup-guide summary { cursor: pointer; color: var(--ink-secondary); }
+.deep-guide-evidence { font-size: var(--text-sm); }
+.deep-guide-evidence pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 400px; overflow-y: auto; }
+@media (max-width: 800px) { .deep-guide-scenario, .deep-guide-exercise { padding: 12px; } }
 @media (max-width: 700px) { .job-alerts { top: 68px; bottom: auto; max-height: min(50vh, 360px); } }
+
+.ai-quota,.ai-budget-status { margin-block: 1rem; overflow-wrap: anywhere; }
+.ai-quota-bucket { display: grid; gap: .5rem; margin-block: .75rem; }
+.ai-quota-bucket > div { display: grid; gap: .35rem; }
+.ai-quota progress { width: min(100%,28rem); height: .65rem; accent-color: var(--accent); }
+.ai-budget-status p { margin-block: .5rem; }
+:root .demo-notice { padding: 16px; margin-bottom: 20px; border: 1px solid #b9cebf; border-radius: 12px; background: #edf5ef; color: #244f35; }
+:root .demo-notice p { margin: 8px 0 12px; line-height: 1.5; }
+:root .demo-guide-links { display: flex; flex-wrap: wrap; gap: 8px; }
+:root .demo-guide-links button { white-space: normal; text-align: left; }
+:root .demo-guide-links button[aria-pressed="true"] { border-color: #326a45; background: #dceade; }
+.demo-history-budget { margin-bottom: 16px; }

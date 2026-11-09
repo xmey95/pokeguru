@@ -13,7 +13,7 @@ jobs:
     env:
       POKEGURU_AUTO_SYNC: '0'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -34,10 +34,15 @@ jobs:
           package-manager-cache: false
       - name: Install dependencies
         run: npm ci
+      - name: Prepare verified Electron runtime before expensive tests
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/retry-ci-download.sh node scripts/prepare-electron-runtime.cjs
       - name: Check types
         run: npm run typecheck
       - name: Run local tests
-        run: npm test -- --maxWorkers=2 --testTimeout=15000
+        run: npm test -- --maxWorkers=${{ matrix.os == 'macos-15-intel' && 1 || 2 }} --testTimeout=15000
       - name: Build Electron app
         run: npm run build
       - name: Verify daily sync startup on Linux
@@ -235,7 +240,10 @@ jobs:
         run: node tests/deck-footer-ui-live.mjs
       - name: Package Linux AppImage
         if: runner.os == 'Linux'
-        run: npm run package:linux
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --require=./scripts/preload-builder-download.cjs
+        run: bash scripts/retry-ci-download.sh npm run package:linux -- --config.electronDist=node_modules/electron/dist
       - name: Smoke packaged Linux app
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/package-smoke.mjs release/linux-unpacked/pokeguru
@@ -248,7 +256,10 @@ jobs:
           xvfb-run -a node "$GITHUB_WORKSPACE/tests/package-smoke.mjs" "$RUNNER_TEMP/squashfs-root/AppRun"
       - name: Package Windows installer
         if: runner.os == 'Windows'
-        run: npm run package:win
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --require=./scripts/preload-builder-download.cjs
+        run: bash scripts/retry-ci-download.sh npm run package:win -- --config.electronDist=node_modules/electron/dist
       - name: Smoke packaged Windows app
         if: runner.os == 'Windows'
         run: node tests/package-smoke.mjs release/win-unpacked/Pokeguru.exe
@@ -267,9 +278,11 @@ jobs:
       - name: Package macOS DMG
         if: runner.os == 'macOS'
         env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --require=./scripts/preload-builder-download.cjs
           # Firma ad hoc: non usa certificati o secret nei job delle PR.
           CSC_FOR_PULL_REQUEST: 'true'
-        run: npm run package:mac
+        run: bash scripts/retry-ci-download.sh npm run package:mac -- --config.electronDist=node_modules/electron/dist
       - name: Verify and smoke mounted macOS DMG
         if: runner.os == 'macOS'
         shell: bash

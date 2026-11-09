@@ -9,7 +9,8 @@ function versionOrigin(version: DeckVersion): string {
   return version.source === 'file' ? `File ${version.fileName ?? '.txt'}` : 'Testo incollato'
 }
 
-export function DeckHistory({ projectId, versions, onOpenChange, onRestored, onAnnotated }: {
+export function DeckHistory({ projectId, versions, onOpenChange, onRestored, onAnnotated, readOnly = false }: {
+  readOnly?: boolean
   projectId: string
   versions: DeckVersion[]
   onOpenChange(open: boolean): void
@@ -76,7 +77,7 @@ export function DeckHistory({ projectId, versions, onOpenChange, onRestored, onA
   }
 
   return <><details className="deck-history deck-reference-item" onToggle={(event) => onOpenChange(event.currentTarget.open)}>
-    <summary><span className="deck-reference-label">Versioni della lista ({current?.sequence ?? 0})</span><span className="deck-reference-description">Confronta, annota o ripristina una versione</span></summary>
+    <summary><span className="deck-reference-label">Versioni della lista ({current?.sequence ?? 0})</span><span className="deck-reference-description">{readOnly ? 'Consulta le versioni originali' : 'Confronta, annota o ripristina una versione'}</span></summary>
     {!current || !selected ? <p>Nessuna versione salvata.</p> : <div className="deck-history-body">
       <p className="content-note">La lista principale resta visibile nel pannello. Scegli una versione per leggerla e confrontarla.</p>
       <label htmlFor="deck-history-version">Versione da consultare</label>
@@ -97,15 +98,15 @@ export function DeckHistory({ projectId, versions, onOpenChange, onRestored, onA
           {item.name}: {item.before} → {item.after}</li>)}</ul>}
       </div>}
       <details><summary>Leggi il testo completo di v{selected.sequence}</summary><pre>{selected.rawText}</pre></details>
-      <form className="deck-history-annotation" onSubmit={(event) => void annotate(event)}>
+      {!readOnly && <form className="deck-history-annotation" onSubmit={(event) => void annotate(event)}>
         <label htmlFor="deck-version-label">Etichetta</label>
         <input id="deck-version-label" value={label} maxLength={80} onChange={(event) => setLabel(event.target.value)} />
         <label htmlFor="deck-version-note">Nota</label>
         <textarea id="deck-version-note" value={note} maxLength={1000} onChange={(event) => setNote(event.target.value)} />
         <button type="submit" className="secondary-button" disabled={busy}>Salva etichetta e nota</button>
-      </form>
+      </form>}
       {error && !confirming && <p className="error-banner" role="alert">{error}</p>}
-      {selected.id !== current.id && <button type="button" className="secondary-button"
+      {!readOnly && selected.id !== current.id && <button type="button" className="secondary-button"
         onClick={() => { setError(null); setConfirming(true) }}>Ripristina v{selected.sequence} come lista principale</button>}
     </div>}
   </details>{confirming && selected && current && <div className="adoption-modal-backdrop" onKeyDown={(event) => {

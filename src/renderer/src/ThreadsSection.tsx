@@ -24,6 +24,7 @@ import { catalogCardTargets, guideSourceTarget, tcgdexCardPrintId } from './guid
 import { useCardPreview } from './CardPreview'
 import { ExpandablePreviewDeck } from './PreviewDeckLines'
 import { AiDiagnostics, AiEvidenceLimit } from './AiDiagnostics'
+import {AiBudgetStatus} from './AiLimits'
 
 interface Props {
   projectId: string
@@ -829,6 +830,7 @@ export function ThreadsSection({ projectId, mainContextKey, onAdopt }: Props) {
               {timelineEntries.slice(-visibleTimelineCount).map((entry) => entry.kind === 'message' ? <div className="thread-message" data-author={entry.item.author} key={entry.item.id}><small>{entry.item.author === 'user' ? 'Tu' : 'Codex'} · {displayDate(entry.item.createdAt)}</small>{entry.item.author === 'assistant' ? <ThreadMarkdown text={entry.item.text} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} /> : <p>{entry.item.text}</p>}<ThreadMessageEvidence message={entry.item} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} />{entry.item.aiConfig && <details><summary>Dettagli AI</summary><p>{entry.item.aiConfig.model ?? 'Automatico'} / {entry.item.aiConfig.reasoningEffort ?? 'predefinito'} · {entry.item.aiConfig.source === 'override' ? 'scelta della strategia' : 'preferenze globali'}</p></details>}</div> : <CandidateDetail key={entry.item.id} candidate={entry.item} thread={selected} versions={comparisonVersions}
                 catalog={catalog} constraints={constraints} audit={ruleAudit} working={working || asking || aiBusy} cardTargets={cardTargets} onOpenCatalogCard={onOpenCatalogCard} onAdopt={confirmAdoption} onContinue={(candidate) => void continueFrom(candidate)} />)}
             </div>
+            {currentAiJob&&currentAiJob.status!=='running'&&<AiBudgetStatus job={currentAiJob} />}
             {(asking || currentAiJob?.status === 'running') && <AiJobActivity
               className="thread-ai-activity" startedAt={startedAt} job={currentAiJob}
               title="Codex sta rispondendo…" />}

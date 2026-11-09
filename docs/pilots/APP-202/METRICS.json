@@ -1,0 +1,177 @@
+{
+  "date": "2026-10-31",
+  "task": "APP-202",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 384,
+    "externalSkipped": 44,
+    "guideTestsPassed": 59,
+    "typecheck": "pass",
+    "build": "pass",
+    "historicalCandidateAudit": "Read-only rejected APP-201 draft; Dragon Headbutt covered in scenario-2, not a tactical certification"
+  },
+  "verificationBasis": "Archived tested-code and original frozen inputs; v12 covers board attacks before/during replies, retreat costs bound to outgoing Active, omission formulas derived from complete witness options, corrected outgoing Energy holder instructions. All prior gates retained.",
+  "sealedFiles": 43,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "Fresh jobs, maximum eight invocations each; all earlier gates retained. Two separate case calls with full selected exact-list facts; all originals preserved. Attack exclusions and zero-damage claims independently criticized. Positive omission witnesses must respect both reduced budgets. No model-declared terminal shortcut.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 4,
+      "failedCalls": 2,
+      "inputTokens": 358863,
+      "outputTokens": 39938,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 764457,
+      "elapsedMs": 765709,
+      "startedAt": "2026-10-31T07:53:28.812Z",
+      "endedAt": "2026-10-31T08:06:14.521Z",
+      "error": "Movimento di carte non valido.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "inputHash": "751ded21f5bebb8c54944ce47713a8f330b091111c6df0ff8f70b03c6fd9523b",
+          "message": "scenario-2: danni/condizioni mancanti per uno o più Pokémon in campo."
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "inputHash": "751ded21f5bebb8c54944ce47713a8f330b091111c6df0ff8f70b03c6fd9523b",
+          "message": "Movimento di carte non valido."
+        }
+      ],
+      "derivedTactics": [
+        {
+          "hash": "0b3e23be0b382dcad6e159cfe8fbec6c15ff03d923769b276c121e98d615bea8",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "7432bca55fce666cd4261c11c8fa4a18f2e5467a77175866484ff7e3ddff52ee"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "bf4d3061eb569f3c4f83e083e2bd7fd4af3be0269e276fea8247a4e4357db9c6"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "status": "succeeded",
+          "inputHash": "7618bbf7bfe8c4d39dc483da7494cf101e58e6cc9c800f1903f91d695a76e129"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "status": "failed",
+          "inputHash": "751ded21f5bebb8c54944ce47713a8f330b091111c6df0ff8f70b03c6fd9523b"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "status": "failed",
+          "inputHash": "8ce1af43efe918b3ee9ea938ca3a96bd04cb3fdb37ced8355d2e627a47ab7250"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 2,
+      "failedCalls": 1,
+      "inputTokens": 67201,
+      "outputTokens": 2957,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 81539,
+      "elapsedMs": 81698,
+      "startedAt": "2026-10-31T07:53:29.510Z",
+      "endedAt": "2026-10-31T07:54:51.208Z",
+      "error": "Codex non ha completato la richiesta. Verifica accesso, connessione e modello.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "aa450a685afe69f1c0ba66e13dc1d6953f28fc79966e352cee46d84f9ee0145f"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "status": "failed",
+          "inputHash": "5730a62c6724a9014eee4390ba9a3d4e848bef9d4c529aabda3cb15acf03e4df"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 2,
+      "failedCalls": 1,
+      "inputTokens": 39314,
+      "outputTokens": 3043,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 87699,
+      "elapsedMs": 87850,
+      "startedAt": "2026-10-31T07:53:29.653Z",
+      "endedAt": "2026-10-31T07:54:57.503Z",
+      "error": "Codex non ha completato la richiesta. Verifica accesso, connessione e modello.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "ebbb0e52a5b3a46c2a9c7b1b27547aa4a32869337ee4022d64485004b64ffa54"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "status": "failed",
+          "inputHash": "3d1f56fe0b9bc63b870a4adac86a15322757c28e2ca6600ba0a115f0b768e3ff"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 8,
+  "passed": 0,
+  "executionWindow": {
+    "startedAt": "2026-10-31T07:53:28.812Z",
+    "endedAt": "2026-10-31T08:06:14.521Z"
+  }
+}

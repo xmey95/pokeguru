@@ -1,0 +1,365 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-198",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "verificationBasis": "Archived tested-code and original campaign inputs; 35 files unchanged during the campaign. Post-campaign prompt clarification and display labels tested locally only.",
+  "postCampaignChanges": {
+    "newModelCalls": 0,
+    "liveVerified": false,
+    "description": "Clarified opponent reply-turn specificDraws versus preparatory draws audited in assumptions/development/pivot. Updated consumption-budget and promotion display labels. Original rejected drafts and findings unchanged."
+  },
+  "sealedFiles": 35,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh generation per pilot matchup; no previous guide and no editorial patch. Version 8 derives response-turn consumption budgets, attachment/retreat Energy costs, and exposes defensive promotion choices. Numerical omission proofs need affordable witness branches for positive residual damage; all previous gates retained.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 503492,
+      "outputTokens": 41128,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 770737,
+      "elapsedMs": 772281,
+      "startedAt": "2026-10-30T19:47:15.881Z",
+      "endedAt": "2026-10-30T20:00:08.162Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-natural-evolution: pescata specifica me02.5-016 omessa dalle risorse della replica.",
+              "scenario-natural-evolution: pescata specifica me03-084 omessa dalle risorse della replica."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 32,
+              "calculations": 19,
+              "transitions": 43
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-rotom-budew",
+                "message": "Conservare Poffin lascia Drakloak come unico Pokémon avversario. Nel nostro turno successivo Rare Candy, Toucannon e Mist sono già disponibili: Feather Rondo infligge 100 con due nostri Pokémon in Panchina, manda KO Drakloak e conclude la partita per assenza di Pokémon avversari. Ridurre Feather Rondo non giustifica questa rinuncia allo sviluppo.",
+                "correction": "Distinguere la replica minima per il solo KO dalla risposta competitivamente sostenibile. Registrare il seguito che perde contro Rare Candy e confrontare una risposta che metta almeno una riserva in Panchina, usando anche Crispin per svilupparla.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me05-094",
+                  "card:me01-175",
+                  "card:sv05-144",
+                  "card:sv07-133",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-rotom-budew",
+                "message": "Il confronto difensivo omette un accesso diretto a un secondo Budew: dopo Recon Directive, Poffin può cercare Budew e un Dreepy dal mazzo. Night Stretcher non è quindi necessario per ripristinare Itchy Pollen. La conclusione e il pivot attribuiscono al recupero un ruolo eccessivo.",
+                "correction": "Aggiungere un ramo completo Poffin → Budew più Dreepy, con ritirata e sviluppo tramite Crispin. Confrontare il risparmio di Night Stretcher con il vantaggio del secondo Dreepy nella linea attuale; aggiornare pivot e conclusione indicando anche Poffin come accesso al blocco.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv05-144",
+                  "card:me02.5-016",
+                  "card:me02.5-196",
+                  "card:sv07-133"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-natural-evolution",
+                "message": "specificDraws contiene due Budew, ma nessuno viene pescato: Budew è già Attivo dal setup. Queste identità non condizionano la replica e non corrispondono al registro.",
+                "correction": "Impostare specificDraws a [] per questa replica. La pescata di Poffin avviene, ma la sua identità non è necessaria al solo Itchy Pollen dichiarato.",
+                "sourceIds": [
+                  "card:me02.5-016",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-natural-evolution",
+                "message": "specificDraws include Rosa's Encouragement due volte, benché Rosa non venga impiegata e non contribuisca allo sviluppo o all'attacco. Il registro mostra una sola pesca di Rosa nel setup.",
+                "correction": "Rimuovere entrambe le occorrenze di me03-084. Conservare Poffin e Crispin, necessari allo sviluppo effettivamente registrato in questo ramo.",
+                "sourceIds": [
+                  "card:me03-084",
+                  "card:sv05-144",
+                  "card:sv07-133",
+                  "card:sv06-129"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-natural-evolution",
+                "message": "Nel turno 1 si conserva Poké Pad per adattarsi allo sviluppo avversario, pur vedendo già Budew Attivo. Il conseguente blocco rende quella ricerca inutilizzabile e la seconda evoluzione dipende dalla pesca esatta dell'ultimo Trumbeak. Non viene confrontato l'accesso preventivo garantito alla seconda evoluzione o al secondo Toucannon.",
+                "correction": "Rivalutare l'uso di Poké Pad prima di Itchy Pollen e motivare concretamente il confronto fra secondo Trumbeak e secondo Toucannon. Se si conserva la carta, dichiarare la dipendenza dalla pesca specifica e mostrare il pivot quando non arriva Trumbeak; se si modifica il setup, aggiornare insieme registro, mani, inventario e rami.",
+                "sourceIds": [
+                  "card:me03-113",
+                  "card:me02.5-016",
+                  "card:me05-067",
+                  "card:me05-094",
+                  "our-list"
+                ]
+              }
+            ],
+            "checks": [
+              "Verificati i costi e i danni dichiarati di Assault Landing, Fly, Feather Rondo, Bite e Dragon Headbutt sulle schede fornite.",
+              "Le linee principali collegano due nostri turni con una replica intermedia e un attacco successivo.",
+              "Le evoluzioni naturali registrate rispettano la separazione dei turni; Dragapult ex non può evolvere sul Drakloak appena evoluto.",
+              "Le ritirate dichiarate hanno costi coerenti con le schede; i calculations con retreatCostId sono derivati ammessi.",
+              "KO e promozioni principali mantengono separati Premi e variazioni della Panchina.",
+              "Le prove di omissione della replica minima risultano coerenti con il budget ridotto di una nuova carta, ma non dimostrano la qualità strategica della replica."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 45,
+              "calculations": 22,
+              "transitions": 43
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-rotom-budew",
+                "message": "resources conta una sola copia di Poké Pad, ma reply-direct ne utilizza due fisicamente distinte: una pescata con Aerial Draw e una presa dai Premi dopo il KO di Drakloak. Il recupero non interviene e non permette di identificarle come la stessa copia.",
+                "correction": "Portare a 2 il conteggio di me03-113 nelle resources dello scenario e verificare nuovamente la copertura di tutti i rami.",
+                "sourceIds": [
+                  "our-list",
+                  "card:me05-094",
+                  "card:me03-113"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-natural-evolution",
+                "message": "Le specificDraws delle repliche omettono Poké Pad pescato nel setup. Questa identità è decisiva per ottenere il secondo Trumbeak e raggiungere lo stato comune dichiarato, con due evoluzioni naturali e la riserva alimentata. Il contratto richiede di includere anche le pescate decisive del setup.",
+                "correction": "Includere me03-113 nelle specificDraws delle opzioni che riutilizzano questo setup, distinguendo la sua funzione preparatoria dalle pescate necessarie alla sola replica avversaria.",
+                "sourceIds": [
+                  "card:me03-113",
+                  "card:me05-067",
+                  "card:me02.5-250"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-rotom-budew",
+                "message": "specificDraws è vuoto, ma il seguito dimostrato richiede la seconda Mist Energy pescata al turno 2: la prima viene scartata con Fan Rotom e la seconda alimenta Toucannon al turno 4. Senza quella pesca, il KO successivo dipende da un nuovo accesso a Energia, per esempio la Spiky Energy dichiarata al turno 4. La conclusione comprende il seguito, non soltanto il KO immediato di Rotom.",
+                "correction": "Dichiarare la pesca preparatoria decisiva oppure rappresentare esplicitamente le alternative di assegnazione e le rispettive condizioni. Precisare che il KO immediato di Rotom non richiede pescate specifiche, mentre il seguito registrato sì.",
+                "sourceIds": [
+                  "card:sv05-161",
+                  "card:sv09-159",
+                  "card:me05-094",
+                  "card:sv06-129"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi opening, setupLedger, mani residue e inventari iniziali dei due scenari: nessuna discrepanza individuata.",
+              "Verificati costi degli attacchi, evoluzioni naturali, blocco Item, ritirate e conservazione delle Energie nelle linee dichiarate.",
+              "Verificati conteggi Panchina, KO, Premi e promozioni delle sequenze principali e dei rami.",
+              "Ricontrollati i budget ridotti: Bite raggiunge 40 senza nuova evoluzione; Petty Grudge raggiunge 10 senza nuova Fire.",
+              "Confrontati accesso diretto al secondo Budew tramite Poffin e recupero del primo tramite Night Stretcher; entrambi sono raggiungibili.",
+              "I campi derivati dell'app e i calcoli collegati a retreatCostId sono stati trattati come proiezioni ammesse, non come duplicazioni vietate."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "2a061e34e3a5af96557d64507ea0103c23e0e4df301c94c70aeb64c138f05dfd",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "b47966b1b24241adf1371bb7222159632102d92a7490285cde470b9908158e77",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "506e9e2644939e497383f9948a1ad1cbebc0e9d12c642cea6021769a36307752",
+        "b1af0162389106faf4889d6eb819d07fef17c0301f5fc8c918dd12bcfdc2fcc8"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "0744210a190ac089b23295f8edb137ddbbd70c5ea9576f91ef50bc6cbc518263"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "39222f531b09666b0ae31de695bce9524ef156c067927666399316091dcb54da"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "357decbc7de33a7dae54dea14bed54ea44126ed0aba57a6033650c1104007085"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "f38912de0b4805e8c280221c8dbe819c19e37f5a8df1e873464a680d7648b099"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "8a62c3bdd6b5e900732b9f29e2eead000778910b38438fada1b9829d3fe21e87"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 236320,
+      "outputTokens": 26254,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 451017,
+      "elapsedMs": 452428,
+      "startedAt": "2026-10-30T19:47:16.236Z",
+      "endedAt": "2026-10-30T19:54:48.664Z",
+      "error": "scenario-1: il turno della replica deve appartenere all’avversario.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "8c8569dc83e3ffbe06901747f2ae54d9b799dd2304389e8e62295cec6b93868f",
+          "message": "scenario-1: sviluppo incompleto fino all’attacco successivo alla replica."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "inputHash": "8c8569dc83e3ffbe06901747f2ae54d9b799dd2304389e8e62295cec6b93868f",
+          "message": "scenario-1: il turno della replica deve appartenere all’avversario."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "2d4f8eb4c34348e00f80ab65c31e174a0a7da96288d96230bba3a53445cfc4ed"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "8c8569dc83e3ffbe06901747f2ae54d9b799dd2304389e8e62295cec6b93868f"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "34b16b79dd77792d630261dd5aae79f3f93fb6d48fead7303968091c6779cd3a"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 151215,
+      "outputTokens": 28005,
+      "cachedInputTokens": 53376,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 512580,
+      "elapsedMs": 513960,
+      "startedAt": "2026-10-30T19:47:16.544Z",
+      "endedAt": "2026-10-30T19:55:50.504Z",
+      "error": "scenario-drakloak-blaziken: mee-009 ×1 non disponibile in opponent/hand.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "e65e505cf27ef810258b3f9a444c3157a84249df0c9630e698dc0ec27ee34e75",
+          "message": "scenario-drakloak-blaziken: mee-009 ×1 non disponibile in opponent/hand."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "inputHash": "e65e505cf27ef810258b3f9a444c3157a84249df0c9630e698dc0ec27ee34e75",
+          "message": "scenario-drakloak-blaziken: mee-009 ×1 non disponibile in opponent/hand."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "ee2e93b3f0e108118ef0cc2cd256fde6e6d71353e6620b593192e6a336013eb1"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "e65e505cf27ef810258b3f9a444c3157a84249df0c9630e698dc0ec27ee34e75"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "624afa4ad0e981b3ba01fff40101624d78020e0651bc92250f434d33ef9962e7"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 11,
+  "passed": 0
+}

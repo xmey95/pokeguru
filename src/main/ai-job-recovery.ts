@@ -19,6 +19,8 @@ import { readMatchupAnalysis } from './matchup-analysis'
 import { hasStrategyPhases } from '../shared/meta-matchups'
 import { aiFailureCode } from './ai-failure'
 import { AiEvidenceArchive } from './ai-evidence-archive'
+import { assertGuideReport } from '../shared/matchup-guide'
+import { assertGuideIntegrity } from './matchup-guide-generation'
 
 interface ThreadRequest {
   schemaVersion?: number
@@ -142,7 +144,7 @@ export async function recoverThreadJob(job: AiJob, jobs: AiJobStore, projects: P
 type MatchupBase = Omit<MatchupReport, 'strengths' | 'weaknesses' | 'ourKeyCards' |
   'theirKeyCards' | 'strategy' | 'limitations'>
 interface MatchupRequest {
-  analysisVersion?: 2
+  analysisVersion?: 2 | 3
   validatedDraft?: boolean
   base: MatchupBase
   discussionId?: string
@@ -154,6 +156,7 @@ interface MatchupResult { report: MatchupReport; changeSummary?: string }
 function matchupResult(job: AiJob, request: MatchupRequest, raw: unknown): MatchupResult {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Analisi Codex non valida.')
   const value = raw as Record<string, unknown>
+  if (request.analysisVersion === 3) throw new Error('Una bozza approfondita richiede il completamento dei controlli nel workflow.')
   const analysis = readMatchupAnalysis(raw, request.analysisVersion ?? 1)
   if (job.kind === 'matchup-revise' &&
     (typeof value.changeSummary !== 'string' || value.changeSummary.length > 5000))
@@ -188,6 +191,11 @@ export function recoverMatchupJob(job: AiJob, jobs: AiJobStore, projects: Projec
     throw new Error('Risultato Matchup del job non leggibile.')
   if (request.analysisVersion === 2 && !hasStrategyPhases(result.report.strategyPhases))
     throw new Error('Il piano di gioco è incompleto. Riprova.')
+  if (request.analysisVersion === 3) {
+    if (!request.validatedDraft || !result.report.guide) throw new Error('Guida approfondita non verificata.')
+    assertGuideReport(result.report)
+    assertGuideIntegrity(result.report.guide)
+  }
   if (projects.hasMatchupJobResult(job.id)) {
     jobs.transition(job.id, 'applied')
     return 'applied'

@@ -1,0 +1,40 @@
+# Collegamento generale della riparazione narrativa
+
+**Integrazione locale autorizzata, implementata e verificata il03-11-2026.** Nuovo modulo guide-premise-text-repair.ts collegato a constructGuideMainLines per tutte le guide v28. I tre testi diagnostici non sono adottati e non esiste autorizzazione a nuova rete. Le sezioni Contratto previsto e Verifiche prima della rete conservano i criteri della proposta; lo stato implementato è precisato qui sotto.
+
+Il generatore attuale ricostruisce tutto il primo turno per ogni repairScope=first-turn, anche quando il rilievo è solo una frase incompleta. La proposta separa questo caso usando un ambito esplicito del critico, non una ricerca di parole come “troncato”, il livello minor/major o nomi delle carte. Mancanza di alternative, costi, eventi e risorse continua a richiedere riparazione del turno o del setup. Un dubbio sulla natura del rilievo non autorizza un intervento solo testuale.
+
+## Contratto previsto
+
+- Nuovo ambito di riparazione testuale della premessa, esplicito e strutturato. Ogni finding deve riguardare uno dei tre campi consentiti; finding con azioni alternative o con cambiamenti al registro non appartiene a questo ambito. Rilievi e controlinee restano integralmente nello storico. La compatibilità con vecchie recensioni first-turn non viene indovinata o riscritta: occorre un nuovo routing AI sullo stesso input, oppure il percorso completo già esistente.
+- Richiesta piccola: caseId, hash esatto del prefisso, comparison, reason, pivot. Derivare gli schemi dal turno nativo associato alla lista e all’avversario, senza duplicare i tetti in una nuova politica. Mantenere i maxLength originali anche nel trasporto, perché A ha funzionato. Nessun troncamento automatico.
+- Il reader inserisce solo le tre stringhe AI in una copia del corpo originario, poi esegue il reader nativo completo. Il validatore della cache ricostruisce il risultato atteso e verifica che non sia cambiato alcun altro campo. Scope, fonti, corpo e sviluppo originari fanno parte dell’identità della richiesta.
+- Salvare nuova ricevuta e checkpoint senza sovrascrivere il prefisso respinto o il giudizio precedente. Il turno corretto richiede una nuova critica indipendente sul suo hash. Nessun pass ereditato dal prefisso precedente o dal job diagnostico. Rifiuti del critico restano rifiuti, anche quando sono solo testuali.
+- Conservare invalidazione dei discendenti e dipendenze: una modifica narrativa cambia l’identità del prefisso. La prima integrazione riguarda la critica anticipata, prima dei turni successivi. Non estenderla tacitamente alle linee complete o ai rami senza provarne invalidazione e ripresa.
+- Ripresa dopo interruzione: riutilizzare solo una risposta pagata identica, validata nuovamente con controlli correnti e fonti esatte; riesame solo se identico anche il suo input. Un nuovo feedback ha identità nuova. Nessun retry illimitato o azzeramento dei tentativi.
+
+Questo è generale per la fase di premessa delle guide: niente condizioni su matchup, set, carta o ID dello scenario. Non risolve automaticamente i rilievi tattici delle fasi successive e non dimostra generalizzazione da solo.
+
+## Verifiche prima della rete
+
+Contratto testuale su due fixture con ID/carte e limiti distinti; rigetto di campi extra, stringhe fuori limite, quantità/destinatari alterati, hash/scope/fonti estranei e cache fisicamente modificata. Verificare che il critico con rilievi su risorse o alternative mantenga il percorso completo, e che un pass incoerente sia respinto. Testare interruzione prima/dopo risposta e critica, conservando tutti i record negativi e senza ricomprare risposte valide. Verificare batching con un caso narrativo e un caso fisico, fratelli accettati intatti e tutte le riserve.
+
+Prima del collegamento conservare le impronte dei prompt storici o introdurre una versione di protocollo esplicita; non ricomprare silenziosamente ricevute/critiche già pagate. Suite, typecheck/build e replay sulle copie dei tre job devono precedere un nuovo freeze o una richiesta live.
+
+## Budget e decisione successiva
+
+Il diagnostico non riduce il numero di fasi obbligatorie. Dopo58 cumulative Crustle ha6 residue entro64, mentre l’ultimo controller sul job principale chiedeva11. Non rimuovere controlli o abbassare artificialmente la riserva per farlo entrare. Prima di proporre una ripresa bisogna calcolare il minimo effettivo sul nuovo protocollo, includendo le tre chiamate diagnostiche e l’eventuale nuovo routing. Nessuna nuova autorizzazione, aumento o adozione è implicita in questo documento. Il nuovo replay sottrae le tre invocazioni diagnostiche dal limite del job principale:64 complessive significano61 nel job, con55 già spese.
+
+Criterio per le prove future: una riparazione narrativa deve riuscire senza modificare la fisica, essere riesaminata sul nuovo prefisso e conservare le stesse garanzie anche su un caso estraneo agli esempi. Solo dopo le tre guide complete valide seguiranno controllo UI e valutazione held-out/generale. Oggi questi criteri restano aperti.
+
+## Collegamento implementato
+
+Il riesame della premessa e il suo schema storico restano byte-identici. I feedback first-turn senza alternative eseguibili richiedono una nuova decisione separata del critico: pg-premise-repair-route-1, con hash del feedback e del prefisso, mode=text oppure turn, campi espliciti e motivo. Il routing non può emettere un pass, modificare o cancellare finding. I rilievi con controlinee/azioni proposte continuano direttamente al turno completo; non sono candidati a sola narrativa. La severità e il wording non classificano l’ambito.
+
+pg-premise-text-repair-1 deriva i tre limiti dal reader nativo corrente, conserva anche i maxLength del trasporto e fissa a const ogni campo non autorizzato. Il reader copia il corpo originario e sostituisce esclusivamente le stringhe AI ricevute, poi richiama il reader completo del turno. Cache alterate in qualunque altro campo, risposta invariata, scope/fonti/ID/hash estranei o testi oltre limite sono respinti. La richiesta non è una guida valida e non genera un pass.
+
+Il coordinator salva i normali checkpoint e richiede il riesame completo sul nuovo hash, conservando tutti i rifiuti originali. Un’interruzione prima della patch recupera la sola classificazione pagata; un’interruzione dopo la patch recupera il prefisso e riparte dal nuovo critico. I fratelli già accettati sono conservati. Lo scheduler pianifica separatamente header testuali e nativi, contando tutti i gruppi futuri nelle riserve; rimane il divieto di mescolare ruoli, progetti o fonti. Scaling e timeout passano per le funzioni correnti, senza corsie dirette al provider. Il primitive storico a linea singola e i vecchi protocolli sono conservati; la nuova integrazione usa il coordinator v28 realmente chiamato dal generatore.
+
+Il primo typecheck ha rilevato un limite del tipo intersezione delle liste di finding: usare Omit sul solo tipo, mantenendo identico il reader/schema runtime. Inferenza del generico routing resa esplicita. Log negativo conservato, typecheck finale passato. Nel primo replay la richiesta di ripresa era diversa dall’originale e il controllo di identità l’ha respinta: ripetuto con la richiesta originale esatta; nessuna modifica di ID o dati per aggirare il vincolo, log negativo conservato.
+
+22 test mirati passati comprendono sei regressioni nuove: due binding di carte distinti, campi/limiti/scope/cache, routing esplicito, interruzioni prima/dopo patch, percorso fisico alternativo e isolamento dei gruppi. Tre replay sulle copie passano: primo caso fermato dal limite vigente; solo in copia con70 complessive, routing sintetico dichiarato e richiesta di soli testi; altri due casi raggiungono soltanto il piano. Fonte e55 tentativi/30 checkpoint intatti. Nessuna chiamata reale, nessuna approvazione semantica in questi replay. Esito finale:612 pass/44 esclusi, typecheck/build e freeze468 intatto; il sizing freddo facoltativo è stato interrotto senza risultati, nessuna nuova stima18/18/20 dichiarata. Budget corrente e limiti in PREMISE-TEXT-VERIFICATION.md.

@@ -1,3 +1,5 @@
+**Novità v0.3.13 — guide approfondite e generazione ottimizzata.** Guide personalizzate sulla lista esatta e sul singolo matchup, scenari verificati prima della prosa, riparazioni automatiche e recupero delle risposte già pagate. Funzioni AI puntuali e diagnostica della v0.3.12 conservate. [Note di versione](docs/releases/v0.3.13.md) · [Qualificazione e stato della pubblicazione](docs/releases/v0.3.13-VERIFICATION.md).
+
 <p align="center">
   <img src="resources/icon.png" alt="Logo Pokéguru" width="96" height="96">
 </p>

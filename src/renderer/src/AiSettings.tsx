@@ -3,6 +3,7 @@ import type { AiConnection, AiLoginStart, AiPreferences, CodexSetupStatus } from
 import { useNavigation, useDraftState, useBusyState, useBusyStartedAt } from './Navigation'
 import { ActivityStatus, Spinner } from './Loading'
 import { NotificationSoundSettings } from './NotificationSoundSettings'
+import {AiQuotaView} from './AiLimits'
 
 const automatic: AiPreferences = { model: null, reasoningEffort: null }
 type Action = 'save' | 'test' | 'login' | 'logout'
@@ -208,6 +209,7 @@ export function AiSettings() {
         <p className="warning-banner" role="status">La CLI ufficiale non si avvia. Verifica l’installazione di Pokéguru e riprova.</p>
       </div>}
       {setup?.cliAvailable && <p className="content-note">{setup.bundled ? 'Codex incluso in Pokéguru' : 'CLI Codex disponibile'}: {setup.version}</p>}
+      {connected&&<AiQuotaView quota={connection?.quota} />}
       {connection && !connection.account && <button type="button" className="text-button" onClick={() => void login('device')} disabled={busy || loginPending}>Accedi con codice dispositivo</button>}
       {loginPending && <div>
         <ActivityStatus state="paused" title={deviceLogin ? 'Completa l’accesso con il codice' : 'Completa l’accesso nel browser'} detail="Lo stato si aggiorna automaticamente." />

@@ -1,0 +1,5317 @@
+{
+  "task": "APP-215",
+  "date": "2026-10-31",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "promptVersion": "matchup-guide-22",
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "manualCorrections": 0,
+  "diagnosticCalls": 0,
+  "estimateOnly": true,
+  "sealedFiles": 59,
+  "changedSealedFiles": [],
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 438,
+    "externalSkipped": 44,
+    "newTargetedTests": 6,
+    "typecheck": "pass",
+    "build": "pass",
+    "offlineOutputReplay": "pass",
+    "offlineAllSchemas": "pass",
+    "postLiveChecks": 5
+  },
+  "timeoutRecovery": {
+    "at": "2026-10-31T16:35:36.385Z",
+    "modelCallsForAudit": 0,
+    "actualInvocations": 13,
+    "automaticTimeoutRetries": [
+      {
+        "id": "toucannon-dragapult",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "identicalInputHash": "cbc714f6341e6f2fe6bba524f9a34515a97995776d5f6afc46f0cd45e3712d7f",
+        "singleImmutableContext": true,
+        "remainingBefore": 7,
+        "remainingOnRetry": 6,
+        "actualRetryInvoked": true,
+        "retryStatus": "succeeded"
+      },
+      {
+        "id": "toucannon-festival",
+        "failedSequence": 3,
+        "retrySequence": 4,
+        "stage": "scenarios-1",
+        "identicalInputHash": "d0a16ae4fdd00e87b34c278359e3677b5783493c52364fcf9bd43939c21e518e",
+        "singleImmutableContext": true,
+        "remainingBefore": 6,
+        "remainingOnRetry": 5,
+        "actualRetryInvoked": true,
+        "retryStatus": "failed"
+      }
+    ],
+    "immutableContextFailures": 0
+  },
+  "outputCompressionAudit": {
+    "modelCalls": 0,
+    "priorGuidesChanged": false,
+    "oldCasesManuallyRepaired": false,
+    "rows": [
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 2,
+        "rawUnchanged": true,
+        "error": "Error: scenario-1: destinatario dell’Energia non presente in campo. Evento without-drakloak[10], turno 3 opponent: Assegna la Fire Energy ottenuta con Recon Directive al Drakloak già provvisto di Psychic Energy.. Percorso dichiarato: {\"side\":\"opponent\",\"printId\":\"mee-010\",\"count\":1,\"path\":[\"hand\",\"attached\"],\"hostPrintId\":\"sv06-129\",\"sourceIds\":[\"card:mee-010\"],\"attachment\":\"manual\"}. Campo effettivo a questo punto: [{\"side\":\"ours\",\"printId\":\"me02.5-250\",\"zone\":\"active\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me05-066\",\"zone\":\"bench\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"sv06-128\",\"zone\":\"bench\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"me02.5-016\",\"zone\":\"bench\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me04-070\",\"zone\":\"bench\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me02.5-250\",\"zone\":\"bench\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-128\",\"zone\":\"active\",\"count\":1}]. Registrare prima l'ingresso o l'evoluzione reale del destinatario e usare la stampa attualmente in campo; nessun host è stato sostituito automaticamente.",
+        "newVersionDiagnosticOnly": "Error: scenario-1: destinatario dell’Energia non presente in campo. Evento without-drakloak[10], turno 3 opponent: Assegna la Fire Energy ottenuta con Recon Directive al Drakloak già provvisto di Psychic Energy.. Percorso dichiarato: {\"side\":\"opponent\",\"printId\":\"mee-010\",\"count\":1,\"path\":[\"hand\",\"attached\"],\"hostPrintId\":\"sv06-129\",\"sourceIds\":[\"card:mee-010\"],\"attachment\":\"manual\"}. Campo effettivo a questo punto: [{\"side\":\"ours\",\"printId\":\"me02.5-250\",\"zone\":\"active\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me05-066\",\"zone\":\"bench\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"sv06-128\",\"zone\":\"bench\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"me02.5-016\",\"zone\":\"bench\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me04-070\",\"zone\":\"bench\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me02.5-250\",\"zone\":\"bench\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-128\",\"zone\":\"active\",\"count\":1}]. Registrare prima l'ingresso o l'evoluzione reale del destinatario e usare la stampa attualmente in campo; nessun host è stato sostituito automaticamente.",
+        "roundtripIdentical": true
+      },
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 3,
+        "rawUnchanged": true,
+        "error": "Error: scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"opponentLineEvents\",\"requiredUse\":\"turns.opponent.events (anche nei rami)\",\"entries\":[{\"index\":10,\"value\":{\"kind\":\"effect\",\"description\":\"Evento sostituito dalla sequenza esplicita delle due evoluzioni naturali.\",\"moves\":[],\"energyRoutes\":[],\"attack\":null,\"trainer\":null,\"action\":\"other\",\"affectedSide\":\"opponent\",\"deckObservations\":[],\"retreat\":null,\"accessReceipt\":null}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+        "newVersionDiagnosticOnly": "",
+        "roundtripIdentical": false
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 2,
+        "rawUnchanged": true,
+        "error": "Error: scenario-1: me01-167 ×1 non disponibile in ours/hand. Evento main[2], turno 6 ours: Buddy-Buddy Poffin, ottenuto da Aerial Draw, prepara un nuovo Pikipek.. Disponibilità effettiva: active=0, bench=0, evolution=0, attached=0, hand=0, discard=0, prizes=0, deck=4, stadium=0, lost=0. Non inventare un accesso: correggere il percorso dichiarato e la sua fonte, oppure cambiare linea.",
+        "newVersionDiagnosticOnly": "Error: scenario-1: me01-167 ×1 non disponibile in ours/hand. Evento main[2], turno 6 ours: Buddy-Buddy Poffin, ottenuto da Aerial Draw, prepara un nuovo Pikipek.. Disponibilità effettiva: active=0, bench=0, evolution=0, attached=0, hand=0, discard=0, prizes=0, deck=4, stadium=0, lost=0. Non inventare un accesso: correggere il percorso dichiarato e la sua fonte, oppure cambiare linea. Stato prima dell'evento e soli movimenti precedenti già verificati (non una correzione applicata): {\"before\":[{\"side\":\"ours\",\"printId\":\"me05-094\",\"zone\":\"deck\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me05-067\",\"zone\":\"deck\",\"count\":2},{\"side\":\"ours\",\"printId\":\"me02.5-250\",\"zone\":\"deck\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me04-070\",\"zone\":\"deck\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me05-066\",\"zone\":\"deck\",\"count\":2},{\"side\":\"ours\",\"printId\":\"sv06-186\",\"zone\":\"deck\",\"count\":2},{\"side\":\"ours\",\"printId\":\"sv06.5-040\",\"zone\":\"deck\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me02-116\",\"zone\":\"deck\",\"count\":3},{\"side\":\"ours\",\"printId\":\"me01-173\",\"zone\":\"deck\",\"count\":2},{\"side\":\"ours\",\"printId\":\"me02.5-256\",\"zone\":\"deck\",\"count\":2},{\"side\":\"ours\",\"printId\":\"me01-175\",\"zone\":\"deck\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me01-166\",\"zone\":\"deck\",\"count\":3},{\"side\":\"ours\",\"printId\":\"me01-167\",\"zone\":\"deck\",\"count\":4},{\"side\":\"ours\",\"printId\":\"me03-113\",\"zone\":\"deck\",\"count\":4},{\"side\":\"ours\",\"printId\":\"sv06-205\",\"zone\":\"deck\",\"count\":3},{\"side\":\"ours\",\"printId\":\"me01-184\",\"zone\":\"deck\",\"count\":2},{\"side\":\"ours\",\"printId\":\"me03-115\",\"zone\":\"deck\",\"count\":1},{\"side\":\"ours\",\"printId\":\"sv09-159\",\"zone\":\"deck\",\"count\":3},{\"side\":\"ours\",\"printId\":\"sv06-167\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-017\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-018\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-015\",\"zone\":\"deck\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"sv06-044\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv05-023\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv05-024\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv10-010\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me01-119\",\"zone\":\"deck\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"me05-077\",\"zone\":\"deck\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"me01-114\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-155\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-154\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me03-081\",\"zone\":\"deck\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"sv05-144\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me01-131\",\"zone\":\"deck\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"me02.5-196\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-163\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me02.5-212\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me01-130\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv10.5w-080\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me02.5-181\",\"zone\":\"deck\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-149\",\"zone\":\"deck\",\"count\":3},{\"side\":\"opponent\",\"printId\":\"mee-009\",\"zone\":\"deck\",\"count\":2},{\"side\":\"ours\",\"printId\":\"sv05-161\",\"zone\":\"hand\",\"count\":2},{\"side\":\"ours\",\"printId\":\"me01-175\",\"zone\":\"hand\",\"count\":1},{\"side\":\"ours\",\"printId\":\"sv06-205\",\"zone\":\"prizes\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me01-184\",\"zone\":\"prizes\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me01-166\",\"zone\":\"prizes\",\"count\":1},{\"side\":\"ours\",\"printId\":\"sv09-159\",\"zone\":\"prizes\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv10.5w-080\",\"zone\":\"prizes\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me01-119\",\"zone\":\"prizes\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv05-144\",\"zone\":\"prizes\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me01-131\",\"zone\":\"prizes\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-014\",\"zone\":\"bench\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"me03-081\",\"zone\":\"discard\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"sv06-017\",\"zone\":\"discard\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"sv06-018\",\"zone\":\"active\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-014\",\"zone\":\"evolution\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-015\",\"zone\":\"bench\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv05-144\",\"zone\":\"discard\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"me03-086\",\"zone\":\"attached\",\"count\":2},{\"side\":\"opponent\",\"printId\":\"me02.5-181\",\"zone\":\"attached\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-149\",\"zone\":\"stadium\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me02-116\",\"zone\":\"discard\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me02.5-250\",\"zone\":\"discard\",\"count\":1},{\"side\":\"ours\",\"printId\":\"sv05-161\",\"zone\":\"discard\",\"count\":2},{\"side\":\"ours\",\"printId\":\"me05-094\",\"zone\":\"hand\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me01-175\",\"zone\":\"discard\",\"count\":2},{\"side\":\"ours\",\"printId\":\"me05-066\",\"zone\":\"evolution\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me05-094\",\"zone\":\"active\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me01-184\",\"zone\":\"discard\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me02.5-256\",\"zone\":\"hand\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-018\",\"zone\":\"discard\",\"count\":1},{\"side\":\"ours\",\"printId\":\"sv10-185\",\"zone\":\"hand\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"mee-009\",\"zone\":\"discard\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me01-119\",\"zone\":\"discard\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me02.5-196\",\"zone\":\"hand\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-044\",\"zone\":\"evolution\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv06-126\",\"zone\":\"evolution\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv05-023\",\"zone\":\"bench\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"sv08.5-021\",\"zone\":\"bench\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me01-114\",\"zone\":\"hand\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me05-094\",\"zone\":\"discard\",\"count\":1},{\"side\":\"ours\",\"printId\":\"me05-066\",\"zone\":\"discard\",\"count\":1},{\"side\":\"opponent\",\"printId\":\"me02.5-039\",\"zone\":\"hand\",\"count\":1}],\"verifiedPrefix\":[],\"failedMove\":{\"side\":\"ours\",\"printId\":\"me01-167\",\"count\":1,\"from\":\"hand\",\"to\":\"discard\"}}. La descrizione di una pesca/ricerca non sposta carte: dichiarare il trasferimento reale prima dell'uso, con fonte e costi.",
+        "roundtripIdentical": true
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 3,
+        "rawUnchanged": true,
+        "error": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "newVersionDiagnosticOnly": "",
+        "roundtripIdentical": false
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 2,
+        "rawUnchanged": true,
+        "error": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro e i rami richiesti. Non presento questa risposta come caso valido né come guida utilizzabile. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "newVersionDiagnosticOnly": "",
+        "roundtripIdentical": false
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 3,
+        "rawUnchanged": true,
+        "error": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro eseguibile, i tre rami e le verifiche richieste. Questo è un limite della costruzione, non dei dati forniti; non presento il caso come valido. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "newVersionDiagnosticOnly": "",
+        "roundtripIdentical": false
+      }
+    ],
+    "measurements": [
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 2,
+        "nativeCharacters": 54302,
+        "inlineCharacters": 45042,
+        "prettyInlineCharacters": 104854
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 2,
+        "nativeCharacters": 68338,
+        "inlineCharacters": 55907,
+        "prettyInlineCharacters": 132400
+      }
+    ]
+  },
+  "feedbackAudit": {
+    "at": "2026-10-31T16:35:36.464Z",
+    "modelCalls": 0,
+    "readOnly": true,
+    "retries": [
+      {
+        "id": "toucannon-dragapult",
+        "failedSequence": 4,
+        "retrySequence": 5,
+        "stage": "scenarios-2",
+        "previousRawHash": "239f1818ec198b5daa6ffa0ee549f24478bfe0f7da4ad614a95bd60db2944938",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 134122,
+        "retryInputBytes": 138500
+      },
+      {
+        "id": "toucannon-festival",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "d77be0b944743127d2a846bfca7b95417798c4632df636f372700cb6a0e49e00",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 137668,
+        "retryInputBytes": 144198
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "ba3d4bacecd970d7b572c733099218ecfc36a6a811f1d1e3dbd7b92a1f1f2faa",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 164675,
+        "retryInputBytes": 107339
+      }
+    ]
+  },
+  "outputProtocol": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "succeeded",
+            "responseCharacters": 48036,
+            "encoding": "pg-scenario-inline-4",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 59316,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 22,
+                "calculations": 17,
+                "transitions": 26
+              }
+            },
+            "inlineSummary": [
+              {
+                "id": "scenario-1",
+                "events": 89,
+                "moves": 94,
+                "energyRoutes": 27,
+                "audits": 14,
+                "promotionReviewsDeclared": 22,
+                "coverage": {
+                  "direct": "reply-direct",
+                  "access": "reply-access",
+                  "defend": "reply-defend"
+                }
+              }
+            ]
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-2",
+            "status": "failed",
+            "responseCharacters": 4861,
+            "encoding": "pg-scenario-inline-4",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-2: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il caso richiesto. Le lacune sono della costruzione, non dei dati consegnati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "inlineSummary": null
+          },
+          {
+            "sequence": 5,
+            "stage": "scenarios-2",
+            "status": "succeeded",
+            "responseCharacters": 59547,
+            "encoding": "pg-scenario-inline-4",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 73605,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 22,
+                "calculations": 13,
+                "transitions": 23
+              }
+            },
+            "inlineSummary": [
+              {
+                "id": "scenario-2",
+                "events": 110,
+                "moves": 105,
+                "energyRoutes": 43,
+                "audits": 16,
+                "promotionReviewsDeclared": 36,
+                "coverage": {
+                  "direct": "direct-dragapult",
+                  "access": "access-crispin",
+                  "defend": "defend-budew"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 6899,
+            "encoding": "pg-scenario-inline-4",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "inlineSummary": null
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 8662,
+            "encoding": "pg-scenario-inline-4",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "inlineSummary": null
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 6048,
+            "encoding": "pg-scenario-inline-4",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Candidato Solar Cutter; registro non completato. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "inlineSummary": null
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-1-rebuild",
+            "status": "failed",
+            "responseCharacters": 22896,
+            "encoding": "pg-scenario-inline-4",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 27297,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [
+                "scenario-1: manca prova di rimozione per mee-009.",
+                "scenario-1:direct: manca prova di rimozione per mee-009.",
+                "scenario-1:access: manca prova di rimozione per mee-009.",
+                "scenario-1:defend: manca prova di rimozione per mee-009."
+              ],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 18,
+                "calculations": 9,
+                "transitions": 12
+              }
+            },
+            "inlineSummary": [
+              {
+                "id": "scenario-1",
+                "events": 30,
+                "moves": 23,
+                "energyRoutes": 11,
+                "audits": 10,
+                "promotionReviewsDeclared": 4,
+                "coverage": {
+                  "direct": "direct",
+                  "access": "access",
+                  "defend": "defend"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "referenceAudit": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "eventsNotRemoved": true,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-inline-4",
+            "poolsDeclared": [],
+            "expansionError": null,
+            "constructed": true,
+            "declaredEventsInline": true,
+            "applied": false
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-2",
+            "scenarioId": "scenario-2",
+            "encoding": "pg-scenario-inline-4",
+            "poolsDeclared": [],
+            "expansionError": null,
+            "constructed": false,
+            "declaredEventsInline": true,
+            "applied": false
+          },
+          {
+            "sequence": 5,
+            "stage": "scenarios-2",
+            "scenarioId": "scenario-2",
+            "encoding": "pg-scenario-inline-4",
+            "poolsDeclared": [],
+            "expansionError": null,
+            "constructed": true,
+            "declaredEventsInline": true,
+            "applied": false
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-inline-4",
+            "poolsDeclared": [],
+            "expansionError": null,
+            "constructed": false,
+            "declaredEventsInline": true,
+            "applied": false
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-inline-4",
+            "poolsDeclared": [],
+            "expansionError": null,
+            "constructed": false,
+            "declaredEventsInline": true,
+            "applied": false
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-inline-4",
+            "poolsDeclared": [],
+            "expansionError": null,
+            "constructed": false,
+            "declaredEventsInline": true,
+            "applied": false
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-1-rebuild",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-inline-4",
+            "poolsDeclared": [],
+            "expansionError": null,
+            "constructed": true,
+            "declaredEventsInline": true,
+            "applied": false
+          }
+        ]
+      }
+    ]
+  },
+  "rebuildAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "manualEdits": 0,
+    "maximumPerGuide": 8,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "rebuilds": [],
+        "skipped": [],
+        "rebuiltOpenings": [],
+        "actualCalls": 5
+      },
+      {
+        "id": "toucannon-festival",
+        "rebuilds": [],
+        "skipped": [],
+        "rebuiltOpenings": [],
+        "actualCalls": 4
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "rebuilds": [
+          {
+            "caseId": "scenario-1",
+            "origin": "automatic-after-two-structural-failures",
+            "remainingCalls": 5,
+            "reservedCalls": 4,
+            "maximumCalls": 1,
+            "failedSequences": [
+              2,
+              3
+            ],
+            "invocations": [
+              {
+                "sequence": 4,
+                "inputHash": "bbf3c764fbcec13bde78cb5fdfa2c50a3472093f6bf7b8e4420bd568545417e5",
+                "stage": "scenarios-1-rebuild"
+              }
+            ]
+          }
+        ],
+        "skipped": [],
+        "rebuiltOpenings": [],
+        "actualCalls": 4
+      }
+    ]
+  },
+  "positiveReplay": {
+    "modelCalls": 0,
+    "oldFactsChanged": false,
+    "rows": [
+      {
+        "sequence": 3,
+        "legacyVersion": "matchup-guide-20",
+        "localErrors": [],
+        "nativeCharacters": 38706,
+        "inlineCharacters": 31262,
+        "prettyInlineCharacters": 77540,
+        "roundtripIdentical": true,
+        "notAnApprovedGuide": true
+      },
+      {
+        "sequence": 4,
+        "legacyVersion": "matchup-guide-20",
+        "localErrors": [],
+        "nativeCharacters": 28336,
+        "inlineCharacters": 24710,
+        "prettyInlineCharacters": 50910,
+        "roundtripIdentical": true,
+        "notAnApprovedGuide": true
+      }
+    ]
+  },
+  "calibrationAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "maximumPolicyUnchanged": true,
+    "perRequestContextMeasured": false,
+    "calibrationRule": "max(1.12, all observed turn input / visible prompt+schema * 1.1), plus 2048 tokens; no outlier divided or discarded",
+    "source": "https://learn.chatgpt.com/docs/non-interactive-mode",
+    "historicalOutlierCause": "Not reconstructible from archived final counters; original CLI used --ephemeral",
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "samples": [
+          {
+            "sequence": 1,
+            "visibleTokens": 74555,
+            "inputTokens": 85709,
+            "outputTokens": 2349,
+            "family": "plan",
+            "units": 1,
+            "responseCharacters": 7624,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 3,
+            "visibleTokens": 63986,
+            "inputTokens": 72745,
+            "outputTokens": 19275,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 48036,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 4,
+            "visibleTokens": 64021,
+            "inputTokens": 72780,
+            "outputTokens": 3230,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 4861,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 5,
+            "visibleTokens": 65267,
+            "inputTokens": 74026,
+            "outputTokens": 23589,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 59547,
+            "usageScope": "codex-turn"
+          }
+        ],
+        "issuedPlans": [
+          {
+            "sequence": 1,
+            "stage": "plan",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 74555,
+            "estimatedInput": 85550,
+            "reservedOutput": 6000,
+            "estimatedResponseCharacters": 8000,
+            "margin": 8192,
+            "bytes": 241397,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 8,
+            "reservedCalls": 5,
+            "calibrationFactor": 1.12,
+            "family": "plan",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.12,
+              "samples": 0,
+              "turnSamples": 0,
+              "unknownSamples": 0,
+              "largestInput": 0,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 63986,
+            "estimatedInput": 82963,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 133976,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 7,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.264568439407149,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.264568439407149,
+              "samples": 1,
+              "turnSamples": 1,
+              "unknownSamples": 0,
+              "largestInput": 85709,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 63986,
+            "estimatedInput": 82963,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 133976,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 6,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.264568439407149,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.264568439407149,
+              "samples": 1,
+              "turnSamples": 1,
+              "unknownSamples": 0,
+              "largestInput": 85709,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-2",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 64021,
+            "estimatedInput": 83007,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 55242,
+            "margin": 8192,
+            "bytes": 134122,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 5,
+            "reservedCalls": 3,
+            "calibrationFactor": 1.264568439407149,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.264568439407149,
+              "samples": 2,
+              "turnSamples": 2,
+              "unknownSamples": 0,
+              "largestInput": 85709,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 5,
+            "stage": "scenarios-2",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 65267,
+            "estimatedInput": 84583,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 55242,
+            "margin": 8192,
+            "bytes": 138500,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 4,
+            "reservedCalls": 3,
+            "calibrationFactor": 1.264568439407149,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.264568439407149,
+              "samples": 3,
+              "turnSamples": 3,
+              "unknownSamples": 0,
+              "largestInput": 85709,
+              "measurement": "turn-usage-conservative"
+            }
+          }
+        ],
+        "blockedCandidates": [],
+        "usageEvidence": [
+          {
+            "sequence": 1,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 2,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 3,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 7,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 4,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 5,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 5,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 9,
+            "requestInputTokens": null
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "samples": [
+          {
+            "sequence": 1,
+            "visibleTokens": 80161,
+            "inputTokens": 91316,
+            "outputTokens": 2262,
+            "family": "plan",
+            "units": 1,
+            "responseCharacters": 7551,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 2,
+            "visibleTokens": 65865,
+            "inputTokens": 74546,
+            "outputTokens": 3962,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 6899,
+            "usageScope": "codex-turn"
+          }
+        ],
+        "issuedPlans": [
+          {
+            "sequence": 1,
+            "stage": "plan",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 80161,
+            "estimatedInput": 91829,
+            "reservedOutput": 6000,
+            "estimatedResponseCharacters": 8000,
+            "margin": 8192,
+            "bytes": 263818,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 8,
+            "reservedCalls": 5,
+            "calibrationFactor": 1.12,
+            "family": "plan",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.12,
+              "samples": 0,
+              "turnSamples": 0,
+              "unknownSamples": 0,
+              "largestInput": 0,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 65865,
+            "estimatedInput": 84582,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 137668,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 7,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.253073190204713,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.253073190204713,
+              "samples": 1,
+              "turnSamples": 1,
+              "unknownSamples": 0,
+              "largestInput": 91316,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 67674,
+            "estimatedInput": 86849,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 144198,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 6,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.253073190204713,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.253073190204713,
+              "samples": 2,
+              "turnSamples": 2,
+              "unknownSamples": 0,
+              "largestInput": 91316,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 67674,
+            "estimatedInput": 86849,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 144198,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 5,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.253073190204713,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.253073190204713,
+              "samples": 2,
+              "turnSamples": 2,
+              "unknownSamples": 0,
+              "largestInput": 91316,
+              "measurement": "turn-usage-conservative"
+            }
+          }
+        ],
+        "blockedCandidates": [],
+        "usageEvidence": [
+          {
+            "sequence": 1,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 2,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 2,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 5,
+            "requestInputTokens": null
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "samples": [
+          {
+            "sequence": 1,
+            "visibleTokens": 42917,
+            "inputTokens": 54070,
+            "outputTokens": 2636,
+            "family": "plan",
+            "units": 1,
+            "responseCharacters": 8507,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 2,
+            "visibleTokens": 65432,
+            "inputTokens": 74062,
+            "outputTokens": 4106,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 8662,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 3,
+            "visibleTokens": 53715,
+            "inputTokens": 62342,
+            "outputTokens": 6412,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 6048,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 4,
+            "visibleTokens": 53722,
+            "inputTokens": 62269,
+            "outputTokens": 9060,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 22896,
+            "usageScope": "codex-turn"
+          }
+        ],
+        "issuedPlans": [
+          {
+            "sequence": 1,
+            "stage": "plan",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 42917,
+            "estimatedInput": 50116,
+            "reservedOutput": 6000,
+            "estimatedResponseCharacters": 8000,
+            "margin": 8192,
+            "bytes": 142993,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 8,
+            "reservedCalls": 5,
+            "calibrationFactor": 1.12,
+            "family": "plan",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.12,
+              "samples": 0,
+              "turnSamples": 0,
+              "unknownSamples": 0,
+              "largestInput": 0,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 65432,
+            "estimatedInput": 92728,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 164675,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 7,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.3858610806906357,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.3858610806906357,
+              "samples": 1,
+              "turnSamples": 1,
+              "unknownSamples": 0,
+              "largestInput": 54070,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 53715,
+            "estimatedInput": 76490,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 107339,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 6,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.3858610806906357,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.3858610806906357,
+              "samples": 2,
+              "turnSamples": 2,
+              "unknownSamples": 0,
+              "largestInput": 74062,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-1-rebuild",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 53722,
+            "estimatedInput": 76500,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 106069,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 5,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.3858610806906357,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.3858610806906357,
+              "samples": 3,
+              "turnSamples": 3,
+              "unknownSamples": 0,
+              "largestInput": 74062,
+              "measurement": "turn-usage-conservative"
+            }
+          }
+        ],
+        "blockedCandidates": [],
+        "usageEvidence": [
+          {
+            "sequence": 1,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 2,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 2,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 4,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 3,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 11,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 4,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 5,
+            "requestInputTokens": null
+          }
+        ]
+      }
+    ]
+  },
+  "calibrationHistory": {
+    "modelCalls": 0,
+    "historicalSamples": [
+      {
+        "visibleTokens": 58000,
+        "inputTokens": 69256,
+        "outputTokens": 2334,
+        "family": "plan",
+        "units": 1,
+        "responseCharacters": 8178
+      },
+      {
+        "visibleTokens": 60879,
+        "inputTokens": 69265,
+        "outputTokens": 9350,
+        "family": "scenario",
+        "units": 1,
+        "responseCharacters": 24255
+      },
+      {
+        "visibleTokens": 60912,
+        "inputTokens": 139697,
+        "outputTokens": 15221,
+        "family": "scenario",
+        "units": 1,
+        "responseCharacters": 35707
+      }
+    ],
+    "calibration": {
+      "factor": 2.5227656291042817,
+      "samples": 3,
+      "turnSamples": 0,
+      "unknownSamples": 3,
+      "largestInput": 139697,
+      "measurement": "turn-usage-conservative"
+    },
+    "oldCliMode": "exec --ephemeral --json",
+    "oldTraceAvailable": false,
+    "causeOfLargerUsage": "Not reconstructible from acquired final counters; no inferred internal request count or per-request context measurement.",
+    "source": "https://learn.chatgpt.com/docs/non-interactive-mode"
+  },
+  "reviewContextAudit": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "outputsChanged": false,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "reviews": []
+      },
+      {
+        "id": "toucannon-festival",
+        "reviews": []
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "reviews": []
+      }
+    ]
+  },
+  "accessAudit": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "outputsChanged": false,
+    "substituteEventsChosen": false,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "plans": [
+          {
+            "allocations": [
+              {
+                "caseId": "scenario-1",
+                "opening": {
+                  "ours": {
+                    "active": "me02.5-250",
+                    "hand": [
+                      "me05-066",
+                      "me05-066",
+                      "me05-067",
+                      "me02-116",
+                      "sv09-159",
+                      "me01-166"
+                    ],
+                    "prizes": [
+                      "me05-094",
+                      "me01-175",
+                      "sv06-205",
+                      "me01-184",
+                      "sv05-161",
+                      "me01-167"
+                    ],
+                    "bench": []
+                  },
+                  "opponent": {
+                    "active": "me02.5-016",
+                    "hand": [
+                      "sv06-128",
+                      "sv06-128",
+                      "sv06-129",
+                      "mee-013",
+                      "mee-010",
+                      "me03-081"
+                    ],
+                    "prizes": [
+                      "sv06-130",
+                      "me01-119",
+                      "me03-071",
+                      "me02.5-196",
+                      "mee-010",
+                      "me01-114"
+                    ],
+                    "bench": []
+                  }
+                },
+                "remainingDeck": {
+                  "ours": [
+                    {
+                      "printId": "me05-094",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me05-067",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-250",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me04-070",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me05-066",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-186",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv10-185",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06.5-040",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02-116",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-173",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-256",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-175",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-166",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-167",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me03-113",
+                      "count": 4
+                    },
+                    {
+                      "printId": "sv06-205",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-184",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me03-115",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-161",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv09-159",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-167",
+                      "count": 1
+                    }
+                  ],
+                  "opponent": [
+                    {
+                      "printId": "sv06-128",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-129",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-130",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-095",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-016",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-062",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-142",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02-014",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-119",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-114",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv07-133",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me03-076",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-084",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-071",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv05-144",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me03-081",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-131",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me02.5-196",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me04-082",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-165",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-127",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-010",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-013",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-015",
+                      "count": 2
+                    }
+                  ]
+                }
+              },
+              {
+                "caseId": "scenario-2",
+                "opening": {
+                  "ours": {
+                    "active": "me02.5-250",
+                    "hand": [
+                      "me05-066",
+                      "me05-066",
+                      "me05-067",
+                      "me02-116",
+                      "sv05-161",
+                      "me01-166"
+                    ],
+                    "prizes": [
+                      "me05-094",
+                      "me01-175",
+                      "sv06-205",
+                      "me01-184",
+                      "sv09-159",
+                      "me01-167"
+                    ],
+                    "bench": []
+                  },
+                  "opponent": {
+                    "active": "me02.5-016",
+                    "hand": [
+                      "sv06-128",
+                      "sv06-128",
+                      "sv06-129",
+                      "mee-010",
+                      "mee-013",
+                      "me03-062"
+                    ],
+                    "prizes": [
+                      "sv06-130",
+                      "me01-119",
+                      "me03-071",
+                      "me02.5-196",
+                      "mee-010",
+                      "me01-114"
+                    ],
+                    "bench": []
+                  }
+                },
+                "remainingDeck": {
+                  "ours": [
+                    {
+                      "printId": "me05-094",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me05-067",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-250",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me04-070",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me05-066",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-186",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv10-185",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06.5-040",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02-116",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-173",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-256",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-175",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-166",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-167",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me03-113",
+                      "count": 4
+                    },
+                    {
+                      "printId": "sv06-205",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-184",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me03-115",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-161",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv09-159",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-167",
+                      "count": 1
+                    }
+                  ],
+                  "opponent": [
+                    {
+                      "printId": "sv06-128",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-129",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-130",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-095",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-016",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-062",
+                      "count": 0
+                    },
+                    {
+                      "printId": "me02.5-142",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02-014",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-119",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-114",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv07-133",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me03-076",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-084",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-071",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv05-144",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me03-081",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me01-131",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me02.5-196",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me04-082",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-165",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-127",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-010",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-013",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-015",
+                      "count": 2
+                    }
+                  ]
+                }
+              }
+            ],
+            "origin": "validated-ai-plan-and-exact-lists"
+          }
+        ],
+        "allocations": [
+          {
+            "caseId": "scenario-1",
+            "opening": {
+              "ours": {
+                "active": "me02.5-250",
+                "hand": [
+                  "me05-066",
+                  "me05-066",
+                  "me05-067",
+                  "me02-116",
+                  "sv09-159",
+                  "me01-166"
+                ],
+                "prizes": [
+                  "me05-094",
+                  "me01-175",
+                  "sv06-205",
+                  "me01-184",
+                  "sv05-161",
+                  "me01-167"
+                ],
+                "bench": []
+              },
+              "opponent": {
+                "active": "me02.5-016",
+                "hand": [
+                  "sv06-128",
+                  "sv06-128",
+                  "sv06-129",
+                  "mee-013",
+                  "mee-010",
+                  "me03-081"
+                ],
+                "prizes": [
+                  "sv06-130",
+                  "me01-119",
+                  "me03-071",
+                  "me02.5-196",
+                  "mee-010",
+                  "me01-114"
+                ],
+                "bench": []
+              }
+            },
+            "remainingDeck": {
+              "ours": [
+                {
+                  "printId": "me05-094",
+                  "count": 3
+                },
+                {
+                  "printId": "me05-067",
+                  "count": 1
+                },
+                {
+                  "printId": "me02.5-250",
+                  "count": 1
+                },
+                {
+                  "printId": "me04-070",
+                  "count": 1
+                },
+                {
+                  "printId": "me05-066",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-186",
+                  "count": 2
+                },
+                {
+                  "printId": "sv10-185",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06.5-040",
+                  "count": 1
+                },
+                {
+                  "printId": "me02-116",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-173",
+                  "count": 2
+                },
+                {
+                  "printId": "me02.5-256",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-175",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-166",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-167",
+                  "count": 3
+                },
+                {
+                  "printId": "me03-113",
+                  "count": 4
+                },
+                {
+                  "printId": "sv06-205",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-184",
+                  "count": 3
+                },
+                {
+                  "printId": "me03-115",
+                  "count": 1
+                },
+                {
+                  "printId": "sv05-161",
+                  "count": 3
+                },
+                {
+                  "printId": "sv09-159",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-167",
+                  "count": 1
+                }
+              ],
+              "opponent": [
+                {
+                  "printId": "sv06-128",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-129",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-130",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-095",
+                  "count": 2
+                },
+                {
+                  "printId": "me02.5-016",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-062",
+                  "count": 1
+                },
+                {
+                  "printId": "me02.5-142",
+                  "count": 1
+                },
+                {
+                  "printId": "me02-014",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-119",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-114",
+                  "count": 2
+                },
+                {
+                  "printId": "sv07-133",
+                  "count": 2
+                },
+                {
+                  "printId": "me03-076",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-084",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-071",
+                  "count": 3
+                },
+                {
+                  "printId": "sv05-144",
+                  "count": 4
+                },
+                {
+                  "printId": "me03-081",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-131",
+                  "count": 3
+                },
+                {
+                  "printId": "me02.5-196",
+                  "count": 2
+                },
+                {
+                  "printId": "me04-082",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-165",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-127",
+                  "count": 2
+                },
+                {
+                  "printId": "mee-010",
+                  "count": 2
+                },
+                {
+                  "printId": "mee-013",
+                  "count": 2
+                },
+                {
+                  "printId": "mee-015",
+                  "count": 2
+                }
+              ]
+            }
+          },
+          {
+            "caseId": "scenario-2",
+            "opening": {
+              "ours": {
+                "active": "me02.5-250",
+                "hand": [
+                  "me05-066",
+                  "me05-066",
+                  "me05-067",
+                  "me02-116",
+                  "sv05-161",
+                  "me01-166"
+                ],
+                "prizes": [
+                  "me05-094",
+                  "me01-175",
+                  "sv06-205",
+                  "me01-184",
+                  "sv09-159",
+                  "me01-167"
+                ],
+                "bench": []
+              },
+              "opponent": {
+                "active": "me02.5-016",
+                "hand": [
+                  "sv06-128",
+                  "sv06-128",
+                  "sv06-129",
+                  "mee-010",
+                  "mee-013",
+                  "me03-062"
+                ],
+                "prizes": [
+                  "sv06-130",
+                  "me01-119",
+                  "me03-071",
+                  "me02.5-196",
+                  "mee-010",
+                  "me01-114"
+                ],
+                "bench": []
+              }
+            },
+            "remainingDeck": {
+              "ours": [
+                {
+                  "printId": "me05-094",
+                  "count": 3
+                },
+                {
+                  "printId": "me05-067",
+                  "count": 1
+                },
+                {
+                  "printId": "me02.5-250",
+                  "count": 1
+                },
+                {
+                  "printId": "me04-070",
+                  "count": 1
+                },
+                {
+                  "printId": "me05-066",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-186",
+                  "count": 2
+                },
+                {
+                  "printId": "sv10-185",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06.5-040",
+                  "count": 1
+                },
+                {
+                  "printId": "me02-116",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-173",
+                  "count": 2
+                },
+                {
+                  "printId": "me02.5-256",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-175",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-166",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-167",
+                  "count": 3
+                },
+                {
+                  "printId": "me03-113",
+                  "count": 4
+                },
+                {
+                  "printId": "sv06-205",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-184",
+                  "count": 3
+                },
+                {
+                  "printId": "me03-115",
+                  "count": 1
+                },
+                {
+                  "printId": "sv05-161",
+                  "count": 3
+                },
+                {
+                  "printId": "sv09-159",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-167",
+                  "count": 1
+                }
+              ],
+              "opponent": [
+                {
+                  "printId": "sv06-128",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-129",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-130",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-095",
+                  "count": 2
+                },
+                {
+                  "printId": "me02.5-016",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-062",
+                  "count": 0
+                },
+                {
+                  "printId": "me02.5-142",
+                  "count": 1
+                },
+                {
+                  "printId": "me02-014",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-119",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-114",
+                  "count": 2
+                },
+                {
+                  "printId": "sv07-133",
+                  "count": 2
+                },
+                {
+                  "printId": "me03-076",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-084",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-071",
+                  "count": 3
+                },
+                {
+                  "printId": "sv05-144",
+                  "count": 4
+                },
+                {
+                  "printId": "me03-081",
+                  "count": 4
+                },
+                {
+                  "printId": "me01-131",
+                  "count": 3
+                },
+                {
+                  "printId": "me02.5-196",
+                  "count": 2
+                },
+                {
+                  "printId": "me04-082",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-165",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-127",
+                  "count": 2
+                },
+                {
+                  "printId": "mee-010",
+                  "count": 2
+                },
+                {
+                  "printId": "mee-013",
+                  "count": 2
+                },
+                {
+                  "printId": "mee-015",
+                  "count": 2
+                }
+              ]
+            }
+          }
+        ],
+        "responses": [
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "succeeded",
+            "scenarioId": "scenario-1",
+            "openingSuppliedByPlan": true,
+            "rebuiltAllocation": null,
+            "rebuiltAllocationError": null,
+            "markers": [
+              {
+                "eventIndex": 2,
+                "receipt": {
+                  "sourceIds": [
+                    "card:me03-081"
+                  ],
+                  "reason": "Ricerca aggiuntiva reale: ottiene la seconda evoluzione per il Dreepy già in Panchina, senza consumare il Supporter."
+                },
+                "moves": [
+                  {
+                    "side": "opponent",
+                    "printId": "me03-081",
+                    "count": 1,
+                    "from": "hand",
+                    "to": "discard"
+                  },
+                  {
+                    "side": "opponent",
+                    "printId": "sv06-129",
+                    "count": 1,
+                    "from": "deck",
+                    "to": "hand"
+                  }
+                ],
+                "energyRoutes": []
+              }
+            ]
+          },
+          {
+            "sequence": 5,
+            "stage": "scenarios-2",
+            "status": "succeeded",
+            "scenarioId": "scenario-2",
+            "openingSuppliedByPlan": true,
+            "rebuiltAllocation": null,
+            "rebuiltAllocationError": null,
+            "markers": [
+              {
+                "eventIndex": 1,
+                "receipt": {
+                  "sourceIds": [
+                    "card:sv06-129"
+                  ],
+                  "reason": "Pesca da effetto reale: Crispin entra deck→hand e viene giocato nello stesso turno per sviluppare il secondo Dreepy."
+                },
+                "moves": [
+                  {
+                    "side": "opponent",
+                    "printId": "sv07-133",
+                    "count": 1,
+                    "from": "deck",
+                    "to": "hand"
+                  }
+                ],
+                "energyRoutes": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "plans": [
+          {
+            "allocations": [
+              {
+                "caseId": "scenario-1",
+                "opening": {
+                  "ours": {
+                    "active": "me02.5-250",
+                    "hand": [
+                      "me05-066",
+                      "me05-066",
+                      "me01-167",
+                      "me02-116",
+                      "sv05-161",
+                      "me05-067"
+                    ],
+                    "prizes": [
+                      "me05-094",
+                      "me01-166",
+                      "sv06-205",
+                      "me02.5-256",
+                      "sv09-159",
+                      "me01-184"
+                    ],
+                    "bench": [
+                      "me05-066",
+                      "me05-066"
+                    ]
+                  },
+                  "opponent": {
+                    "active": "sv06-017",
+                    "hand": [
+                      "sv06-017",
+                      "sv06-014",
+                      "sv06-044",
+                      "mee-009",
+                      "sv06-018",
+                      "me03-081"
+                    ],
+                    "prizes": [
+                      "sv05-023",
+                      "me01-119",
+                      "sv10.5w-080",
+                      "me02.5-181",
+                      "me01-114",
+                      "me03-086"
+                    ],
+                    "bench": [
+                      "sv06-017",
+                      "sv06-014",
+                      "sv06-044"
+                    ]
+                  }
+                },
+                "remainingDeck": {
+                  "ours": [
+                    {
+                      "printId": "me05-094",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me05-067",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-250",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me04-070",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me05-066",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-186",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv10-185",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06.5-040",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02-116",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-173",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-256",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-175",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me01-166",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-167",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me03-113",
+                      "count": 4
+                    },
+                    {
+                      "printId": "sv06-205",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-184",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me03-115",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-161",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv09-159",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-167",
+                      "count": 1
+                    }
+                  ],
+                  "opponent": [
+                    {
+                      "printId": "sv06-017",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-126",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-018",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-014",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-015",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-044",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv08.5-021",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-023",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-024",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv10-010",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-039",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-119",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me05-077",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-114",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-155",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-154",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-081",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv05-144",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me01-131",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me02.5-196",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-163",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-212",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-130",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv10.5w-080",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-181",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-149",
+                      "count": 4
+                    },
+                    {
+                      "printId": "mee-009",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me03-086",
+                      "count": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "caseId": "scenario-2",
+                "opening": {
+                  "ours": {
+                    "active": "me05-066",
+                    "hand": [
+                      "me05-066",
+                      "me02.5-250",
+                      "me05-067",
+                      "me01-175",
+                      "me05-094",
+                      "sv05-161"
+                    ],
+                    "prizes": [
+                      "me04-070",
+                      "me01-184",
+                      "sv06-205",
+                      "me01-166",
+                      "me02.5-256",
+                      "sv09-159"
+                    ],
+                    "bench": [
+                      "me05-066",
+                      "me02.5-250"
+                    ]
+                  },
+                  "opponent": {
+                    "active": "sv06-044",
+                    "hand": [
+                      "sv06-017",
+                      "sv06-014",
+                      "mee-009",
+                      "sv06-018",
+                      "sv06-015",
+                      "sv06-149"
+                    ],
+                    "prizes": [
+                      "sv05-023",
+                      "me01-119",
+                      "sv10.5w-080",
+                      "me02.5-181",
+                      "me01-114",
+                      "me03-086"
+                    ],
+                    "bench": [
+                      "sv06-017",
+                      "sv06-014"
+                    ]
+                  }
+                },
+                "remainingDeck": {
+                  "ours": [
+                    {
+                      "printId": "me05-094",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me05-067",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-250",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me04-070",
+                      "count": 0
+                    },
+                    {
+                      "printId": "me05-066",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-186",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv10-185",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06.5-040",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02-116",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me01-173",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-256",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-175",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-166",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-167",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me03-113",
+                      "count": 4
+                    },
+                    {
+                      "printId": "sv06-205",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-184",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me03-115",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-161",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv09-159",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-167",
+                      "count": 1
+                    }
+                  ],
+                  "opponent": [
+                    {
+                      "printId": "sv06-017",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-126",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-018",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-014",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-015",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-044",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv08.5-021",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-023",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-024",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv10-010",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-039",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-119",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me05-077",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-114",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-155",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-154",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-081",
+                      "count": 4
+                    },
+                    {
+                      "printId": "sv05-144",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me01-131",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me02.5-196",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-163",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-212",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-130",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv10.5w-080",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-181",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-149",
+                      "count": 3
+                    },
+                    {
+                      "printId": "mee-009",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me03-086",
+                      "count": 1
+                    }
+                  ]
+                }
+              }
+            ],
+            "origin": "validated-ai-plan-and-exact-lists"
+          }
+        ],
+        "allocations": [
+          {
+            "caseId": "scenario-1",
+            "opening": {
+              "ours": {
+                "active": "me02.5-250",
+                "hand": [
+                  "me05-066",
+                  "me05-066",
+                  "me01-167",
+                  "me02-116",
+                  "sv05-161",
+                  "me05-067"
+                ],
+                "prizes": [
+                  "me05-094",
+                  "me01-166",
+                  "sv06-205",
+                  "me02.5-256",
+                  "sv09-159",
+                  "me01-184"
+                ],
+                "bench": [
+                  "me05-066",
+                  "me05-066"
+                ]
+              },
+              "opponent": {
+                "active": "sv06-017",
+                "hand": [
+                  "sv06-017",
+                  "sv06-014",
+                  "sv06-044",
+                  "mee-009",
+                  "sv06-018",
+                  "me03-081"
+                ],
+                "prizes": [
+                  "sv05-023",
+                  "me01-119",
+                  "sv10.5w-080",
+                  "me02.5-181",
+                  "me01-114",
+                  "me03-086"
+                ],
+                "bench": [
+                  "sv06-017",
+                  "sv06-014",
+                  "sv06-044"
+                ]
+              }
+            },
+            "remainingDeck": {
+              "ours": [
+                {
+                  "printId": "me05-094",
+                  "count": 3
+                },
+                {
+                  "printId": "me05-067",
+                  "count": 1
+                },
+                {
+                  "printId": "me02.5-250",
+                  "count": 1
+                },
+                {
+                  "printId": "me04-070",
+                  "count": 1
+                },
+                {
+                  "printId": "me05-066",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-186",
+                  "count": 2
+                },
+                {
+                  "printId": "sv10-185",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06.5-040",
+                  "count": 1
+                },
+                {
+                  "printId": "me02-116",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-173",
+                  "count": 2
+                },
+                {
+                  "printId": "me02.5-256",
+                  "count": 2
+                },
+                {
+                  "printId": "me01-175",
+                  "count": 4
+                },
+                {
+                  "printId": "me01-166",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-167",
+                  "count": 3
+                },
+                {
+                  "printId": "me03-113",
+                  "count": 4
+                },
+                {
+                  "printId": "sv06-205",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-184",
+                  "count": 3
+                },
+                {
+                  "printId": "me03-115",
+                  "count": 1
+                },
+                {
+                  "printId": "sv05-161",
+                  "count": 3
+                },
+                {
+                  "printId": "sv09-159",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-167",
+                  "count": 1
+                }
+              ],
+              "opponent": [
+                {
+                  "printId": "sv06-017",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-126",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-018",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-014",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-015",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-044",
+                  "count": 1
+                },
+                {
+                  "printId": "sv08.5-021",
+                  "count": 1
+                },
+                {
+                  "printId": "sv05-023",
+                  "count": 1
+                },
+                {
+                  "printId": "sv05-024",
+                  "count": 1
+                },
+                {
+                  "printId": "sv10-010",
+                  "count": 1
+                },
+                {
+                  "printId": "me02.5-039",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-119",
+                  "count": 3
+                },
+                {
+                  "printId": "me05-077",
+                  "count": 2
+                },
+                {
+                  "printId": "me01-114",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-155",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-154",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-081",
+                  "count": 3
+                },
+                {
+                  "printId": "sv05-144",
+                  "count": 4
+                },
+                {
+                  "printId": "me01-131",
+                  "count": 3
+                },
+                {
+                  "printId": "me02.5-196",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-163",
+                  "count": 1
+                },
+                {
+                  "printId": "me02.5-212",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-130",
+                  "count": 1
+                },
+                {
+                  "printId": "sv10.5w-080",
+                  "count": 1
+                },
+                {
+                  "printId": "me02.5-181",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-149",
+                  "count": 4
+                },
+                {
+                  "printId": "mee-009",
+                  "count": 2
+                },
+                {
+                  "printId": "me03-086",
+                  "count": 1
+                }
+              ]
+            }
+          }
+        ],
+        "responses": []
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "plans": [
+          {
+            "allocations": [
+              {
+                "caseId": "scenario-1",
+                "opening": {
+                  "ours": {
+                    "active": "sv08.5-004",
+                    "hand": [
+                      "sv06-128",
+                      "sv10-040",
+                      "me01-125",
+                      "sv09-024",
+                      "mee-002",
+                      "sv07-133"
+                    ],
+                    "prizes": [
+                      "sv06-128",
+                      "sv06-129",
+                      "me01-119",
+                      "me01-114",
+                      "sv05-144",
+                      "mee-007"
+                    ],
+                    "bench": [
+                      "sv06-128",
+                      "sv10-040"
+                    ]
+                  },
+                  "opponent": {
+                    "active": "me01-012",
+                    "hand": [
+                      "sv06-017",
+                      "me02.5-008",
+                      "me01-117",
+                      "me02-087",
+                      "mee-009",
+                      "mee-009"
+                    ],
+                    "prizes": [
+                      "sv06-025",
+                      "me01-119",
+                      "me01-131",
+                      "sv06-143",
+                      "mee-009",
+                      "mee-009"
+                    ],
+                    "bench": [
+                      "sv06-017",
+                      "me02.5-008"
+                    ]
+                  }
+                },
+                "remainingDeck": {
+                  "ours": [
+                    {
+                      "printId": "sv06-128",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-129",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-130",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv10-040",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv10-041",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv09-024",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-095",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv09-056",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06.5-038",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-062",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv08.5-004",
+                      "count": 0
+                    },
+                    {
+                      "printId": "me01-119",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-114",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv07-133",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02-087",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv05-144",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-131",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me03-081",
+                      "count": 4
+                    },
+                    {
+                      "printId": "sv06.5-061",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-125",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me04-082",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-165",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv07-131",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-127",
+                      "count": 1
+                    },
+                    {
+                      "printId": "mee-002",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-005",
+                      "count": 3
+                    },
+                    {
+                      "printId": "mee-007",
+                      "count": 1
+                    }
+                  ],
+                  "opponent": [
+                    {
+                      "printId": "sv06-025",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-017",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-018",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv07-014",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-008",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-009",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-009",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-010",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-012",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-062",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-142",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-119",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-114",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02-087",
+                      "count": 0
+                    },
+                    {
+                      "printId": "me03-076",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-145",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-155",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-131",
+                      "count": 3
+                    },
+                    {
+                      "printId": "sv06-143",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me02.5-196",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me04-082",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-165",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-117",
+                      "count": 3
+                    },
+                    {
+                      "printId": "mee-009",
+                      "count": 9
+                    }
+                  ]
+                }
+              },
+              {
+                "caseId": "scenario-2",
+                "opening": {
+                  "ours": {
+                    "active": "sv10-040",
+                    "hand": [
+                      "sv06-128",
+                      "sv06-129",
+                      "sv10-041",
+                      "mee-002",
+                      "mee-005",
+                      "me02-087"
+                    ],
+                    "prizes": [
+                      "sv06-128",
+                      "sv06-129",
+                      "me01-119",
+                      "me01-114",
+                      "sv05-144",
+                      "mee-007"
+                    ],
+                    "bench": [
+                      "sv06-128"
+                    ]
+                  },
+                  "opponent": {
+                    "active": "sv06-025",
+                    "hand": [
+                      "me01-012",
+                      "sv06-017",
+                      "mee-009",
+                      "mee-009",
+                      "me01-117",
+                      "me01-131"
+                    ],
+                    "prizes": [
+                      "sv06-025",
+                      "me01-119",
+                      "me01-131",
+                      "sv06-143",
+                      "mee-009",
+                      "mee-009"
+                    ],
+                    "bench": [
+                      "me01-012",
+                      "sv06-017"
+                    ]
+                  }
+                },
+                "remainingDeck": {
+                  "ours": [
+                    {
+                      "printId": "sv06-128",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-129",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-130",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv10-040",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv10-041",
+                      "count": 0
+                    },
+                    {
+                      "printId": "sv09-024",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-095",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv09-056",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06.5-038",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-062",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv08.5-004",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-119",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-114",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv07-133",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02-087",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-144",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-131",
+                      "count": 4
+                    },
+                    {
+                      "printId": "me03-081",
+                      "count": 4
+                    },
+                    {
+                      "printId": "sv06.5-061",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-125",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me04-082",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-165",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv07-131",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-127",
+                      "count": 1
+                    },
+                    {
+                      "printId": "mee-002",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-005",
+                      "count": 2
+                    },
+                    {
+                      "printId": "mee-007",
+                      "count": 1
+                    }
+                  ],
+                  "opponent": [
+                    {
+                      "printId": "sv06-025",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-017",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-018",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv07-014",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-008",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-009",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me02.5-009",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-010",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me01-012",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-062",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02.5-142",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-119",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me01-114",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me02-087",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me03-076",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv05-145",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-155",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-131",
+                      "count": 2
+                    },
+                    {
+                      "printId": "sv06-143",
+                      "count": 3
+                    },
+                    {
+                      "printId": "me02.5-196",
+                      "count": 2
+                    },
+                    {
+                      "printId": "me04-082",
+                      "count": 1
+                    },
+                    {
+                      "printId": "sv06-165",
+                      "count": 1
+                    },
+                    {
+                      "printId": "me01-117",
+                      "count": 3
+                    },
+                    {
+                      "printId": "mee-009",
+                      "count": 9
+                    }
+                  ]
+                }
+              }
+            ],
+            "origin": "validated-ai-plan-and-exact-lists"
+          }
+        ],
+        "allocations": [
+          {
+            "caseId": "scenario-1",
+            "opening": {
+              "ours": {
+                "active": "sv08.5-004",
+                "hand": [
+                  "sv06-128",
+                  "sv10-040",
+                  "me01-125",
+                  "sv09-024",
+                  "mee-002",
+                  "sv07-133"
+                ],
+                "prizes": [
+                  "sv06-128",
+                  "sv06-129",
+                  "me01-119",
+                  "me01-114",
+                  "sv05-144",
+                  "mee-007"
+                ],
+                "bench": [
+                  "sv06-128",
+                  "sv10-040"
+                ]
+              },
+              "opponent": {
+                "active": "me01-012",
+                "hand": [
+                  "sv06-017",
+                  "me02.5-008",
+                  "me01-117",
+                  "me02-087",
+                  "mee-009",
+                  "mee-009"
+                ],
+                "prizes": [
+                  "sv06-025",
+                  "me01-119",
+                  "me01-131",
+                  "sv06-143",
+                  "mee-009",
+                  "mee-009"
+                ],
+                "bench": [
+                  "sv06-017",
+                  "me02.5-008"
+                ]
+              }
+            },
+            "remainingDeck": {
+              "ours": [
+                {
+                  "printId": "sv06-128",
+                  "count": 2
+                },
+                {
+                  "printId": "sv06-129",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-130",
+                  "count": 2
+                },
+                {
+                  "printId": "sv10-040",
+                  "count": 1
+                },
+                {
+                  "printId": "sv10-041",
+                  "count": 1
+                },
+                {
+                  "printId": "sv09-024",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-095",
+                  "count": 2
+                },
+                {
+                  "printId": "sv09-056",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06.5-038",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-062",
+                  "count": 1
+                },
+                {
+                  "printId": "sv08.5-004",
+                  "count": 0
+                },
+                {
+                  "printId": "me01-119",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-114",
+                  "count": 2
+                },
+                {
+                  "printId": "sv07-133",
+                  "count": 1
+                },
+                {
+                  "printId": "me02-087",
+                  "count": 2
+                },
+                {
+                  "printId": "sv05-144",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-131",
+                  "count": 4
+                },
+                {
+                  "printId": "me03-081",
+                  "count": 4
+                },
+                {
+                  "printId": "sv06.5-061",
+                  "count": 2
+                },
+                {
+                  "printId": "me01-125",
+                  "count": 1
+                },
+                {
+                  "printId": "me04-082",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-165",
+                  "count": 1
+                },
+                {
+                  "printId": "sv07-131",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-127",
+                  "count": 1
+                },
+                {
+                  "printId": "mee-002",
+                  "count": 2
+                },
+                {
+                  "printId": "mee-005",
+                  "count": 3
+                },
+                {
+                  "printId": "mee-007",
+                  "count": 1
+                }
+              ],
+              "opponent": [
+                {
+                  "printId": "sv06-025",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-017",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-018",
+                  "count": 2
+                },
+                {
+                  "printId": "sv07-014",
+                  "count": 2
+                },
+                {
+                  "printId": "me02.5-008",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-009",
+                  "count": 1
+                },
+                {
+                  "printId": "me02.5-009",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-010",
+                  "count": 2
+                },
+                {
+                  "printId": "me01-012",
+                  "count": 1
+                },
+                {
+                  "printId": "me03-062",
+                  "count": 2
+                },
+                {
+                  "printId": "me02.5-142",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-119",
+                  "count": 3
+                },
+                {
+                  "printId": "me01-114",
+                  "count": 2
+                },
+                {
+                  "printId": "me02-087",
+                  "count": 0
+                },
+                {
+                  "printId": "me03-076",
+                  "count": 1
+                },
+                {
+                  "printId": "sv05-145",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-155",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-131",
+                  "count": 3
+                },
+                {
+                  "printId": "sv06-143",
+                  "count": 3
+                },
+                {
+                  "printId": "me02.5-196",
+                  "count": 2
+                },
+                {
+                  "printId": "me04-082",
+                  "count": 1
+                },
+                {
+                  "printId": "sv06-165",
+                  "count": 1
+                },
+                {
+                  "printId": "me01-117",
+                  "count": 3
+                },
+                {
+                  "printId": "mee-009",
+                  "count": 9
+                }
+              ]
+            }
+          }
+        ],
+        "responses": [
+          {
+            "sequence": 4,
+            "stage": "scenarios-1-rebuild",
+            "status": "failed",
+            "scenarioId": "scenario-1",
+            "openingSuppliedByPlan": false,
+            "rebuiltAllocation": {
+              "caseId": "scenario-1",
+              "opening": {
+                "ours": {
+                  "active": "sv08.5-004",
+                  "hand": [
+                    "sv10-040",
+                    "sv06-128",
+                    "mee-002",
+                    "mee-005",
+                    "sv06-129",
+                    "sv10-041"
+                  ],
+                  "prizes": [
+                    "sv06-130",
+                    "sv09-024",
+                    "me01-119",
+                    "me01-114",
+                    "sv05-144",
+                    "mee-007"
+                  ],
+                  "bench": [
+                    "sv10-040",
+                    "sv06-128"
+                  ]
+                },
+                "opponent": {
+                  "active": "me01-012",
+                  "hand": [
+                    "me02.5-008",
+                    "mee-009",
+                    "mee-009",
+                    "sv07-014",
+                    "me01-010",
+                    "me02.5-196"
+                  ],
+                  "prizes": [
+                    "sv06-025",
+                    "me01-119",
+                    "me01-131",
+                    "sv06-143",
+                    "mee-009",
+                    "me01-114"
+                  ],
+                  "bench": [
+                    "me02.5-008"
+                  ]
+                }
+              },
+              "remainingDeck": {
+                "ours": [
+                  {
+                    "printId": "sv06-128",
+                    "count": 3
+                  },
+                  {
+                    "printId": "sv06-129",
+                    "count": 3
+                  },
+                  {
+                    "printId": "sv06-130",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv10-040",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv10-041",
+                    "count": 0
+                  },
+                  {
+                    "printId": "sv09-024",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv06-095",
+                    "count": 2
+                  },
+                  {
+                    "printId": "sv09-056",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv06.5-038",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me03-062",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv08.5-004",
+                    "count": 0
+                  },
+                  {
+                    "printId": "me01-119",
+                    "count": 3
+                  },
+                  {
+                    "printId": "me01-114",
+                    "count": 2
+                  },
+                  {
+                    "printId": "sv07-133",
+                    "count": 2
+                  },
+                  {
+                    "printId": "me02-087",
+                    "count": 2
+                  },
+                  {
+                    "printId": "sv05-144",
+                    "count": 3
+                  },
+                  {
+                    "printId": "me01-131",
+                    "count": 4
+                  },
+                  {
+                    "printId": "me03-081",
+                    "count": 4
+                  },
+                  {
+                    "printId": "sv06.5-061",
+                    "count": 2
+                  },
+                  {
+                    "printId": "me01-125",
+                    "count": 2
+                  },
+                  {
+                    "printId": "me04-082",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv06-165",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv07-131",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me01-127",
+                    "count": 1
+                  },
+                  {
+                    "printId": "mee-002",
+                    "count": 2
+                  },
+                  {
+                    "printId": "mee-005",
+                    "count": 2
+                  },
+                  {
+                    "printId": "mee-007",
+                    "count": 1
+                  }
+                ],
+                "opponent": [
+                  {
+                    "printId": "sv06-025",
+                    "count": 3
+                  },
+                  {
+                    "printId": "sv06-017",
+                    "count": 2
+                  },
+                  {
+                    "printId": "sv06-018",
+                    "count": 2
+                  },
+                  {
+                    "printId": "sv07-014",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me02.5-008",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me01-009",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me02.5-009",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me01-010",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me01-012",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me03-062",
+                    "count": 2
+                  },
+                  {
+                    "printId": "me02.5-142",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me01-119",
+                    "count": 3
+                  },
+                  {
+                    "printId": "me01-114",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me02-087",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me03-076",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv05-145",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv06-155",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me01-131",
+                    "count": 3
+                  },
+                  {
+                    "printId": "sv06-143",
+                    "count": 3
+                  },
+                  {
+                    "printId": "me02.5-196",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me04-082",
+                    "count": 1
+                  },
+                  {
+                    "printId": "sv06-165",
+                    "count": 1
+                  },
+                  {
+                    "printId": "me01-117",
+                    "count": 4
+                  },
+                  {
+                    "printId": "mee-009",
+                    "count": 10
+                  }
+                ]
+              }
+            },
+            "rebuiltAllocationError": null,
+            "markers": [
+              {
+                "eventIndex": 1,
+                "receipt": {
+                  "sourceIds": [
+                    "card:me01-012"
+                  ],
+                  "reason": "Ricerca effettiva da attacco: completa l'accesso alle due catene già parzialmente in mano e allo Stadio, rinunciando al KO di Budew."
+                },
+                "moves": [
+                  {
+                    "side": "opponent",
+                    "printId": "sv06-017",
+                    "count": 1,
+                    "from": "deck",
+                    "to": "hand"
+                  },
+                  {
+                    "side": "opponent",
+                    "printId": "me01-009",
+                    "count": 1,
+                    "from": "deck",
+                    "to": "hand"
+                  },
+                  {
+                    "side": "opponent",
+                    "printId": "me01-117",
+                    "count": 1,
+                    "from": "deck",
+                    "to": "hand"
+                  }
+                ],
+                "energyRoutes": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "refusalInspection": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "placeholders": [
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 4,
+        "characters": 4861,
+        "productionRefusalDetected": true,
+        "constructionError": "Error: scenario-2: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il caso richiesto. Le lacune sono della costruzione, non dei dati consegnati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "failed": "scenario-2: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il caso richiesto. Le lacune sono della costruzione, non dei dati consegnati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 2,
+        "characters": 6899,
+        "productionRefusalDetected": true,
+        "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "failed": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 2,
+        "characters": 8662,
+        "productionRefusalDetected": true,
+        "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "failed": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 3,
+        "characters": 6048,
+        "productionRefusalDetected": true,
+        "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Candidato Solar Cutter; registro non completato. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "failed": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Candidato Solar Cutter; registro non completato. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+      }
+    ],
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 3,
+            "characters": 48036,
+            "limitations": [
+              "Le pescate e le carte osservate sono ipotesi esplicite, prive di probabilità misurate; ricerche e rimescolamenti non garantiscono pescate future.",
+              "Il caso non attribuisce alla nostra lista un record contro Dragapult e non utilizza il record avversario contro il field come record del matchup.",
+              "Le identità consegnate sono mantenute; resta la discrepanza documentale della riconciliazione di our-list, che segnala 60 copie non riconciliate."
+            ],
+            "changeSummary": "Costruito un caso dalla stessa apertura congelata: KO iniziale di Fan Rotom, risposta minima di Drakloak, accesso a un secondo motore, difesa con Itchy Pollen e due testimoni di rimozione. Il seguito distingue Toucannon senza blocco Item dal secondo Fan Rotom sotto blocco; non dichiara vittoria o rimozione completa del motore.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Prendere subito il Premio con Fan Rotom mantiene davvero un attacco disponibile dopo entrambe le risposte avversarie?",
+                "assumptions": [
+                  "Si usa esattamente openingAllocation di scenario-1; iniziamo secondi. Le aperture non rappresentano una partita osservata.",
+                  "Le pescate dichiarate e le coppie viste con Recon Directive sono allocazioni ipotetiche del mazzo residuo, non accessi garantiti.",
+                  "Il primo turno avversario pesca Rosa's Encouragement; la nostra prima pesca è Mist Energy. La replica pesca Poké Pad in ogni ramo.",
+                  "Recon Directive della prima copia guarda Boss's Orders e Crushing Hammer: prende Boss's Orders e mette Crushing Hammer in fondo. Il ramo access usa anche la seconda copia, prendendo Basic Fire Energy e mettendo Basic Darkness Energy in fondo.",
+                  "Il primo KO ci consegna il Toucannon già allocato nei nostri Premi. Il seguito pesca una Rare Candy dal mazzo; sotto Itchy Pollen resta in mano.",
+                  "Non si fonda alcun esito sul contraccolpo di Spiky Energy: viene assegnata soltanto nel nostro ultimo turno dimostrato.",
+                  "Il confronto riguarda questa posizione e le risorse esplicitamente raggiunte; non dimostra indispensabilità universale né probabilità delle pescate."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "KO di Fan Rotom; nel seguito Toucannon mette KO il Drakloak carico.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "KO di Fan Rotom con un secondo Drakloak già sviluppato; dopo il contrattacco resta un motore evoluto.",
+                    "firstEvents": 0,
+                    "replyEvents": 10
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Itchy Pollen impedisce Rare Candy; Drakloak resta vivo con Psychic. Il secondo Rotom mette comunque KO Budew.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 4,
+            "characters": 4861,
+            "limitations": [
+              "Questo output non soddisfa la costruzione richiesta: setup, movimenti, rami e audit non sono completati. Non deve essere considerato uno scenario valido o una guida giocabile."
+            ],
+            "changeSummary": "Non ho completato il caso richiesto. Le lacune sono della costruzione, non dei dati consegnati.",
+            "constructionError": "Error: scenario-2: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il caso richiesto. Le lacune sono della costruzione, non dei dati consegnati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "scenarios": [
+              {
+                "id": "scenario-2",
+                "decision": "La pressione di Fan Rotom consente di conservare un attacco dopo la replica avversaria?",
+                "assumptions": [
+                  "Le pescate indicate sono ipotesi specifiche: non sono garantite.",
+                  "Cominciamo noi. Entrambi i lati usano l’allocazione iniziale congelata di scenario-2."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Non verificato.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Non verificato.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Non verificato.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 5,
+            "characters": 59547,
+            "limitations": [
+              "Le aperture e le pescate sono ipotesi specifiche, senza probabilità attribuite; nessun risultato del caso è una partita osservata o un winrate del matchup.",
+              "Il registro di riconciliazione della fonte segnala 60 copie non riconciliate, mentre la lista risolta consegnata contiene le 60 carte impiegate: le identità delle stampe sono mantenute.",
+              "La fonte rules consegnata riguarda soprattutto ammissioni, rotazione, ban ed errata; i passaggi ordinari di turno seguono le regole esplicitate nella richiesta.",
+              "La preferenza difensiva riguarda la conservazione della linea Dragon in questa posizione. Concede un Premio aggiuntivo e non dimostra superiorità universale né un esito finale della partita."
+            ],
+            "changeSummary": "Ricostruito scenario-2 dall’apertura congelata con setup completo, due Trumbeak preparati sotto Itchy Pollen, promozione difensiva alternativa, accesso reale a Crispin, KO minimo e testimone positivo di rimozione. Tutti i rami proseguono fino a Feather Rondo con un secondo Toucannon alimentato.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-2",
+                "decision": "Prendere il KO di Budew costringe davvero l’avversario a esporre Drakloak al nostro Toucannon?",
+                "assumptions": [
+                  "Cominciamo noi; si usa integralmente l’apertura congelata di scenario-2 e la sola lista opponent-1.",
+                  "Pescate, carte viste con Recon Directive e Premi presi sono allocazioni ipotetiche compatibili con le liste, non eventi osservati o accessi garantiti.",
+                  "Il setup rappresenta il nostro primo turno e il primo turno avversario. La decisione principale arriva nel nostro secondo turno, dopo Itchy Pollen.",
+                  "Recon Directive vede Dragapult ex e Crispin: i rami scelgono diversamente fra le stesse due carte, senza cambiare la distribuzione per favorire una risposta.",
+                  "Il ramo economico e il testimone di rimozione limitano deliberatamente le nuove risorse impiegate per verificare il budget; non sono presentati come lo sviluppo avversario preferibile.",
+                  "Non si assegnano Spiky Energy e non si impiegano timing simultanei controversi. Legacy Energy non entra nella linea."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct-dragapult",
+                    "outcome": "Fan Rotom va KO; il secondo Dreepy riceve Psychic e Dragapult resta in mano, ma Drakloak viene eliminato dal nostro Toucannon.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  },
+                  {
+                    "role": "access",
+                    "id": "access-crispin",
+                    "outcome": "Recon Directive trova Crispin, che insieme alla manuale carica il secondo Dreepy. Fan Rotom e poi Drakloak vanno KO; il successore avversario conserva Fire e Psychic.",
+                    "firstEvents": 0,
+                    "replyEvents": 8
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend-budew",
+                    "outcome": "Budew ripete Itchy Pollen e poi va KO. Drakloak conserva Fire e Psychic, resta vivo e ha Dragapult ex in mano; entrambi i nostri Toucannon sono comunque sviluppati.",
+                    "firstEvents": 1,
+                    "replyEvents": 4
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 6899,
+            "limitations": [
+              "Non ho completato un registro eseguibile con tutti i rami e i testimoni richiesti; questo output non soddisfa la costruzione e non deve essere validato come scenario.",
+              "La correzione dell'effetto di Battle Cage è supportata dalla scheda consegnata e deve precedere qualsiasi ricostruzione."
+            ],
+            "changeSummary": "Individuato l'errore nella tesi su Battle Cage. Scenario completo non consegnato.",
+            "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Il KO economico di Fan Rotom lascia un contrattacco sostenibile contro la migliore replica di Festival Lead?",
+                "assumptions": [
+                  "Le aperture sono quelle congelate in openingAllocation; non sono partite osservate.",
+                  "La pressione iniziale di Assault Landing è condizionata alla presenza di uno Stadio.",
+                  "Battle Cage non costituisce una difesa dal secondo attacco di Festival Lead.",
+                  "Il record opponent-versus-field non fornisce un winrate di questo matchup."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Confronto teorico, non eseguito nel registro.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Accesso non costruito.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Difesa non costruita.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 8662,
+            "limitations": [
+              "La costruzione richiesta non è stata completata: questo output non soddisfa i controlli sui rami, sugli audit, sulle promozioni e sulla continuità. Non deve essere presentato come caso valido."
+            ],
+            "changeSummary": "Sono conservati apertura, identità e alcuni controlli testuali, ma non è stato prodotto il caso completo richiesto.",
+            "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Quando passare dal blocco Strumenti a un attaccante evoluto senza perdere il seguito?",
+                "assumptions": [
+                  "L’apertura rimane quella di openingAllocation; non viene sostituita con una posizione arbitraria.",
+                  "Le pescate e le distribuzioni successive richiedono una costruzione esplicita: non sono garantite dalle liste.",
+                  "Questo oggetto non costituisce uno scenario eseguibile o validato."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Solar Cutter è un candidato al KO di Budew, non una replica costruita in questo registro.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Traverse Time è un accesso candidato; non è stato eseguito un accesso aggiuntivo nel registro.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Growl richiede accesso all’Attivo e costo d’attacco: non basta assegnare l’unica manuale a Celebi e poi ritirarlo.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 6048,
+            "limitations": [
+              "Non ho completato la costruzione richiesta. I rami riportati sono segnaposto, non prove utilizzabili; questo output deve essere respinto dalla validazione.",
+              "Il limite di esecuzione della costruzione non è una mancanza delle liste o delle fonti consegnate."
+            ],
+            "changeSummary": "Individuate alternative decisive da verificare, ma non prodotto uno scenario completo e validabile. Nessuna pressione favorevole, continuità o minima è dimostrata.",
+            "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Candidato Solar Cutter; registro non completato. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Come trasformare lo sviluppo iniziale in pressione senza perdere il secondo attaccante?",
+                "assumptions": [
+                  "L’apertura applicabile è esclusivamente quella congelata in openingAllocation.",
+                  "Le alternative individuate non costituiscono un registro completo né uno scenario validato."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Candidato Solar Cutter; registro non completato.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Accesso non costruito.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Difesa non costruita.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 4,
+            "characters": 22896,
+            "limitations": [
+              "Le pescate sono ipotesi esplicite; non sono probabilità né risultati competitivi.",
+              "Il caso dimostra pressione iniziale e un successore disponibile, senza certificare vantaggio nel matchup o sviluppo futuro tramite Forest of Vitality."
+            ],
+            "changeSummary": "Ricostruita una nuova apertura con Celebi già alimentato, tre repliche complete e seguito Fire. Il KO minimo usa zero nuove carte per l'attacco; Growl e Traverse Time non superano il Premio immediato della diretta.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Il blocco Strumenti vale il Premio ceduto, se prepariamo subito il successore?",
+                "assumptions": [
+                  "Caso ipotetico raggiungibile, non partita osservata. L'avversario comincia.",
+                  "Le pescate dichiarate sono una possibile distribuzione delle carte residue, non accessi garantiti.",
+                  "Il confronto riguarda pressione iniziale e continuità, non una vittoria: l'avversario conserva entrambe le linee evolutive nel mazzo.",
+                  "Nessun effetto Tera o timing di evoluzioni consecutive con Forest of Vitality è necessario alla dimostrazione.",
+                  "Il secondo attaccante di riserva è Dreepy con Psychic Energy e Petty Grudge; evolverlo subito toglierebbe quell'attacco senza rendere pagabile Dragon Headbutt."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Solar Cutter elimina Budew; Chikorita riceve la manuale prima dell'attacco e Combusken risponde con 40 su Celebi.",
+                    "firstEvents": 0,
+                    "replyEvents": 4
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Traverse Time trova Applin, Bayleef e Forest of Vitality; non prende Premi. Combusken infligge 40 a Celebi nel seguito.",
+                    "firstEvents": 0,
+                    "replyEvents": 2
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Chikorita usa Growl dopo la ritirata di Celebi. Budew si ritira e Combusken infligge 40 a Chikorita: Growl non riduce il danno del nuovo attaccante.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "stopAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "status": "interrupted",
+        "failureCode": "call-budget",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 5,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 305260,
+          "outputTokens": 48443,
+          "cachedInputTokens": 0,
+          "durationMs": 1593956,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": true
+        },
+        "budget": {
+          "stage": "review-scenarios-1",
+          "checkedAt": "2026-10-31T16:34:48.841Z",
+          "outcome": "blocked",
+          "estimateOnly": true,
+          "reasons": [
+            "input-tokens",
+            "calls"
+          ],
+          "remainingCalls": 3,
+          "requiredCalls": 4,
+          "estimatedInputTokens": 132609,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 10000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 276793,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 12000,
+          "responseCharacterLimit": 100000,
+          "calibration": {
+            "factor": 1.264568439407149,
+            "samples": 4,
+            "turnSamples": 4,
+            "unknownSamples": 0,
+            "largestInput": 85709,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "toucannon-festival",
+        "status": "interrupted",
+        "failureCode": "timeout",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 4,
+          "failedAttempts": 3,
+          "attemptLimit": 8,
+          "inputTokens": 165862,
+          "outputTokens": 6224,
+          "cachedInputTokens": 0,
+          "durationMs": 1377003,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": true
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T16:21:05.408Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 5,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 86849,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 144198,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000,
+          "calibration": {
+            "factor": 1.253073190204713,
+            "samples": 2,
+            "turnSamples": 2,
+            "unknownSamples": 0,
+            "largestInput": 91316,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 4,
+          "failedAttempts": 3,
+          "attemptLimit": 8,
+          "inputTokens": 252743,
+          "outputTokens": 22214,
+          "cachedInputTokens": 0,
+          "durationMs": 591446,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1-rebuild",
+          "checkedAt": "2026-10-31T16:14:51.132Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 5,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 76500,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 106069,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000,
+          "calibration": {
+            "factor": 1.3858610806906357,
+            "samples": 3,
+            "turnSamples": 3,
+            "unknownSamples": 0,
+            "largestInput": 74062,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        "quickCheck": "ok"
+      }
+    ]
+  },
+  "nativeDecisionsAudit": "native-decisions-audit.json",
+  "policy": {
+    "inputTarget": 96000,
+    "inputMaximum": 128000,
+    "totalEnvelope": 176000,
+    "margin": 8192,
+    "requestBytes": 500000,
+    "responseCharacters": 100000
+  },
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "jobId": "b5f2222e-630e-4f6e-81d8-61ec19659943",
+      "startedAt": "2026-10-31T16:08:03.136Z",
+      "endedAt": "2026-10-31T16:34:48.850Z",
+      "passed": false,
+      "error": "Richiesta non inviata. Budget insufficiente: restano 3 chiamate, ma ne servono almeno 4 per completare tutte le verifiche. Il lavoro resta salvato. Questo limite locale è distinto dalla quota del servizio Codex.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T16:08:03.724Z",
+          "endedAt": "2026-10-31T16:09:08.552Z",
+          "status": "succeeded",
+          "inputHash": "8d764626b08448e9f7c2d7db0e7d658342bf2fdde0af23bde75ee91b0f4f7a4c",
+          "inputBytes": 241397,
+          "durationMs": 64825,
+          "usage": {
+            "inputTokens": 85709,
+            "cachedInputTokens": 0,
+            "outputTokens": 2349
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T16:09:09.285Z",
+          "endedAt": "2026-10-31T16:19:09.317Z",
+          "status": "failed",
+          "inputHash": "cbc714f6341e6f2fe6bba524f9a34515a97995776d5f6afc46f0cd45e3712d7f",
+          "inputBytes": 133976,
+          "durationMs": 600028,
+          "usage": null
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T16:19:10.378Z",
+          "endedAt": "2026-10-31T16:25:02.838Z",
+          "status": "succeeded",
+          "inputHash": "cbc714f6341e6f2fe6bba524f9a34515a97995776d5f6afc46f0cd45e3712d7f",
+          "inputBytes": 133976,
+          "durationMs": 352460,
+          "usage": {
+            "inputTokens": 72745,
+            "cachedInputTokens": 0,
+            "outputTokens": 19275
+          }
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T16:25:04.217Z",
+          "endedAt": "2026-10-31T16:27:00.289Z",
+          "status": "failed",
+          "inputHash": "62d827f4ac0ac571bc24eb8bb69bf8c935b4480d62f74680aec2dad1a02b7729",
+          "inputBytes": 134122,
+          "durationMs": 116064,
+          "usage": {
+            "inputTokens": 72780,
+            "cachedInputTokens": 0,
+            "outputTokens": 3230
+          }
+        },
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T16:27:02.237Z",
+          "endedAt": "2026-10-31T16:34:42.822Z",
+          "status": "succeeded",
+          "inputHash": "de36133d03ceeca54ab30b0970a94517a7d0cdf772d6ae02ea720451eff407ec",
+          "inputBytes": 138500,
+          "durationMs": 460579,
+          "usage": {
+            "inputTokens": 74026,
+            "cachedInputTokens": 0,
+            "outputTokens": 23589
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 74555,
+          "estimatedInput": 85550,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 241397,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.12,
+            "samples": 0,
+            "turnSamples": 0,
+            "unknownSamples": 0,
+            "largestInput": 0,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 63986,
+          "estimatedInput": 82963,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 133976,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.264568439407149,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.264568439407149,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 85709,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 63986,
+          "estimatedInput": 82963,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 133976,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.264568439407149,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.264568439407149,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 85709,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 64021,
+          "estimatedInput": 83007,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 55242,
+          "margin": 8192,
+          "bytes": 134122,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.264568439407149,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.264568439407149,
+            "samples": 2,
+            "turnSamples": 2,
+            "unknownSamples": 0,
+            "largestInput": 85709,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 65267,
+          "estimatedInput": 84583,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 55242,
+          "margin": 8192,
+          "bytes": 138500,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 4,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.264568439407149,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.264568439407149,
+            "samples": 3,
+            "turnSamples": 3,
+            "unknownSamples": 0,
+            "largestInput": 85709,
+            "measurement": "turn-usage-conservative"
+          }
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "3ca50bbc86ecac0e0ed5c167259fe676042cb818ad2d2370d06a34513c1dab8e",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "aae85cab5cdc17802901d9e32d2155afe22548e9ad2d761c6ae51bf40febed41",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "58a4c74f59bfaeecf6b3ecf2b5620a418852360fb59b3281801b3818e5719c38",
+        "a6c34105e91fbaf20f94fe1559f01cce1b28ffafebea2861f849322acbd5643c"
+      ],
+      "invalidResponses": [
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "inputHash": "b084bea8318ed7113b59de9d7249c6a0c89102f08280f5b36f3b765454762f99",
+          "message": "scenario-2: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il caso richiesto. Le lacune sono della costruzione, non dei dati consegnati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 5,
+      "inputTokens": 305260,
+      "outputTokens": 48443,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "elapsedSeconds": 1606,
+      "rawResponsesAvailable": 4,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "timeout",
+          "message": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati."
+        },
+        {
+          "stage": "scenarios-2",
+          "code": "invalid-response",
+          "message": "scenario-2: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il caso richiesto. Le lacune sono della costruzione, non dei dati consegnati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "jobId": "370ea37a-71ab-4f17-a82e-17a882bd7679",
+      "startedAt": "2026-10-31T16:08:03.758Z",
+      "endedAt": "2026-10-31T16:31:05.588Z",
+      "passed": false,
+      "error": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T16:08:03.964Z",
+          "endedAt": "2026-10-31T16:09:01.936Z",
+          "status": "succeeded",
+          "inputHash": "8206022da22043e2d9bb61a01b0a23a677b3c8bc2b01dfb52443debd038f8869",
+          "inputBytes": 263818,
+          "durationMs": 57968,
+          "usage": {
+            "inputTokens": 91316,
+            "cachedInputTokens": 0,
+            "outputTokens": 2262
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T16:09:02.826Z",
+          "endedAt": "2026-10-31T16:11:01.650Z",
+          "status": "failed",
+          "inputHash": "f3e68d9ff9face085e5147ca60c6b687e002df046ef305f9cef90f94a7d33407",
+          "inputBytes": 137668,
+          "durationMs": 118830,
+          "usage": {
+            "inputTokens": 74546,
+            "cachedInputTokens": 0,
+            "outputTokens": 3962
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T16:11:03.110Z",
+          "endedAt": "2026-10-31T16:21:03.222Z",
+          "status": "failed",
+          "inputHash": "d0a16ae4fdd00e87b34c278359e3677b5783493c52364fcf9bd43939c21e518e",
+          "inputBytes": 144198,
+          "durationMs": 600100,
+          "usage": null
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T16:21:05.451Z",
+          "endedAt": "2026-10-31T16:31:05.563Z",
+          "status": "failed",
+          "inputHash": "d0a16ae4fdd00e87b34c278359e3677b5783493c52364fcf9bd43939c21e518e",
+          "inputBytes": 144198,
+          "durationMs": 600105,
+          "usage": null
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 80161,
+          "estimatedInput": 91829,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 263818,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.12,
+            "samples": 0,
+            "turnSamples": 0,
+            "unknownSamples": 0,
+            "largestInput": 0,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 65865,
+          "estimatedInput": 84582,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 137668,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.253073190204713,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.253073190204713,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 91316,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 67674,
+          "estimatedInput": 86849,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 144198,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.253073190204713,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.253073190204713,
+            "samples": 2,
+            "turnSamples": 2,
+            "unknownSamples": 0,
+            "largestInput": 91316,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 67674,
+          "estimatedInput": 86849,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 144198,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.253073190204713,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.253073190204713,
+            "samples": 2,
+            "turnSamples": 2,
+            "unknownSamples": 0,
+            "largestInput": 91316,
+            "measurement": "turn-usage-conservative"
+          }
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "f558e47c7fc176d37b845bc7ce370f98b8b7c3cb0665949820709201b3d3ec03",
+          "message": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 4,
+      "inputTokens": 165862,
+      "outputTokens": 6224,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 2,
+      "elapsedSeconds": 1382,
+      "rawResponsesAvailable": 2,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "timeout",
+          "message": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "timeout",
+          "message": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati."
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "jobId": "2b998e4f-a579-4613-95ad-d9244c0d6eb3",
+      "startedAt": "2026-10-31T16:08:03.996Z",
+      "endedAt": "2026-10-31T16:17:58.385Z",
+      "passed": false,
+      "error": "scenario-1: manca prova di rimozione per mee-009.\nscenario-1:direct: manca prova di rimozione per mee-009.\nscenario-1:access: manca prova di rimozione per mee-009.\nscenario-1:defend: manca prova di rimozione per mee-009.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T16:08:04.161Z",
+          "endedAt": "2026-10-31T16:09:16.904Z",
+          "status": "succeeded",
+          "inputHash": "05aa39672cf66faad7045954ec961741d46d7a5726ae63505509500a8752eacc",
+          "inputBytes": 142993,
+          "durationMs": 72741,
+          "usage": {
+            "inputTokens": 54070,
+            "cachedInputTokens": 0,
+            "outputTokens": 2636
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T16:09:17.409Z",
+          "endedAt": "2026-10-31T16:10:49.039Z",
+          "status": "failed",
+          "inputHash": "db2422e94333674d8899183474513e0ae2bd1acf8983a328ebcb7813f97fbbc8",
+          "inputBytes": 164675,
+          "durationMs": 91636,
+          "usage": {
+            "inputTokens": 74062,
+            "cachedInputTokens": 0,
+            "outputTokens": 4106
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T16:10:50.499Z",
+          "endedAt": "2026-10-31T16:14:50.359Z",
+          "status": "failed",
+          "inputHash": "5281f05900b7342b0a0b141330f1fd7e503630fd7cc1f7db29e32e91ee2a1ac6",
+          "inputBytes": 107339,
+          "durationMs": 239854,
+          "usage": {
+            "inputTokens": 62342,
+            "cachedInputTokens": 0,
+            "outputTokens": 6412
+          }
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-1-rebuild",
+          "startedAt": "2026-10-31T16:14:51.148Z",
+          "endedAt": "2026-10-31T16:17:58.374Z",
+          "status": "failed",
+          "inputHash": "bbf3c764fbcec13bde78cb5fdfa2c50a3472093f6bf7b8e4420bd568545417e5",
+          "inputBytes": 106069,
+          "durationMs": 187215,
+          "usage": {
+            "inputTokens": 62269,
+            "cachedInputTokens": 0,
+            "outputTokens": 9060
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 42917,
+          "estimatedInput": 50116,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 142993,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.12,
+            "samples": 0,
+            "turnSamples": 0,
+            "unknownSamples": 0,
+            "largestInput": 0,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 65432,
+          "estimatedInput": 92728,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 164675,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3858610806906357,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.3858610806906357,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 54070,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 53715,
+          "estimatedInput": 76490,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 107339,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3858610806906357,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.3858610806906357,
+            "samples": 2,
+            "turnSamples": 2,
+            "unknownSamples": 0,
+            "largestInput": 74062,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1-rebuild",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 53722,
+          "estimatedInput": 76500,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 106069,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3858610806906357,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.3858610806906357,
+            "samples": 3,
+            "turnSamples": 3,
+            "unknownSamples": 0,
+            "largestInput": 74062,
+            "measurement": "turn-usage-conservative"
+          }
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "db2422e94333674d8899183474513e0ae2bd1acf8983a328ebcb7813f97fbbc8",
+          "message": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "db2422e94333674d8899183474513e0ae2bd1acf8983a328ebcb7813f97fbbc8",
+          "message": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Candidato Solar Cutter; registro non completato. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-1-rebuild",
+          "inputHash": "aa0dc741d8ee1fe504ab146ec4166d7d2eac0d972380bfca6d63e0db7c2d59d4",
+          "message": "scenario-1: manca prova di rimozione per mee-009.\nscenario-1:direct: manca prova di rimozione per mee-009.\nscenario-1:access: manca prova di rimozione per mee-009.\nscenario-1:defend: manca prova di rimozione per mee-009."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 4,
+      "inputTokens": 252743,
+      "outputTokens": 22214,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 594,
+      "rawResponsesAvailable": 4,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Candidato Solar Cutter; registro non completato. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        },
+        {
+          "stage": "scenarios-1-rebuild",
+          "code": "invalid-response",
+          "message": "scenario-1: manca prova di rimozione per mee-009.\nscenario-1:direct: manca prova di rimozione per mee-009.\nscenario-1:access: manca prova di rimozione per mee-009.\nscenario-1:defend: manca prova di rimozione per mee-009."
+        }
+      ]
+    }
+  ],
+  "passed": 0,
+  "scenarioOutputSummary": {
+    "responses": 7,
+    "minimumCharacters": 4861,
+    "maximumCharacters": 59547,
+    "contextSchemasPassed": 7,
+    "losslessRoundtrips": 3,
+    "nativeSchemaPassed": 3,
+    "locallyAcceptedCases": 2
+  },
+  "actualCalls": 13,
+  "inputTokens": 723865,
+  "outputTokens": 76881,
+  "callsWithoutUsage": 3,
+  "unissuedTokenPlans": 0,
+  "elapsedSeconds": 1606,
+  "ui": "Not run: no validated generated guide",
+  "blockedPreflightCandidates": 0,
+  "rawResponsesAvailable": 10
+}

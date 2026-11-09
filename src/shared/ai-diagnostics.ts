@@ -1,7 +1,8 @@
 import { aiCallKinds, readAiCallMetrics, type AiCallKind, type AiCallMetrics } from './ai-call-metrics'
 
-export const aiFailureCodes = ['unknown', 'cancelled', 'paused', 'timeout', 'auth', 'network',
-  'storage', 'invalid-plan', 'invalid-response', 'evidence-incomplete', 'draft-limit',
+import {readAiBudget,type AiBudgetSnapshot} from './ai-limits'
+export const aiFailureCodes = ['unknown', 'cancelled', 'paused', 'process-interrupted', 'timeout', 'auth', 'network', 'token-budget','call-budget','request-limit',
+  'storage', 'invalid-plan', 'invalid-response', 'invalid-schema', 'output-limit', 'provider', 'evidence-incomplete', 'draft-limit',
   'batch-too-large', 'query-limit', 'cli-unavailable', 'context-limit', 'quota', 'storage-full', 'no-progress'] as const
 export type AiFailureCode = typeof aiFailureCodes[number]
 
@@ -33,6 +34,11 @@ export interface AiEvidencePlanMetrics {
 export interface AiDiagnostics {
   evidencePlan?: AiEvidencePlanMetrics
   metrics?: AiCallMetrics
+  budget?:AiBudgetSnapshot
+  guide?: { formatVersion: 1; attempts: number; failedAttempts: number; attemptLimit: number;
+    inputTokens: number; outputTokens: number; cachedInputTokens: number; durationMs: number;
+    localErrors: number; reviewFindings: number; validated: boolean; usageIncomplete?:boolean;
+    delivery?:{contract:'bounded-delivery-1';repairsUsed:number;repairLimit:number} }
   collection?: AiCollectionDiagnostics
   failureCode?: AiFailureCode
   model?: string | null
@@ -83,6 +89,19 @@ export function readAiDiagnostics(value: unknown): AiDiagnostics {
   }
   const metrics = readAiCallMetrics(data.metrics)
   if (metrics) result.metrics = metrics
+  const budget=readAiBudget(data.budget);if(budget)result.budget=budget
+  const guide = data.guide as Record<string, unknown> | undefined
+  if (guide?.formatVersion === 1 && typeof guide.validated === 'boolean' &&
+    ['attempts', 'failedAttempts', 'attemptLimit', 'inputTokens', 'outputTokens', 'cachedInputTokens', 'durationMs', 'localErrors', 'reviewFindings']
+      .every(key => Number.isSafeInteger(guide[key]) && Number(guide[key]) >= 0)) {
+    result.guide = { formatVersion: 1, validated: guide.validated, attempts: Number(guide.attempts),
+      failedAttempts: Number(guide.failedAttempts), attemptLimit: Number(guide.attemptLimit), inputTokens: Number(guide.inputTokens),
+      outputTokens: Number(guide.outputTokens), cachedInputTokens: Number(guide.cachedInputTokens), durationMs: Number(guide.durationMs),
+      localErrors: Number(guide.localErrors), reviewFindings: Number(guide.reviewFindings) }
+    if(typeof guide.usageIncomplete==='boolean')result.guide.usageIncomplete=guide.usageIncomplete
+    const delivery=guide.delivery as any
+    if(delivery?.contract==='bounded-delivery-1'&&Number.isSafeInteger(delivery.repairLimit)&&delivery.repairLimit>=16&&delivery.repairLimit<=result.guide.attemptLimit&&Number.isSafeInteger(delivery.repairsUsed)&&delivery.repairsUsed>=0&&delivery.repairsUsed<=delivery.repairLimit)result.guide.delivery={contract:'bounded-delivery-1',repairLimit:delivery.repairLimit,repairsUsed:delivery.repairsUsed}
+  }
   if (['user', 'shutdown', 'failure', 'legacy'].includes(data.suspensionReason as string))
     result.suspensionReason = data.suspensionReason as AiDiagnostics['suspensionReason']
   if (aiFailureCodes.includes(data.failureCode as AiFailureCode)) result.failureCode = data.failureCode as AiFailureCode

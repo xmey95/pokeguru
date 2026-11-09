@@ -1,4 +1,5 @@
 import { codexErrorEvent, codexFailure } from './codex-failure'
+import {readAiQuota,type AiQuota} from '../shared/ai-limits'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { createInterface, type Interface } from 'node:readline'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -120,8 +121,14 @@ export class CodexControl {
     return {
       account: account === 'chatgpt' ? 'chatgpt' : account === 'apiKey' ? 'apiKey' : account ? 'other' : null,
       plan: typeof response?.account?.planType === 'string' ? response.account.planType : null,
-      models: account ? await this.models() : []
+      models: account ? await this.models() : [],
+      ...(account==='chatgpt'?{quota:await this.quota()}: {})
     }
+  }
+
+  async quota():Promise<AiQuota>{
+    try{return readAiQuota(await this.request('account/rateLimits/read'))}
+    catch{return readAiQuota(null)} // A quota endpoint failure must not report an authentication failure.
   }
 
   async models(): Promise<AiModel[]> {

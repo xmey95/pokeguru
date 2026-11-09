@@ -1,6 +1,6 @@
 # APP-192 — Risposta diretta quando le prove bastano
 
-Worktree `task/app-192-focused-ai` da dev `e98f68c` (v0.3.11). Ottimizzazione e confronto autorizzati il 30 ottobre 2026. Il confronto locale non comprendeva merge, rilascio o modifiche al profilo personale. La successiva integrazione e distribuzione nella v0.3.12 sono autorizzate e tracciate separatamente in APP-195.
+Worktree `task/app-192-focused-ai` da dev `e98f68c` (v0.3.11). Ottimizzazione e confronto autorizzati il 30 ottobre 2026. Il confronto locale non comprendeva merge, rilascio o modifiche al profilo personale. La successiva integrazione e distribuzione nella v0.3.12 sono completate e verificate in APP-195; [rapporto di rilascio](RELEASE-0.3.12-VERIFICATION.json).
 
 ## Contratto
 
@@ -51,4 +51,4 @@ Le due candidate del caso ampio passano i validatori. Le frequenze citate da v5 
 
 **Controlli locali:** 393 test ordinari passati, 51 opzionali esclusi; typecheck/build passati. Cinque nuovi test di instradamento, checkpoint, isolamento e rifiuto delle risposte incoerenti; regressione sulla consegna delle carte dopo ripresa. Preflight dello snapshot e cinque probe negativi (61 carte, vincolo esatto violato, due ACE SPEC, stampa sconosciuta, fonte sconosciuta) passati. La prova Electron reale di lifecycle passa con risposta v5 conservata, workflow v4, legacy, pause, attese quota, assenza di duplicati e isolamento: profilo temporaneo, nessuna inferenza in questa prova.
 
-**Conclusione circoscritta:** obiettivo di latenza raggiunto nel campione ripetuto, senza regressioni osservate nei criteri definiti e senza indebolire i validatori. Restano variabilità remota, campione ridotto e assenza di verifica end-to-end sull'archivio completo. Il cambiamento non è presente nella v0.3.11; la distribuzione nella v0.3.12 è tracciata in APP-195.
+**Conclusione circoscritta:** obiettivo di latenza raggiunto nel campione ripetuto, senza regressioni osservate nei criteri definiti e senza indebolire i validatori. Restano variabilità remota, campione ridotto e assenza di verifica end-to-end sull'archivio completo. Il cambiamento non è presente nella v0.3.11; la distribuzione nella v0.3.12 è completata e verificata in APP-195.

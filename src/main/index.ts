@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, session, shell } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { BackendClient } from './backend-rpc'
@@ -45,7 +45,7 @@ function isTrustedRendererUrl(value: string): boolean {
 function createWindow(): void {
   const developmentUrl = developmentRendererUrl()
   const window = new BrowserWindow({
-    title: 'Pokéguru',
+    title: process.env.POKEGURU_DEMO === '1' ? 'Pokéguru — Consultazione offline' : 'Pokéguru',
     icon: app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(__dirname, '../../resources/icon.png'),
     width: 1280,
     height: 800,
@@ -119,6 +119,8 @@ function createWindow(): void {
 
 
 app.whenReady().then(async () => {
+  if (process.env.POKEGURU_DEMO === '1' && !process.env.POKEGURU_DATA_DIR)
+    throw new Error('La demo richiede un profilo separato. Usa il comando di avvio della demo.')
   if (process.platform === 'win32') app.setAppUserModelId('io.github.xmey95.pokeguru')
   if (process.platform === 'win32' || process.platform === 'linux') Menu.setApplicationMenu(null)
   const override = process.env.POKEGURU_DATA_DIR
@@ -138,6 +140,8 @@ app.whenReady().then(async () => {
     version: app.getVersion(), packaged: app.isPackaged,
     electron: process.versions.electron, chrome: process.versions.chrome
   }, async (action, value) => {
+    if (process.env.POKEGURU_DEMO === '1' && action === 'open-external')
+      throw new Error('I collegamenti esterni sono disabilitati nella demo offline.')
     if (action === 'open-external' && typeof value === 'string') {
       const url = new URL(value)
       if (url.protocol !== 'https:' || url.username || url.password) throw new Error('URL non consentito.')
@@ -147,6 +151,10 @@ app.whenReady().then(async () => {
     else if (action === 'save-dialog' && mainWindow) return dialog.showSaveDialog(mainWindow, value as Electron.SaveDialogOptions)
     else throw new Error('Operazione desktop non disponibile.')
   })
+  if (process.env.POKEGURU_DEMO === '1') {
+    app.setName('Pokeguru — Demo offline')
+    session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_details, callback) => callback({ cancel: true }))
+  }
   // Register only backend-owned channels; internal lifecycle messages never become IPC.
   const channels = await backend.ready
   for (const channel of channels) ipcMain.handle(channel, async (event, ...args) => {
