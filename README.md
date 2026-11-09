@@ -1,4 +1,4 @@
-**Novità v0.3.13 — guide approfondite e generazione ottimizzata.** Guide sulla lista esatta e sul singolo matchup,scenari verificati prima dei capitoli e riparazioni automatiche fino all’approvazione,con tutti i controlli e senza tetti numerici prefissati sui nuovi job. Recupero dei raw già pagati,scaling dinamico e trasporti senza perdita. [Qualificazione e limiti](docs/pilots/APP-259/OPTIMIZATION-APP-260.md). Le funzioni AI puntuali e la diagnostica della v0.3.12 sono conservate;la distribuzione richiede i gate della nuova release.
+**Novità v0.3.13 — guide approfondite e generazione ottimizzata.** Guide personalizzate sulla lista esatta e sul singolo matchup, scenari verificati prima della prosa, riparazioni automatiche e recupero delle risposte già pagate. Funzioni AI puntuali e diagnostica della v0.3.12 conservate. [Note di versione](docs/releases/v0.3.13.md) · [Qualificazione e stato della pubblicazione](docs/releases/v0.3.13-VERIFICATION.md).
 
 <p align="center">
   <img src="resources/icon.png" alt="Logo Pokéguru" width="96" height="96">

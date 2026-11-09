@@ -1822,3 +1822,8 @@ Le prove funzionali e320test pertinenti passano,ma il gate completo a freddo res
 
 
 **T-292 (09-11-2026, APP-260).** Qualificati T-288–T-291 sul medesimo codice: full offline unico1251pass/12esclusi/0fail,typecheck/build,tre approvazioni immutate,UI ordinaria e readonly responsive. Replay esatto290/281 con provider intercettato:freddo231,7s/1198,4MiB,caldo232,4s/1368,8MiB,rispetto a456,7s/1462,3MiB. Riferimento con concorrenza parziale e variabilità dichiarati. Consumi riportati come token dei soli trasporti,non fatturazione o costo di guide future. Zero nuove chiamate reali;nessun tetto numerico nuovo o modifica manuale degli originali. [Rapporto](pilots/APP-259/OPTIMIZATION-APP-260.md).
+
+
+## REL-013 — Integrazione v0.3.13 senza sostituire il checkout originale (09-11-2026)
+
+La release integra la snapshot locale delle guide sopra dev v0.3.12 in un worktree separato. Mantiene workflow 1–5, domande AI puntuali, Eventi, metriche persistenti e controlli delle guide. Schema SQLite 16 invariato. Le cronologie remote complete sono conservate negli archivi REMOTE-DEV-V0.3.12-* a causa degli ID storici coincidenti; gli stati correnti restano soltanto in BACKLOG.md. Qualificazione del pacchetto da npm ci, non da node_modules collegato: il primo tentativo locale ometteva dipendenze transitive. Nessun database .verify o credenziale viene incluso nella sorgente pubblicabile. Pubblicazione ancora bloccata da auto-review; nessuna approvazione remota o integrazione live è dedotta dai soli test locali. [Prove e stato](releases/v0.3.13-VERIFICATION.md).

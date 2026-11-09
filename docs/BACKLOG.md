@@ -2863,9 +2863,14 @@ Accettazione: distinzione tra saldo della singola stampa e somma completa della 
 
 ## APP-261 — Integrare e pubblicare la release v0.3.13
 
-- **Stato:** In progress (09-11-2026). Ready tecnico dopo inventario e controllo dello stato remoto; unica attività principale corrente.
+- **Stato:** Blocked (09-11-2026), solo per approvazione della pubblicazione remota. Preparazione e qualificazione locali completate; nessun rilascio ufficiale dichiarato.
 - **Autorizzazione:** richiesta utente «facciamo una nuova release»:integrazione tramite dev/main,CI e pubblicazione secondo il flusso esistente. Supera le esclusioni di rilascio dei precedenti incrementi.
 - **Perimetro:** guida approfondita e ottimizzazione APP-259/260,conservando le funzioni già distribuite nella v0.3.12 e i dati personali. Nessuna nuova inferenza reale o modifica manuale alle guide approvate.
 - **Stato reale:** checkout originale task/app-172-desktop-refinements a f3d2875,590file locali modificati/nuovi (25,2MB) prima delle note di rilascio; origin/dev9837f3c,main9ee6af1,ultima releasev0.3.12. Lavoro locale preservato:integrazione in checkout separato,snapshot e confronti prima dei cambiamenti.
 - **Done:** conflitti risolti senza perdere funzioni remote o controlli locali;versione/lock allineati;test/build/persistenza/guide pertinenti e CI verdi;PR in dev e main;release pubblicata con quattro pacchetti,nove asset,manifest/checksum/attestazioni e commit coerenti;rapporti e Ripresa aggiornati.
 - **Evidenze:** .verify/release-0.3.13-20261109/workspace-inventory.json. Il numero590 descrive file,non invocazioni o crediti.
+
+- **Qualificazione locale conclusa:** npm ci, typecheck/build, 1351 test passati / 56 esclusi / 0 errori su 238 file; due Electron opt-in e test provenienza aggiuntivi passati. Tre guide originali rilette in sola lettura, UI ordinaria e readonly e tutte e tre nel vero pacchetto Windows verificate, riapertura e fonti invarianti. Zero nuove inferenze. Primo pacchetto da junction e falso negativo CLI diagnosticati, sostituiti da verifiche pulite senza indebolire asserzioni.
+- **Consegna locale:** installer candidato v0.3.13 in .verify/release-0.3.13-20261109/worktree/release; SHA-256 29ca8effc6f1d8e02a9c600faef8fadba0152ad199fa6bd4842cf87a174c62bc. Snapshot e 590 file originali invariati prima delle sole note finali; nessun database privato nel ramo di release. Codice integrato sopra dev9837f3c nel ramo locale task/app-261-release-0.3.13.
+- **Blocco concreto:** auto-review ha respinto push del ramo e apertura PR verso il repository pubblico xmey95/pokeguru, ritenendo la richiesta generica di release insufficiente per questa esportazione. Nessun push/PR/merge/tag/release eseguito. Serve conferma esplicita del destinatario pubblico e del flusso PR→dev→main→Release; poi CI su quattro sistemi e verifica nove asset/manifest/checksum/attestazioni. Nessun nuovo test AI reale necessario.
+- **Ripresa verificabile:** worktree isolato .verify/release-0.3.13-20261109/worktree, qualification.json e log nello stesso parent; [rapporto](releases/v0.3.13-VERIFICATION.md) nel ramo di release. Checkout originale non riallineato o resettato.
