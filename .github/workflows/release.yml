@@ -49,6 +49,8 @@ jobs:
       - run: npm ci
       - name: Prepare verified Electron runtime before expensive tests
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash scripts/retry-ci-download.sh node scripts/prepare-electron-runtime.cjs
       - run: npm test -- --maxWorkers=2 --testTimeout=15000
       - name: Install Linux display tools
@@ -56,16 +58,24 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
       - name: Package Linux AppImage
         if: runner.os == 'Linux'
-        run: bash scripts/retry-ci-download.sh npm run package:linux
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --require=./scripts/preload-builder-download.cjs
+        run: bash scripts/retry-ci-download.sh npm run package:linux -- --config.electronDist=node_modules/electron/dist
       - name: Package Windows installer
         if: runner.os == 'Windows'
         env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --require=./scripts/preload-builder-download.cjs
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-        run: bash scripts/retry-ci-download.sh npm run package:win
+        run: bash scripts/retry-ci-download.sh npm run package:win -- --config.electronDist=node_modules/electron/dist
       - name: Package macOS DMG
         if: runner.os == 'macOS'
-        run: bash scripts/retry-ci-download.sh npm run package:mac
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --require=./scripts/preload-builder-download.cjs
+        run: bash scripts/retry-ci-download.sh npm run package:mac -- --config.electronDist=node_modules/electron/dist
       - name: Verify Windows publisher signature when configured
         if: runner.os == 'Windows'
         shell: pwsh
