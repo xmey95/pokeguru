@@ -13,7 +13,7 @@ jobs:
     env:
       POKEGURU_AUTO_SYNC: '0'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 35
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -47,22 +47,25 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci
+      - name: Prepare verified Electron runtime before expensive tests
+        shell: bash
+        run: bash scripts/retry-ci-download.sh node scripts/prepare-electron-runtime.cjs
       - run: npm test -- --maxWorkers=2 --testTimeout=15000
       - name: Install Linux display tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
       - name: Package Linux AppImage
         if: runner.os == 'Linux'
-        run: npm run package:linux
+        run: bash scripts/retry-ci-download.sh npm run package:linux
       - name: Package Windows installer
         if: runner.os == 'Windows'
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-        run: npm run package:win
+        run: bash scripts/retry-ci-download.sh npm run package:win
       - name: Package macOS DMG
         if: runner.os == 'macOS'
-        run: npm run package:mac
+        run: bash scripts/retry-ci-download.sh npm run package:mac
       - name: Verify Windows publisher signature when configured
         if: runner.os == 'Windows'
         shell: pwsh

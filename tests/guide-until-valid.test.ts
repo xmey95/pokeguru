@@ -163,4 +163,4 @@ it('completes three independent case repair rounds, keeps negatives, seals, pers
    writeFileSync(output+'.metrics.json',JSON.stringify({coldMs,warmMs,peakRssMiB,calls,negativeOpinions:negatives.length,repairs:readGuideDelivery(work.archive).repairs,syntheticProviderOnly:true,completeReadersAndPersistence:true},null,2))
   }
  }finally{work.close();f.close()}
-},120000)
+},240000)

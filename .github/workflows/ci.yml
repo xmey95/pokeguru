@@ -13,7 +13,7 @@ jobs:
     env:
       POKEGURU_AUTO_SYNC: '0'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -34,6 +34,9 @@ jobs:
           package-manager-cache: false
       - name: Install dependencies
         run: npm ci
+      - name: Prepare verified Electron runtime before expensive tests
+        shell: bash
+        run: bash scripts/retry-ci-download.sh node scripts/prepare-electron-runtime.cjs
       - name: Check types
         run: npm run typecheck
       - name: Run local tests
@@ -235,7 +238,7 @@ jobs:
         run: node tests/deck-footer-ui-live.mjs
       - name: Package Linux AppImage
         if: runner.os == 'Linux'
-        run: npm run package:linux
+        run: bash scripts/retry-ci-download.sh npm run package:linux
       - name: Smoke packaged Linux app
         if: runner.os == 'Linux'
         run: xvfb-run -a node tests/package-smoke.mjs release/linux-unpacked/pokeguru
@@ -248,7 +251,7 @@ jobs:
           xvfb-run -a node "$GITHUB_WORKSPACE/tests/package-smoke.mjs" "$RUNNER_TEMP/squashfs-root/AppRun"
       - name: Package Windows installer
         if: runner.os == 'Windows'
-        run: npm run package:win
+        run: bash scripts/retry-ci-download.sh npm run package:win
       - name: Smoke packaged Windows app
         if: runner.os == 'Windows'
         run: node tests/package-smoke.mjs release/win-unpacked/Pokeguru.exe
@@ -269,7 +272,7 @@ jobs:
         env:
           # Firma ad hoc: non usa certificati o secret nei job delle PR.
           CSC_FOR_PULL_REQUEST: 'true'
-        run: npm run package:mac
+        run: bash scripts/retry-ci-download.sh npm run package:mac
       - name: Verify and smoke mounted macOS DMG
         if: runner.os == 'macOS'
         shell: bash
