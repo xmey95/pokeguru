@@ -1,0 +1,1718 @@
+{
+  "task": "APP-211",
+  "date": "2026-10-31",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "promptVersion": "matchup-guide-19",
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "manualCorrections": 0,
+  "diagnosticCalls": 0,
+  "estimateOnly": true,
+  "sealedFiles": 56,
+  "changedSealedFiles": [],
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 422,
+    "externalSkipped": 44,
+    "targetedTests": 83,
+    "typecheck": "pass",
+    "build": "pass",
+    "offlineOutputReplay": "pass",
+    "offlineAllSchemas": "pass"
+  },
+  "timeoutRecovery": {
+    "at": "2026-10-31T14:06:36.351Z",
+    "modelCallsForAudit": 0,
+    "actualInvocations": 9,
+    "automaticTimeoutRetries": [
+      {
+        "id": "toucannon-festival",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "identicalInputHash": "c09ed0e2366cee723eaeebd8c94dd7b90e77edcddbea59176c2bc7f5944a18b3",
+        "singleImmutableContext": true,
+        "remainingBefore": 7,
+        "remainingOnRetry": 6,
+        "actualRetryInvoked": true,
+        "retryStatus": "failed"
+      }
+    ],
+    "immutableContextFailures": 0
+  },
+  "outputCompressionAudit": {
+    "modelCalls": 0,
+    "priorGuidesChanged": false,
+    "oldCasesManuallyRepaired": false,
+    "rows": [
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 2,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-18",
+        "error": "Error: scenario-1: promozione obbligatoria omessa prima della fine del turno.",
+        "localChecks": null,
+        "roundTripIdentical": true,
+        "promotionDiagnostic": "Error: scenario-1: promozione obbligatoria omessa prima della fine del turno. Turno 3, lato senza Attivo: opponent; candidati in Panchina: [{\"printId\":\"me02.5-016\",\"count\":1},{\"printId\":\"me02-014\",\"count\":1}]. Scegliere e registrare bench→active nel turno del KO, dopo gli scarti e i Premi. Il giocatore di turno determina la tabella dell'evento, anche quando promuove l'altro lato. Rivalutare TUTTI i candidati in tactical.promotions del turno e di ogni ramo coinvolto."
+      },
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 3,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-18",
+        "error": "scenario-1: promozione diretta omessa in main|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in main|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in main|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in direct|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in direct|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in direct|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in access|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|5|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in defend|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in defend|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in defend|5|ours: opponent / me02-014.",
+        "localChecks": {
+          "errors": [
+            "scenario-1: promozione diretta omessa in main|3|ours: opponent / me02.5-016.",
+            "scenario-1: promozione diretta omessa in main|3|ours: opponent / me02-014.",
+            "scenario-1: promozione diretta omessa in main|5|ours: opponent / me02.5-016.",
+            "scenario-1: promozione diretta omessa in direct|3|ours: opponent / me02.5-016.",
+            "scenario-1: promozione diretta omessa in direct|3|ours: opponent / me02-014.",
+            "scenario-1: promozione diretta omessa in direct|5|ours: opponent / me02.5-016.",
+            "scenario-1: promozione diretta omessa in access|3|ours: opponent / me02.5-016.",
+            "scenario-1: promozione diretta omessa in access|3|ours: opponent / me02-014.",
+            "scenario-1: promozione diretta omessa in access|5|ours: opponent / me02.5-016.",
+            "scenario-1: promozione diretta omessa in access|5|ours: opponent / me02-014.",
+            "scenario-1: promozione diretta omessa in defend|3|ours: opponent / me02.5-016.",
+            "scenario-1: promozione diretta omessa in defend|3|ours: opponent / me02-014.",
+            "scenario-1: promozione diretta omessa in defend|5|ours: opponent / me02-014."
+          ],
+          "checks": {
+            "scenarios": 1,
+            "quantities": 17,
+            "calculations": 13,
+            "transitions": 18
+          }
+        },
+        "roundTripIdentical": true,
+        "promotionDiagnostic": null
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 2,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-18",
+        "error": "Error: scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"opponentLineEvents\",\"requiredUse\":\"turns.opponent.events (anche nei rami)\",\"entries\":[{\"index\":15,\"value\":{\"kind\":\"effect\",\"description\":\"Dopo il KO di Dipplin o Applin, l’avversario promuove Applin TWM 126.\",\"moves\":[16],\"energyRoutes\":[],\"attack\":null,\"trainer\":null,\"action\":\"promote\",\"affectedSide\":\"opponent\",\"deckObservations\":[],\"retreat\":null}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+        "localChecks": null,
+        "roundTripIdentical": false,
+        "promotionDiagnostic": null
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 3,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-18",
+        "error": "Error: scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"energyTable\",\"requiredUse\":\"e/energyRoutes di un evento referenziato\",\"entries\":[{\"index\":10,\"value\":{\"side\":\"ours\",\"printId\":\"sv09-159\",\"count\":1,\"path\":[\"prizes\",\"hand\"],\"hostPrintId\":null,\"sourceIds\":[\"rules\"],\"attachment\":null}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+        "localChecks": null,
+        "roundTripIdentical": false,
+        "promotionDiagnostic": null
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 4,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-18",
+        "error": null,
+        "localChecks": {
+          "errors": [],
+          "checks": {
+            "scenarios": 1,
+            "quantities": 17,
+            "calculations": 11,
+            "transitions": 12
+          }
+        },
+        "roundTripIdentical": true,
+        "promotionDiagnostic": null
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 5,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-18",
+        "error": "scenario-2: promozione diretta omessa in reply-direct|5|ours: opponent / sv06-018.",
+        "localChecks": {
+          "errors": [
+            "scenario-2: promozione diretta omessa in reply-direct|5|ours: opponent / sv06-018."
+          ],
+          "checks": {
+            "scenarios": 1,
+            "quantities": 17,
+            "calculations": 10,
+            "transitions": 12
+          }
+        },
+        "roundTripIdentical": true,
+        "promotionDiagnostic": null
+      }
+    ]
+  },
+  "feedbackAudit": {
+    "at": "2026-10-31T14:04:59.047Z",
+    "modelCalls": 0,
+    "readOnly": true,
+    "retries": [
+      {
+        "id": "dragapult-hydrapple",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "cb482b62c3f0e8b8e021bb90eec76b91bdf1a92a946e4b650040fc292ffcc364",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 135530,
+        "retryInputBytes": 119704
+      }
+    ]
+  },
+  "outputProtocol": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "succeeded",
+            "responseCharacters": 24255,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 36978,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 16,
+                "calculations": 15,
+                "transitions": 17
+              }
+            },
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 3,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 17,
+                  "opponentLineEvents": 5,
+                  "ourFinalAttacks": 3
+                },
+                "moves": 17,
+                "energyRoutes": 7,
+                "audits": 9,
+                "promotionReviewsDeclared": 6,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-2",
+            "status": "failed",
+            "responseCharacters": 35707,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 58563,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [
+                "scenario-2: accesso/sviluppo omesso in main|5|ours: me03-113 (hand).",
+                "scenario-2: accesso/sviluppo omesso in direct-moltres|5|ours: me03-113 (hand).",
+                "scenario-2: accesso/sviluppo omesso in access-mind-bend|5|ours: me03-113 (hand).",
+                "scenario-2: accesso/sviluppo omesso in defend-budew|5|ours: me03-113 (hand).",
+                "scenario-2: accesso/sviluppo omesso in witness-fire-only|5|ours: me03-113 (hand).",
+                "scenario-2: accesso/sviluppo omesso in witness-darkness-retreat|5|ours: me03-113 (hand)."
+              ],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 19,
+                "calculations": 21,
+                "transitions": 20
+              }
+            },
+            "tables": [
+              {
+                "id": "scenario-2",
+                "events": {
+                  "ourSetupEvents": 4,
+                  "opponentSetupEvents": 3,
+                  "ourLineEvents": 17,
+                  "opponentLineEvents": 13,
+                  "ourFinalAttacks": 2
+                },
+                "moves": 29,
+                "energyRoutes": 15,
+                "audits": 13,
+                "promotionReviewsDeclared": 14,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 41014,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"moveTable\",\"requiredUse\":\"m/moves di un evento referenziato\",\"entries\":[{\"index\":13,\"value\":{\"side\":\"ours\",\"printId\":\"me03-113\",\"count\":1,\"from\":\"hand\",\"to\":\"discard\"}},{\"index\":14,\"value\":{\"side\":\"ours\",\"printId\":\"me05-094\",\"count\":1,\"from\":\"deck\",\"to\":\"hand\"}},{\"index\":45,\"value\":{\"side\":\"ours\",\"printId\":\"me02-116\",\"count\":1,\"from\":\"hand\",\"to\":\"stadium\"}},{\"index\":49,\"value\":{\"side\":\"opponent\",\"printId\":\"sv06-017\",\"count\":1,\"from\":\"bench\",\"to\":\"active\"}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 6,
+                  "opponentSetupEvents": 4,
+                  "ourLineEvents": 16,
+                  "opponentLineEvents": 17,
+                  "ourFinalAttacks": 4
+                },
+                "moves": 56,
+                "energyRoutes": 13,
+                "audits": 12,
+                "promotionReviewsDeclared": 24,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 33978,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: riferimento moveTable[31] assente o non intero.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 1,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 15,
+                  "opponentLineEvents": 10,
+                  "ourFinalAttacks": 3
+                },
+                "moves": 31,
+                "energyRoutes": 12,
+                "audits": 11,
+                "promotionReviewsDeclared": 13,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 34812,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"energyTable\",\"requiredUse\":\"e/energyRoutes di un evento referenziato\",\"entries\":[{\"index\":10,\"value\":{\"side\":\"opponent\",\"printId\":\"mee-009\",\"count\":2,\"path\":[\"attached\",\"discard\"],\"hostPrintId\":\"sv06-025\",\"sourceIds\":[\"rules\",\"card:sv06-025\"],\"attachment\":null}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 1,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 16,
+                  "opponentLineEvents": 10,
+                  "ourFinalAttacks": 2
+                },
+                "moves": 32,
+                "energyRoutes": 13,
+                "audits": 11,
+                "promotionReviewsDeclared": 13,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "referenceAudit": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 17,
+                "used": 17,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 5,
+                "used": 5,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 17,
+                "used": 17,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 7,
+                "used": 7,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 9,
+                "used": 9,
+                "unused": []
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-2",
+            "scenarioId": "scenario-2",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 4,
+                "used": 4,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 17,
+                "used": 17,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 13,
+                "used": 13,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 29,
+                "used": 29,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 15,
+                "used": 15,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 13,
+                "used": 13,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 6,
+                "used": 6,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 4,
+                "used": 4,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 16,
+                "used": 16,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 17,
+                "used": 17,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 4,
+                "used": 4,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 56,
+                "used": 52,
+                "unused": [
+                  {
+                    "index": 13,
+                    "value": {
+                      "side": "ours",
+                      "printId": "me03-113",
+                      "count": 1,
+                      "from": "hand",
+                      "to": "discard"
+                    }
+                  },
+                  {
+                    "index": 14,
+                    "value": {
+                      "side": "ours",
+                      "printId": "me05-094",
+                      "count": 1,
+                      "from": "deck",
+                      "to": "hand"
+                    }
+                  },
+                  {
+                    "index": 45,
+                    "value": {
+                      "side": "ours",
+                      "printId": "me02-116",
+                      "count": 1,
+                      "from": "hand",
+                      "to": "stadium"
+                    }
+                  },
+                  {
+                    "index": 49,
+                    "value": {
+                      "side": "opponent",
+                      "printId": "sv06-017",
+                      "count": 1,
+                      "from": "bench",
+                      "to": "active"
+                    }
+                  }
+                ]
+              },
+              {
+                "table": "energyTable",
+                "declared": 13,
+                "used": 13,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 12,
+                "used": 12,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [
+              {
+                "table": "moveTable",
+                "index": 31
+              },
+              {
+                "table": "moveTable",
+                "index": 32
+              }
+            ],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 1,
+                "used": 1,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 15,
+                "used": 15,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 10,
+                "used": 10,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 31,
+                "used": 29,
+                "unused": [
+                  {
+                    "index": 27,
+                    "value": {
+                      "side": "ours",
+                      "printId": "sv08.5-004",
+                      "count": 1,
+                      "from": "active",
+                      "to": "bench"
+                    }
+                  },
+                  {
+                    "index": 29,
+                    "value": {
+                      "side": "opponent",
+                      "printId": "sv06-017",
+                      "count": 1,
+                      "from": "deck",
+                      "to": "hand"
+                    }
+                  }
+                ]
+              },
+              {
+                "table": "energyTable",
+                "declared": 12,
+                "used": 12,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 1,
+                "used": 1,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 16,
+                "used": 16,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 10,
+                "used": 10,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 32,
+                "used": 32,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 13,
+                "used": 12,
+                "unused": [
+                  {
+                    "index": 10,
+                    "value": {
+                      "side": "opponent",
+                      "printId": "mee-009",
+                      "count": 2,
+                      "path": [
+                        "attached",
+                        "discard"
+                      ],
+                      "hostPrintId": "sv06-025",
+                      "sourceIds": [
+                        "rules",
+                        "card:sv06-025"
+                      ],
+                      "attachment": null
+                    }
+                  }
+                ]
+              },
+              {
+                "table": "auditTable",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "calibrationAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "retryDataLossless": true,
+    "blockedPlan": {
+      "stage": "scenarios-2",
+      "units": 1,
+      "encoding": "shared-v2",
+      "visibleTokens": 71683,
+      "estimatedInput": 182888,
+      "reservedOutput": 28000,
+      "estimatedResponseCharacters": 42000,
+      "margin": 8192,
+      "bytes": 159270,
+      "fits": false,
+      "fitsTarget": false,
+      "remainingCalls": 5,
+      "reservedCalls": 3,
+      "calibrationFactor": 2.5227656291042817,
+      "family": "scenario",
+      "estimateOnly": true
+    },
+    "samples": [
+      {
+        "visibleTokens": 58000,
+        "inputTokens": 69256,
+        "outputTokens": 2334,
+        "family": "plan",
+        "units": 1,
+        "responseCharacters": 8178
+      },
+      {
+        "visibleTokens": 60879,
+        "inputTokens": 69265,
+        "outputTokens": 9350,
+        "family": "scenario",
+        "units": 1,
+        "responseCharacters": 24255
+      },
+      {
+        "visibleTokens": 60912,
+        "inputTokens": 139697,
+        "outputTokens": 15221,
+        "family": "scenario",
+        "units": 1,
+        "responseCharacters": 35707
+      }
+    ],
+    "largestInputSample": 139697,
+    "causeOfLargerServiceUsage": "Not isolated; no claim that this is quota exhaustion or a per-request context measurement."
+  },
+  "refusalInspection": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "placeholders": [],
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 24255,
+            "limitations": [
+              "Le pescate e l'apertura senza accessi avversari sono condizioni esplicite del caso; mani con Poffin, Poké Pad, Meowth ex o Supporter richiedono un confronto diverso.",
+              "Nessuna replica costruita raggiunge il KO: minimumReplyId è null e non esistono risorse di una minima da sottoporre a omissionTests.",
+              "Il documento rules non contiene un regolamento procedurale completo; il caso evita timing reattivi decisivi.",
+              "Non sono disponibili partite osservate o statistiche specifiche della nostra lista contro Dragapult."
+            ],
+            "changeSummary": "Costruito un solo caso con evoluzione naturale, tre repliche complete e attacco successivo di Toucannon. Il vantaggio dimostrato è la continuità di un Premio per attacco nella posizione condizionata, senza attribuire vittoria o rimozione del motore.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Prendere Budew con Fan Rotom mantenendo disponibile Toucannon per il prossimo attacco?",
+                "assumptions": [
+                  "Caso ipotetico contro la sola opponent-1; cominciamo noi. Le carte non distribuite o movimentate restano nel mazzo, nelle quantità delle rispettive liste di 60.",
+                  "Le due Panchine iniziali provengono dalle sei carte delle rispettive mani indicate; non sono copie aggiuntive.",
+                  "La mano avversaria è un'apertura senza Supporter o ricerca: contiene due evoluzioni senza Dreepy. I Supporter e gli accessi restano nel mazzo, non sono dichiarati tutti nei Premi.",
+                  "Le identità delle pescate sono condizioni del caso, non pescate garantite. Nessuna ricerca o rimescolamento precede le pescate dichiarate.",
+                  "La pressione dimostrata è di un Premio per attacco. Non è dimostrata la rimozione del motore Dragapult né una vittoria.",
+                  "Le Energie speciali della nostra lista non sono recuperabili con Night Stretcher. Non utilizziamo Spiky Energy o timing reattivi.",
+                  "La riconciliazione originale segnala 60 copie non risolte; il caso usa le identità esatte della lista e delle schede consegnate."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "Fighting Wings porta Fan Rotom a 30 danni totali. Toucannon risponde con 120 e prende Moltres; Budew promuove immediatamente. Night Stretcher resta in mano.",
+                    "firstEvents": 0,
+                    "replyEvents": 2
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "Night Stretcher recupera il Budew eliminato e lo rimette in Panchina. Itchy Pollen rinnova il blocco; Toucannon elimina il Budew attivo con 140, mentre quello recuperato promuove e Moltres resta intatto.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Budew resta attivo e rinnova Itchy Pollen, conservando Moltres e Night Stretcher. Toucannon elimina Budew con 120; Moltres deve promuovere. Rispetto all'accesso manca un ulteriore schermo già in campo.",
+                    "firstEvents": 0,
+                    "replyEvents": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 35707,
+            "limitations": [
+              "Le distribuzioni indicate sono ipotesi raggiungibili delle liste congelate; non documentano frequenze, risultati osservati o probabilità di successo.",
+              "Il documento rules consegnato riguarda legalità del formato, rotazione, ban ed errata; il caso evita di fondare l’esito su timing reattivi irrisolti.",
+              "La riconciliazione originale segnala 60 copie non risolte, mentre il packet fornisce lista e schede esatte: la discrepanza di provenienza resta esplicita."
+            ],
+            "changeSummary": "Costruito il solo scenario-2 contro opponent-1: la difesa con Budew conserva Munkidori carico e sottrae Moltres al secondo colpo. Registrati setup, tre ruoli completi, due testimoni, contrattacchi, Premi, promozioni e prove di rimozione.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-2",
+                "decision": "Dopo Boss's Orders e 70 danni a Moltres, il secondo attacco è davvero assicurato contro lo stesso bersaglio?",
+                "assumptions": [
+                  "Caso costruito, non partita osservata. Cominciamo noi.",
+                  "Le mani, i Premi e le pescate indicate sono una possibile distribuzione delle liste congelate; non sono garantiti.",
+                  "I Base indicati nella Panchina iniziale provengono dalle sei carte elencate in hand.",
+                  "Nel setup avversario Itchy Pollen infligge 10 danni a Fan Rotom. Nessun altro danno è presente prima della decisione.",
+                  "Le Energie e Air Balloon rimangono assegnati durante le evoluzioni ordinarie.",
+                  "Legacy Energy e gli effetti reattivi di Spiky Energy non intervengono nelle sequenze dimostrate: il portatore di Spiky Energy non subisce attacchi.",
+                  "La discrepanza di provenienza della riconciliazione originale resta aperta; il caso usa le stampe e quantità esplicitamente consegnate nel packet."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct-moltres",
+                    "outcome": "Moltres infligge 20 e Munkidori viene preparato; il nostro successore elimina Moltres. Rispetto alla difesa perde il Pokémon danneggiato e una Fire Energy senza prendere Fan Rotom.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "access",
+                    "id": "access-mind-bend",
+                    "outcome": "Crispin rende disponibile Psychic Energy e paga con Fire Energy la ritirata di Moltres. Mind Bend elimina Fan Rotom; promuoviamo direttamente il Trumbeak carico e Toucannon elimina Munkidori nel turno successivo.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend-budew",
+                    "outcome": "Moltres viene ritirato e Budew rinnova il blocco Item. Toucannon prende Budew, ma Munkidori resta vivo con due Energie e Moltres conserva i suoi 50 PS residui.",
+                    "firstEvents": 0,
+                    "replyEvents": 4
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 3,
+            "characters": 41014,
+            "limitations": [
+              "Nessun risultato osservato della nostra lista contro Festival Lead è fornito; il caso non stima un winrate.",
+              "Le distribuzioni di pesca dichiarate sono ipotesi raggiungibili, non probabilità o pescate garantite.",
+              "La riconciliazione originale segnala 60 copie non riconciliate: vengono usate le identità e quantità della ourList congelata.",
+              "Il caso non dipende dal timing fra Spiky Energy e Festival Lead."
+            ],
+            "changeSummary": "Costruito un caso di KO economico con Fan Rotom e seguito con due Toucannon, confrontando ampliamento della Panchina, accesso a Festival Grounds, ritirata difensiva e budget ridotto.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Prendere il KO economico con Fan Rotom preparando due Trumbeak mantiene un contrattacco contro la migliore ricerca avversaria?",
+                "assumptions": [
+                  "Caso ipotetico: cominciamo noi. Le pescate e le carte trovate sono una possibile distribuzione delle esatte liste congelate, non risultati osservati.",
+                  "Le due Pikipek della Panchina iniziale provengono dalle sei carte dichiarate nella nostra mano; analogamente Applin e Grookey avversari.",
+                  "Basic Grass Energy mee-009 è trattata come Energia Base Grass secondo nome e lista; la sua scheda gameplay consegnata non esplicita l'Energia fornita.",
+                  "I lanci di Tumbling Attack nel testimone danno testa: il ramo dimostra il massimo positivo sotto il budget ridotto, non un danno garantito.",
+                  "Le ricerche rimescolano. Le successive pescate dichiarate rappresentano una distribuzione possibile dopo questi rimescolamenti, senza garanzia sull'ordine.",
+                  "La preferenza per la ricerca di Festival Grounds confronta gli esiti costruiti e deterministici delle ricerche singole; cercare Lillie's Determination apre ulteriori esiti casuali, non dominati universalmente dal ramo scelto."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "KO di Fan Rotom con un solo attacco; cinque Pokémon avversari in Panchina. Toucannon risponde per 220 e lascia un secondo Toucannon carico.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "Il primo attacco manda KO Fan Rotom; Festival Lead permette altri 60 sul Trumbeak promosso. Toucannon evolve, sopravvive con 90 PS e contrattacca per 180.",
+                    "firstEvents": 0,
+                    "replyEvents": 8
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Air Balloon salva Dipplin dall'esposizione immediata e Rellor infligge 30, subendone 10. Toucannon manda KO Rellor; Dipplin e Thwackey restano disponibili, ma l'avversario rinuncia al Premio e non conserva l'Energia assegnata a Rellor.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 33978,
+            "limitations": [
+              "Le distribuzioni di mazzo e le pescate sono ipotesi esplicite, non probabilità stimate o risultati osservati.",
+              "Gli aggregati non forniscono un record specifico di questo matchup; nessuna percentuale di vittoria è dedotta."
+            ],
+            "changeSummary": "Costruito un caso ipotetico con setup, tre ruoli e minima. Gli audit del seguito individuano tuttavia Boss's Orders su Ogerpon come alternativa superiore ancora da incorporare nei registri.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Sacrificare Budew per conservare Drakloak carico e preparare Phantom Dive?",
+                "assumptions": [
+                  "Cominciamo noi. Opening, Premi e pescate sono allocazioni ipotetiche delle due liste esatte, non una partita osservata.",
+                  "Le carte elencate in bench provengono dalle rispettive sei carte iniziali di hand.",
+                  "La posizione annotata è quella dopo una setupRound, prima del nostro secondo turno. Nessun danno è stato inflitto nel setup.",
+                  "Recon Directive trova le due carte dichiarate nell'ordine ipotizzato. Le osservazioni in fondo non garantiscono pescate successive.",
+                  "Nei tre rami che usano Teal Dance durante la replica, la stessa pesca da effetto è Dawn. Il ramo minimo non usa quell'Abilità e non riceve quella pesca.",
+                  "La pressione è condizionata: conserviamo Drakloak carico e un Torchic con Fire Energy, ma concediamo il KO di Budew. Non viene dimostrata una vittoria né la rimozione del motore avversario.",
+                  "Non si usano espansione Tera della Panchina, Festival Lead, condizioni speciali o timing controversi. Forest of Vitality cercata da Traverse Time resta in mano fino a un turno futuro."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "Ogerpon mette KO Budew senza ritirarsi; Dawn prepara Chikorita e gli stadi. Phantom Dive mette poi KO Ogerpon già a 10 danni, concede due Premi e segna Chikorita per 60.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "Teal Dance pesca Dawn; Dawn prepara la linea Meganium. Celebi mette KO Budew, mentre Ogerpon conserva due Energie in Panchina. Il successivo Phantom Dive prende un Premio su Celebi e segna Chikorita per 60.",
+                    "firstEvents": 0,
+                    "replyEvents": 8
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Celebi usa Traverse Time per trovare Forest of Vitality, Applin e Dipplin; preserva Ogerpon e prepara una futura evoluzione, ma lascia vivo Budew. Budew si ritira gratuitamente e Dragapult ex mette KO Celebi, segnando Chikorita.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 34812,
+            "limitations": [
+              "Le allocazioni e le pescate sono ipotesi raggiungibili, senza probabilità stimate. Il caso non è una partita osservata o una certificazione competitiva.",
+              "Gli aggregati non forniscono un record specifico del matchup. Nessuna percentuale di vittoria è dedotta.",
+              "Le identità tecniche sono quelle del packet; la riconciliazione originale non certifica le stampe cosmetiche della foto."
+            ],
+            "changeSummary": "Ricostruiti i seguiti con Boss's Orders su Ogerpon nei rami che lo ritirano. Aggiornati bersagli, Energie scartate, Premi, promozioni e preferenza per la diretta. Corretti i riferimenti dei movimenti di Traverse Time.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Conservare Drakloak carico dietro Budew per raggiungere Phantom Dive?",
+                "assumptions": [
+                  "Caso ipotetico contro la sola opponent-1. Cominciamo noi; mani, Premi, ordine iniziale e pescate dichiarati sono allocazioni possibili, non risultati osservati né pescate garantite.",
+                  "I Pokémon in bench sono presi dalle sei carte della rispettiva hand iniziale. Le carte non localizzate restano nel mazzo nelle quantità residue delle liste esatte.",
+                  "Le annotazioni descrivono la posizione dopo una setupRound, prima del nostro secondo turno. Nel setup non sono stati inflitti danni.",
+                  "Recon Directive trova le coppie dichiarate. Dopo ogni ricerca e rimescolamento, la successiva coppia è un'ulteriore distribuzione ipotetica: le osservazioni in fondo non garantiscono accessi futuri.",
+                  "Quando la replica usa Teal Dance, la carta pescata è Dawn in tutti quei rami. La minima non attiva Teal Dance e non riceve questa pesca.",
+                  "Il primo setup avversario privilegia due Energie su Ogerpon rispetto a Traverse Time immediato: è una scelta di pressione, non una sequenza obbligata. Il diverso sviluppo ottenibile con Celebi è confrontato nell'audit.",
+                  "Non si applicano espansione della Panchina tramite Tera, protezione Tera, Festival Lead o timing controversi. Il caso usa cinque posti in Panchina.",
+                  "La continuità concretamente dimostrata arriva a Phantom Dive e alla preparazione di Combusken con due Fire Energy e Blaziken ex in mano. Non dimostra che questo secondo attaccante sopravviva a un ulteriore turno avversario."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "Ogerpon mette KO Budew; Dawn prepara Chikorita, Bayleef e Meganium. Phantom Dive elimina poi Ogerpon e segna Chikorita per 60. Celebi viene promosso con una Grass. Rispetto al ramo access si evita di scartare una Grass in ritirata.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "Teal Dance pesca Dawn e Dawn prepara la linea Meganium. Celebi mette KO Budew dopo la ritirata di Ogerpon. Boss's Orders richiama Ogerpon: Phantom Dive prende due Premi e segna Chikorita. Celebi viene nuovamente promosso con la propria Grass.",
+                    "firstEvents": 0,
+                    "replyEvents": 8
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Celebi usa Traverse Time per ottenere Forest of Vitality, Applin e Dipplin. Budew sopravvive e si ritira gratuitamente; Boss's Orders richiama Ogerpon e Phantom Dive lo elimina, segnando Chikorita. La difesa conserva risorse evolutive accessibili, ma concede il mancato Premio su Budew.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "stopAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "status": "interrupted",
+        "failureCode": "token-budget",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 1,
+          "attemptLimit": 8,
+          "inputTokens": 278218,
+          "outputTokens": 26905,
+          "cachedInputTokens": 69760,
+          "durationMs": 666455,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-2",
+          "checkedAt": "2026-10-31T13:56:06.383Z",
+          "outcome": "blocked",
+          "estimateOnly": true,
+          "reasons": [
+            "input-tokens",
+            "total-tokens"
+          ],
+          "remainingCalls": 5,
+          "requiredCalls": 4,
+          "estimatedInputTokens": 182888,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 159270,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "toucannon-festival",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 141454,
+          "outputTokens": 20630,
+          "cachedInputTokens": 9600,
+          "durationMs": 1080999,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": true
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T13:55:57.079Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 83173,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 127582,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 173118,
+          "outputTokens": 30219,
+          "cachedInputTokens": 0,
+          "durationMs": 675246,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T13:52:30.072Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 87003,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 119704,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      }
+    ]
+  },
+  "nativeDecisionsAudit": "native-decisions-audit.json",
+  "policy": {
+    "inputTarget": 96000,
+    "inputMaximum": 128000,
+    "totalEnvelope": 176000,
+    "margin": 8192,
+    "requestBytes": 500000,
+    "responseCharacters": 100000
+  },
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "jobId": "ed238bd9-bfe4-46d9-8dd8-5b25b34e8192",
+      "startedAt": "2026-10-31T13:44:56.976Z",
+      "endedAt": "2026-10-31T13:56:06.395Z",
+      "passed": false,
+      "error": "Analisi interrotta per budget di token insufficiente. Input stimato 182.888 token; limite input 128.000. Input, output riservato e margine richiedono 219.080 token; budget complessivo 176.000. Il lavoro resta salvato. Questo limite locale è distinto dalla quota del servizio Codex.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T13:44:57.519Z",
+          "endedAt": "2026-10-31T13:46:03.660Z",
+          "status": "succeeded",
+          "inputHash": "04b280b721bc4b6f526b2bb3c1bdb5e2b4e0126506c1b68416a505949f1317d2",
+          "inputBytes": 185909,
+          "durationMs": 66134,
+          "usage": {
+            "inputTokens": 69256,
+            "cachedInputTokens": 0,
+            "outputTokens": 2334
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T13:46:04.072Z",
+          "endedAt": "2026-10-31T13:49:49.192Z",
+          "status": "succeeded",
+          "inputHash": "19a95789631353b74f7f3c006e5f64bfc32f82a710ed29adc52413bb637ea392",
+          "inputBytes": 125844,
+          "durationMs": 225119,
+          "usage": {
+            "inputTokens": 69265,
+            "cachedInputTokens": 0,
+            "outputTokens": 9350
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T13:49:49.644Z",
+          "endedAt": "2026-10-31T13:56:04.848Z",
+          "status": "failed",
+          "inputHash": "e36acc2ccd0789617884f2e34c9d836b3fc7efaf1e0c70863eba485c9f6d5cf8",
+          "inputBytes": 125959,
+          "durationMs": 375202,
+          "usage": {
+            "inputTokens": 139697,
+            "cachedInputTokens": 69760,
+            "outputTokens": 15221
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 58000,
+          "estimatedInput": 67009,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 185909,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 60879,
+          "estimatedInput": 82012,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 125844,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3134758620689657,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 60912,
+          "estimatedInput": 82055,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 125959,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.3134758620689657,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "4ea1b06bdaa191f25efc69e212285da8b8ed838452b54db759866fb6d22553f6",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "0dad130d2016ed75ff07b7e192a0814c0446bf84f983973e5117e632b0c25ce5"
+      ],
+      "invalidResponses": [
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "inputHash": "e897402f9363f50d6e62fa0f0665541a6dce5a51a578702df0fbce324e9c071b",
+          "message": "scenario-2: accesso/sviluppo omesso in main|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in direct-moltres|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in access-mind-bend|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in defend-budew|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in witness-fire-only|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in witness-darkness-retreat|5|ours: me03-113 (hand)."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 278218,
+      "outputTokens": 26905,
+      "cachedInputTokens": 69760,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 669,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 1,
+      "failures": [
+        {
+          "stage": "scenarios-2",
+          "code": "invalid-response",
+          "message": "scenario-2: accesso/sviluppo omesso in main|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in direct-moltres|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in access-mind-bend|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in defend-budew|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in witness-fire-only|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in witness-darkness-retreat|5|ours: me03-113 (hand)."
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "jobId": "01f8201d-3d95-4d6d-ab0f-926c4caec2b8",
+      "startedAt": "2026-10-31T13:44:57.555Z",
+      "endedAt": "2026-10-31T14:03:00.353Z",
+      "passed": false,
+      "error": "scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"moveTable\",\"requiredUse\":\"m/moves di un evento referenziato\",\"entries\":[{\"index\":13,\"value\":{\"side\":\"ours\",\"printId\":\"me03-113\",\"count\":1,\"from\":\"hand\",\"to\":\"discard\"}},{\"index\":14,\"value\":{\"side\":\"ours\",\"printId\":\"me05-094\",\"count\":1,\"from\":\"deck\",\"to\":\"hand\"}},{\"index\":45,\"value\":{\"side\":\"ours\",\"printId\":\"me02-116\",\"count\":1,\"from\":\"hand\",\"to\":\"stadium\"}},{\"index\":49,\"value\":{\"side\":\"opponent\",\"printId\":\"sv06-017\",\"count\":1,\"from\":\"bench\",\"to\":\"active\"}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T13:44:57.748Z",
+          "endedAt": "2026-10-31T13:45:55.467Z",
+          "status": "succeeded",
+          "inputHash": "2ca9e8c460542312b692533ba020a7cfc8f9b841dbb2d9e0d52ce280462c8d9a",
+          "inputBytes": 192047,
+          "durationMs": 57717,
+          "usage": {
+            "inputTokens": 71075,
+            "cachedInputTokens": 9600,
+            "outputTokens": 2237
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T13:45:55.931Z",
+          "endedAt": "2026-10-31T13:55:55.978Z",
+          "status": "failed",
+          "inputHash": "c09ed0e2366cee723eaeebd8c94dd7b90e77edcddbea59176c2bc7f5944a18b3",
+          "inputBytes": 127582,
+          "durationMs": 600042,
+          "usage": null
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T13:55:57.090Z",
+          "endedAt": "2026-10-31T14:03:00.338Z",
+          "status": "failed",
+          "inputHash": "c09ed0e2366cee723eaeebd8c94dd7b90e77edcddbea59176c2bc7f5944a18b3",
+          "inputBytes": 127582,
+          "durationMs": 423240,
+          "usage": {
+            "inputTokens": 70379,
+            "cachedInputTokens": 0,
+            "outputTokens": 18393
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 59819,
+          "estimatedInput": 69046,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 192047,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 62070,
+          "estimatedInput": 83173,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 127582,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3069844029488957,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 62070,
+          "estimatedInput": 83173,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 127582,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3069844029488957,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "7a9e5d7356b2a2823feb3cb650585c212eff1929be9bf812cfc560b0e396270e",
+          "message": "scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"moveTable\",\"requiredUse\":\"m/moves di un evento referenziato\",\"entries\":[{\"index\":13,\"value\":{\"side\":\"ours\",\"printId\":\"me03-113\",\"count\":1,\"from\":\"hand\",\"to\":\"discard\"}},{\"index\":14,\"value\":{\"side\":\"ours\",\"printId\":\"me05-094\",\"count\":1,\"from\":\"deck\",\"to\":\"hand\"}},{\"index\":45,\"value\":{\"side\":\"ours\",\"printId\":\"me02-116\",\"count\":1,\"from\":\"hand\",\"to\":\"stadium\"}},{\"index\":49,\"value\":{\"side\":\"opponent\",\"printId\":\"sv06-017\",\"count\":1,\"from\":\"bench\",\"to\":\"active\"}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 141454,
+      "outputTokens": 20630,
+      "cachedInputTokens": 9600,
+      "callsWithoutUsage": 1,
+      "elapsedSeconds": 1083,
+      "rawResponsesAvailable": 2,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "timeout",
+          "message": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"moveTable\",\"requiredUse\":\"m/moves di un evento referenziato\",\"entries\":[{\"index\":13,\"value\":{\"side\":\"ours\",\"printId\":\"me03-113\",\"count\":1,\"from\":\"hand\",\"to\":\"discard\"}},{\"index\":14,\"value\":{\"side\":\"ours\",\"printId\":\"me05-094\",\"count\":1,\"from\":\"deck\",\"to\":\"hand\"}},{\"index\":45,\"value\":{\"side\":\"ours\",\"printId\":\"me02-116\",\"count\":1,\"from\":\"hand\",\"to\":\"stadium\"}},{\"index\":49,\"value\":{\"side\":\"opponent\",\"printId\":\"sv06-017\",\"count\":1,\"from\":\"bench\",\"to\":\"active\"}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente."
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "jobId": "dc471fa2-026d-43aa-b5f7-fecb7515ac73",
+      "startedAt": "2026-10-31T13:44:57.778Z",
+      "endedAt": "2026-10-31T13:56:14.887Z",
+      "passed": false,
+      "error": "scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"energyTable\",\"requiredUse\":\"e/energyRoutes di un evento referenziato\",\"entries\":[{\"index\":10,\"value\":{\"side\":\"opponent\",\"printId\":\"mee-009\",\"count\":2,\"path\":[\"attached\",\"discard\"],\"hostPrintId\":\"sv06-025\",\"sourceIds\":[\"rules\",\"card:sv06-025\"],\"attachment\":null}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T13:44:57.943Z",
+          "endedAt": "2026-10-31T13:46:07.166Z",
+          "status": "succeeded",
+          "inputHash": "5ad8082a90e498abb35f370dbe3f9c8a244db10c81047cc1f89416fb55459b5d",
+          "inputBytes": 106316,
+          "durationMs": 69217,
+          "usage": {
+            "inputTokens": 43178,
+            "cachedInputTokens": 0,
+            "outputTokens": 2284
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T13:46:07.365Z",
+          "endedAt": "2026-10-31T13:52:28.615Z",
+          "status": "failed",
+          "inputHash": "6db7697d2b7365d95f30b9a0987997e26ab4ed4d1ca1ba2e8efb7d1b6596c06f",
+          "inputBytes": 135530,
+          "durationMs": 381247,
+          "usage": {
+            "inputTokens": 64591,
+            "cachedInputTokens": 0,
+            "outputTokens": 15985
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T13:52:30.092Z",
+          "endedAt": "2026-10-31T13:56:14.874Z",
+          "status": "failed",
+          "inputHash": "0f39781b21accf8c048ca424b200763a756c96f4b919a34f9aa85da12b76facc",
+          "inputBytes": 119704,
+          "durationMs": 224782,
+          "usage": {
+            "inputTokens": 65349,
+            "cachedInputTokens": 0,
+            "outputTokens": 11950
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 31921,
+          "estimatedInput": 37800,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 106316,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 56334,
+          "estimatedInput": 85869,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 135530,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.487917045205351,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 57096,
+          "estimatedInput": 87003,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 119704,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.487917045205351,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "6db7697d2b7365d95f30b9a0987997e26ab4ed4d1ca1ba2e8efb7d1b6596c06f",
+          "message": "scenario-1: riferimento moveTable[31] assente o non intero."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "6db7697d2b7365d95f30b9a0987997e26ab4ed4d1ca1ba2e8efb7d1b6596c06f",
+          "message": "scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"energyTable\",\"requiredUse\":\"e/energyRoutes di un evento referenziato\",\"entries\":[{\"index\":10,\"value\":{\"side\":\"opponent\",\"printId\":\"mee-009\",\"count\":2,\"path\":[\"attached\",\"discard\"],\"hostPrintId\":\"sv06-025\",\"sourceIds\":[\"rules\",\"card:sv06-025\"],\"attachment\":null}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 173118,
+      "outputTokens": 30219,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 677,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: riferimento moveTable[31] assente o non intero."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"energyTable\",\"requiredUse\":\"e/energyRoutes di un evento referenziato\",\"entries\":[{\"index\":10,\"value\":{\"side\":\"opponent\",\"printId\":\"mee-009\",\"count\":2,\"path\":[\"attached\",\"discard\"],\"hostPrintId\":\"sv06-025\",\"sourceIds\":[\"rules\",\"card:sv06-025\"],\"attachment\":null}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente."
+        }
+      ]
+    }
+  ],
+  "passed": 0,
+  "scenarioOutputSummary": {
+    "responses": 5,
+    "minimumCharacters": 24255,
+    "maximumCharacters": 41014,
+    "contextSchemasPassed": 5,
+    "losslessRoundtrips": 2,
+    "nativeSchemaPassed": 2,
+    "locallyAcceptedCases": 1
+  },
+  "actualCalls": 9,
+  "inputTokens": 592790,
+  "outputTokens": 77754,
+  "callsWithoutUsage": 1,
+  "unissuedTokenPlans": 0,
+  "elapsedSeconds": 1083,
+  "ui": "Not run: no validated generated guide",
+  "blockedPreflightCandidates": 1,
+  "rawResponsesAvailable": 8
+}

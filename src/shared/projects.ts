@@ -112,7 +112,7 @@ export interface ProjectsApi {
   listConstraints(projectId: string): Promise<OperationResult<DeckConstraint[]>>
   saveConstraint(input: SaveConstraintInput): Promise<OperationResult<DeckConstraint>>
   deleteConstraint(input: DeleteConstraintInput): Promise<OperationResult<DeckConstraint[]>>
-  getMeta(): Promise<OperationResult<MetaSnapshot>>
+  getMeta(projectId?: string): Promise<OperationResult<MetaSnapshot>>
   getMatchupEvidence(metaId: string, opponentId: string): Promise<OperationResult<MatchupTournamentEvidence>>
   listMatchupReportSummaries(projectId: string, metaId: string): Promise<OperationResult<{ opponentId: string }[]>>
   listMatchupReports(projectId: string, metaId: string): Promise<OperationResult<MatchupReport[]>>

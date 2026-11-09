@@ -1,0 +1,729 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-197",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "verificationBasis": "Archived tested-code and original campaign inputs. Corrected reviewer context included before freeze.",
+  "sealedFiles": 34,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh generation per pilot matchup; no previous guide and no editorial patch. Version 7 binds printing IDs and setup cardinalities and derives development anchors through the next attack; all previous gates retained.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 6,
+      "failedCalls": 1,
+      "inputTokens": 512512,
+      "outputTokens": 52304,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 1472178,
+      "elapsedMs": 1475008,
+      "startedAt": "2026-10-30T18:49:01.617Z",
+      "endedAt": "2026-10-30T19:13:36.625Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 4,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 44,
+              "calculations": 19,
+              "transitions": 46
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-candy-versus-second-budew",
+                "message": "L'omissionTest di Basic Psychic Energy riporta remainingDamage=0, ma il miglior riordino raggiungibile infligge 10: Drakloak scarta Fire per ritirarsi verso Budew B, che usa Itchy Pollen. La spiegazione riconosce già questa alternativa e contraddice il valore numerico.",
+                "correction": "Impostare remainingDamage=10 e descrivere coerentemente ritirata, costo e attacco alternativo. Il danno resta inferiore alla soglia di 70, quindi questa correzione non invalida da sola la necessità di Psychic per il KO dichiarato.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me02.5-016",
+                  "card:mee-010"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-ordinary-evolution-through-lock",
+                "message": "Nel turno 3 viene conservato gratuitamente Trumbeak B, benché Pikipek B possa già evolvere. Questo ritardo impedisce di valutare il migliore sviluppo del secondo attaccante: evolvendolo subito, nel turno 5 il Toucannon B trovato con Hassel può evolvere quel Trumbeak e usare anche Aerial Draw. La motivazione di conservare una carta in mano non identifica un beneficio concreto che compensi questa perdita.",
+                "correction": "Evolvere entrambi i Pikipek nel turno 3 e aggiornare insieme registro, mani e tutti i rami che riusano il prefisso. Nel turno 5 rivalutare l'evoluzione del secondo Toucannon dopo Hassel e la relativa Aerial Draw, dichiarando la nuova pesca e verificando nuovamente accessi, assegnazioni e attacco prima di chiudere il turno.",
+                "sourceIds": [
+                  "our-list",
+                  "card:me05-066",
+                  "card:me05-067",
+                  "card:me05-094",
+                  "card:sv06-205",
+                  "card:me02.5-016"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-candy-versus-second-budew",
+                "message": "remainingHp=90 non descrive il risultato della linea completa dell'opzione: la continuazione include Feather Rondo e il KO del Drakloak attaccante. Il valore fotografa invece il momento precedente alla nostra risposta.",
+                "correction": "Impostare remainingHp=0 per la linea completa. Se utile, precisare nell'outcome che Drakloak ha 90 PS subito dopo Dragon Headbutt, prima del KO di risposta.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-candy-versus-second-budew",
+                "message": "remainingHp=90 contraddice il prefisso completo riusato con forkAtEvent=22: quel registro comprende il KO di Drakloak A causato da Feather Rondo e la promozione di Drakloak B.",
+                "correction": "Impostare remainingHp=0 per Drakloak A, distinguendolo esplicitamente dal Drakloak B integro conservato sul campo.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-ordinary-evolution-through-lock",
+                "message": "remainingHp=90 è incoerente con la continuazione dell'opzione, che comprende il KO del Drakloak attaccante nel nostro turno 5.",
+                "correction": "Impostare remainingHp=0 al termine della linea completa e mantenere separata l'eventuale indicazione dei 90 PS prima della risposta.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-ordinary-evolution-through-lock",
+                "message": "remainingHp=90 non coincide con il risultato degli eventi riusati: Drakloak A viene mandato KO da Feather Rondo e Drakloak B viene promosso.",
+                "correction": "Impostare remainingHp=0 per l'attaccante Drakloak A; descrivere separatamente i PS e lo sviluppo del secondo Drakloak.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me05-094"
+                ]
+              }
+            ],
+            "checks": [
+              "Confrontati opening, setupLedger, mani residue e inventari iniziali con le due liste selezionate: non emergono copie eccedenti nei setup.",
+              "Verificati i costi degli attacchi mostrati, Fan Call, finestre di evoluzione, condizioni di Hassel e distinzione fra evoluzione ordinaria e Rare Candy.",
+              "Verificati i danni principali: Assault Landing 70, Dragon Headbutt 70, Feather Rondo 160 oppure 180 secondo le Panchine.",
+              "Verificati separazione fra KO e promozione, Premi rimasti e conteggi Panchina nelle transizioni presentate.",
+              "Verificate le ritirate difensive e la riduzione di Air Balloon con minimo zero; le formule derivate presenti sono appropriate.",
+              "Confrontati gli accessi disponibili tramite Poké Pad, Night Stretcher e Recon Directive: il secondo Budew costituisce una difesa raggiungibile, correttamente distinta dal KO offensivo.",
+              "Capitoli ed esercizi vuoti non sono contestati in questa fase. Le limitazioni dichiarate non sanano gli errori degli scenari."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 44,
+              "calculations": 19,
+              "transitions": 49
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-candy-versus-second-budew",
+                "message": "La difesa preferita spreca una Fire evitabilmente. Dopo il primo KO di Budew, l'avversario può promuovere direttamente Budew B invece di Dreepy A. Nel turno 3 può effettuare lo stesso sviluppo dei due Drakloak dalla Panchina, assegnare Psychic a Drakloak A già provvisto di Fire e usare Itchy Pollen. Nega ugualmente Rare Candy e Hassel, conserva entrambi i Drakloak e mantiene un futuro Dragapult ex già alimentato. La replica dichiarata, invece, scarta Fire per tornare allo stesso Budew e lascia soltanto Psychic sul secondo Drakloak. Il confronto non valuta questa difesa migliore, raggiungibile senza nuove pescate.",
+                "correction": "Aggiungere e verificare il ramo con promozione immediata di Budew B dopo il primo KO, modificando il prefisso prima della promozione di Dreepy A. Registrare evoluzioni in Panchina, assegnazione di Psychic a Drakloak A e Itchy Pollen senza ritirata. Dopo il nostro secondo Assault Landing, valutare la promozione del Drakloak con Fire e Psychic. Aggiornare replica preferita, outcome, pivot, audit e sviluppo successivo considerando Dragapult ex già alimentabile mediante la sola evoluzione disponibile in mano.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me02.5-016",
+                  "card:sv06-129",
+                  "card:sv06-130",
+                  "card:mee-010",
+                  "card:mee-013"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-ordinary-evolution-through-lock",
+                "message": "Anche qui la difesa preferita paga una ritirata che può evitare scegliendo una promozione diversa. Dopo Assault Landing al turno 3, Budew B può essere promosso direttamente. Nel turno 4 entrambi i Dreepy possono evolvere in Panchina, usare Recon Directive e ricevere Psychic sul Drakloak A che conserva Fire; Budew ripete Itchy Pollen. Il nostro Toucannon può ancora rimuovere Budew al turno 5, ma l'avversario conserva un Drakloak con entrambe le Energie necessarie a Phantom Dive e Dragapult ex in mano. Questo sviluppo è sensibilmente migliore della posizione dichiarata con Fire scartata e sola Psychic su B.",
+                "correction": "Espandere un ramo difensivo che diverga prima della promozione successiva al primo KO di Budew. Conservare Fire su A, assegnargli Psychic e verificare la nostra risposta fino a Feather Rondo e alla successiva promozione avversaria. Aggiornare il confronto e il pivot: l'evoluzione ordinaria garantisce l'attacco mostrato, ma la difesa competente conserva anche l'accesso a Phantom Dive nel turno 6, senza dover trovare un'altra Energia. Riallineare audit, risorse assegnate e conclusione al ramo corretto.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me02.5-016",
+                  "card:sv06-129",
+                  "card:sv06-130",
+                  "card:me05-094",
+                  "card:mee-010",
+                  "card:mee-013"
+                ]
+              }
+            ],
+            "checks": [
+              "Confrontati costi e danni degli attacchi, evoluzioni ordinarie e Rare Candy con le schede fornite.",
+              "Ripercorsi mani iniziali, movimenti, pescate, Premi e promozioni delle linee dichiarate.",
+              "Ricontrollate le prove di rimozione di Drakloak e Psychic nelle identità delle carte viste ipotizzate.",
+              "Verificata un'alternativa difensiva raggiungibile tramite promozione diretta di Budew, senza nuove risorse.",
+              "I campi contabili e i calcoli di ritirata derivati dall'app non sono stati considerati duplicazioni vietate."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "411f55db739b29ba6d5cb079cb3714ddde8601f30f7bab208099c1486a3682e9",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "515814f4d1c1aa66b632e02b821a5524c9cb34fc131705dfa93742bcd7d7cc13",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "2445eb533128f0572a44438955d2e1414ad919bd6bf513ee731138713cd68e10",
+        "ca1f124922655562e6cbdff36b6dd1742d1ce5a11445f896d919ec6c18e05cf6"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "4e00bfdbdfc3824a2e2e9b4b9133bf2fd787e659806ab69f38fe51204ce0887c"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "b2f77c12bb92feae2b56c0e1552034475d38dab9e7398d1db913e74cf8aa6fba"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "b2f77c12bb92feae2b56c0e1552034475d38dab9e7398d1db913e74cf8aa6fba"
+        },
+        {
+          "sequence": 4,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "36c53469d34e43b2b9d04b28b205d9e85aa91ee84c5be00782168d160a821315"
+        },
+        {
+          "sequence": 5,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "ce363f588465689eb5170d024efe7a503f8f339ac96100235aa7eef92db0d960"
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "38b80768299c3eb6e0ba0951daebad0757e64b1e1de25811013ba1352e7fd2db"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 510471,
+      "outputTokens": 51196,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 758795,
+      "elapsedMs": 760261,
+      "startedAt": "2026-10-30T18:49:02.047Z",
+      "endedAt": "2026-10-30T19:01:42.308Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 59,
+              "calculations": 11,
+              "transitions": 53
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-grookey-gust",
+                "message": "La replica non è minima: dopo il KO di Grookey si può promuovere l'Applin Dragon già alimentato ed evolverlo in Dipplin. L'Energia aggiuntiva in requiredCards non serve. Do the Wave infligge comunque 80 a Fan Rotom dopo Boss's Orders.",
+                "correction": "Promuovere sv06-126, evolverlo in sv06-018 conservando la Basic Grass Energy già assegnata e usare Boss's Orders. Rimuovere mee-009 dai requisiti minimi, impostare attachments=0 e aggiornare ramo, omissionTests, conclusione e pivot. Valutare l'assegnazione disponibile separatamente per sviluppare il secondo attaccante.",
+                "sourceIds": [
+                  "card:sv06-126",
+                  "card:sv06-018",
+                  "card:me01-114",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-grookey-gust",
+                "message": "La linea principale consuma la seconda Grass Energy per alimentare Dipplin mentre lascia inutilizzata quella sull'Applin Dragon. Evolvere invece l'Applin Dragon promosso permette lo stesso KO e conserva l'assegnazione per un altro Applin: il campo successivo e la continuità avversaria risultano migliori.",
+                "correction": "Ricalcolare la migliore replica promuovendo ed evolvendo l'Applin Dragon alimentato e assegnando la seconda Energia a un Applin in Panchina. Aggiornare registro, stack scartato al KO di Dipplin, promozione finale, mani, sviluppo e valutazione della continuità avversaria.",
+                "sourceIds": [
+                  "card:sv06-126",
+                  "card:sv06-018",
+                  "card:me01-114",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-stadium-restored",
+                "message": "L'omissionTest di mee-009 dichiara remainingDamage=0, ma la sua stessa spiegazione identifica una ricerca alternativa che permette 80 danni. Con Dipplin Attivo, Thwackey può cercare l'ultima Basic Grass Energy nel mazzo oppure Night Stretcher per recuperare quella scartata; resta disponibile un Do the Wave singolo.",
+                "correction": "Impostare remainingDamage=80 e descrivere il miglior riordino raggiungibile, distinguendo il mancato KO dall'impossibilità di attaccare.",
+                "sourceIds": [
+                  "card:sv06-015",
+                  "card:sv06-018",
+                  "card:me02.5-196",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-grookey-gust",
+                "message": "resources conta un solo Grookey, ma il ramo reply-grookey-defend usa due copie fisiche: quella messa KO e una seconda cercata con Find a Friend. La dichiarazione separata in requiredCards non completa il conteggio complessivo richiesto per lo scenario.",
+                "correction": "Portare il conteggio avversario di sv06-014 in resources a 2, includendo la copia aggiuntiva usata dal ramo difensivo senza duplicare quella già consumata.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-126",
+                  "card:sv06-014"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-stadium-restored",
+                "message": "replyComparison contrappone una sola linea offensiva con ricerca a un sacrificio senza attacco. Manca il confronto richiesto con una replica diretta sul medesimo Toucannon usando le risorse già disponibili.",
+                "correction": "Aggiungere un ramo offensivo diretto completo: evoluzione in Dipplin, assegnazione dalla mano e singolo Do the Wave sotto Battle Cage, per 80 danni. Confrontarlo con il ripristino tramite Thwackey e mantenere anche una difesa verificata.",
+                "sourceIds": [
+                  "card:sv06-018",
+                  "card:sv06-015",
+                  "card:sv06-149",
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-grookey-gust",
+                "message": "Il confronto contiene un attacco e una difesa, ma non una seconda replica con ricerca, recupero o sviluppo aggiuntivo contro lo stesso bersaglio. Inoltre la difesa conserva Dipplin senza confrontare l'evoluzione dell'Applin Dragon già alimentato e l'assegnazione indipendente al secondo attaccante.",
+                "correction": "Ricostruire il confronto dalla promozione successiva al KO, includendo la replica minima corretta e un'alternativa con sviluppo aggiuntivo realmente raggiungibile; verificare anche la difesa rispetto all'evoluzione disponibile, ai PS risultanti e alla preparazione del secondo attaccante. Registrare integralmente ogni continuazione.",
+                "sourceIds": [
+                  "card:sv06-126",
+                  "card:sv06-018",
+                  "card:sv06-014",
+                  "opponent-1"
+                ]
+              }
+            ],
+            "checks": [
+              "Controllati setup iniziali, mani residue, ricerche, evoluzioni e assegnazioni sulle schede fornite.",
+              "I danni principali 240, 80, 160 e 200 sono aritmeticamente coerenti con le Panchine dichiarate.",
+              "Le transizioni principali separano correttamente gust, KO e promozione.",
+              "Verificata una replica alternativa con meno requisiti: Dipplin evolve dall'Applin Dragon già alimentato.",
+              "Non contestata la presenza dei campi derivati dall'app; capitoli ed esercizi esclusi dalla revisione di questa fase."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 60,
+              "calculations": 14,
+              "transitions": 53
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-stadium-restored",
+                "message": "L'omissionTest di Festival Grounds non regge: prima della replica ci sono tre copie nel mazzo. Togliere UNA copia lascia altre due copie cercabili con Boom Boom Groove. La migliore replica continua quindi a infliggere 160, non 80. La conclusione che ogni rimozione impedisca il KO è falsa.",
+                "correction": "Ricalcolare remainingDamage=160 per questa rimozione e correggere la conclusione di minimalità. Distinguere la necessità dell'accesso a una carta chiamata Festival Grounds dall'indispensabilità della singola copia fisica: non trattare la rimozione di una copia come indisponibilità di tutte le copie della stampa. Adeguare la dimostrazione al criterio di omissione richiesto, senza alterare artificialmente i Premi o il mazzo per eliminare gli accessi equivalenti.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-015",
+                  "card:sv06-018",
+                  "card:sv06-149"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-grookey-gust",
+                "message": "L'omissionTest di Dipplin dichiara remainingDamage=0, mentre la sua stessa spiegazione e la conclusion individuano una linea raggiungibile da 30 sul medesimo Fan Rotom: ritirata dell'Applin Dragon scartando la sua Energia, assegnazione all'Applin Grass promosso, Boss's Orders e Tumbling Attack con testa.",
+                "correction": "Impostare remainingDamage=30 e mantenere esplicita la condizione del lancio favorevole. Il risultato resta inferiore alla soglia di 70; allineare il valore numerico alla migliore sequenza descritta.",
+                "sourceIds": [
+                  "card:sv06-126",
+                  "card:sv06-017",
+                  "card:me01-114",
+                  "card:me02.5-250"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi setup, mani residue e inventari iniziali di entrambi gli scenari rispetto alle due liste da 60 carte.",
+              "Verificati costi degli attacchi, evoluzioni, assegnazioni e usi delle Abilità nelle linee principali.",
+              "Verificate continuità sui nostri turni 3 e 5, replica intermedia, danni, KO, Premi e promozioni separate.",
+              "Confrontati rami offensivi e difensivi, accessi di ricerca e recupero e prove di omissione.",
+              "I campi contabili derivati presenti nel draft non sono stati trattati come duplicazioni vietate."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "22df86fde50b2052f81fcf907ff6aa458c6d56de4b06e3e635148687847e381a",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "6ffa9c12ac1e417561ca71e30172094167f80b68c807b05ac99f2390aa531b9c",
+        "9faa4a0ea8a16c424c1ac55681c4bd2f10fa21b96468f675c1e9244de3872e32"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "e7c5131f3ff3d847d90f1e4e39ad46c8c84666abd4de66b90bba808493f2fd77"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "386bfae73571eade453549b5c59a45cc4742f1ba6d7492e517fdd26aa48e7444"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "e4498b157577ba7097f4651f2e733e6388b6f369914d129f2e3640536adc20cb"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "414a8cb4eaef8896f11aee25cec6eed3850545923845a83df4a4c296e697decd"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "2da4e5ba7fcb216717a947b9c28c00981324d5a94153d7db5cbfe01ca4d3f6b9"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 355183,
+      "outputTokens": 46012,
+      "cachedInputTokens": 142080,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 838594,
+      "elapsedMs": 839831,
+      "startedAt": "2026-10-30T18:49:02.324Z",
+      "endedAt": "2026-10-30T19:03:02.155Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 42,
+              "calculations": 17,
+              "transitions": 39
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Nel turno 4 Drakloak è in mano e il Dreepy di riserva è in Panchina dal turno 2: può evolvere e usare subito Recon Directive. L'affermazione «non c'è Drakloak in campo» descrive una rinuncia gratuita, non un impedimento. Si perde sviluppo del secondo attaccante e un accesso che può cambiare la linea.",
+                "correction": "Evolvere il Dreepy di riserva, confrontare Recon Directive prima delle ricerche e dichiararne gli esiti ipotizzati. Rivalutare anche Poké Pad, che può cercare Combusken per sviluppare Torchic. Aggiornare registro, mano, risorse, audit e linea successiva.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:me03-081",
+                  "card:sv10-041",
+                  "our-list"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "requiredCards=[] e attachments=0 nascondono nel prefisso l'evoluzione Bayleef→Meganium, che non è sul campo nello stato iniziale dello scenario. Inoltre il KO non richiede necessariamente Wild Growth: assegnando manualmente la Grass già in mano, Ogerpon arriva a tre Energie e infligge 150 danni al Dreepy con Psychic, sufficienti per il KO senza evolvere Meganium.",
+                "correction": "Confrontare esplicitamente la linea con una Grass aggiuntiva e quella con Bayleef e Meganium. Contare anche le carte consumate dal prefisso riutilizzato, distinguendo quelle già sul campo all'inizio da quelle successivamente giocate. Ridefinire replica minima e omissionTests verificando i migliori riordini e gli accessi alternativi.",
+                "sourceIds": [
+                  "card:sv06-025",
+                  "card:me01-010",
+                  "card:me01-009",
+                  "card:sv06-128"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "requiredCards contabilizza soltanto Dipplin, ma il ramo espanso gioca anche Bayleef e Meganium dalla mano e assegna una Grass a Dipplin. Il riuso del prefisso non rende gratuite queste risorse aggiuntive rispetto allo stato iniziale.",
+                "correction": "Includere tutte le copie aggiuntive utilizzate dal ramo espanso, con accesso dalla mano o dal mazzo, oppure semplificare realmente il ramo eliminando lo sviluppo non dichiarato. Applicare lo stesso criterio agli altri confronti.",
+                "sourceIds": [
+                  "card:me01-009",
+                  "card:me01-010",
+                  "card:sv06-018",
+                  "card:mee-009"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Il danno di 40 è corretto, ma requiredCards omette Bayleef e Meganium giocati nel prefisso. Sono copie dalla mano utilizzate per lo sviluppo dichiarato, anche se non sono indispensabili al danno di Do the Wave.",
+                "correction": "Aggiungere le evoluzioni e i relativi accessi al conteggio del ramo, oppure rappresentare una continuazione distinta senza quelle evoluzioni e adeguare outcome e campo risultante.",
+                "sourceIds": [
+                  "card:me01-009",
+                  "card:me01-010",
+                  "card:sv06-018"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "requiredCards omette Bayleef e Meganium consumati dal prefisso, pur rivendicando la conservazione del motore evoluto nell'outcome.",
+                "correction": "Contabilizzare entrambe le evoluzioni dalla mano nel ramo completo e verificare che requiredCards copra tutto lo sviluppo effettivamente rappresentato.",
+                "sourceIds": [
+                  "card:me01-009",
+                  "card:me01-010",
+                  "card:me01-012"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Il ramo include l'evoluzione di Meganium nel prefisso, ma requiredCards omette Bayleef e Meganium. Il conteggio copre soltanto la continuazione successiva al fork, anziché tutte le risorse aggiuntive del ramo espanso.",
+                "correction": "Includere le evoluzioni e i loro accessi dall'apertura; mantenere separati i requisiti del KO da quelli dello sviluppo aggiuntivo, senza escludere questi ultimi dal conteggio complessivo.",
+                "sourceIds": [
+                  "card:me01-009",
+                  "card:me01-010",
+                  "card:sv06-025"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "La difesa riusa un prefisso che evolve Bayleef e Meganium, ma non li contabilizza in requiredCards. La descrizione del motore conservato dipende proprio da queste carte giocate dalla mano.",
+                "correction": "Contare entrambe le evoluzioni nel ramo espanso e rivalutare il compromesso difensivo dopo aver corretto anche lo sviluppo disponibile al nostro turno 4.",
+                "sourceIds": [
+                  "card:me01-009",
+                  "card:me01-010",
+                  "card:sv06-025",
+                  "card:sv06-129"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "La sequenza termina al turno 4. Il passaggio a Phantom Dive è soltanto annunciato: manca la replica avversaria successiva e l'attacco nel nostro turno seguente richiesto dalla revisione v7. Inoltre Blaziken è ancora Attivo con costo di ritirata 2: evolvere e alimentare Drakloak non basta a portare Dragapult all'attacco.",
+                "correction": "Estendere la linea attraverso il turno avversario 5 e il nostro turno 6, verificando sviluppo Hydrapple/Ogerpon, eventuali KO, accessi, uscita di Blaziken e costo della ritirata. Dimostrare l'attacco successivo oppure ridimensionare la continuità dichiarata.",
+                "sourceIds": [
+                  "card:sv09-024",
+                  "card:sv06-130",
+                  "card:sv07-014",
+                  "card:sv06-025",
+                  "card:me01-010"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "La linea termina dopo il primo Phantom Dive. Conservare le Energie dimostra un costo disponibile, ma non dimostra che Dragapult sopravviva alla replica successiva né quale attacco venga effettivamente eseguito nel nostro turno seguente.",
+                "correction": "Estendere registro e audit ai turni 5 e 6, con pesca avversaria esplicita, confronto degli accessi e migliore replica plausibile. Integrare lo sviluppo di Drakloak e rappresentare il nostro attacco successivo con danni, Premi e promozioni aggiornati.",
+                "sourceIds": [
+                  "card:sv06-130",
+                  "card:sv06-129",
+                  "card:sv06-025",
+                  "card:me01-010",
+                  "opponent-2"
+                ]
+              }
+            ],
+            "checks": [
+              "Verificati manualmente apertura, movimenti e conteggi delle mani nelle linee rappresentate: non emergono discrepanze aritmetiche.",
+              "Inventari iniziali coerenti con le copie delle due liste selezionate e con le pescate del setup.",
+              "Corretti i danni dichiarati di Smolder-sault, Myriad Leaf Shower, Do the Wave e Spray Fluid nelle condizioni rappresentate.",
+              "Corrette le transizioni KO dell'Attivo e successiva promozione; corretti i costi stampati delle ritirate rappresentate.",
+              "Forest of Vitality consente le evoluzioni concatenate al turno 3, ma non nel primo turno.",
+              "I campi derivati dell'app e le formule di ritirata derivate non sono stati contestati come duplicazioni.",
+              "Rilevate omissioni nello sviluppo disponibile, nei requisiti dei rami e nella dimostrazione della continuità successiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 48,
+              "calculations": 22,
+              "transitions": 73
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Al turno 4 Crispin non è necessario a Phantom Dive: Dragapult conserva Psychic e abbiamo ancora la Fire dell'apertura in mano. Possiamo assegnare manualmente quella Fire all'Attivo e giocare Boss's Orders, ottenuto da Recon Directive, per mandare KO Ogerpon a 200 PS. Possiamo comunque sviluppare Drakloak e Combusken e mettere 60 danni su Bayleef. La difesa rappresentata quindi non conserva Ogerpon contro la nostra migliore risposta disponibile; il turnAudit giustifica la rinuncia a Boss con un prerequisito falso.",
+                "correction": "Confrontare esplicitamente Boss più assegnazione manuale Fire con Crispin più Fire a Combusken. Ricostruire la continuazione dopo il KO di Ogerpon, inclusi due Premi, Grass scartate, promozione e migliore replica avversaria. Rivalutare la difesa preferita e la tesi strategica senza presumere che Ogerpon venga conservato.",
+                "sourceIds": [
+                  "card:sv06-130",
+                  "card:sv07-133",
+                  "card:me01-114",
+                  "card:sv06-129",
+                  "card:sv06-025",
+                  "our-list"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Traverse Time cerca una Forest di riserva mentre Forest è già attiva, ma non confronta la ricerca di un secondo Ogerpon. Quest'ultimo è disponibile nella lista e consente un ulteriore Teal Dance al turno 5: con le due Grass già previste dalle pescate si possono attivare entrambi gli Ogerpon, mantenendo Hydrapple capace di attaccare grazie a Wild Growth. Si ottiene una pesca aggiuntiva che può aprire Energie, Supporter o ricerca prima dell'attacco. La risposta da 210 con una sola Forest residua in mano non rappresenta quindi tutti gli accessi plausibili della ricerca scelta al turno 3.",
+                "correction": "Confrontare la ricerca Hydrapple più due Ogerpon con quella attuale. Esplicitare la pesca aggiuntiva, rivalutare immediatamente tutti gli accessi e aggiornare registro, risorse, danni e continuazione. Se si conserva Forest come scelta, motivarne concretamente il vantaggio rispetto al secondo motore di pesca.",
+                "sourceIds": [
+                  "opponent-2",
+                  "card:me01-012",
+                  "card:sv06-025",
+                  "card:me01-010",
+                  "card:sv07-014",
+                  "card:me01-117"
+                ]
+              }
+            ],
+            "checks": [
+              "Controllati aperture, mani residue, evoluzioni, costi degli attacchi e ritirate rappresentate.",
+              "Verificati i conti dichiarati di danni, Wild Growth, KO, Premi e promozioni.",
+              "Verificata indipendentemente la rimozione della Grass nella replica minima b-direct: senza accessi aggiuntivi Ogerpon non paga il costo.",
+              "Individuate alternative concrete che richiedono di rivalutare entrambe le continuazioni strategiche.",
+              "I campi derivati dell'app non sono stati considerati duplicazioni vietate."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "cc63479b7d41e78d5f7093d37c11e9f39f0ef95b9dc1ea9f4386a84f4745dbf0",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "e2c5f53d64962c88610a5d1a6059638b1227b428f3517e8bfbb914731d519852",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "35ff1874939aa15ec8a205aaf280c29cbc929600d1a57ab07d8045e49ff1148d",
+        "8f4ac682d13d1e345c1cdda568ce6dd5d7829e065c8966adb101f8710ee95494"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "426bbac4823fc37bebe17dcf877af41ea2db115cf6e16633478a9c8cfcbbdf2f"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "7fbffcd79701cc9a42a02d9f04b7a85b9acd83d9c2da2aeffcf8e92f27c8e3fd"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "7de469c55e20b0d3446ca2a5cec9f2a810bf9da94bc6de6340a4a922a055625b"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "e5d060e6c7c75f032474516446f910a3529429d2a5c7c2d64e6799d8a68a9531"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "7d7ca714f1f6adb9cd6b6b2383ab4d791f31810b3eec9e337479fa2d97eef1fa"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 16,
+  "passed": 0
+}

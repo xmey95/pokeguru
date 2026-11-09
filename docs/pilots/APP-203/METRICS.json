@@ -1,0 +1,439 @@
+{
+  "date": "2026-10-31",
+  "task": "APP-203",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "evidenceAsOf": "2026-10-30",
+  "postCampaignChanges": {
+    "paths": [
+      "src/main/ai-failure.ts",
+      "src/main/codex-failure.ts",
+      "src/shared/ai-diagnostics.ts"
+    ],
+    "description": "After guide campaign, output-limit classification added and verified against both archived failing requests through the production reader. No additional guide generation or content correction. Original tested code and output retained."
+  },
+  "localVerification": {
+    "testsPassed": 390,
+    "externalSkipped": 44,
+    "guideTestsPassed": 62,
+    "typecheck": "pass",
+    "build": "pass",
+    "schemaEquivalence": "Nine real schemas expanded identically; independent Ajv accepts the prior valid shape and rejects same-zone movements. No tactical certification"
+  },
+  "verificationBasis": "Archived tested-code and original frozen inputs; v13 separates deck observations from physical transfers and uses lossless shared schema definitions. Archived schema diagnosis calls included in each relevant guide budget; all prior gates retained.",
+  "sealedFiles": 50,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "Fresh jobs, maximum eight invocations each; all earlier gates retained. Two separate case calls with full selected exact-list facts; all originals preserved. Attack exclusions and zero-damage claims independently criticized. Positive omission witnesses must respect both reduced budgets. No model-declared terminal shortcut.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 228354,
+      "outputTokens": 31613,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 459528,
+      "elapsedMs": 460822,
+      "startedAt": "2026-10-31T08:34:15.917Z",
+      "endedAt": "2026-10-31T08:41:56.739Z",
+      "error": "scenario-1: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:direct: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:access: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:defend: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:without-drakloak: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "8575dc04aa5a4e625662e6e6ec1273da6994a78ccc9a43e71c026a0d01ccc65a",
+          "message": "scenario-1: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:direct: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:access: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:defend: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:without-drakloak: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "8575dc04aa5a4e625662e6e6ec1273da6994a78ccc9a43e71c026a0d01ccc65a",
+          "message": "scenario-1: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:direct: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:access: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:defend: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:without-drakloak: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "0f5a646efb254e0c79ec7307bbbd8146a743f3f2815b16ca011c03c57970f613"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "status": "failed",
+          "inputHash": "8575dc04aa5a4e625662e6e6ec1273da6994a78ccc9a43e71c026a0d01ccc65a"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "status": "failed",
+          "inputHash": "2d52cf4ef3c8024a929db991f03982313bd328bbc031de2040a1d6e8f25943a5"
+        }
+      ],
+      "generationJobCalls": 3,
+      "generationJobEndedAt": "2026-10-31T08:41:56.739Z",
+      "supplementaryDiagnoses": []
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 7,
+      "failedCalls": 4,
+      "inputTokens": 223514,
+      "outputTokens": 36905,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 4,
+      "totalInvocationMs": 736986,
+      "elapsedMs": 1213669,
+      "startedAt": "2026-10-31T08:34:16.077Z",
+      "endedAt": "2026-10-31T08:54:29.746Z",
+      "error": "Il contesto della guida supera il limite verificabile: ridurre le liste mirate, senza troncare le prove.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "86a777f04aac373bd86587adae75f3914efa853f7c961a09223b74f43a24a6f1",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "8701f123fd3ebd3d787356c008e8a1c2381030bbcbe11cef0fd49a6376cba257",
+        "e01abef45d2137157f1fcc9b44571c2052c389b67aa794785722e726fbc232fd"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "diagnose-archived-schema",
+          "status": "failed",
+          "inputHash": "5730a62c6724a9014eee4390ba9a3d4e848bef9d4c529aabda3cb15acf03e4df"
+        },
+        {
+          "sequence": 2,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "5889f6a06cb919d051a8d29fbd4decdad661ebb1adaf0f244eb04471aff82ccf"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "status": "succeeded",
+          "inputHash": "c2b595133757c534667cf86c71a5bada6c27e3e63f047f1430a7df31b649e9af"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "status": "succeeded",
+          "inputHash": "f97544328b6ba463460f84b9a7b18a133adc7ebd0279fa4769be11cc8423dec5"
+        },
+        {
+          "sequence": 5,
+          "stage": "diagnose-raw-protocol",
+          "status": "failed",
+          "inputHash": null
+        },
+        {
+          "sequence": 6,
+          "stage": "diagnose-raw-protocol",
+          "status": "failed",
+          "inputHash": null
+        },
+        {
+          "sequence": 7,
+          "stage": "diagnose-production-classifier",
+          "status": "failed",
+          "inputHash": null
+        }
+      ],
+      "generationJobCalls": 4,
+      "generationJobEndedAt": "2026-10-31T08:46:20.557Z",
+      "supplementaryDiagnoses": [
+        {
+          "id": "toucannon-festival",
+          "stage": "diagnose-raw-protocol",
+          "generationJobCalls": 4,
+          "additionalCalls": 1,
+          "totalPerGuide": 5,
+          "startedAt": "2026-10-31T08:47:50.262Z",
+          "endedAt": "2026-10-31T08:47:54.285Z",
+          "status": "failed",
+          "usage": null,
+          "usedInGuide": false,
+          "exitCode": 1,
+          "timedOut": false,
+          "stdoutBytes": 287,
+          "stderrBytes": 158,
+          "unterminatedLastLine": false,
+          "eventShapes": [
+            {
+              "type": "thread.started",
+              "keys": [
+                "type",
+                "thread_id"
+              ],
+              "itemType": null
+            },
+            {
+              "type": "turn.started",
+              "keys": [
+                "type"
+              ],
+              "itemType": null
+            },
+            {
+              "type": "error",
+              "keys": [
+                "type",
+                "message"
+              ],
+              "itemType": null
+            },
+            {
+              "type": "turn.failed",
+              "keys": [
+                "type",
+                "error"
+              ],
+              "itemType": null
+            }
+          ],
+          "providerErrorTechnicalText": [
+            "\"[redacted] response [redacted] : [redacted]\"",
+            "{\"message\":\"[redacted] response [redacted] : [redacted]\"}"
+          ],
+          "stderrTechnicalText": "2026-10-31[redacted]:47:50.495911[redacted] ::[redacted]: Failed to [redacted] for [redacted]: [redacted] not supported [redacted] for [redacted] ",
+          "basis": "Exactly one extra reproduction of the archived failing schema/prompt, counted with the completed guide job; only allowlisted technical words exported, raw error text kept in memory only"
+        },
+        {
+          "id": "toucannon-festival",
+          "stage": "diagnose-raw-protocol",
+          "generationJobCalls": 4,
+          "earlierSupplementaryCalls": 1,
+          "additionalCalls": 1,
+          "totalPerGuide": 6,
+          "startedAt": "2026-10-31T08:49:44.382Z",
+          "endedAt": "2026-10-31T08:49:49.745Z",
+          "status": "failed",
+          "usage": null,
+          "usedInGuide": false,
+          "providerErrorWords": [
+            [
+              "incomplete",
+              "max",
+              "output",
+              "reason",
+              "response",
+              "returned",
+              "tokens"
+            ],
+            [
+              "incomplete",
+              "max",
+              "message",
+              "output",
+              "reason",
+              "response",
+              "returned",
+              "tokens"
+            ]
+          ],
+          "exitCode": 1,
+          "timedOut": false,
+          "stdoutBytes": 287,
+          "stderrBytes": 158,
+          "unterminatedLastLine": false,
+          "eventShapes": [
+            {
+              "type": "thread.started",
+              "keys": [
+                "type",
+                "thread_id"
+              ],
+              "itemType": null
+            },
+            {
+              "type": "turn.started",
+              "keys": [
+                "type"
+              ],
+              "itemType": null
+            },
+            {
+              "type": "error",
+              "keys": [
+                "type",
+                "message"
+              ],
+              "itemType": null
+            },
+            {
+              "type": "turn.failed",
+              "keys": [
+                "type",
+                "error"
+              ],
+              "itemType": null
+            }
+          ],
+          "providerErrorTechnicalText": [
+            "\"[redacted] response [redacted] : [redacted]\"",
+            "{\"message\":\"[redacted] response [redacted] : [redacted]\"}"
+          ],
+          "stderrTechnicalText": "2026-10-31[redacted]:49:45.207231[redacted] ::[redacted]: Failed to [redacted] for [redacted]: [redacted] not supported [redacted] for [redacted] ",
+          "basis": "Exactly one extra reproduction of the archived failing schema/prompt, counted with the completed guide job; only allowlisted technical words exported, raw error text kept in memory only"
+        },
+        {
+          "id": "toucannon-festival",
+          "stage": "diagnose-production-classifier",
+          "generationJobCalls": 4,
+          "earlierSupplementaryCalls": 2,
+          "additionalCalls": 1,
+          "totalPerGuide": 7,
+          "startedAt": "2026-10-31T08:54:24.601Z",
+          "status": "failed",
+          "usedInGuide": false,
+          "usage": null,
+          "code": "output-limit",
+          "message": "Codex ha interrotto la risposta per il limite dei token di output. Nessun contenuto incompleto è stato applicato.",
+          "providerDetails": {
+            "reason": "output-limit",
+            "httpStatus": null,
+            "exitCode": 1
+          },
+          "endedAt": "2026-10-31T08:54:29.746Z"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 6,
+      "failedCalls": 4,
+      "inputTokens": 233486,
+      "outputTokens": 64971,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 2,
+      "totalInvocationMs": 1033547,
+      "elapsedMs": 1217685,
+      "startedAt": "2026-10-31T08:34:16.201Z",
+      "endedAt": "2026-10-31T08:54:33.886Z",
+      "error": "scenario-2: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-direct: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-access: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-defend: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-developed: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "inputHash": "069d5e5dedaed6423dc6c2c7d07d9dfa05f66f188fe8901e6f8e76f0555f3e9f",
+          "message": "scenario-2: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-direct: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-access: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-defend: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato."
+        },
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "inputHash": "069d5e5dedaed6423dc6c2c7d07d9dfa05f66f188fe8901e6f8e76f0555f3e9f",
+          "message": "scenario-2: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-direct: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-access: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-defend: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-2:s2-developed: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato."
+        }
+      ],
+      "derivedTactics": [
+        {
+          "hash": "8d1e27e2689b67dc9c2f665315160a130fe42e78d2b1836400ab20dd8cffc03f",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "41d89f9e312dc4ab887ccf714ba45164848de47e0627efd6ee0792800b0bb57e"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "diagnose-archived-schema",
+          "status": "failed",
+          "inputHash": "3d1f56fe0b9bc63b870a4adac86a15322757c28e2ca6600ba0a115f0b768e3ff"
+        },
+        {
+          "sequence": 2,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "642028ce1d2a7128d551d406ad3d40e4720f8d9d03df71edba85335a30971b08"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "status": "succeeded",
+          "inputHash": "aa7ed47ed24eea1a4469367b71ab835f558fc6733757c7347c26a37d6d0a7672"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "status": "failed",
+          "inputHash": "069d5e5dedaed6423dc6c2c7d07d9dfa05f66f188fe8901e6f8e76f0555f3e9f"
+        },
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "status": "failed",
+          "inputHash": "84eed6c56f6871d60952b9203f2c3e0940a5d9ed04cf4fd4a4df19af4ac429ac"
+        },
+        {
+          "sequence": 6,
+          "stage": "diagnose-production-classifier",
+          "status": "failed",
+          "inputHash": null
+        }
+      ],
+      "generationJobCalls": 5,
+      "generationJobEndedAt": "2026-10-31T08:51:27.090Z",
+      "supplementaryDiagnoses": [
+        {
+          "id": "dragapult-hydrapple",
+          "stage": "diagnose-production-classifier",
+          "generationJobCalls": 5,
+          "earlierSupplementaryCalls": 0,
+          "additionalCalls": 1,
+          "totalPerGuide": 6,
+          "startedAt": "2026-10-31T08:54:29.747Z",
+          "status": "failed",
+          "usedInGuide": false,
+          "usage": null,
+          "code": "output-limit",
+          "message": "Codex ha interrotto la risposta per il limite dei token di output. Nessun contenuto incompleto è stato applicato.",
+          "providerDetails": {
+            "reason": "output-limit",
+            "httpStatus": null,
+            "exitCode": 1
+          },
+          "endedAt": "2026-10-31T08:54:33.886Z"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 16,
+  "passed": 0,
+  "executionWindow": {
+    "startedAt": "2026-10-31T08:34:15.917Z",
+    "endedAt": "2026-10-31T08:54:33.886Z"
+  }
+}

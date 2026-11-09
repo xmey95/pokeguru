@@ -1,0 +1,710 @@
+{
+  "task": "APP-206",
+  "date": "2026-10-31",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "promptVersion": "matchup-guide-15",
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "manualCorrections": 0,
+  "diagnosticCalls": 0,
+  "estimateOnly": true,
+  "sealedFiles": 51,
+  "changedSealedFiles": [],
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 403,
+    "externalSkipped": 44,
+    "targetedTests": 71,
+    "typecheck": "pass",
+    "build": "pass",
+    "offlineTacticalReplay": "pass"
+  },
+  "timeoutRecovery": {
+    "at": "2026-10-31T10:55:32.744Z",
+    "modelCallsForAudit": 0,
+    "actualInvocations": 5,
+    "automaticTimeoutRetries": [
+      {
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "identicalInputHash": "b2d4c1ad69022fbece4420c331e3868883dbba86804ba153171c3270bce70c22",
+        "singleImmutableContext": true,
+        "remainingBefore": 7,
+        "remainingOnRetry": 6,
+        "actualRetryInvoked": true,
+        "retryStatus": "succeeded"
+      }
+    ],
+    "immutableContextFailures": 0
+  },
+  "reviewBudgetAudit": {
+    "modelCalls": 0,
+    "guideChanged": false,
+    "whole": {
+      "stage": "review-scenarios-1",
+      "units": 2,
+      "encoding": "shared",
+      "visibleTokens": 119571,
+      "estimatedInput": 160161,
+      "reservedOutput": 10000,
+      "estimatedResponseCharacters": 12000,
+      "margin": 8192,
+      "bytes": 390774,
+      "fits": false,
+      "fitsTarget": false,
+      "remainingCalls": 3,
+      "reservedCalls": 2,
+      "calibrationFactor": 1.3223307595618605,
+      "family": "review",
+      "estimateOnly": true
+    },
+    "parts": [
+      {
+        "stage": "review-scenarios-1",
+        "units": 1,
+        "encoding": "shared",
+        "visibleTokens": 92066,
+        "estimatedInput": 123790,
+        "reservedOutput": 8000,
+        "estimatedResponseCharacters": 12000,
+        "margin": 8192,
+        "bytes": 301561,
+        "fits": true,
+        "fitsTarget": false,
+        "remainingCalls": 3,
+        "reservedCalls": 2,
+        "calibrationFactor": 1.3223307595618605,
+        "family": "review",
+        "estimateOnly": true
+      },
+      {
+        "stage": "review-scenarios-1",
+        "units": 1,
+        "encoding": "shared",
+        "visibleTokens": 81282,
+        "estimatedInput": 109530,
+        "reservedOutput": 8000,
+        "estimatedResponseCharacters": 12000,
+        "margin": 8192,
+        "bytes": 264971,
+        "fits": true,
+        "fitsTarget": false,
+        "remainingCalls": 3,
+        "reservedCalls": 2,
+        "calibrationFactor": 1.3223307595618605,
+        "family": "review",
+        "estimateOnly": true
+      }
+    ],
+    "availableCalls": 3,
+    "minimumNeeded": 4,
+    "decision": "Stop before criticism: both separate reviews, prose and final criticism cannot fit."
+  },
+  "policy": {
+    "inputTarget": 96000,
+    "inputMaximum": 128000,
+    "totalEnvelope": 176000,
+    "margin": 8192,
+    "requestBytes": 500000,
+    "responseCharacters": 100000
+  },
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "jobId": "efbb8579-9d26-41a9-8e87-b037970d033d",
+      "startedAt": "2026-10-31T10:21:43.849Z",
+      "endedAt": "2026-10-31T10:37:32.133Z",
+      "passed": false,
+      "error": "Il budget residuo non consente tutte le unità di critica e le fasi obbligatorie.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T10:21:44.417Z",
+          "endedAt": "2026-10-31T10:22:43.934Z",
+          "status": "succeeded",
+          "inputHash": "b80962c698c9fdfe46f1a0e54875747af8c9a4975f061345b61879cf6715f2f8",
+          "inputBytes": 176772,
+          "durationMs": 59517,
+          "usage": {
+            "inputTokens": 66946,
+            "cachedInputTokens": 0,
+            "outputTokens": 2323
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T10:22:44.243Z",
+          "endedAt": "2026-10-31T10:24:52.472Z",
+          "status": "failed",
+          "inputHash": "6ae9fdf8ff1c6d0766b1f8fc92d39598012d914c5e4d6534e827e0b315c094be",
+          "inputBytes": 176530,
+          "durationMs": 128227,
+          "usage": {
+            "inputTokens": 77745,
+            "cachedInputTokens": 0,
+            "outputTokens": 3962
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T10:24:53.619Z",
+          "endedAt": "2026-10-31T10:29:26.356Z",
+          "status": "succeeded",
+          "inputHash": "0cb3fb1d62ff902e4e62b92f159a20aca1634e9c7b9146f39f74ef3f7a55139b",
+          "inputBytes": 181556,
+          "durationMs": 272725,
+          "usage": {
+            "inputTokens": 79128,
+            "cachedInputTokens": 0,
+            "outputTokens": 17117
+          }
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T10:29:26.631Z",
+          "endedAt": "2026-10-31T10:34:01.588Z",
+          "status": "failed",
+          "inputHash": "56484a5c25900d827ac69c6404a1e51de382c3c67cd571cd79e303edc5ed0996",
+          "inputBytes": 176649,
+          "durationMs": 274955,
+          "usage": {
+            "inputTokens": 77778,
+            "cachedInputTokens": 0,
+            "outputTokens": 13651
+          }
+        },
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T10:34:02.905Z",
+          "endedAt": "2026-10-31T10:37:30.081Z",
+          "status": "succeeded",
+          "inputHash": "e46b927be86c45ea7614c24fd91c074bcdb05be91704068d0fb71339de8a638d",
+          "inputBytes": 212438,
+          "durationMs": 207176,
+          "usage": {
+            "inputTokens": 88172,
+            "cachedInputTokens": 0,
+            "outputTokens": 14710
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 55690,
+          "estimatedInput": 64421,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 176772,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 68822,
+          "estimatedInput": 93054,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 176530,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3223307595618605,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 70206,
+          "estimatedInput": 94884,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 181556,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3223307595618605,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 68856,
+          "estimatedInput": 93099,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 62226,
+          "margin": 8192,
+          "bytes": 176649,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.3223307595618605,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "shared",
+          "visibleTokens": 79250,
+          "estimatedInput": 106843,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 62226,
+          "margin": 8192,
+          "bytes": 212438,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 4,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.3223307595618605,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "068053650663a820a6bed0301df09c52a69ec2262633233b42d472892767128e",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "38f7998ce738ca9494e125d92f7e38727ac86d7bc354bf8ee1bfbd5ae96cc17c",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "1b866ebf570032e764a47833fbf6efa4abc1dd693daf0f1352e3965bff991d0e",
+        "288e8218fe96a42f8a4cef6eed73a76884196639c7b34163b40e56893795aec3"
+      ],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "6ae9fdf8ff1c6d0766b1f8fc92d39598012d914c5e4d6534e827e0b315c094be",
+          "message": "scenario-1: ramo privo del nostro primo turno e della sua pesca."
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "inputHash": "56484a5c25900d827ac69c6404a1e51de382c3c67cd571cd79e303edc5ed0996",
+          "message": "scenario-2: ramo testimone fuori dal budget ridotto.\nscenario-2:direct-moltres: ramo testimone fuori dal budget ridotto.\nscenario-2:access-drakloak: ramo testimone fuori dal budget ridotto.\nscenario-2:defend-budew: ramo testimone fuori dal budget ridotto."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 5,
+      "inputTokens": 389769,
+      "outputTokens": 51763,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 948
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "jobId": "de7fa5c8-7497-45e1-a1b5-a354d645e89c",
+      "startedAt": "2026-10-31T10:21:44.456Z",
+      "endedAt": "2026-10-31T10:38:49.215Z",
+      "passed": false,
+      "error": "scenario-2: audit tattico omesso main|3|ours.\nscenario-2: audit tattico omesso main|4|opponent.\nscenario-2: audit tattico omesso main|5|ours.\nscenario-2: audit tattico omesso direct|3|ours.\nscenario-2: audit tattico omesso direct|4|opponent.\nscenario-2: audit tattico omesso direct|5|ours.\nscenario-2: audit tattico omesso access|3|ours.\nscenario-2: audit tattico omesso access|4|opponent.\nscenario-2: audit tattico omesso access|5|ours.\nscenario-2: audit tattico omesso defend|3|ours.\nscenario-2: audit tattico omesso defend|4|opponent.\nscenario-2: audit tattico omesso defend|5|ours.\nscenario-2: replica con accesso aggiuntivo senza ricerca, recupero o pesca da effetto nel turno della risposta.\nscenario-2: pescata specifica mee-009 omessa dalle risorse della replica.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T10:21:44.649Z",
+          "endedAt": "2026-10-31T10:22:33.318Z",
+          "status": "succeeded",
+          "inputHash": "acc297e3a215a6e0f266e023f9be8490737cf90468b4db4e970fdb18fc26c132",
+          "inputBytes": 182910,
+          "durationMs": 48665,
+          "usage": {
+            "inputTokens": 68772,
+            "cachedInputTokens": 0,
+            "outputTokens": 2121
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T10:22:33.624Z",
+          "endedAt": "2026-10-31T10:27:32.495Z",
+          "status": "succeeded",
+          "inputHash": "203644fa2f96a4d6a75ff5b169ca853bcd57e0f83a109124dcd06d43887a023b",
+          "inputBytes": 180586,
+          "durationMs": 298867,
+          "usage": {
+            "inputTokens": 79347,
+            "cachedInputTokens": 0,
+            "outputTokens": 15938
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T10:27:32.807Z",
+          "endedAt": "2026-10-31T10:37:27.104Z",
+          "status": "failed",
+          "inputHash": "662d3ca24c1ce2e230cf2d821eca455029e4352ce24a978a0f217099aafc420e",
+          "inputBytes": 180721,
+          "durationMs": 594299,
+          "usage": null
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T10:37:28.133Z",
+          "endedAt": "2026-10-31T10:38:49.206Z",
+          "status": "failed",
+          "inputHash": "662d3ca24c1ce2e230cf2d821eca455029e4352ce24a978a0f217099aafc420e",
+          "inputBytes": 180721,
+          "durationMs": 81064,
+          "usage": {
+            "inputTokens": 79385,
+            "cachedInputTokens": 0,
+            "outputTokens": 6457
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 57519,
+          "estimatedInput": 66470,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 182910,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 70467,
+          "estimatedInput": 94727,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 180586,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.315203671830178,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 70505,
+          "estimatedInput": 94777,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 54730,
+          "margin": 8192,
+          "bytes": 180721,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.315203671830178,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 70505,
+          "estimatedInput": 94777,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 54730,
+          "margin": 8192,
+          "bytes": 180721,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.315203671830178,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "c2a01f731b60ed893882da244ba3708da696d4f43db13d662b1149558ccb9047",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "ae1fb2448a7f4be2452f544c477ee0d0623a5901fdda5e86355a41bfc1abb137"
+      ],
+      "invalidResponses": [
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "inputHash": "662d3ca24c1ce2e230cf2d821eca455029e4352ce24a978a0f217099aafc420e",
+          "message": "scenario-2: audit tattico omesso main|3|ours.\nscenario-2: audit tattico omesso main|4|opponent.\nscenario-2: audit tattico omesso main|5|ours.\nscenario-2: audit tattico omesso direct|3|ours.\nscenario-2: audit tattico omesso direct|4|opponent.\nscenario-2: audit tattico omesso direct|5|ours.\nscenario-2: audit tattico omesso access|3|ours.\nscenario-2: audit tattico omesso access|4|opponent.\nscenario-2: audit tattico omesso access|5|ours.\nscenario-2: audit tattico omesso defend|3|ours.\nscenario-2: audit tattico omesso defend|4|opponent.\nscenario-2: audit tattico omesso defend|5|ours.\nscenario-2: replica con accesso aggiuntivo senza ricerca, recupero o pesca da effetto nel turno della risposta.\nscenario-2: pescata specifica mee-009 omessa dalle risorse della replica."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 4,
+      "inputTokens": 227504,
+      "outputTokens": 24516,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "elapsedSeconds": 1025
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "jobId": "50d759a2-d4b5-4e2f-baa2-7e060e3575f5",
+      "startedAt": "2026-10-31T10:21:44.685Z",
+      "endedAt": "2026-10-31T10:54:34.024Z",
+      "passed": false,
+      "error": "scenario-2: ritirata senza retreatCostId e scambio Attivo/Panchina coerente col costo.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T10:21:44.834Z",
+          "endedAt": "2026-10-31T10:22:44.628Z",
+          "status": "succeeded",
+          "inputHash": "040566c9301ab2b5540a63c8975ec62e1a10a889eac820fd8bc5418f7d14fe9d",
+          "inputBytes": 97179,
+          "durationMs": 59797,
+          "usage": {
+            "inputTokens": 40891,
+            "cachedInputTokens": 0,
+            "outputTokens": 2099
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T10:22:44.947Z",
+          "endedAt": "2026-10-31T10:32:44.992Z",
+          "status": "failed",
+          "inputHash": "b2d4c1ad69022fbece4420c331e3868883dbba86804ba153171c3270bce70c22",
+          "inputBytes": 124843,
+          "durationMs": 600038,
+          "usage": null
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T10:32:46.010Z",
+          "endedAt": "2026-10-31T10:40:33.059Z",
+          "status": "succeeded",
+          "inputHash": "b2d4c1ad69022fbece4420c331e3868883dbba86804ba153171c3270bce70c22",
+          "inputBytes": 124843,
+          "durationMs": 467042,
+          "usage": {
+            "inputTokens": 61340,
+            "cachedInputTokens": 0,
+            "outputTokens": 19510
+          }
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T10:40:33.334Z",
+          "endedAt": "2026-10-31T10:47:45.487Z",
+          "status": "failed",
+          "inputHash": "ae0bffb71960b935013e3d37e61162185d6809fe76abd74178dd63f692df1632",
+          "inputBytes": 124959,
+          "durationMs": 432161,
+          "usage": null
+        },
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T10:47:46.530Z",
+          "endedAt": "2026-10-31T10:54:34.014Z",
+          "status": "failed",
+          "inputHash": "ae0bffb71960b935013e3d37e61162185d6809fe76abd74178dd63f692df1632",
+          "inputBytes": 124959,
+          "durationMs": 407464,
+          "usage": {
+            "inputTokens": 61375,
+            "cachedInputTokens": 0,
+            "outputTokens": 17679
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 29632,
+          "estimatedInput": 35236,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 97179,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 52491,
+          "estimatedInput": 81728,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 124843,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.5179569384449245,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 52491,
+          "estimatedInput": 81728,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 124843,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.5179569384449245,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 52523,
+          "estimatedInput": 81776,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 47190,
+          "margin": 8192,
+          "bytes": 124959,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.5179569384449245,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 52523,
+          "estimatedInput": 81776,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 47190,
+          "margin": 8192,
+          "bytes": 124959,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 4,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.5179569384449245,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "c9a8fcd2d78642724ac7e3c1880a133afd1de02f4c978dc18da1da6a3cf225ec",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "d50c2d7772032acf1045dc577c5a566ec403c2b8ab5b6cc140ca6f03bb966ee1"
+      ],
+      "invalidResponses": [
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "inputHash": "ae0bffb71960b935013e3d37e61162185d6809fe76abd74178dd63f692df1632",
+          "message": "scenario-2: ritirata senza retreatCostId e scambio Attivo/Panchina coerente col costo."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 5,
+      "inputTokens": 163606,
+      "outputTokens": 39288,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 2,
+      "elapsedSeconds": 1969
+    }
+  ],
+  "passed": 0,
+  "actualCalls": 14,
+  "inputTokens": 780879,
+  "outputTokens": 115567,
+  "callsWithoutUsage": 3,
+  "unissuedTokenPlans": 0,
+  "elapsedSeconds": 1970
+}

@@ -60,7 +60,8 @@ function ProjectActions({ project, archived, onArchive, onRestore, onDelete }: {
   </>
 }
 
-export function ProjectSwitcher({ projects, archivedProjects, selected, loading, onSelect, onCreate, onArchive, onRestore, onDelete }: {
+export function ProjectSwitcher({ projects, archivedProjects, selected, loading, onSelect, onCreate, onArchive, onRestore, onDelete, readOnly = false }: {
+  readOnly?: boolean
   projects: Project[]
   archivedProjects: Project[]
   selected: Project | null
@@ -122,7 +123,7 @@ export function ProjectSwitcher({ projects, archivedProjects, selected, loading,
       <div className="project-picker-head"><div><span className="eyebrow">Il tuo spazio di gioco</span>
         <h2>{showArchived ? 'Progetti archiviati' : 'I tuoi progetti'}</h2></div>
         <div className="project-picker-head-actions">
-          {!showArchived && <button type="button" className="project-picker-create" aria-label="Nuovo progetto"
+          {!readOnly && !showArchived && <button type="button" className="project-picker-create" aria-label="Nuovo progetto"
             onClick={() => { close(); onCreate() }}><Icon name="plus" />Nuovo</button>}
           <button type="button" className="text-button" onClick={close} aria-label="Chiudi selettore progetti"><span aria-hidden="true">×</span></button>
         </div></div>
@@ -142,10 +143,10 @@ export function ProjectSwitcher({ projects, archivedProjects, selected, loading,
               <span><strong>{project.name}</strong><small>Standard · {project.cardTotal === null ? 'Senza lista' : `${project.cardTotal} carte`}</small></span>
               {selected?.id === project.id && <span className="project-current">In uso</span>}
             </button>}
-          <ProjectActions project={project} archived={showArchived}
+          {!readOnly && <ProjectActions project={project} archived={showArchived}
             onArchive={() => { close(); onArchive(project.id) }}
             onRestore={() => { close(); onRestore(project.id) }}
-            onDelete={() => { close(); onDelete(project) }} /></li>
+            onDelete={() => { close(); onDelete(project) }} />}</li>
         ))}</ul> : <p role="status">{visible.length ? 'Nessun progetto trovato.' : showArchived ? 'Nessun progetto archiviato.' : 'Nessun progetto.'}</p>}
       </div>
     </dialog>

@@ -15,7 +15,8 @@ const date = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'm
 const revisionLabel = (index: number) => index === 0 ? 'Guida iniziale' : `Revisione ${index}`
 
 export function MatchupDiscussion({ discussion, onOlder, olderLoading, feedback, onFeedback, onSubmit, onRetry, onContinue,
-  onOpenCatalogCard, cardTargets, generating, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached, aiControls }: {
+  onOpenCatalogCard, cardTargets, generating, inFlight, error, canRevise, canRetry, canContinue, absentFromMeta, cached, aiControls, readOnly = false }: {
+  readOnly?: boolean
   discussion: Discussion
   onOlder(): void
   olderLoading: boolean
@@ -64,12 +65,12 @@ export function MatchupDiscussion({ discussion, onOlder, olderLoading, feedback,
         {error && <p className="error-banner" role="alert">{error}</p>}
       </div>}
     </article>}
-    {discussion.current && (pending || submitting) && <div className="discussion-retry-actions">
+    {!readOnly && discussion.current && (pending || submitting) && <div className="discussion-retry-actions">
       {aiControls}
       {pending && <button type="button" className="primary-button"
         onClick={() => onRetry(pending.id)} disabled={generating || !canRetry}>Riprova la revisione</button>}
     </div>}
-    {discussion.current && !pending && !submitting && <div className="feedback-form">
+    {!readOnly && discussion.current && !pending && !submitting && <div className="feedback-form">
       <label htmlFor="matchup-feedback">Aggiungi un’osservazione</label>
       <textarea id="matchup-feedback" value={feedback} maxLength={5000}
         onChange={(event) => onFeedback(event.target.value)} disabled={generating}
@@ -80,7 +81,7 @@ export function MatchupDiscussion({ discussion, onOlder, olderLoading, feedback,
       <button type="button" className="primary-button" onClick={onSubmit}
         disabled={!feedback.trim() || generating || !canRevise}>Aggiorna guida</button>
     </div>}
-    {!discussion.current && canContinue && <div className="discussion-continue-actions">{aiControls}<button type="button" className="primary-button discussion-continue"
+    {!readOnly && !discussion.current && canContinue && <div className="discussion-continue-actions">{aiControls}<button type="button" className="primary-button discussion-continue"
       onClick={onContinue} disabled={generating || cached || !canRetry}>
       {generating ? 'Codex sta rivalutando…' : 'Continua sulla nuova base'}
     </button></div>}
@@ -97,11 +98,11 @@ export function MatchupDiscussion({ discussion, onOlder, olderLoading, feedback,
             <summary>Leggi versione</summary>
             <div className="discussion-version-body">
               <h4>Piano di gioco</h4><MatchupPlan scope={`history-${turn.id}`} report={turn.report} renderText={(value) => text(value, turn)} />
-              <div className="discussion-version-limits"><h4>Limiti dell’analisi</h4>{text(turn.report.limitations, turn)}<AiEvidenceLimit trace={turn.report.aiQueries} /></div>
+              {!turn.report.guide && <><div className="discussion-version-limits"><h4>Limiti dell’analisi</h4>{text(turn.report.limitations, turn)}<AiEvidenceLimit trace={turn.report.aiQueries} /></div>
               <h4>Le nostre carte chiave</h4>{text(turn.report.ourKeyCards, turn, true)}
               <h4>Le loro carte chiave</h4>{text(turn.report.theirKeyCards, turn, true)}
               <h4>Punti forti</h4>{text(turn.report.strengths, turn, true)}
-              <h4>Debolezze</h4>{text(turn.report.weaknesses, turn, true)}
+              <h4>Debolezze</h4>{text(turn.report.weaknesses, turn, true)}</>}
               <details className="discussion-version-sources"><summary>Fonti e dettagli</summary>
                 {turn.report.sampleDeckUrl && text(`[Lista avversaria](${turn.report.sampleDeckUrl})`, turn)}
                 {turn.report.metaSourceUrl && text(`[Metagame](${turn.report.metaSourceUrl})`, turn)}

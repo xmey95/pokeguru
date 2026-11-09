@@ -1,0 +1,355 @@
+{
+  "provenance": "Generated from frozen root epoch10 encoders before private-key memory optimization",
+  "input": {
+    "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+    "rows": [
+      {
+        "id": "generic-print-0",
+        "side": "ours",
+        "count": 0,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 0",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-1",
+        "side": "opponent",
+        "count": 1,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 1",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-2",
+        "side": "ours",
+        "count": 2,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 2",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-3",
+        "side": "opponent",
+        "count": 3,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 3",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-4",
+        "side": "ours",
+        "count": 0,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 4",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-5",
+        "side": "opponent",
+        "count": 1,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 5",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-6",
+        "side": "ours",
+        "count": 2,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 6",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-7",
+        "side": "opponent",
+        "count": 3,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 7",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-8",
+        "side": "ours",
+        "count": 0,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 8",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-9",
+        "side": "opponent",
+        "count": 1,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 9",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-10",
+        "side": "ours",
+        "count": 2,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 10",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-11",
+        "side": "opponent",
+        "count": 3,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 11",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-12",
+        "side": "ours",
+        "count": 0,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 12",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-13",
+        "side": "opponent",
+        "count": 1,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 13",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-14",
+        "side": "ours",
+        "count": 2,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 14",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-15",
+        "side": "opponent",
+        "count": 3,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 15",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-16",
+        "side": "ours",
+        "count": 0,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 16",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": "generic-print-17",
+        "side": "opponent",
+        "count": 1,
+        "zone": "hand",
+        "condition": "Original printed condition and complete original source remain intact. 17",
+        "source": "{\"id\":\"generic-source\",\"text\":\"Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. Original source text with exact spacing, amounts and conditions. \",\"count\":2}",
+        "active": false,
+        "resources": [
+          1,
+          2,
+          3
+        ]
+      }
+    ],
+    "literalArrays": [
+      [
+        -1
+      ],
+      [
+        "^0",
+        0,
+        "keep"
+      ],
+      [
+        "!",
+        -2
+      ],
+      [
+        "?",
+        -3
+      ],
+      [
+        "+",
+        -4
+      ]
+    ],
+    "unicode": "  Pokémon 🐦 العربية 中文 é\n",
+    "damagedUtf16": "literal\ud800source"
+  },
+  "cases": [
+    {
+      "codec": 1,
+      "args": [],
+      "hash": "00884189414fc425f34225b67a82bb875492017f17effb749e4752751d9eb41c"
+    },
+    {
+      "codec": 2,
+      "args": [
+        true,
+        40
+      ],
+      "hash": "6572b48915916c4e943fceeb309b832bd416ce191b6e39059e94721933b48bd5"
+    },
+    {
+      "codec": 2,
+      "args": [
+        false,
+        40
+      ],
+      "hash": "1880031f1371d7392d29a645adc3cf754d0c09e1579efa39450917ab6342595f"
+    },
+    {
+      "codec": 2,
+      "args": [
+        true,
+        12
+      ],
+      "hash": "b866b6a56dc342f2ecb265d96b039855bbe9e116ada57fd9fcd13739a735fe87"
+    },
+    {
+      "codec": 2,
+      "args": [
+        true,
+        16
+      ],
+      "hash": "b866b6a56dc342f2ecb265d96b039855bbe9e116ada57fd9fcd13739a735fe87"
+    },
+    {
+      "codec": 3,
+      "args": [
+        8,
+        true
+      ],
+      "hash": "1c05d2063922517c646b565319333c420a2031d07e2f8b2bbb31d60a4f0d2a20"
+    },
+    {
+      "codec": 4,
+      "args": [
+        8,
+        true
+      ],
+      "hash": "05bf2a9defa764643dfb95954481d0fc492c8dae194eab4b3fce6ac1defe8aa6"
+    },
+    {
+      "codec": 3,
+      "args": [
+        8,
+        false
+      ],
+      "hash": "1e8759edd396b37fba6b27630273f651a057bf0c98595ae681f82ad91fd8930a"
+    },
+    {
+      "codec": 4,
+      "args": [
+        8,
+        false
+      ],
+      "hash": "1f6aab4db27768a98a52c67ee31cb7665e23c904e568b52812b79be72712058b"
+    }
+  ]
+}

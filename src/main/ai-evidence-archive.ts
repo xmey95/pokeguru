@@ -4,6 +4,7 @@ import { gzipSync, gunzipSync } from 'node:zlib'
 import type { AiEvidenceQueryResult } from '../shared/ai-evidence'
 import { statementCache } from './database-statements'
 import type { EvidenceRecord } from './ai-evidence-partition'
+import { EvidenceJsonCache } from './evidence-json-cache'
 
 /** Persist originals separately from query membership. No aggregate payload limit:
  * each compressed SQLite chunk is bounded, and readers walk one record at a time.
@@ -154,6 +155,10 @@ export interface EvidenceAnalysisInventory {
 export class AiEvidenceArchive {
   private readonly db: DatabaseSync
   private readonly prepare: ReturnType<typeof statementCache>
+  private readonly decodedOriginals = new EvidenceJsonCache()
+  private readonly selectionFields = new EvidenceJsonCache(4 * 1024 * 1024, 16384)
+  private readSnapshotDepth = 0
+  private readSnapshotSequence = 0
   // The source inventory is immutable after capture. Keep small aggregate
   // counts here and ordered identities in TEMP, isolated to this job/connection.
   private readonly eventCounts = new Map<string, { slot: number; matchingLists: number; distinctDecks: number; listsInspected: number }>()
@@ -183,9 +188,27 @@ export class AiEvidenceArchive {
   }
 
   private atomic<T>(fn: () => T): T {
+    if (this.readSnapshotDepth) throw new Error('Una lettura coerente delle evidenze non può salvare dati.')
     this.db.exec('BEGIN IMMEDIATE')
     try { const result = fn(); this.db.exec('COMMIT'); return result }
     catch (error) { this.db.exec('ROLLBACK'); throw error }
+  }
+
+  /** Synchronous readers can enumerate several related immutable namespaces
+   * against one SQLite view. Never hold this scope over a provider/async call.
+   * SAVEPOINT also composes with an existing host transaction or reader. */
+  withReadSnapshot<T>(read: () => T): T {
+    const name = 'evidence_read_' + ++this.readSnapshotSequence
+    this.db.exec('SAVEPOINT ' + name); this.readSnapshotDepth++
+    try {
+      const result = read()
+      if (result && typeof (result as any).then === 'function') throw new Error('La lettura coerente delle evidenze deve essere sincrona.')
+      this.db.exec('RELEASE ' + name)
+      return result
+    } catch (error) {
+      this.db.exec('ROLLBACK TO ' + name); this.db.exec('RELEASE ' + name)
+      throw error
+    } finally { this.readSnapshotDepth-- }
   }
 
   private put(value: unknown, children: string[] = []): string {
@@ -203,16 +226,33 @@ export class AiEvidenceArchive {
     return hash
   }
 
-  private get<T>(hash: string): T {
+  private originalParts(hash: string) {
     const expected = this.prepare('SELECT bytes FROM ai_evidence_objects WHERE hash = ?')
       .get(hash) as { bytes: number } | undefined
     if (!expected) throw new Error('Prova archiviata mancante.')
-    const chunks: Buffer[] = []
-    let bytes = 0, ordinal = 0
+    // Recheck ALL current compressed bytes and metadata even on a cache hit.
+    // An in-place edit, missing chunk, changed ordinal or binding must never
+    // inherit a previous integrity result. Fresh JSON.parse isolates callers.
+    const compressed: Uint8Array[] = [], fingerprint = createHash('sha256')
+    let ordinal = 0
     for (const row of this.db.prepare('SELECT ordinal, body FROM ai_evidence_chunks WHERE object_hash = ? ORDER BY ordinal')
       .iterate(hash) as Iterable<{ ordinal: number; body: Uint8Array }>) {
       if (row.ordinal !== ordinal++) throw new Error('Prova archiviata incompleta.')
-      const chunk = gunzipSync(row.body, { maxOutputLength: CHUNK_BYTES })
+      fingerprint.update(JSON.stringify([row.ordinal, row.body.length])); fingerprint.update(row.body)
+      compressed.push(row.body)
+    }
+    const cacheKey = `${hash}:${expected.bytes}:${fingerprint.digest('hex')}`
+    return {expected,compressed,cacheKey}
+  }
+
+  private get<T>(hash: string, original = this.originalParts(hash)): T {
+    const {expected,compressed,cacheKey}=original
+    const cached = this.decodedOriginals.get(cacheKey)
+    if (cached !== undefined) return JSON.parse(cached) as T
+    const chunks: Buffer[] = []
+    let bytes = 0
+    for (const body of compressed) {
+      const chunk = gunzipSync(body, { maxOutputLength: CHUNK_BYTES })
       bytes += chunk.length
       if (bytes > expected.bytes) throw new Error('Dimensione della prova archiviata non valida.')
       chunks.push(chunk)
@@ -220,7 +260,9 @@ export class AiEvidenceArchive {
     const body = Buffer.concat(chunks)
     if (bytes !== expected.bytes || createHash('sha256').update(body).digest('hex') !== hash)
       throw new Error('Integrità della prova archiviata non valida.')
-    return JSON.parse(body.toString('utf8')) as T
+    const json = body.toString('utf8'), value = JSON.parse(json) as T
+    this.decodedOriginals.put(cacheKey, json)
+    return value
   }
 
   /** Immutable named inputs pin the original scope, regardless of later source syncs. */
@@ -245,12 +287,19 @@ export class AiEvidenceArchive {
         AND json_type(result_json, '$.sourceIds') = 'array' LIMIT 1`).get(this.id)
   }
   saveValue(role: string, key: string, value: unknown): void {
+    this.saveValues([{role,key,value}])
+  }
+  /** Related immutable evidence (for example raw opinion and its receipt)
+   * must commit together. A conflicting binding rolls back every entry. */
+  saveValues(entries:{role:string;key:string;value:unknown}[]):void{
     this.atomic(() => {
+      for(const {role,key,value} of entries){
       const hash = this.put(value)
       const existing = this.prepare('SELECT object_hash FROM ai_evidence_values WHERE job_id = ? AND role = ? AND key = ?')
         .get(this.id, role, key) as { object_hash: string } | undefined
       if (existing && existing.object_hash !== hash) throw new Error('Il contesto salvato è immutabile.')
       this.prepare('INSERT OR IGNORE INTO ai_evidence_values VALUES (?, ?, ?, ?)').run(this.id, role, key, hash)
+      }
     })
   }
   *values<T>(role: string): Generator<{ key: string; value: T }> {
@@ -261,6 +310,54 @@ export class AiEvidenceArchive {
         .all(this.id, role, ...(after === null ? [] : [after])) as { key: string; object_hash: string }[]
       if (!rows.length) return
       for (const row of rows) { after = row.key; yield { key: row.key, value: this.get<T>(row.object_hash) } }
+    }
+  }
+
+  /** Select by an exact top-level string without repeatedly parsing unrelated
+   * large originals. Every current compressed chunk and size is fingerprinted
+   * even for excluded rows. Only primitive selector fields are cached, never
+   * decoded values, validation results or approvals. Selected rows still use
+   * the normal isolated JSON reader and all callers' validators. */
+  *valuesByField<T>(role:string,field:string|readonly string[],expected:string):Generator<{key:string;value:T}>{
+    const path=typeof field==='string'?[field]:field,selector=JSON.stringify(path)
+    const selected=(value:unknown)=>path.reduce<any>((v,key)=>v[key],value)
+    let after:string|null=null
+    while(true){
+      const rows=this.prepare(`SELECT key, object_hash FROM ai_evidence_values
+        WHERE job_id = ? AND role = ? ${after===null?'':'AND key > ?'} ORDER BY key LIMIT 64`)
+        .all(this.id,role,...after===null?[]:[after]) as {key:string;object_hash:string}[]
+      if(!rows.length)return
+      for(const row of rows){
+        after=row.key
+        const original=this.originalParts(row.object_hash),prior=this.selectionFields.get(original.cacheKey)
+        let metadata:{fields:Record<string,string>;objects:string[];scalar?:true},value:T|undefined
+        if(prior!==undefined)metadata=JSON.parse(prior)
+        else{
+          value=this.get<T>(row.object_hash,original)
+          if(value===null||value===undefined)throw new TypeError('Selezione di campi da una prova nulla.')
+          const fields:[string,string][]=[],objects:string[]=[]
+          const collect=(node:unknown,prefix:string[])=>{
+            for(const [key,v]of Object.entries(Object(node))){
+              if(typeof v==='string'&&v.length<=256)fields.push([JSON.stringify([...prefix,key]),v])
+              else if(!prefix.length&&v!==null&&typeof v==='object'&&!Array.isArray(v)){objects.push(key);collect(v,[key])}
+            }
+          }
+          const scalar=typeof value!=='object'||Array.isArray(value)
+          if(!scalar)collect(value,[])
+          metadata={fields:Object.fromEntries(fields),objects,...scalar?{scalar:true as const}:{}}
+          this.selectionFields.put(original.cacheKey,JSON.stringify(metadata))
+        }
+        // Longer paths/values or absent/null parents use the exact original
+        // access, including its errors. No malformed parent is silently hidden.
+        if(metadata.scalar||expected.length>256||path.length!==1&&(path.length!==2||!metadata.objects.includes(path[0]))){value??=this.get<T>(row.object_hash,original);if(selected(value)!==expected)continue}
+        else if(!Object.hasOwn(metadata.fields,selector)||metadata.fields[selector]!==expected)continue
+        const result=value??this.get<T>(row.object_hash,original)
+        // Consumers may recursively read other originals while this generator
+        // is suspended. The fingerprint/read is complete; do not retain its
+        // compressed buffers for the lifetime of that nested work.
+        original.compressed.length=0
+        yield {key:row.key,value:result}
+      }
     }
   }
 
@@ -731,7 +828,7 @@ export class AiEvidenceArchive {
       }
     }
   }
-  close(): void { this.db.close() }
+  close(): void { this.decodedOriginals.clear(); this.selectionFields.clear(); this.db.close() }
 }
 
 /** Only unreachable objects are collected. History and suspended runs are roots;

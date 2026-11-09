@@ -67,6 +67,7 @@ export function reportGuideReferences(report: MatchupReport, cardTargets: Readon
     if (target) references.push({ label, target })
   }
   for (const card of report.sampleDeckMechanics ?? []) add(card.name, card.sourceUrl)
+  for (const source of report.guide?.sources ?? []) add(source.label, source.url)
   for (const card of report.tournamentEvidence?.observedCards ?? []) add(card.name, card.cardSourceUrl)
   for (const event of report.tournamentEvidence?.events ?? []) add(event.name, event.url)
   if (report.tournamentEvidence?.eventName) add(report.tournamentEvidence.eventName, report.tournamentEvidence.eventUrl)

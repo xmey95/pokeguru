@@ -1,0 +1,252 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-201",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "evidenceAsOf": "2026-10-30",
+  "postCampaignChanges": {
+    "newModelCalls": 0,
+    "liveVerified": false,
+    "paths": [
+      "src/main/guide-causal-contract.ts",
+      "src/shared/guide-turn-blocks.ts",
+      "tests/matchup-guide.test.ts"
+    ],
+    "description": "Chiarito hostPrintId anche per Energie rimosse da attached (ritirata/KO), errore v11 più preciso e regressione locale. Validazione invariata; nessuna inferenza o modifica delle bozze originali. Copia in post-campaign-code; tested-code conserva il codice della campagna."
+  },
+  "verificationBasis": "Archived tested-code and original inputs; v11 single-case generation, one causal contract, ordinary turn legality, derived descriptions and continuation policy executed only while the game continues.",
+  "sealedFiles": 42,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "Fresh jobs, maximum eight invocations each; all earlier gates retained. Two separate case calls with full selected exact-list facts; all originals preserved. Prior failed output delivered to automatic retry. Setup legality and descriptions derived from the executed register; no model-declared terminal shortcut.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 6,
+      "failedCalls": 2,
+      "inputTokens": 494681,
+      "outputTokens": 49418,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 1327381,
+      "elapsedMs": 1331476,
+      "startedAt": "2026-10-30T22:51:11.491Z",
+      "endedAt": "2026-10-30T23:13:22.967Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 48,
+              "calculations": 19,
+              "transitions": 40
+            }
+          },
+          "review": null,
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "bbc7b0c47eaf4cff59df01f48ba92ebbad25be21a2e5efa3d4ff0535dd782a16",
+          "message": "scenario-1: manca prova di rimozione per mee-013.\nscenario-1:direct: manca prova di rimozione per mee-013.\nscenario-1:access: manca prova di rimozione per mee-013.\nscenario-1:defend: manca prova di rimozione per mee-013."
+        }
+      ],
+      "derivedTactics": [
+        {
+          "hash": "46ac0aaf9243768d8ff3eeef5d4a8aa80b8bba46aa28e0d51182ae2064792d43",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "90edd901c7ec0dc6e5acd68477ba6aea6c6ebf3a20611ae54efe97115a7169cf",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "4de2c7c7914c8b095fa6405d5df0bd8b415a28d4b8ad2530650f5a377f1809d4",
+        "9ee208b13cfb82b656bba460d8b76211b50c8f0563669ca0a06bd51fa7993e0a"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "1a994d3f32e1a2ffecbd2be46d06e02f726240ecffcb8da61c2f348f91bcfa39"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "status": "failed",
+          "inputHash": "bbc7b0c47eaf4cff59df01f48ba92ebbad25be21a2e5efa3d4ff0535dd782a16"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "status": "succeeded",
+          "inputHash": "94604028c68140052225819bd8a97c7ec5505da8e2d229984cd547ca2cadc352"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "status": "failed",
+          "inputHash": "183b58abe902ad4c58dc44bd6961376c02f8ca6cb12186c603197d5e6a16030d"
+        },
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "status": "succeeded",
+          "inputHash": "183b58abe902ad4c58dc44bd6961376c02f8ca6cb12186c603197d5e6a16030d"
+        },
+        {
+          "sequence": 6,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "017eac5ab9722763e0cc35efa747617c4bb2bb3ca970bd50f78445130db4baed"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 265785,
+      "outputTokens": 24607,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 466796,
+      "elapsedMs": 468202,
+      "startedAt": "2026-10-30T22:51:11.849Z",
+      "endedAt": "2026-10-30T22:59:00.051Z",
+      "error": "scenario-1: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1: prova di rimozione positiva senza ramo testimone.\nscenario-1:direct: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:direct: prova di rimozione positiva senza ramo testimone.\nscenario-1:access: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:access: prova di rimozione positiva senza ramo testimone.\nscenario-1:defend: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:defend: prova di rimozione positiva senza ramo testimone.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "a4bb8f7618dea88f76befc9b359567eb555e7835780f5e3af1e24dafaeaca390",
+          "message": "scenario-1: danni/condizioni mancanti per uno o più Pokémon in campo."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "a4bb8f7618dea88f76befc9b359567eb555e7835780f5e3af1e24dafaeaca390",
+          "message": "scenario-1: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1: prova di rimozione positiva senza ramo testimone.\nscenario-1:direct: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:direct: prova di rimozione positiva senza ramo testimone.\nscenario-1:access: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:access: prova di rimozione positiva senza ramo testimone.\nscenario-1:defend: ritirata da esprimere tramite costo stampato e modificatori, non come risultato precalcolato.\nscenario-1:defend: prova di rimozione positiva senza ramo testimone."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "3b5105f56f67fbc6a0d68650fa4c819e44479768802af0ad851cdffcf540f600"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "status": "failed",
+          "inputHash": "a4bb8f7618dea88f76befc9b359567eb555e7835780f5e3af1e24dafaeaca390"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "status": "failed",
+          "inputHash": "3e4f4c12fa2c6295143092f5469a6ad74c34b3192ffe8b1d5fe78a97d6776752"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 4,
+      "failedCalls": 2,
+      "inputTokens": 198687,
+      "outputTokens": 28949,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 1042511,
+      "elapsedMs": 1043927,
+      "startedAt": "2026-10-30T22:51:12.131Z",
+      "endedAt": "2026-10-30T23:08:36.058Z",
+      "error": "scenario-2: Energia assegnata senza destinatario.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "inputHash": "1b91f08bd903d8245f146c50428724c77423440f27dc84b97ccffa42037f3969",
+          "message": "scenario-2: Energia assegnata senza destinatario."
+        }
+      ],
+      "derivedTactics": [
+        {
+          "hash": "ce8809b900071a209946f408332b269f2e37f7cb456fdc4c557e25e2dbd1730f",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "d554816831eac6e978562826c6d40f8b3c95af24da12e03f55f5874686406705"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "ecf36193a688463fe99d614997e7b4b70db6a804532065ed062c047a1080ba37"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "status": "succeeded",
+          "inputHash": "d7391a43280b25dc67537212486563acd1227dd5c8f1fa93398074936e51e9ca"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-2",
+          "status": "failed",
+          "inputHash": "1b91f08bd903d8245f146c50428724c77423440f27dc84b97ccffa42037f3969"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "status": "failed",
+          "inputHash": "1b91f08bd903d8245f146c50428724c77423440f27dc84b97ccffa42037f3969"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 13,
+  "passed": 0,
+  "executionWindow": {
+    "startedAt": "2026-10-30T22:51:11.491Z",
+    "endedAt": "2026-10-30T23:13:22.967Z"
+  }
+}

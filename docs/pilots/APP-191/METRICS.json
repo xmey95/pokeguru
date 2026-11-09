@@ -1,0 +1,627 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-191",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "sealedFiles": 28,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh generation per pilot matchup; no previous guide and no editorial patch. Existing application pipeline and gates unchanged.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 7,
+      "failedCalls": 0,
+      "inputTokens": 539738,
+      "outputTokens": 40493,
+      "cachedInputTokens": 9728,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 930553,
+      "elapsedMs": 931045,
+      "startedAt": "2026-10-30T14:15:19.864Z",
+      "endedAt": "2026-10-30T14:30:50.909Z",
+      "error": "Guida non pubblicata: la revisione rileva ancora problemi. Bozza e osservazioni sono conservate; la guida precedente resta disponibile.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 5,
+          "stage": "review-1",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 33,
+              "calculations": 6,
+              "transitions": 14
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-opening-remove-budew",
+                "message": "La replica viene presentata come migliore senza valutare Recon Directive e Ultra Ball con la mano completa. Drakloak può cercare una carta prima di scegliere il Supporter; Ultra Ball può inoltre scartare due carte, cercare Meowth ex e accedere tramite Last-Ditch Catch a Lillie's Determination. Con sei Premi ancora rimasti, questa pesca otto carte. Non aumentare il danno immediato non basta a dimostrare che conservare Ultra Ball sia la risposta migliore: ricostruire la Panchina e la mano può essere più incisivo del KO di Patrat.",
+                "correction": "Definire gli esiti ipotetici di Recon Directive e confrontare esplicitamente il ramo Boss più KO con il ramo Ultra Ball–Meowth ex–Supporter di pesca, contabilizzando scarti, ricerche e nuove carte. Finché il confronto manca, descrivere il KO di Patrat come replica legale illustrativa, eliminando le affermazioni di ottimalità anche dalle limitations.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-129",
+                  "card:me01-131",
+                  "card:me03-062",
+                  "card:me01-119"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "development",
+                "message": "Le sequenze intermedie A e B contengono attacchi, gust, KO, promozioni e recuperi decisivi, ma non hanno stati completi verificabili. Mancano mani complete, Premi rimasti, stack e assegnazioni dettagliati, inventari e storia raggiungibile. Per esempio, non è verificabile quali Pokémon ricevano i sei segnalini, se sopravvivano e se il successore resti effettivamente pronto. Il claim-sequences ammette questa lacuna, ma dichiararla non soddisfa i requisiti delle dimostrazioni.",
+                "correction": "Trasformare le due sequenze in scenari completi con inventari da 60 carte per lato, setupHistory, risorse fisiche e transizioni separate; specificare distribuzione dei segnalini e migliore replica. In alternativa, riscriverle come considerazioni strategiche condizionali senza presentare una sequenza concreta dimostrata e aggiungere una dimostrazione completa del piano intermedio a più turni.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:sv06-130",
+                  "card:me04-070",
+                  "card:me01-173",
+                  "card:me02-116"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-opening-greedy-dreepy",
+                "message": "La replica avversaria non esamina un'alternativa importante: Ultra Ball può scartare Drakloak e Darkness per cercare Meowth ex, che cerca Lillie's Determination. L'avversario ha ancora sei Premi e può pescare otto carte mantenendo Budew Attivo per Itchy Pollen. Il ramo scelto garantisce un Dreepy e intrappola Patrat, ma non viene confrontato con questa ricostruzione della mano; quindi non dimostra la migliore replica plausibile richiesta.",
+                "correction": "Aggiungere un ramo alternativo separato con Meowth ex, Supporter cercato e otto pescate esplicitamente ipotizzate e contabilizzate. Confrontare sviluppo, pressione e mobilità con il ramo Boss su Patrat, spiegando quali condizioni rendano preferibile ciascuno e come cambi il nostro pivot.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-131",
+                  "card:me03-062",
+                  "card:me01-119",
+                  "card:me02.5-016",
+                  "card:me01-114"
+                ]
+              }
+            ],
+            "checks": [
+              "Verificati i testi forniti delle carte decisive e la distinzione tra danni, collocazione e spostamento dei segnalini.",
+              "Verificati i totali della nostra lista: 17 Pokémon, 34 Trainer e 9 Energie.",
+              "Gli inventari iniziali dei due scenari assegnano 60 carte per lato e rispettano le quantità di opponent-1 e della nostra lista.",
+              "Le storie iniziali giustificano 13 carte nostre e 8 avversarie fuori da mazzo e Premi, con una pescata iniziale per lato.",
+              "I sei calcoli strutturati e le quattordici transizioni rispettano aritmetica, Premi rimasti e conteggi della Panchina.",
+              "Verificate le soglie di Feather Rondo e le frequenze dichiarate sulle otto liste.",
+              "Le linee strutturate non dipendono da timing controversi di Spiky Energy.",
+              "La verifica locale senza errori non risolve le lacune nella valutazione della migliore replica e nelle dimostrazioni intermedie."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          }
+        },
+        {
+          "sequence": 7,
+          "stage": "review-2",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 56,
+              "calculations": 8,
+              "transitions": 27
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-opening-remove-budew",
+                "message": "La replica non considera un controgioco disponibile nella mano completa: dopo Lillie's Determination, Night Stretcher recupera il Budew appena mandato KO. L'avversario può panchinarlo nel quinto posto prima di giocare Risky Ruins, ritirare Drakloak scartando una delle due Energie e attaccare gratuitamente con Itchy Pollen. Il blocco impedisce Rare Candy nel nostro turno successivo e rompe la conversione favorevole dimostrata. Eliminare il primo Budew non garantisce quindi la finestra descritta.",
+                "correction": "Esporre questa replica con recupero, ingresso in Panchina, ritirata e attacco separati. Ricalcolare mano, risorse, danni e continuazione sotto blocco Item. Conservare la linea attuale soltanto come scelta avversaria permissiva, oppure costruire un diverso stato raggiungibile in cui questa risposta sia realmente indisponibile. Rivalutare summary, development, closing, decisions, variants, claim-opening-target e gli esercizi collegati.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me02.5-196",
+                  "card:me02.5-016",
+                  "card:sv06-129",
+                  "card:me01-175"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "exercise-opening-target",
+                "message": "La soluzione presenta Battle Cage come uno dei tre accessi necessari per attaccare, ma nella sequenza dichiarata non entra alcun nuovo Base dopo Hassel. Risky Ruins non impedisce evoluzione, ritirata o Feather Rondo; quest'ultimo non richiede uno Stadio. Mist Energy e Air Balloon consentono già l'attacco dopo Rare Candy. La stessa condizione nascosta errata compare nel capitolo development e nella spiegazione dello scenario favorevole.",
+                "correction": "Distinguere i pezzi necessari all'attacco dalla sostituzione preventiva dello Stadio: nella linea attuale Battle Cage è una scelta di protezione, non un requisito. Correggere domanda e soluzione, development, decisions e explanation dello scenario; valutare il terzo accesso di Hassel in funzione della continuazione e della replica avversaria corretta.",
+                "sourceIds": [
+                  "card:sv06-205",
+                  "card:me01-127",
+                  "card:me02-116",
+                  "card:me05-094",
+                  "card:me01-166",
+                  "card:sv05-161"
+                ]
+              }
+            ],
+            "checks": [
+              "Verificati inventari iniziali, copie fisiche, storia di preparazione e quantità delle liste impiegate.",
+              "Verificati gli otto calcoli e le transizioni registrate di Panchine, KO, promozioni e Premi.",
+              "Confrontate le linee con i testi forniti e con la mano avversaria completa: individuato il recupero immediato di Budew che interrompe il piano.",
+              "Controllate dipendenze narrative ed esercizi: individuato un requisito di Stadio non previsto da Feather Rondo.",
+              "La revisione non costituisce certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          }
+        }
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "4319bb5e98def202355fed3f0db7c0be6860d34063bb6de0e92416952d2b93bd"
+        },
+        {
+          "sequence": 2,
+          "stage": "gameplan",
+          "status": "succeeded",
+          "inputHash": "7f0457fcbe289aa00e32e8666ddfcc2dbabb151b28b4a297843c7137696a4d7c"
+        },
+        {
+          "sequence": 3,
+          "stage": "decisions",
+          "status": "succeeded",
+          "inputHash": "d7a3c2ccc7ad77d318e1c52859db48cf7e19bc46b312a8c4ad832c50010e6b85"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "f1ee9e291445d40560a261b4fa2716ca66a0c58a7bd0b5c31112500fc4e52ca5"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-1",
+          "status": "succeeded",
+          "inputHash": "b8ee2c8242d72f5004f30bc959bdb86c8c5092fbe9f13d428582ffd21ef66f27"
+        },
+        {
+          "sequence": 6,
+          "stage": "repair",
+          "status": "succeeded",
+          "inputHash": "7284286ba0fca786affeae6dee9dc1017fe4f8a1ca45abc6026d77eaab6467c4"
+        },
+        {
+          "sequence": 7,
+          "stage": "review-2",
+          "status": "succeeded",
+          "inputHash": "040b01695252907fa8ab0b0a90ef184d38510c08fc8f41937fa2568bb356bcac"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 7,
+      "failedCalls": 0,
+      "inputTokens": 545062,
+      "outputTokens": 41155,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 795689,
+      "elapsedMs": 796188,
+      "startedAt": "2026-10-30T14:15:20.409Z",
+      "endedAt": "2026-10-30T14:28:36.597Z",
+      "error": "Guida non pubblicata: la revisione rileva ancora problemi. Bozza e osservazioni sono conservate; la guida precedente resta disponibile.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 5,
+          "stage": "review-1",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 41,
+              "calculations": 8,
+              "transitions": 13
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "blocking",
+                "targetId": "scenario-secret-box-breaks-plan",
+                "message": "La replica avversaria sottovaluta Secret Box. Con la mano dichiarata è disponibile una linea che manda KO Toucannon e una riserva: non occorre rinunciare alle altre categorie di ricerca.",
+                "correction": "Dopo le evoluzioni, scartare Lillie's Determination, Rabsca e Brave Bangle con Secret Box; cercare Buddy-Buddy Poffin, il secondo Brave Bangle, Gladion's Final Battle e Festival Grounds. Poffin mette due Base disponibili in Panchina, portandola a cinque; assegnare Brave Bangle, giocare Festival Grounds e usare Thwackey per Basic Grass Energy. Gladion rimane l'unica carta in mano: ogni attacco infligge 100 + 80 = 180. Registrare separatamente KO, Premio e promozione; calcolare il secondo KO sulla riserva scelta. Aggiornare inventario delle risorse utilizzate, conti, spiegazione e pivot.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-163",
+                  "card:sv05-144",
+                  "card:sv06-015",
+                  "card:me05-077",
+                  "card:sv06-018",
+                  "card:sv10.5w-080"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "scenario-cage-buys-turn",
+                "message": "La storia iniziale avversaria elenca otto carte come apertura di sette. La pesca aggiuntiva di Lillie's Determination da mulligan non corregge questa incongruenza.",
+                "correction": "Specificare sette carte iniziali e attribuire separatamente tutte le altre carte alle pescate da mulligan, alla pescata di turno e alla ricerca Poffin. Per mantenere lo stato dichiarato servono due pescate supplementari da mulligan, non una. Verificare nuovamente storia, mano e inventario senza modificare setupDraws per le pescate supplementari.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv05-144",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "scenario-secret-box-breaks-plan",
+                "message": "Anche questa apertura avversaria contiene otto carte. Quattro pescate supplementari non bastano a produrre la mano e il campo dichiarati dalla storia descritta.",
+                "correction": "Ricostruire l'apertura con sette carte e cinque pescate supplementari da mulligan, oppure cambiare esplicitamente storia e stato. Conservando l'inventario attuale, identificare precisamente le cinque carte ottenute dai mulligan e Festival Grounds come pescata del primo turno.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv05-144",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-cage-buys-turn",
+                "message": "resources non conta tutte le copie fisiche viste e utilizzate: mancano almeno Rabsca, i due Brave Bangle, i due Gladion's Final Battle e Boss's Orders presente nella mano iniziale. L'inventario da 60 carte non sostituisce questo registro.",
+                "correction": "Riconciliare resources con setupHistory, stato e intera sequenza, includendo le carte in mano, pescate, giocate e scartate di entrambi i lati, contando ogni copia fisica una sola volta. Applicare lo stesso controllo al secondo scenario dopo aver corretto la replica.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:me01-119"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "development",
+                "message": "Le sequenze narrative non descrivono gli scenari strutturati: A parte dal terzo turno con Panchine 3/5 e Dipplin carico, mentre il primo scenario parte dal secondo con Panchine 4/4 e Applin. B usa Legacy Energy, che negli inventari è nei Premi. Il testo contiene inoltre una correzione interna della Panchina invece di uno stato iniziale univoco.",
+                "correction": "Allineare development ai due scenari corretti, oppure costruire scenari completi separati per queste ulteriori sequenze. Rivalutare closing, claims collegati, variants, limitations ed esercizi rispetto agli stati effettivamente dimostrati; eliminare dal testo le autocorrezioni narrative.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:sv06-167",
+                  "card:me05-077",
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "exercise-two-attacks",
+                "message": "La soluzione presenta 120 danni come conclusione del secondo scenario, ignorando la migliore replica raggiungibile con Poffin e Gladion. Insegna quindi una valutazione avversaria incompleta.",
+                "correction": "Riscrivere domanda e soluzione sulla replica completa: cinque Pokémon in Panchina, Gladion legalmente giocato, 180 danni per attacco e scelta della promozione dopo il primo KO. Collegare esplicitamente il cambio di piano alla perdita di due Pokémon.",
+                "sourceIds": [
+                  "card:sv06-163",
+                  "card:sv05-144",
+                  "card:me05-077",
+                  "card:sv06-018"
+                ]
+              }
+            ],
+            "checks": [
+              "Verificati i testi forniti per ricerche, Festival Lead, Gladion, Legacy Energy e recuperi.",
+              "I conti numerici registrati sono aritmeticamente coerenti, ma non dimostrano la migliore replica.",
+              "Le transizioni registrate distinguono correttamente KO dell'Attivo e promozione.",
+              "Le frequenze dichiarate delle varianti corrispondono alle otto liste fornite.",
+              "Il record contro il field non è presentato come winrate del matchup.",
+              "Il timing decisivo Spiky Energy/Festival è correttamente escluso dalle dimostrazioni.",
+              "Gli esiti positivi dei controlli locali non superano le incongruenze di raggiungibilità e risposta avversaria."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          }
+        },
+        {
+          "sequence": 7,
+          "stage": "review-2",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 54,
+              "calculations": 12,
+              "transitions": 22
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "blocking",
+                "targetId": "scenario-cage-buys-turn",
+                "message": "La preparazione non produce la mano e l’inventario dichiarati. Le sette iniziali contengono due Grookey; uno viene messo in Panchina e Poffin cerca un altro Grookey dal mazzo. Il secondo Grookey iniziale resta quindi in mano, mentre l’inventario contabilizza soltanto due copie complessive fuori dal mazzo e la mano dichiarata lo omette.",
+                "correction": "Ricostruire una preparazione raggiungibile, contabilizzando distintamente il Grookey iniziale rimasto in mano e quello cercato oppure modificando esplicitamente l’apertura ipotetica. Ricalcolare inventario, mano completa, resources e migliore replica.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv05-144"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "scenario-secret-box-breaks-plan",
+                "message": "Anche qui l’apertura contiene due Grookey, ma soltanto uno viene inizialmente panchinato e Poffin ne cerca un altro. Rimane un Grookey in mano non registrato. Dopo i tre scarti di Secret Box e le altre azioni, Gladion non risulta quindi dimostrato come ultima carta in mano.",
+                "correction": "Correggere la storia iniziale e tutte le zone interessate; verificare nuovamente lo svuotamento della mano prima di Gladion. Aggiornare le conclusioni dipendenti soltanto dopo questa verifica.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv05-144",
+                  "card:sv06-163",
+                  "card:me05-077"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "scenario-cage-buys-turn",
+                "message": "La replica dichiarata migliore trascura una linea disponibile persino accettando la mano iniziale dichiarata. Dopo Lillie's Determination, evoluzione di Seaking e ingresso di Shaymin e Psyduck, Thwackey può cercare Secret Box. Scartando Rabsca e i due Gladion, Secret Box può cercare Poké Pad, Festival Grounds, un Supporter e una categoria Tool disponibile. Poké Pad trova un secondo Thwackey, che evolve il secondo Grookey già in gioco e cerca Grass. Festival Grounds e Grass permettono due Do the Wave da 100: Toucannon cade e qualsiasi riserva promossa da 70 PS cade al secondo attacco. Non serve giocare un secondo Supporter.",
+                "correction": "Verificare ed esplicitare questa replica con le quattro categorie di Secret Box e tutte le copie fisiche. Eliminare la conclusione che un solo accesso iniziale obblighi a scegliere definitivamente fra Stadio ed Energia. Ricostruire un caso favorevole realmente resistente alla migliore replica e aggiornare development, closing, decisions, claims ed exercise-access.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-015",
+                  "card:sv06-163",
+                  "card:me03-081",
+                  "card:sv06-018",
+                  "card:me01-119"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-secret-box-breaks-plan",
+                "message": "Lo state dichiara entrambi gli Air Balloon avversari inaccessibili nei Premi; inventory e setupHistory li collocano invece nel mazzo. I sei Premi dell’inventario sono già occupati da altre carte.",
+                "correction": "Allineare lo state alla distribuzione effettivamente scelta. Rivalutare anche le alternative di Secret Box considerando i due Air Balloon accessibili nel mazzo.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me02.5-181",
+                  "card:sv06-163"
+                ]
+              }
+            ],
+            "checks": [
+              "Controllati testi forniti, costi specifici, evoluzioni, condizioni di Gladion e accessi concatenati tramite Thwackey e Secret Box.",
+              "I conti di danno mostrati sono aritmeticamente corretti; non dimostrano la migliore replica né la raggiungibilità delle mani.",
+              "Le transizioni registrate separano correttamente KO dell’Attivo e promozione, ma il primo scenario omette una replica decisiva.",
+              "Le frequenze delle varianti indicate corrispondono alle liste fornite; il record contro il field non viene presentato come winrate del matchup.",
+              "Le dipendenze strategiche del caso favorevole richiedono una nuova revisione dopo la correzione."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          }
+        }
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "e8d35f1f12b7121f182e0e04e0d7fa02b70b1feafbe6afd7e4a2c99b631eb7c2"
+        },
+        {
+          "sequence": 2,
+          "stage": "gameplan",
+          "status": "succeeded",
+          "inputHash": "da98fc690977decd4a1abee86635a00eae41cc3deccc208b61e95ce96de75148"
+        },
+        {
+          "sequence": 3,
+          "stage": "decisions",
+          "status": "succeeded",
+          "inputHash": "bc40973281bbddf4fabbd73c731f60ee9d9e19f623994162de8ea40f389540bd"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "76b0cc57d772e84993ea57b094e71a05b3fbb295786a6beae309b70d482a8b8d"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-1",
+          "status": "succeeded",
+          "inputHash": "e36d62cf5ebe79830162a70d1d95755317f5d0d4d3b4a1c000ce2f6335e8078f"
+        },
+        {
+          "sequence": 6,
+          "stage": "repair",
+          "status": "succeeded",
+          "inputHash": "719ac2360957361a09e568c5370c1673be5375f5c578d4a00ba4a727bc0c182a"
+        },
+        {
+          "sequence": 7,
+          "stage": "review-2",
+          "status": "succeeded",
+          "inputHash": "5331ff5b4f51c74732d88c9a88cf6850cdccf40b1efb217470dc66eafdc7916d"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 7,
+      "failedCalls": 1,
+      "inputTokens": 354160,
+      "outputTokens": 38276,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 904613,
+      "elapsedMs": 905077,
+      "startedAt": "2026-10-30T14:15:20.560Z",
+      "endedAt": "2026-10-30T14:30:25.637Z",
+      "error": "Revisione critica della guida non valida.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 5,
+          "stage": "review-1",
+          "localChecks": {
+            "errors": [
+              "scenario-growth-break: opponent, inventario iniziale incompleto o eccedente per me02-087.",
+              "scenario-growth-break: opponent, quantità non disponibile me02-087 ×1."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 43,
+              "calculations": 7,
+              "transitions": 10
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "blocking",
+                "targetId": "scenario-growth-break",
+                "message": "Opponent-2 non contiene Dawn. Inventario, setupHistory e resources ne utilizzano una copia per costruire Meganium: lo stato iniziale non è raggiungibile dalla lista scelta. I due errori locali sono confermati.",
+                "correction": "Ricostruire la preparazione usando soltanto carte di opponent-2, specificando come vengono ottenuti Chikorita, Bayleef e Meganium. Ricalcolare mano, pescate, scarti, tutte le 60 collocazioni e risorse fisiche; non aggiungere Dawn alla lista.",
+                "sourceIds": [
+                  "opponent-2",
+                  "card:me02-087",
+                  "card:me01-117"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "scenario-growth-break",
+                "message": "Il primo step evolve Dreepy in Drakloak e immediatamente in Dragapult ex. La storia lascia Dreepy non evoluto fino al turno corrente; nessun effetto fornito autorizza questa doppia evoluzione Dragon. La limitazione finale riconosce il problema ma non rende legale la dimostrazione.",
+                "correction": "Modificare concretamente la storia facendo evolvere Dreepy nel turno precedente, aggiornando stato e inventario iniziale con Drakloak in Panchina e Dreepy in evolution. Verificare nuovamente mano, risorse, successione degli step e replica avversaria.",
+                "sourceIds": [
+                  "card:sv06-128",
+                  "card:sv06-129",
+                  "card:sv06-130",
+                  "card:me01-117"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-fire-window",
+                "message": "La replica strutturata dichiara che Boss's Orders su Drakloak infliggerebbe 120 «senza KO», ma Drakloak ha 90 PS. opponentResponse riconosce invece correttamente il KO. Prosa e transizioni descrivono quindi esiti incompatibili, e la migliore replica non è dimostrata.",
+                "correction": "Registrare in un ramo autonomo Boss's Orders, active-ko sul nostro Drakloak, Premio avversario e promozione, con conteggi coerenti. Correggere la valutazione della replica e confrontarla esplicitamente con i 180 danni su Blaziken ex.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:sv06-025",
+                  "card:me01-114"
+                ]
+              },
+              {
+                "severity": "blocking",
+                "targetId": "scenario-fire-window",
+                "message": "explanation e pivot propongono di completare Dragapult ex nello stesso turno in cui Dreepy diventa Drakloak. L'anzianità del Basic non autorizza la seconda evoluzione immediata. Questa protezione della Panchina è illegale nella storia descritta.",
+                "correction": "Eliminare il ramo dalla dimostrazione oppure predisporre Drakloak nel turno precedente, aggiornando tutte le zone e ricalcolando la migliore replica. Rendere coerenti explanation, opponentResponse, pivot e steps.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:sv06-130",
+                  "card:me01-117"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "exercise-fire-window",
+                "message": "La soluzione prima ordina di completare Dragapult ex con entrambe le evoluzioni e poi dichiara quella stessa azione normalmente non consentita. Non offre una soluzione univoca applicabile allo stato dello scenario.",
+                "correction": "Dopo la correzione dello scenario, fornire una sola soluzione legale. Se lo stato resta invariato, spiegare che la doppia evoluzione non è disponibile e valutare il sacrificio da un Premio senza presentare Dragapult ex come protezione immediata.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:sv06-130",
+                  "card:sv06-025",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "variants",
+                "message": "Il capitolo presenta i due casi come dimostrazioni con distribuzioni raggiungibili, ma uno impiega una carta assente e entrambi consigliano una doppia evoluzione non autorizzata. Non risultano quindi soddisfatti i due casi realistici con linea favorevole condizionata e migliore replica verificata.",
+                "correction": "Rivalutare variants, development, summary, closing, decisions ed entrambi gli esercizi dopo aver ricostruito gli scenari. Allineare le conclusioni ai rami effettivamente legali e mantenere fuori dalle dimostrazioni i timing irrisolti.",
+                "sourceIds": [
+                  "opponent-2",
+                  "card:sv06-129",
+                  "card:sv06-130",
+                  "card:me01-117"
+                ]
+              }
+            ],
+            "checks": [
+              "Verificate le quantità delle liste fornite: nostra lista e tre liste avversarie totalizzano ciascuna 60 carte.",
+              "Confermata l'assenza di Dawn in opponent-2 e la sua presenza illegittima nel secondo scenario.",
+              "Verificati i sette calcoli: risultati aritmetici corretti sotto le assunzioni dichiarate; 120 danni eliminano Drakloak da 90 PS.",
+              "Le transizioni registrate conservano correttamente la Panchina al KO dell'Attivo e la riducono alla promozione, ma omettono il ramo della migliore replica nel primo scenario.",
+              "Frequenze riportate con denominatore 634 coerenti con l'aggregato e correttamente distinte da winrate.",
+              "Briar, proprietà Tera e timing non documentati restano condizionati; Festival Grounds e Legacy Energy sono esclusi dai casi dimostrati."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          }
+        },
+        {
+          "sequence": 7,
+          "stage": "review-2",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 44,
+              "calculations": 8,
+              "transitions": 15
+            }
+          },
+          "review": null
+        }
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "74acef564515fd91ce3415202fb27f363c77ff6c5d97759cc3d1b6eed186442d"
+        },
+        {
+          "sequence": 2,
+          "stage": "gameplan",
+          "status": "succeeded",
+          "inputHash": "e4bf971e0680ede88affd95f1858ac3c3c2acdd0f24f93714e8d5478c4fcdcdc"
+        },
+        {
+          "sequence": 3,
+          "stage": "decisions",
+          "status": "succeeded",
+          "inputHash": "57155c4308fd9635eea0d243c207c478cba545a195397bed2689e3b5628f55aa"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "f1db50621870f3475692ca84f110655ba3fef173dbccc97da9b1aaebc6a43851"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-1",
+          "status": "succeeded",
+          "inputHash": "33c923065427829cc95086a6f5442c8a13d32805cfc9056967ac41160510afbc"
+        },
+        {
+          "sequence": 6,
+          "stage": "repair",
+          "status": "succeeded",
+          "inputHash": "998844efc368af08e65326cf72353fddca7abc11543915925638393a3c39d7b5"
+        },
+        {
+          "sequence": 7,
+          "stage": "review-2",
+          "status": "failed",
+          "inputHash": "329d8b25b7d5be67a0a910237db32bfec868594df6e16de5d56e788f89bacb8d"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 21,
+  "passed": 0
+}

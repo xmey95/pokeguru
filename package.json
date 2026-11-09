@@ -1,6 +1,6 @@
 {
   "name": "pokeguru",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "private": true,
   "desktopName": "io.github.xmey95.pokeguru.desktop",
   "description": "Progetti locali per mazzi Pokémon TCG",
@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "cheerio": "^1.1.2",
+    "js-tiktoken": "1.0.21",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-markdown": "10.1.0",

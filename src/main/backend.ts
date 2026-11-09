@@ -1,3 +1,6 @@
+import {GUIDE_DELIVERY_CONTRACT} from '../shared/guide-delivery'
+import {GUIDE_DELIVERY_NETWORK_READY} from './guide-delivery-readiness'
+import {appGuideWorkflowInput,authorizeAppGuideWorkflow} from './guide-app-workflow'
 import { backendContext, callHost } from './backend-host'
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
@@ -51,6 +54,8 @@ import { ACE_SPEC_SOURCE, DECK_CONSTRUCTION_SOURCE } from '../shared/deck-constr
 import { BUNDLED_WESTERN_RULE_PACKAGE } from '../shared/western-rule-package'
 import { gameplaySummary } from '../shared/card-gameplay'
 import { effectiveCardGameplay } from '../shared/card-errata'
+import { addGuideLists, buildGuidePacket, extendGuidePacket } from './matchup-guide-packet'
+import { generateDeepGuide, deepGuideReport } from './matchup-guide-generation'
 import { OFFICIAL_SET_CODES } from '../shared/set-codes'
 import { evaluateStandardDeck } from '../shared/standard-deck'
 import { localCalendarDate } from '../shared/calendar-date'
@@ -76,10 +81,17 @@ import type { MainTournamentSnapshot, MainTournamentSummary, MainTournamentSyncP
 import type { CardPreviewData, CardPreviewLookup } from '../shared/card-preview'
 import { buildDiagnosticReport, type RuntimeIncident, type UiLongTask } from './diagnostics'
 import { readDiagnosticIncidents, writeDiagnosticIncidents } from './diagnostic-incidents'
+import { demoAllowsChannel, loadDemoProfile, readDemoMeta } from './demo-profile'
+import { DEMO_READONLY_MESSAGE } from '../shared/demo-profile'
 
 // Only the authenticated main-frame IPC gateway can invoke these handlers.
 export const backendHandlers = new Map<string, (...args: any[]) => unknown>()
-function registerHandler(channel: string, handler: (...args: any[]) => unknown): void { backendHandlers.set(channel, handler) }
+const demoEnabled = process.env.POKEGURU_DEMO === '1'
+const demoProfile = loadDemoProfile(backendContext.userData, demoEnabled)
+function registerHandler(channel: string, handler: (...args: any[]) => unknown): void {
+  backendHandlers.set(channel, demoEnabled && !demoAllowsChannel(channel)
+    ? () => ({ ok: false, error: DEMO_READONLY_MESSAGE }) : handler)
+}
 
 let aiJobStore: AiJobStore | null = null
 let projectStore: ProjectStore | null = null
@@ -113,7 +125,7 @@ const resumeRunners = new Map<AiJob['kind'], (job: AiJob, args: unknown[]) => Pr
 
 function beginAiWork(job: AiJob, controller: AbortController, args: unknown[]): AiAnalysisWork {
   const work = new AiAnalysisWork(aiArtifactDirectory(job.id), aiJobStore!, job.id,
-    controller.signal, { kind: job.kind, args })
+    controller.signal, appGuideWorkflowInput(job.kind,args,GUIDE_DELIVERY_NETWORK_READY))
   activeAiWork.set(job.id, work)
   return work
 }
@@ -390,7 +402,9 @@ async function prepareStableMatchup(work: AiAnalysisWork, selection: ReturnType<
   config: AiRunConfig, discussion?: MatchupDiscussion, reusePrevious = false) {
   const { projectId, baseline, snapshot, opponent, reconciliation, ruleAudit, asOf } = selection
   const context = discussion ? await work.snapshotAsync('matchup-history',
-    () => prepareMatchupHistory(work.snapshot('discussion', [], () => discussion), config, work)) : undefined
+    () => work.guideVersion === 1 ? Promise.resolve(work.snapshot('discussion', [], () => discussion))
+      : prepareMatchupHistory(work.snapshot('discussion', [], () => discussion), config, work)) : undefined
+  if (work.guideVersion === 1) reusePrevious = false
   const previous = reusePrevious ? [...context?.turns ?? []].reverse().find((turn) => turn.report)?.report : undefined
   const sampleDeck = await work.snapshotAsync('opponent-deck', async () => previous?.sampleDeckCards
     ? { url: previous.sampleDeckUrl, cards: previous.sampleDeckCards } : fetchOpponentSample(opponent))
@@ -404,6 +418,55 @@ async function prepareStableMatchup(work: AiAnalysisWork, selection: ReturnType<
     return matchupDeckContext(baseline, reconciliation, catalog, evaluateStandardDeck(baseline, catalog, asOf, ruleAudit))
   })
   return { context, evidence, sample, deckContext }
+}
+
+async function prepareDeepGuide(job: AiJob, work: AiAnalysisWork, selection: ReturnType<typeof captureMatchupSelection>,
+  config: AiRunConfig, prepared: Awaited<ReturnType<typeof prepareStableMatchup>>, request: string,
+  route: { discussionId?: string; turnId?: string; parentId?: string } = {}) {
+  if (!catalogStore || !aiJobStore) throw new Error(unavailableMessage())
+  const { evidence, sample, deckContext, context } = prepared
+  const previous = [...context?.turns ?? []].reverse().find(turn => turn.report)?.report ?? undefined
+  const { snapshot, opponent, hash, deckVersion } = selection
+  const base = matchupJobBase(job.id, selection.projectId, hash, snapshot, opponent, sample, config, evidence, undefined, deckVersion)
+  const { catalog, engine } = createArchivedEvidenceEngine(work.archive, () => {
+    const current = catalogStore!.view()
+    return { catalog: current, window: currentAiEventWindow(current, 31, selection.asOf),
+      play: tournamentStore?.iterate() ?? [], main: tournamentStore?.iterateMain() ?? [] }
+  })
+  const packet = work.snapshot('guide-packet', [], () => buildGuidePacket({
+    basis: { projectId: selection.projectId, deckHash: hash, deckVersionId: deckVersion?.versionId ?? null,
+      deckResolutionId: deckVersion?.resolutionId ?? null, metaId: snapshot.id, opponentId: opponent.id, asOf: selection.asOf,analysisContract:route.turnId?previous?.guide?.basis.analysisContract:'finite-evidence-1',deliveryContract:route.turnId?previous?.guide?.basis.deliveryContract:GUIDE_DELIVERY_CONTRACT },
+    baseline: selection.baseline, reconciliation: selection.reconciliation, catalog, evidence, sample,
+    matchup: opponent.name, deckContext, promptVersion:route.turnId?previous?.guide?.basis.promptVersion:'matchup-guide-28' }))
+  authorizeAppGuideWorkflow(work,job,packet,config)
+  aiJobStore.prepare(job.id, { analysisVersion: 3, validatedDraft: false, base, ...route })
+  const guide = await generateDeepGuide({ packet, config, work, request, previous, revision: !!route.turnId,
+    ensureEvidence: (packet, text) => {
+      const targets = engine.cardTargets(text).filter(target => !packet.sources.some(s => s.kind === 'card' && s.label === target.name))
+      const ids = [...new Set(targets.flatMap(t => t.printIds))]
+      const expanded = ids.length <= 12 ? extendGuidePacket(packet, catalog, ids) : packet
+      return { packet: expanded, missing: targets.filter(t => !expanded.sources.some(s => s.kind === 'card' && s.label === t.name)).map(t => t.name) }
+    },
+    retrieve: (packet, ids, requests) => {
+      let expanded = extendGuidePacket(packet, catalog, ids)
+      for (const [index, request] of requests.entries()) {
+        const result = engine.execute({ operation: 'events.search', deckName: opponent.name,
+          ...(request.cardName ? { cardName: request.cardName } : {}), offset: request.offset, limit: 2 })
+        work.archive.saveValue('guide-query', String(index), result)
+        const lists = (result.data as { lists?: { deck: string; name: string; listUrl: string; cards: string[] }[] } | undefined)?.lists ?? []
+        if (result.status !== 'ok' || !lists.length) expanded.gaps.push(`Nessuna lista aggiuntiva risolta per ${request.cardName ?? opponent.name}.`)
+        expanded = addGuideLists(expanded, catalog, lists.map(l => ({ label: `${l.deck} · ${l.name}`, url: l.listUrl, cards: l.cards })))
+      }
+      return expanded
+    },
+    onStage: (stage) => jobProgress(job, stage.startsWith('review') ? 'verification' : stage === 'plan' ? 'planning' : 'analysis',
+      stage === 'plan' ? 'Pianifico la guida e le prove necessarie.' : stage.startsWith('review') ? 'Verifico scenari, risorse e risposta avversaria.'
+        : stage === 'repair' ? 'Correggo la bozza e i capitoli collegati.' : stage === 'revision' ? 'Rivedo i capitoli coinvolti e le loro dipendenze.' : 'Scrivo i capitoli e gli scenari del matchup.') })
+  const report = deepGuideReport(base, guide)
+  work.check()
+  aiJobStore.prepare(job.id, { analysisVersion: 3, validatedDraft: true, base, ...route })
+  aiJobStore.ready(job.id, { report, changeSummary: guide.changeSummary })
+  return report
 }
 
 function currentAiEventWindow(catalog: CatalogView, recentDays?: number, to = localCalendarDate()):
@@ -611,6 +674,7 @@ function withStore<T>(operation: () => T): OperationResult<T> {
 }
 
 function registerProjectHandlers(): void {
+  registerHandler('demo:info', () => demoProfile)
   registerHandler('diagnostics:ui-long-task', (duration: unknown): void => {
     if (typeof duration !== 'number' || !Number.isFinite(duration) ||
       duration < 50 || duration > 60_000) return
@@ -1616,8 +1680,12 @@ function registerProjectHandlers(): void {
     catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Vincolo non eliminato.' } }
   })
 
-  registerHandler('matchups:get-meta', async (): Promise<OperationResult<MetaSnapshot>> => {
+  registerHandler('matchups:get-meta', async (projectId?: unknown): Promise<OperationResult<MetaSnapshot>> => {
     if (!projectStore) return { ok: false, error: unavailableMessage() }
+    if (demoProfile) {
+      try { return { ok: true, value: readDemoMeta(backendContext.userData, demoProfile, projectId) } }
+      catch (error) { return { ok: false, error: error instanceof Error ? error.message : DEMO_READONLY_MESSAGE } }
+    }
     try {
       const snapshot = await fetchMeta()
       projectStore.saveMetaSnapshot(snapshot)
@@ -1688,6 +1756,14 @@ function registerProjectHandlers(): void {
       const config = await pinnedAiConfig(work, override)
       jobProgress(job, 'catalog', 'Raccolgo le schede delle due liste dal Catalogo.')
       const { evidence, sample, deckContext } = await prepareStableMatchup(work, selection, config)
+      if (work.guideVersion === 1) {
+        const report = await prepareDeepGuide(job, work, selection, config, { evidence, sample, deckContext, context: undefined },
+          `Crea la guida della nostra lista contro ${opponent.name}.`)
+        projectStore.saveMatchupReport(report)
+        aiJobStore.transition(job.id, 'applied')
+        clearAiArtifacts(job.id)
+        return { ok: true, value: report }
+      }
       jobProgress(job, 'events', 'Collego le liste e i risultati dei tornei.')
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Analizza ${opponent.name} contro la nostra lista`,
         deckContext, sample, evidence, config, controller.signal, undefined, job)
@@ -1771,6 +1847,14 @@ function registerProjectHandlers(): void {
       const config = await pinnedAiConfig(work, override)
       jobProgress(job, 'catalog', 'Aggiorno le schede della lista corrente.')
       const { context, evidence, sample, deckContext } = await prepareStableMatchup(work, selection, config, pending, true)
+      if (work.guideVersion === 1) {
+        const report = await prepareDeepGuide(job, work, selection, config, { context, evidence, sample, deckContext },
+          target.feedback, { discussionId: discussion.id, turnId: target.id })
+        const saved = projectStore.completeMatchupFeedback(discussion.id, target.id, report, report.guide!.changeSummary)
+        aiJobStore.transition(job.id, 'applied')
+        clearAiArtifacts(job.id)
+        return { ok: true, value: saved }
+      }
       jobProgress(job, 'events', 'Ricollego le evidenze dei tornei alla revisione.')
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(target.feedback, deckContext,
         sample, evidence, config, controller.signal, matchupHistoryContext(context!), job)
@@ -1861,6 +1945,14 @@ function registerProjectHandlers(): void {
       const config = await pinnedAiConfig(work, override)
       jobProgress(job, 'catalog', 'Aggiorno le schede delle due liste.')
       const { context, evidence, sample, deckContext } = await prepareStableMatchup(work, selection, config, parent)
+      if (work.guideVersion === 1) {
+        const report = await prepareDeepGuide(job, work, selection, config, { context, evidence, sample, deckContext },
+          `Continua la guida contro ${opponent.name} sulla nuova base. Rivaluta tutti i contenuti rispetto alla lista corrente.`, { parentId: parent.id })
+        const saved = projectStore.saveContinuedMatchupReport(report, parent.id)
+        aiJobStore.transition(job.id, 'applied')
+        clearAiArtifacts(job.id)
+        return { ok: true, value: saved }
+      }
       jobProgress(job, 'events', 'Collego i tornei della nuova base.')
       const { trace: aiQueries, engine: queryEngine } = await matchupAiQueries(`Continua l'analisi di ${opponent.name} sulla nuova lista e sul nuovo metagame`,
         deckContext, sample, evidence, config, controller.signal,
@@ -1932,6 +2024,7 @@ function registerProjectHandlers(): void {
 
 
 export async function initializeBackend(): Promise<void> {
+  if (demoEnabled) globalThis.fetch = async () => { throw new Error(DEMO_READONLY_MESSAGE) }
   try {
     diagnosticIncidentsPath = join(backendContext.userData, 'data', 'diagnostic-incidents.json')
     runtimeIncidents.push(...readDiagnosticIncidents(diagnosticIncidentsPath))
@@ -1986,13 +2079,13 @@ export async function initializeBackend(): Promise<void> {
   }
 
   registerProjectHandlers()
-  if (!storageError && process.env.POKEGURU_AUTO_SYNC !== '0') {
+  if (!storageError && !demoEnabled && process.env.POKEGURU_AUTO_SYNC !== '0') {
     const requestedDelay = Number(process.env.POKEGURU_AUTO_SYNC_DELAY_MS)
     const delay = Number.isFinite(requestedDelay) && requestedDelay >= 3_000 && requestedDelay <= 30_000
       ? requestedDelay : 3_000
     startupSyncTimer = setTimeout(startDailySync, delay)
   }
-  if (!storageError) setTimeout(() => { void recoverAiJobs() }, 0)
+  if (!storageError && !demoEnabled) setTimeout(() => { void recoverAiJobs() }, 0)
 
 }
 

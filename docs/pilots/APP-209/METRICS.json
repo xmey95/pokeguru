@@ -1,0 +1,1232 @@
+{
+  "task": "APP-209",
+  "date": "2026-10-31",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "promptVersion": "matchup-guide-17",
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "manualCorrections": 0,
+  "diagnosticCalls": 0,
+  "estimateOnly": true,
+  "sealedFiles": 56,
+  "changedSealedFiles": [],
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 416,
+    "externalSkipped": 44,
+    "targetedTests": 75,
+    "typecheck": "pass",
+    "build": "pass",
+    "offlineOutputReplay": "pass",
+    "offlineAllSchemas": "pass"
+  },
+  "timeoutRecovery": {
+    "at": "2026-10-31T12:28:59.368Z",
+    "modelCallsForAudit": 0,
+    "actualInvocations": 9,
+    "automaticTimeoutRetries": [],
+    "immutableContextFailures": 0
+  },
+  "outputCompressionAudit": {
+    "modelCalls": 0,
+    "priorGuideChanged": false,
+    "roundTripIdentical": true,
+    "projectionIdentical": true,
+    "localErrors": 0,
+    "nativeResponseCharacters": 97055,
+    "nativeMinifiedCharacters": 56867,
+    "packedCharacters": 38431,
+    "prettyPackedCharacters": 73522,
+    "schemaStats": {
+      "bytes": 48090,
+      "properties": 448,
+      "enumValues": 472,
+      "stringCharacters": 9241
+    },
+    "nextPlan": {
+      "stage": "scenarios-2",
+      "units": 1,
+      "encoding": "plain",
+      "visibleTokens": 40629,
+      "estimatedInput": 50465,
+      "reservedOutput": 36000,
+      "estimatedResponseCharacters": 84551,
+      "margin": 8192,
+      "bytes": 76508,
+      "fits": true,
+      "fitsTarget": true,
+      "remainingCalls": 6,
+      "reservedCalls": 3,
+      "calibrationFactor": 1.1916666666666667,
+      "family": "scenario",
+      "estimateOnly": true
+    },
+    "scenario": [
+      {
+        "id": "scenario-1",
+        "audits": 14,
+        "retreats": 4,
+        "branches": 3
+      }
+    ],
+    "placeholderOriginalsDetected": 2
+  },
+  "feedbackAudit": {
+    "at": "2026-10-31T12:28:59.213Z",
+    "modelCalls": 0,
+    "readOnly": true,
+    "retries": [
+      {
+        "id": "toucannon-dragapult",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "527bebe2e324bfcfb59ce16f511f923fcc70baa2fa068bfb94142a0802d3a8af",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 181361,
+        "retryInputBytes": 141968
+      },
+      {
+        "id": "toucannon-festival",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "cbdefc2954662a1e2b0b351f0b31de0df6c8a5f72159a55a50b8b727ee6e972a",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 122346,
+        "retryInputBytes": 126301
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "33e83eef21ede30e2bbabaeaf6643c87dc4871dced4dc12cd59a1d68cebaccf7",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 130550,
+        "retryInputBytes": 110373
+      }
+    ]
+  },
+  "outputProtocol": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 22961,
+            "encoding": "pg-scenario-tables-1",
+            "expandedCharacters": 37960,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": false,
+            "error": "Error: Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[3].action: campo non ammesso",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": 31,
+                "moves": 22,
+                "energyRoutes": 8,
+                "audits": 9,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 24361,
+            "encoding": "pg-scenario-tables-1",
+            "expandedCharacters": 39148,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": false,
+            "error": "Error: Output scenari espanso non conforme: output.scenarios[0].turns.ours.events[0].action: campo obbligatorio mancante",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": 32,
+                "moves": 23,
+                "energyRoutes": 7,
+                "audits": 9,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 4661,
+            "encoding": "pg-scenario-tables-1",
+            "expandedCharacters": 5431,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": false,
+            "error": "Error: Output scenari espanso non conforme: output.scenarios[0].turns.next.attack.action: campo obbligatorio mancante",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": 1,
+                "moves": 0,
+                "energyRoutes": 0,
+                "audits": 2,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 31219,
+            "encoding": "pg-scenario-tables-1",
+            "expandedCharacters": 48397,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": false,
+            "error": "Error: Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[1].action: campo non ammesso",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": 30,
+                "moves": 25,
+                "energyRoutes": 5,
+                "audits": 12,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 29064,
+            "encoding": "pg-scenario-tables-1",
+            "expandedCharacters": 47297,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": false,
+            "error": "Error: Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[0].action: campo non ammesso",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": 37,
+                "moves": 31,
+                "energyRoutes": 18,
+                "audits": 10,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 26644,
+            "encoding": "pg-scenario-tables-1",
+            "expandedCharacters": 44274,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": false,
+            "error": "Error: Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].opponent.events[0].action: campo non ammesso",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": 37,
+                "moves": 31,
+                "energyRoutes": 17,
+                "audits": 10,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "refusalInspection": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "placeholders": [
+      {
+        "id": "toucannon-festival",
+        "sequence": 2,
+        "characters": 4661,
+        "limitations": [
+          "Non ho completato il registro e i rami richiesti. Il caso consegnato è incompleto: non va eseguito, validato o presentato come risultato strategico. Questa è una mancanza della costruzione, non delle fonti."
+        ],
+        "productionRefusalDetected": false,
+        "stoppedBy": "native-schema"
+      }
+    ],
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 22961,
+            "limitations": [
+              "Il registro presentato richiede correzione prima della validazione: gli eventi 14 e 24 non ricostruiscono un secondo Dreepy realmente disponibile. Non costituisce pertanto uno scenario validato.",
+              "Il calcolo di Feather Rondo e gli audit dipendono dalla correzione della Panchina avversaria; non possono essere considerati verificati."
+            ],
+            "changeSummary": "Prima costruzione del caso iniziale con confronto direct/access/defend; validazione non superata per incoerenza nella ricostruzione della Panchina avversaria.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Incassare il KO su Budew con Fan Rotom e preparare il successore oppure rinunciare alla pressione per investire soltanto nell'evoluzione?",
+                "assumptions": [
+                  "Caso ipotetico, non partita osservata. Cominciamo noi.",
+                  "Le identità delle pescate e dei Premi sono assunzioni del caso; non rappresentano probabilità o accessi garantiti.",
+                  "Le carte non collocate dall'apertura o dai movimenti rimangono nel mazzo della rispettiva lista esatta di 60 carte.",
+                  "Il caso verifica una pressione iniziale condizionata: nessuna delle tre repliche costruite raggiunge il KO dell'Attivo. Non dimostra una vittoria o una superiorità generale nel matchup."
+                ],
+                "setupRounds": 1,
+                "events": 31,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Dreepy conserva Fire e Psychic, infligge 40 e viene eliminato da Feather Rondo; Budew viene promosso. Nessun KO avversario nel turno della replica.",
+                    "firstEvents": 0,
+                    "replyEvents": 4
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher recupera il Budew appena eliminato. Dreepy perde Fire per ritirarsi, Budew rinnova il blocco e viene eliminato dal nostro Toucannon; Dreepy torna Attivo con Psychic.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Il Budew già in mano rinnova il blocco, conservando Night Stretcher. Dreepy perde Fire nella ritirata ma resta vivo con Psychic; Toucannon elimina Budew e Dreepy viene promosso.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 24361,
+            "limitations": [
+              "Pescate e distribuzione iniziale sono ipotesi esplicite; il caso non stima la loro frequenza.",
+              "Il packet documenta schede e legalità, ma non un regolamento generale completo: il caso evita timing decisivi simultanei e non costituisce certificazione competitiva.",
+              "La riconciliazione originale segnala copie non risolte; il registro usa esclusivamente le identità e quantità della lista risolta consegnata."
+            ],
+            "changeSummary": "Ricostruito il secondo Dreepy con una pesca reale nel setup; rimossi gli eventi privi di movimento e i campi action dalle entrate ordinarie in Panchina. Separati i danni di Feather Rondo secondo le Panchine effettive; completati i tre rami fino al contrattacco.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Prendere subito Budew con Fan Rotom e preparare due successori conserva pressione contro il rinnovo del blocco?",
+                "assumptions": [
+                  "Caso ipotetico raggiungibile, non partita osservata. Cominciamo noi; entrambi i lati usano esclusivamente le rispettive liste di 60 carte consegnate.",
+                  "Pescate, Premi e carte trovate dalle Abilità sono allocazioni ipotetiche esplicite, non probabilità o accessi garantiti. Le copie non collocate restano nei rispettivi mazzi.",
+                  "I Base indicati nella Panchina iniziale provengono dalle sei carte della mano iniziale. Non sono copie aggiuntive.",
+                  "Air Balloon è assegnato al Fan Rotom inizialmente Attivo. Le due Mist Energy su Fan Rotom sono assegnate a copie distinte.",
+                  "Dopo il primo Itchy Pollen il divieto di Item vale nel nostro primo turno principale; nei rami access e defend viene rinnovato per il nostro turno successivo. Non sono impiegati timing simultanei di Spiky Energy.",
+                  "Nessuna replica della mano ricostruita raggiunge il KO di Fan Rotom. Il confronto non dimostra vittoria, winrate o superiorità generale nel matchup."
+                ],
+                "setupRounds": 1,
+                "events": 32,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Bite lascia Fan Rotom a 20 PS. Toucannon elimina Dreepy per un Premio; il secondo Dreepy viene promosso. Fire e Psychic restano disponibili fino al KO, poi sono scartate.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher recupera Budew, che rinnova il blocco dopo la ritirata di Dreepy. Fire viene persa; Toucannon elimina Budew e Dreepy con Psychic viene promosso.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Budew dalla mano rinnova il blocco e conserva Night Stretcher. Dreepy conserva Psychic ma perde Fire nella ritirata. Toucannon elimina Budew; Dreepy viene promosso.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 4661,
+            "limitations": [
+              "Non ho completato il registro e i rami richiesti. Il caso consegnato è incompleto: non va eseguito, validato o presentato come risultato strategico. Questa è una mancanza della costruzione, non delle fonti."
+            ],
+            "changeSummary": "Corretta l'interpretazione di Battle Cage; costruzione dello scenario non completata.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Quando sostituire Festival Grounds preservando un secondo attaccante?",
+                "assumptions": [],
+                "setupRounds": 0,
+                "events": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Non costruito.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Non costruito.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Non costruito.",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 31219,
+            "limitations": [
+              "Il registro non supera la verifica strategica: nel nostro contrattacco Toucannon già in mano può evolvere Trumbeak preparato nel turno precedente, ricevere Mist Energy e attaccare dopo una ritirata gratuita resa disponibile da Air Balloon. Gli audit identificano questa alternativa migliore, ma i turni non sono stati ricostruiti per eseguirla.",
+              "La prima presa Premio è incoerente: la descrizione dichiara Spiky Energy, mentre il movimento porta Hassel in mano. Il caso non va considerato validato.",
+              "La preferenza difensiva non è verificata contro la catena Poké Pad → Thwackey → Boom Boom Groove e tutti i relativi accessi. Non è una conclusione competitiva."
+            ],
+            "changeSummary": "Ricostruiti apertura, setup, tre ruoli e due testimoni positivi; la verifica individua ancora incongruenze e un contrattacco migliore non incorporato. Scenario non validato.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Il KO con Fan Rotom conserva davvero pressione quando l'avversario può ripristinare Festival Grounds?",
+                "assumptions": [
+                  "Ipotesi di apertura e pescate esplicite, non partita osservata. Cominciamo noi; ogni carta non collocata dall'apertura o dai movimenti rimane nel mazzo della propria lista esatta.",
+                  "Le Panchine iniziali provengono dalle sei carte dichiarate in hand. Le copie omonime sono allocate coerentemente ai movimenti; nessuna ricerca garantisce una successiva pesca.",
+                  "Il caso verifica una pressione iniziale con Fan Rotom e la disponibilità del secondo Fan Rotom, non una vittoria né la continuità già dimostrata di Toucannon.",
+                  "Nei rami che eseguono Tumbling Attack si assume testa: viene confrontato il massimo danno raggiungibile, non un risultato garantito.",
+                  "La riconciliazione della fonte our-list riporta 60 copie unresolved pur consegnando identità e schede esatte: il caso mantiene queste identità senza correggerne la provenienza."
+                ],
+                "setupRounds": 1,
+                "events": 30,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Due Do the Wave da 40 eliminano Fan Rotom. Il successore attacca per 70, lasciando Dipplin con 10 PS.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Poké Pad cerca una seconda copia di Dipplin e viene impiegata quella; il KO non migliora rispetto alla copia già in mano. È un accesso reale ma più costoso, non la replica minima.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Night Stretcher recupera l'Applin appena perso e lo mette subito in Panchina. Due attacchi da 60 prendono lo stesso Premio della diretta; il Base ricostruito sostiene i danni e una futura evoluzione, senza garantirne l'accesso.",
+                    "firstEvents": 0,
+                    "replyEvents": 8
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 29064,
+            "limitations": [
+              "La continuità mostrata dipende dalle pescate esplicite e dalla preparazione di due Dreepy; non è una garanzia contro mani avversarie diverse.",
+              "Il campione aggregato non misura il winrate del matchup. Il caso usa esclusivamente opponent-1 e non include Briar o Festival Grounds.",
+              "Le identità tecniche consegnate sono conservate; la stampa cosmetica della foto originale non è certificata."
+            ],
+            "changeSummary": "Costruito un caso breve con KO Fire, risposta competente tramite Boss's Orders, accesso da scarti, difesa completa e due testimoni di rimozione. Il seguito dimostra pressione concreta senza attribuire un KO a Phantom Dive su Ogerpon integro.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Il KO con Blaziken ex lascia davvero un secondo attaccante contro Boss's Orders?",
+                "assumptions": [
+                  "Caso ipotetico, non partita osservata. Cominciamo noi; la posizione decisionale segue una setupRound.",
+                  "Le carte non collocate esplicitamente restano nel mazzo secondo le quantità delle due liste congelate: nessuna copia aggiuntiva.",
+                  "Le pescate dichiarate sono una possibile distribuzione, non accessi garantiti. Nei rami la pesca ordinaria avversaria è sempre Basic Grass Energy e quella di Teal Dance è sempre Forest of Vitality.",
+                  "Tumbling Attack dà testa nei due attacchi registrati: 30 danni. Il ramo difensivo rappresenta anche il massimo danno sotto il budget ridotto indicato nei test, non una garanzia del lancio.",
+                  "Le due copie di Dreepy sono distinguibili nel registro: Crispin carica la prima; Boss's Orders elimina quella copia. La seconda resta disponibile.",
+                  "Non si usano Festival Lead, condizioni Tera o altri timing non chiariti. Nessun modificatore dei PS massimi."
+                ],
+                "setupRounds": 1,
+                "events": 37,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Boss's Orders porta avanti il Dreepy con Fire Energy; Myriad Leaf Shower lo manda KO e prende un Premio. Il secondo Dreepy viene promosso direttamente.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher recupera la Grass scartata con Applin; manuale e Teal Dance raggiungono lo stesso KO della diretta, conservando una Grass in mano e consumando il recupero.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Recuperare Applin, assegnargli una Grass e ritirare Ogerpon conserva l'ex ma perde una Grass in ritirata. Tumbling Attack fa al massimo 30; il seguito concede un altro Premio e 60 danni a Ogerpon.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 26644,
+            "limitations": [
+              "Il caso dipende dalle distribuzioni esplicite e non rappresenta una frequenza o un winrate del matchup.",
+              "Le identità tecniche sono quelle consegnate; la stampa cosmetica originale non è certificata."
+            ],
+            "changeSummary": "Ricostruito il registro senza action sulle giocate Trainer, con promozioni separate, tre repliche complete e testimoni di rimozione. Esplicitato anche il KO economico disponibile tramite Bite.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Investire in Blaziken ex preserva pressione dopo il KO del Dreepy caricato?",
+                "assumptions": [
+                  "Caso ipotetico: iniziamo noi. La posizione segue una setupRound; nessuna partita osservata o certificazione competitiva.",
+                  "Tutte le carte non spostate restano nel mazzo nelle quantità delle liste congelate. Premi e pescate sono una distribuzione possibile, non garantita.",
+                  "Tumbling Attack dà testa negli attacchi registrati; 30 è anche il suo massimo utile nei confronti.",
+                  "Le copie di Dreepy sono distinguibili: il primo riceve Fire da Crispin, il secondo resta senza Energie. Boss's Orders bersaglia il primo.",
+                  "Le pescate ordinarie avversarie nei rami sono identiche. Teal Dance pesca Forest of Vitality quando viene usata nel turno di replica.",
+                  "Nessun modificatore dei PS, nessuna condizione Tera o interazione Festival viene utilizzata."
+                ],
+                "setupRounds": 1,
+                "events": 37,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "KO del Dreepy caricato e un Premio; il secondo Dreepy diventa Attivo.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher recupera la Grass di Applin; stesso KO della diretta con un Item aggiuntivo e una Grass conservata in mano.",
+                    "firstEvents": 0,
+                    "replyEvents": 7
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Ogerpon viene ritirato; Applin recuperato infligge al massimo 30 a Blaziken. Il seguito elimina Applin e mette 60 danni su Ogerpon.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "stopAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 222077,
+          "outputTokens": 18899,
+          "cachedInputTokens": 0,
+          "durationMs": 353685,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T12:24:03.420Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 89362,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 141968,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "toucannon-festival",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 208719,
+          "outputTokens": 17969,
+          "cachedInputTokens": 0,
+          "durationMs": 473986,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T12:23:34.788Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 82750,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 126301,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 167943,
+          "outputTokens": 22996,
+          "cachedInputTokens": 0,
+          "durationMs": 449349,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T12:25:53.386Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 83596,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 110373,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      }
+    ]
+  },
+  "nativeDecisionsAudit": "native-decisions-audit.json",
+  "policy": {
+    "inputTarget": 96000,
+    "inputMaximum": 128000,
+    "totalEnvelope": 176000,
+    "margin": 8192,
+    "requestBytes": 500000,
+    "responseCharacters": 100000
+  },
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "jobId": "ce8b2319-c779-477f-be81-a6838cd65809",
+      "startedAt": "2026-10-31T12:20:27.523Z",
+      "endedAt": "2026-10-31T12:26:25.094Z",
+      "passed": false,
+      "error": "Output scenari espanso non conforme: output.scenarios[0].turns.ours.events[0].action: campo obbligatorio mancante",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T12:20:28.553Z",
+          "endedAt": "2026-10-31T12:21:14.782Z",
+          "status": "succeeded",
+          "inputHash": "c7813cc6974380bda9ca4aa87097c9ed2c4bda3f1165aab8c03ee6962fcb91fc",
+          "inputBytes": 181471,
+          "durationMs": 46226,
+          "usage": {
+            "inputTokens": 68138,
+            "cachedInputTokens": 0,
+            "outputTokens": 2197
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:21:15.382Z",
+          "endedAt": "2026-10-31T12:24:01.277Z",
+          "status": "failed",
+          "inputHash": "3b0cba198b5ccf109397ecd9c012a87c5b8052642feeb2487d9bb689af676a19",
+          "inputBytes": 181361,
+          "durationMs": 165875,
+          "usage": {
+            "inputTokens": 79184,
+            "cachedInputTokens": 0,
+            "outputTokens": 8477
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:24:03.481Z",
+          "endedAt": "2026-10-31T12:26:25.070Z",
+          "status": "failed",
+          "inputHash": "fbc28d71d016b37054fd4c35a06cb13546342eaba701c4a8ab23fbed38787e52",
+          "inputBytes": 141968,
+          "durationMs": 141584,
+          "usage": {
+            "inputTokens": 74755,
+            "cachedInputTokens": 0,
+            "outputTokens": 8225
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 56885,
+          "estimatedInput": 65760,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 181471,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 70697,
+          "estimatedInput": 95199,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 181361,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3176021798365123,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 66267,
+          "estimatedInput": 89362,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 141968,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3176021798365123,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "3b0cba198b5ccf109397ecd9c012a87c5b8052642feeb2487d9bb689af676a19",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[3].action: campo non ammesso"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "3b0cba198b5ccf109397ecd9c012a87c5b8052642feeb2487d9bb689af676a19",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].turns.ours.events[0].action: campo obbligatorio mancante"
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 222077,
+      "outputTokens": 18899,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 358,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[3].action: campo non ammesso"
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].turns.ours.events[0].action: campo obbligatorio mancante"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "jobId": "b11eb964-2086-4b88-9a95-9db84603b678",
+      "startedAt": "2026-10-31T12:20:28.610Z",
+      "endedAt": "2026-10-31T12:28:26.220Z",
+      "passed": false,
+      "error": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[1].action: campo non ammesso",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T12:20:28.985Z",
+          "endedAt": "2026-10-31T12:21:21.577Z",
+          "status": "succeeded",
+          "inputHash": "9d6925c52639df4ff406b012ecd24263bbf606e54d317bbba2dd29a064e3324d",
+          "inputBytes": 187609,
+          "durationMs": 52585,
+          "usage": {
+            "inputTokens": 69954,
+            "cachedInputTokens": 0,
+            "outputTokens": 1968
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:21:22.801Z",
+          "endedAt": "2026-10-31T12:23:32.868Z",
+          "status": "failed",
+          "inputHash": "acc49bd451aae41156fa7824e14465c1444fcb502f043a507ed449e687a28694",
+          "inputBytes": 122346,
+          "durationMs": 130046,
+          "usage": {
+            "inputTokens": 68799,
+            "cachedInputTokens": 0,
+            "outputTokens": 3627
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:23:34.843Z",
+          "endedAt": "2026-10-31T12:28:26.203Z",
+          "status": "failed",
+          "inputHash": "28b6b69915441a0561f7536d915f48ff67060ec8575821593a7d80d864ad7468",
+          "inputBytes": 126301,
+          "durationMs": 291355,
+          "usage": {
+            "inputTokens": 69966,
+            "cachedInputTokens": 0,
+            "outputTokens": 12374
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 58698,
+          "estimatedInput": 67790,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 187609,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 60389,
+          "estimatedInput": 81215,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 122346,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3109373402841666,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 61560,
+          "estimatedInput": 82750,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 126301,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3109373402841666,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "025f39d80a076dcd0494a34ced90a848b93ebfe7e97a3d937435e2cd6a8e7c7e",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].turns.next.attack.action: campo obbligatorio mancante"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "025f39d80a076dcd0494a34ced90a848b93ebfe7e97a3d937435e2cd6a8e7c7e",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[1].action: campo non ammesso"
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 208719,
+      "outputTokens": 17969,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 478,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].turns.next.attack.action: campo obbligatorio mancante"
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[1].action: campo non ammesso"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "jobId": "eda8ab4d-94eb-469f-894d-0da225711512",
+      "startedAt": "2026-10-31T12:20:29.084Z",
+      "endedAt": "2026-10-31T12:28:01.465Z",
+      "passed": false,
+      "error": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].opponent.events[0].action: campo non ammesso",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T12:20:29.411Z",
+          "endedAt": "2026-10-31T12:21:16.229Z",
+          "status": "succeeded",
+          "inputHash": "7c17570c1c8bac97a210fc0206aa536c35c667d8e3513ee03ecb4744db58e7d8",
+          "inputBytes": 101878,
+          "durationMs": 46812,
+          "usage": {
+            "inputTokens": 42067,
+            "cachedInputTokens": 0,
+            "outputTokens": 2236
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:21:16.919Z",
+          "endedAt": "2026-10-31T12:25:51.481Z",
+          "status": "failed",
+          "inputHash": "2681b65c109fe1a637a6dda3ef8979e50520d621cd43db38f2a6ddebdd0718ad",
+          "inputBytes": 130550,
+          "durationMs": 274542,
+          "usage": {
+            "inputTokens": 63222,
+            "cachedInputTokens": 0,
+            "outputTokens": 11856
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:25:53.441Z",
+          "endedAt": "2026-10-31T12:28:01.441Z",
+          "status": "failed",
+          "inputHash": "59960ed4509e7a0602b89164ca1a6e55028708325f4b81549875005dba683515",
+          "inputBytes": 110373,
+          "durationMs": 127995,
+          "usage": {
+            "inputTokens": 62654,
+            "cachedInputTokens": 0,
+            "outputTokens": 8904
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 30811,
+          "estimatedInput": 36557,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 101878,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 54867,
+          "estimatedInput": 84451,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 130550,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.5018564798286327,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 54298,
+          "estimatedInput": 83596,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 110373,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.5018564798286327,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "2681b65c109fe1a637a6dda3ef8979e50520d621cd43db38f2a6ddebdd0718ad",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[0].action: campo non ammesso"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "2681b65c109fe1a637a6dda3ef8979e50520d621cd43db38f2a6ddebdd0718ad",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].opponent.events[0].action: campo non ammesso"
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 167943,
+      "outputTokens": 22996,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 452,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].ours.events[0].action: campo non ammesso"
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "Output scenari espanso non conforme: output.scenarios[0].setupRounds[0].opponent.events[0].action: campo non ammesso"
+        }
+      ]
+    }
+  ],
+  "passed": 0,
+  "scenarioOutputSummary": {
+    "responses": 6,
+    "minimumCharacters": 4661,
+    "maximumCharacters": 31219,
+    "losslessRoundtrips": 6,
+    "nativeSchemaPassed": 0
+  },
+  "actualCalls": 9,
+  "inputTokens": 598739,
+  "outputTokens": 59864,
+  "callsWithoutUsage": 0,
+  "unissuedTokenPlans": 0,
+  "elapsedSeconds": 479,
+  "ui": "Not run: no validated generated guide",
+  "blockedPreflightCandidates": 0,
+  "rawResponsesAvailable": 9
+}

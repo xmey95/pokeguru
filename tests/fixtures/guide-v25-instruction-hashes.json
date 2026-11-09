@@ -1,0 +1,52 @@
+{
+  "rows": [
+    {
+      "stage": "plan",
+      "sha256": "cf19227b32e07002f8b24d002dc7a333225269f8207c9759cacfbe388301bac1"
+    },
+    {
+      "stage": "scenarios-1",
+      "sha256": "7a2a6a1249f69070e073989a8912e2ea6c54bcdb858b9b4f8f67b1ab0b570ef5"
+    },
+    {
+      "stage": "scenarios-2",
+      "sha256": "7a2a6a1249f69070e073989a8912e2ea6c54bcdb858b9b4f8f67b1ab0b570ef5"
+    },
+    {
+      "stage": "scenarios-1-rebuild",
+      "sha256": "7a2a6a1249f69070e073989a8912e2ea6c54bcdb858b9b4f8f67b1ab0b570ef5"
+    },
+    {
+      "stage": "review-scenarios-1",
+      "sha256": "6fb89aab0c6672aaabbdf5fe280910324f5d993e893f02c3405a6882f42baf2d"
+    },
+    {
+      "stage": "repair-scenarios-delta",
+      "sha256": "e4380c6a26f2343e086ec62b6adf5f2201e4ad0cedb9822289e864859c010cce"
+    },
+    {
+      "stage": "repair-scenarios-rebuild-scenario-1",
+      "sha256": "7a2a6a1249f69070e073989a8912e2ea6c54bcdb858b9b4f8f67b1ab0b570ef5"
+    },
+    {
+      "stage": "prose",
+      "sha256": "b8bf6b66a036f0a919ac44a73d1b36c6e82d657796091a3b3b39d2828e5a508d"
+    },
+    {
+      "stage": "prose-part-1",
+      "sha256": "b8bf6b66a036f0a919ac44a73d1b36c6e82d657796091a3b3b39d2828e5a508d"
+    },
+    {
+      "stage": "review-1",
+      "sha256": "6fb89aab0c6672aaabbdf5fe280910324f5d993e893f02c3405a6882f42baf2d"
+    },
+    {
+      "stage": "repair-final-delta",
+      "sha256": "af0082af4e600b789b54ccab880d805061d8cb85284a1c7443502569a5b9e614"
+    },
+    {
+      "stage": "revision",
+      "sha256": "7a2a6a1249f69070e073989a8912e2ea6c54bcdb858b9b4f8f67b1ab0b570ef5"
+    }
+  ]
+}

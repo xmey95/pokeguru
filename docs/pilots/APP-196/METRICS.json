@@ -1,0 +1,498 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-196",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "verificationBasis": "Archived tested-code and original campaign inputs. Corrected reviewer context included before freeze.",
+  "sealedFiles": 33,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh generation per pilot matchup; no previous guide and no editorial patch. Version 6 adds zone-derived opportunities, explicit defensive replies and shared branch prefixes; all previous gates retained.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 476173,
+      "outputTokens": 45681,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 880730,
+      "elapsedMs": 882417,
+      "startedAt": "2026-10-30T18:18:28.833Z",
+      "endedAt": "2026-10-30T18:33:11.250Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a: a-direct: pescata non presente nella lista.",
+              "scenario-a: a-defend: risorsa avversaria non disponibile me05-094.",
+              "scenario-a: a-defend: risorsa avversaria non disponibile sv05-161.",
+              "scenario-a: a-defend: risorsa avversaria non disponibile me03-113.",
+              "scenario-a: a-defend: risorsa avversaria non disponibile me02.5-256.",
+              "scenario-a: a-defend: pescata non presente nella lista.",
+              "scenario-a:a-direct: a-direct: pescata non presente nella lista.",
+              "scenario-a:a-direct: a-defend: risorsa avversaria non disponibile me05-094.",
+              "scenario-a:a-direct: a-defend: risorsa avversaria non disponibile sv05-161.",
+              "scenario-a:a-direct: a-defend: risorsa avversaria non disponibile me03-113.",
+              "scenario-a:a-direct: a-defend: risorsa avversaria non disponibile me02.5-256.",
+              "scenario-a:a-direct: a-defend: pescata non presente nella lista.",
+              "scenario-a: pescata specifica Basic omessa dalle risorse della replica.",
+              "scenario-a:a-search-attack: a-direct: pescata non presente nella lista.",
+              "scenario-a:a-search-attack: a-defend: risorsa avversaria non disponibile me05-094.",
+              "scenario-a:a-search-attack: a-defend: risorsa avversaria non disponibile sv05-161.",
+              "scenario-a:a-search-attack: a-defend: risorsa avversaria non disponibile me03-113.",
+              "scenario-a:a-search-attack: a-defend: risorsa avversaria non disponibile me02.5-256.",
+              "scenario-a:a-search-attack: a-defend: pescata non presente nella lista.",
+              "scenario-a:a-defend: a-direct: pescata non presente nella lista.",
+              "scenario-a:a-defend: a-defend: risorsa avversaria non disponibile me05-094.",
+              "scenario-a:a-defend: a-defend: risorsa avversaria non disponibile sv05-161.",
+              "scenario-a:a-defend: a-defend: risorsa avversaria non disponibile me03-113.",
+              "scenario-a:a-defend: a-defend: risorsa avversaria non disponibile me02.5-256.",
+              "scenario-a:a-defend: a-defend: pescata non presente nella lista.",
+              "scenario-a: pescata specifica Toucannon omessa dalle risorse della replica.",
+              "scenario-a: pescata specifica Mist omessa dalle risorse della replica.",
+              "scenario-a: pescata specifica Pok omessa dalle risorse della replica.",
+              "scenario-b: b-developed-attack: pescata non presente nella lista.",
+              "scenario-b: b-developed-defense: risorsa avversaria non disponibile me05-094.",
+              "scenario-b: b-developed-defense: risorsa avversaria non disponibile sv05-161.",
+              "scenario-b: b-developed-defense: risorsa avversaria non disponibile me03-113.",
+              "scenario-b: b-developed-defense: pescata non presente nella lista.",
+              "scenario-b:b-direct: b-developed-attack: pescata non presente nella lista.",
+              "scenario-b:b-direct: b-developed-defense: risorsa avversaria non disponibile me05-094.",
+              "scenario-b:b-direct: b-developed-defense: risorsa avversaria non disponibile sv05-161.",
+              "scenario-b:b-direct: b-developed-defense: risorsa avversaria non disponibile me03-113.",
+              "scenario-b:b-direct: b-developed-defense: pescata non presente nella lista.",
+              "scenario-b:b-developed-attack: b-developed-attack: pescata non presente nella lista.",
+              "scenario-b:b-developed-attack: b-developed-defense: risorsa avversaria non disponibile me05-094.",
+              "scenario-b:b-developed-attack: b-developed-defense: risorsa avversaria non disponibile sv05-161.",
+              "scenario-b:b-developed-attack: b-developed-defense: risorsa avversaria non disponibile me03-113.",
+              "scenario-b:b-developed-attack: b-developed-defense: pescata non presente nella lista.",
+              "scenario-b: pescata specifica Crispin omessa dalle risorse della replica.",
+              "scenario-b:b-developed-defense: b-developed-attack: pescata non presente nella lista.",
+              "scenario-b:b-developed-defense: b-developed-defense: risorsa avversaria non disponibile me05-094.",
+              "scenario-b:b-developed-defense: b-developed-defense: risorsa avversaria non disponibile sv05-161.",
+              "scenario-b:b-developed-defense: b-developed-defense: risorsa avversaria non disponibile me03-113.",
+              "scenario-b:b-developed-defense: b-developed-defense: pescata non presente nella lista.",
+              "scenario-b: pescata specifica Toucannon omessa dalle risorse della replica.",
+              "scenario-b: pescata specifica Mist omessa dalle risorse della replica.",
+              "scenario-b: pescata specifica Pok omessa dalle risorse della replica."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 49,
+              "calculations": 21,
+              "transitions": 47
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Il Feather Rondo finale della linea principale infligge 140, non 160: dopo KO e promozione di Fan Rotom restano due Pokémon per ciascuna Panchina. La descrizione dell'attacco contiene entrambi i valori, mentre calculation e turnAudit continuano a indicare 160.",
+                "correction": "Usare coerentemente terms=[60,20,20,20], multiplier=1 ed expected=140 per questo attacco. Conservare separato il conto da 160 del ramo difensivo, dove Fan Rotom resta in gioco. Il KO di Drakloak rimane valido.",
+                "sourceIds": [
+                  "card:me05-094",
+                  "card:sv06-129"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "requiredCards e specificDraws descrivono soltanto il KO, ma il ramo completo comprende anche Fire pescata e assegnata al secondo Dreepy e Night Stretcher ottenuto da Recon Directive. Lo sviluppo rivendicato in outcome non è coperto dalle risorse dichiarate.",
+                "correction": "Separare la replica minima essenziale dal ramo sviluppato, oppure includere tutte le copie aggiuntive e gli accessi del ramo completo. Se si conserva lo sviluppo del secondo Dreepy, dichiarare la pesca specifica di Basic Fire Energy. Applicare le prove di omissione alla replica minima effettivamente rappresentata.",
+                "sourceIds": [
+                  "card:sv06-129",
+                  "card:mee-010",
+                  "card:me02.5-196"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "specificDraws contiene due identità inesistenti, «Basic». Inoltre il ramo chiude il turno rinunciando gratuitamente a Poké Pad, evoluzione e Recon Directive disponibili: definirlo un riferimento inferiore non soddisfa il controllo obbligatorio delle opportunità prima dell'attacco.",
+                "correction": "Indicare Basic Fire Energy una sola volta se indispensabile allo sviluppo mantenuto. Ricostruire una replica diretta con una motivazione concreta per le risorse conservate, oppure completare lo sviluppo disponibile e aggiornare il confronto senza presentare una rinuncia gratuita come replica competente.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me03-081",
+                  "card:sv06-129"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "requiredCards attribuisce alla replica avversaria Toucannon, Mist Energy, Poké Pad e Boss's Orders della nostra lista. Le pescate «Mist» e «Pok» sono incomplete; Boss's Orders è inoltre già nella nostra mano al momento della replica, essendo stato preso nel prefisso comune.",
+                "correction": "Limitare requiredCards alle risorse aggiuntive del giocatore che replica. Esporre separatamente le condizioni del nostro seguito, usando identità complete e distinguendo carte già disponibili da nuove pescate. Mantenere il seguito verificabile nel registro senza attribuire le nostre carte a opponent-1.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:me02.5-256",
+                  "card:me05-094",
+                  "card:sv05-161"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Le prove di omissione delle Energie non rimuovono una copia fisica: vietano invece l'assegnazione della stampa. Dopo il KO del primo Dreepy esistono Fire e Psychic negli scarti, Night Stretcher in mano e altre copie nel mazzo. Anche togliendo una copia dal percorso Crispin, il KO può restare raggiungibile recuperando la stessa stampa e riordinando le assegnazioni. Non è dimostrata la minimalità richiesta. Manca inoltre Night Stretcher selezionato da Recon Directive fra le risorse aggiuntive del ramo completo.",
+                "correction": "Rifare ogni omissione sottraendo davvero una copia dalla disponibilità dichiarata e cercando il miglior riordino con Night Stretcher, Crispin e le copie residue. Distinguere il fabbisogno energetico dell'attacco dalla necessità di una specifica copia aggiuntiva. Semplificare o ridefinire la replica minima finché tutte le omissioni richieste risultano valide, e contabilizzare anche la selezione di Recon Directive.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me02.5-196",
+                  "card:sv07-133",
+                  "card:sv06-129",
+                  "card:mee-010",
+                  "card:mee-013"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Il ramo include carte nostre in requiredCards avversarie e usa identità di pescata incomplete. Omette inoltre Night Stretcher ottenuto con Recon Directive. La continuazione è ricostruibile, ma i requisiti della replica e quelli della nostra risposta sono mescolati.",
+                "correction": "Contabilizzare soltanto le risorse aggiuntive avversarie nei requisiti della replica, includendo Night Stretcher. Dichiarare separatamente le pescate condizionanti del nostro turno 5 con nomi completi: Toucannon e Mist Energy. Poké Pad, che resta inutilizzato, non è una pesca specifica necessaria al risultato.",
+                "sourceIds": [
+                  "our-list",
+                  "opponent-1",
+                  "card:sv06-129",
+                  "card:me02.5-196",
+                  "card:me05-094",
+                  "card:sv05-161"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Budew attacca mentre Poké Pad e Crispin restano giocabili e il secondo Dreepy può evolvere e caricarsi. Il ramo ammette esplicitamente una rinuncia gratuita allo sviluppo del secondo attaccante, vietata dal contratto v6.",
+                "correction": "Completare prima dell'attacco lo sviluppo utile oppure rappresentare una diversa scelta con un costo opportunità concreto e verificato. Aggiornare risorse, mani, registro e confronto; la sola etichetta di opzione inferiore non giustifica l'omissione.",
+                "sourceIds": [
+                  "card:me03-081",
+                  "card:sv07-133",
+                  "card:sv06-129",
+                  "card:me02.5-016"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Il controllo della continuità trascura un recupero immediato utile: dopo il KO del primo Dreepy, Night Stretcher può recuperarlo e rimetterlo in Panchina nel turno 4. Risky Ruins gli assegna 20 danni, ma non impedisce l'ingresso. Questo prepara una seconda linea evolutiva; conservare genericamente flessibilità non confronta il valore dello sviluppo disponibile. Le sole Energie assegnate a Drakloak non esauriscono le opportunità del turno.",
+                "correction": "Confrontare esplicitamente il recupero e ingresso di Dreepy con la conservazione di Night Stretcher. Se adottato, registrare costo, recupero, ingresso con benchEntries, 20 danni da Risky Ruins, mani e risorse; aggiornare Feather Rondo a 180 nella linea difensiva con sei Pokémon complessivi in Panchina. Se rifiutato, motivare concretamente il sacrificio dello sviluppo del secondo attaccante.",
+                "sourceIds": [
+                  "card:me02.5-196",
+                  "card:sv06-128",
+                  "card:me01-127",
+                  "card:me05-094"
+                ]
+              }
+            ],
+            "checks": [
+              "Esaminati soltanto scenari e claims pertinenti; capitoli ed esercizi non richiesti in questa fase.",
+              "Le liste our-list e opponent-1 contano ciascuna 60 carte; le mani iniziali contano 7 carte per lato e i Premi iniziali 6.",
+              "Ripercorsi i setup comuni: mani finali 4/3, mazzi 43/42 e inventari iniziali risultano coerenti con i movimenti dichiarati.",
+              "Verificati blocco Strumenti, evoluzioni naturali su turni distinti, costi degli attacchi e ritirate dichiarate; le formule derivate di ritirata sono correttamente presenti nel draft.",
+              "I KO dell'Attivo mantengono il conteggio della Panchina fino alla promozione; le transizioni principali rispettano questa distinzione.",
+              "Controllati recuperi disponibili e limiti delle prove di omissione; le ammissioni nelle limitations non risolvono gli errori.",
+              "La revisione non costituisce una certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a: a-direct-attack: pescata non presente nella lista.",
+              "scenario-a: a-developed-defense: pescata non presente nella lista.",
+              "scenario-a:a-direct-attack: a-direct-attack: pescata non presente nella lista.",
+              "scenario-a:a-direct-attack: a-developed-defense: pescata non presente nella lista.",
+              "scenario-a: pescata specifica RiskyRuins omessa dalle risorse della replica.",
+              "scenario-a:a-developed-defense: a-direct-attack: pescata non presente nella lista.",
+              "scenario-a:a-developed-defense: a-developed-defense: pescata non presente nella lista.",
+              "scenario-b: b-direct-attack: pescata non presente nella lista.",
+              "scenario-b: b-developed-defense: pescata non presente nella lista.",
+              "scenario-b:b-direct-attack: b-direct-attack: pescata non presente nella lista.",
+              "scenario-b:b-direct-attack: b-developed-defense: pescata non presente nella lista.",
+              "scenario-b: pescata specifica RiskyRuins omessa dalle risorse della replica.",
+              "scenario-b:b-developed-defense: b-direct-attack: pescata non presente nella lista.",
+              "scenario-b:b-developed-defense: b-developed-defense: pescata non presente nella lista."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 41,
+              "calculations": 14,
+              "transitions": 43
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "specificDraws usa «RiskyRuins», che non identifica una stampa della lista selezionata. La spiegazione nella conclusion non corregge il riferimento strutturale non valido.",
+                "correction": "Sostituire «RiskyRuins» con «me01-127», coerentemente con la pescata registrata e con requiredCards.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-127"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "specificDraws contiene «RiskyRuins», riferimento non valido rispetto alle stampe della lista.",
+                "correction": "Usare «me01-127» per la pescata specifica di Risky Ruins, mantenendo coerenti registro, requiredCards e confronto.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-127"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "specificDraws contiene «RiskyRuins», che non è un printId presente nella lista avversaria.",
+                "correction": "Sostituire il riferimento con «me01-127», la stampa effettivamente pescata nel turno 2.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-127"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "La pescata specifica «RiskyRuins» non corrisponde a una stampa della lista selezionata.",
+                "correction": "Indicare «me01-127» in specificDraws e aggiornare la conclusion che giustifica il precedente identificatore.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me01-127"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "La sequenza verifica un'apertura legale e il KO di Budew, ma termina prima di dimostrare la conversione del tempo nel secondo attaccante. Entrambi i Trumbeak sono senza Energie; il successivo attacco di Toucannon resta subordinato a un accesso non ricostruito. Il turno avversario che può eliminare Fan Rotom è soltanto narrato.",
+                "correction": "Estendere il registro attraverso la replica avversaria e il nostro turno successivo, dichiarando le pescate ipotetiche, gli accessi all'Energia e l'attacco effettivamente raggiungibile. Verificare nuovamente Supporter, Recon Directive prima dell'evoluzione, recuperi e sviluppo del secondo attaccante; se la pesca non consente continuità, mostrare il pivot concreto.",
+                "sourceIds": [
+                  "card:me05-094",
+                  "card:sv06-129",
+                  "card:me03-081",
+                  "card:me01-173",
+                  "our-list",
+                  "opponent-1"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Il KO del Dreepy carico è dimostrato, ma non il seguito strategico richiesto. Il recupero immediato con Night Stretcher e lo sviluppo del Dreepy superstite restano avvertimenti: non vengono confrontati operativamente con il nostro successivo Toucannon, ancora senza Energia. Il caso non dimostra quindi come il vantaggio energetico venga convertito in continuità.",
+                "correction": "Registrare il successivo turno avversario dalla mano completa e almeno il nostro attacco seguente, includendo recuperi, ricerca di Drakloak, Supporter disponibili e assegnazioni effettive. Esplicitare le pescate necessarie e mostrare quando il recupero o la ricarica avversaria obbligano a cambiare piano.",
+                "sourceIds": [
+                  "card:me02.5-196",
+                  "card:me03-081",
+                  "card:sv06-129",
+                  "card:sv07-133",
+                  "card:me05-094",
+                  "card:sv06-205",
+                  "opponent-1"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorse le mani iniziali, Fan Call, Poffin, Crispin, assegnazioni, evoluzioni, scarti e Premi delle linee presentate: i conteggi delle mani sono coerenti.",
+              "Gli inventari iniziali rispettano le quantità delle due liste selezionate; ciascun lato parte con 7 carte, 6 Premi e 47 carte nel mazzo.",
+              "Verificati blocco Strumenti, evoluzioni naturali, finestra di Fan Call e costi degli attacchi nelle assunzioni dichiarate.",
+              "Verificate le ritirate: Trumbeak 1 meno 2, minimo zero; Budew costo stampato zero. Le formule derivate con retreatCostId sono ammesse.",
+              "Danni verificati: Itchy Pollen 10, Bite 40 e Assault Landing 70 con Stadio presente; nessuna delle repliche confrontate raggiunge 70 PS.",
+              "KO, gust e promozioni mantengono correttamente distinti conteggi Panchina e Premi.",
+              "Considerati Poké Pad, Night Stretcher e gli accessi concatenati: nel primo turno personale non permettono l'evoluzione immediata; dopo il KO richiedono invece una continuazione verificata.",
+              "Non richiesti capitoli o esercizi in questa fase; la revisione non costituisce certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "derivedTactics": [
+        {
+          "hash": "1339ef64771143fb8fd08886e6df5def9e060b54fe7b81806dcb1d2c24bbb188",
+          "origin": "compiler-v3"
+        },
+        {
+          "hash": "b23aeb33816df0dd7729e97cebe6252f95b6fcd569c9f77134052e7722ab8c9e",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "08f1adabeb5c9428bc4d187b6275a079551be53af4c4c06043c8b6f7f53dd293",
+        "afb2519410f729014686f190f9df92ad93009242b0938dc771977120f7291a01"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "ee52cef73bc4a006859cb26a36c9ef9520737bd71e88dcc42851e0d5666750a1"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "781c299d8538b7a9761874b1cc44e76b0e4104ecfcfcf64c2fad7ddbf2a6b08a"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "64f32511cb38421c67b18f35c64d9f3507c05843ef8073087c8f3f2f22bfd8e2"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "1617d70e764d997872a5c240c6115a139ff2605d5a1e1c44f1be2ca54af016a5"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "9522831d40f01a73a761f99647bd6121e37874b6a6354a6c88000f137412e61c"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 218883,
+      "outputTokens": 27253,
+      "cachedInputTokens": 10752,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 670260,
+      "elapsedMs": 671701,
+      "startedAt": "2026-10-30T18:18:29.128Z",
+      "endedAt": "2026-10-30T18:29:40.829Z",
+      "error": "scenario-stadium: il setup richiede 7 carte in hand per ours.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "aeaf678cbabdb8bd43e6a19f7db01ffd4a73fe88b16b692045cff5d2a85a810f",
+          "message": "scenario-stadium: replica senza eventi né prefisso."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "inputHash": "aeaf678cbabdb8bd43e6a19f7db01ffd4a73fe88b16b692045cff5d2a85a810f",
+          "message": "scenario-stadium: il setup richiede 7 carte in hand per ours."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "d36260d6485e246741b1fb23f70adcbdc2346ed32b73fa5fa312a79131f12606"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "aeaf678cbabdb8bd43e6a19f7db01ffd4a73fe88b16b692045cff5d2a85a810f"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "e1fc3f40163a07de2d731fc21aff59ef0b7c69e68c3dec06ed20d33712258e21"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 135913,
+      "outputTokens": 54360,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 872554,
+      "elapsedMs": 873895,
+      "startedAt": "2026-10-30T18:18:29.457Z",
+      "endedAt": "2026-10-30T18:33:03.352Z",
+      "error": "scenario-pressure: sviluppo non collegato al turno del registro.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "5d24e75c948824fc7149ae95c61ac718a802cd72c6e1ad898332f1ed42736ffc",
+          "message": "scenario-pressure: me02-087 ×1 non disponibile in opponent/deck."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "inputHash": "5d24e75c948824fc7149ae95c61ac718a802cd72c6e1ad898332f1ed42736ffc",
+          "message": "scenario-pressure: sviluppo non collegato al turno del registro."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "d411de17528f535d4bdf5707ee0bfa69b448a73c89e514e968e698a2d1317860"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "5d24e75c948824fc7149ae95c61ac718a802cd72c6e1ad898332f1ed42736ffc"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "c0dc1ec1eba4a8a34bee774256e43f3f45b9324608057f4cf73ddbc427afdd29"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 11,
+  "passed": 0
+}
