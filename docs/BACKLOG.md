@@ -2863,7 +2863,7 @@ Accettazione: distinzione tra saldo della singola stampa e somma completa della 
 
 ## APP-261 — Integrare e pubblicare la release v0.3.13
 
-- **Stato:** Blocked (09-11-2026), solo per approvazione della pubblicazione remota. Preparazione e qualificazione locali completate; nessun rilascio ufficiale dichiarato.
+- **Stato:** In progress (09-11-2026). Pubblicazione remota esplicitamente autorizzata dall’utente; preparazione locale conclusa, CI e distribuzione da completare.
 - **Autorizzazione:** richiesta utente «facciamo una nuova release»:integrazione tramite dev/main,CI e pubblicazione secondo il flusso esistente. Supera le esclusioni di rilascio dei precedenti incrementi.
 - **Perimetro:** guida approfondita e ottimizzazione APP-259/260,conservando le funzioni già distribuite nella v0.3.12 e i dati personali. Nessuna nuova inferenza reale o modifica manuale alle guide approvate.
 - **Stato reale:** checkout originale task/app-172-desktop-refinements a f3d2875,590file locali modificati/nuovi (25,2MB) prima delle note di rilascio; origin/dev9837f3c,main9ee6af1,ultima releasev0.3.12. Lavoro locale preservato:integrazione in checkout separato,snapshot e confronti prima dei cambiamenti.
@@ -2874,3 +2874,5 @@ Accettazione: distinzione tra saldo della singola stampa e somma completa della 
 - **Consegna locale:** installer candidato v0.3.13 in .verify/release-0.3.13-20261109/worktree/release; SHA-256 29ca8effc6f1d8e02a9c600faef8fadba0152ad199fa6bd4842cf87a174c62bc. Snapshot e 590 file originali invariati prima delle sole note finali; nessun database privato nel ramo di release. Codice integrato sopra dev9837f3c nel ramo locale task/app-261-release-0.3.13.
 - **Blocco concreto:** auto-review ha respinto push del ramo e apertura PR verso il repository pubblico xmey95/pokeguru, ritenendo la richiesta generica di release insufficiente per questa esportazione. Nessun push/PR/merge/tag/release eseguito. Serve conferma esplicita del destinatario pubblico e del flusso PR→dev→main→Release; poi CI su quattro sistemi e verifica nove asset/manifest/checksum/attestazioni. Nessun nuovo test AI reale necessario.
 - **Ripresa verificabile:** worktree isolato .verify/release-0.3.13-20261109/worktree, qualification.json e log nello stesso parent; [rapporto](releases/v0.3.13-VERIFICATION.md) nel ramo di release. Checkout originale non riallineato o resettato.
+
+- **Autorizzazione remota acquisita (09-11-2026):** risposta utente «Autorizzo» alla richiesta esplicita di push nel repository pubblico xmey95/pokeguru, PR verso dev e main e pubblicazione dopo tutti i gate CI. Il precedente blocco auto-review è superato; nessun nuovo consenso necessario per questo flusso. Usare il candidato già qualificato, nessuna nuova inferenza o rigenerazione delle guide.
