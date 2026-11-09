@@ -237,14 +237,26 @@ export class AiJobStore {
       ORDER BY created_at, id`).all() as unknown as JobRow[]).map(job)
   }
 
-  /** Only an explicit retry after intervention renews a transient failure budget.
+  /** Only an explicit retry after intervention renews a transport/unclassified failure budget
+   * or releases a controller stop that was persisted as blocked before dispatch.
    * Context, invalid content and no-progress failures keep their original state. */
   retryAfterIntervention(id: string): void {
     if (this.get(id)?.status !== 'interrupted') throw new Error('Analisi non riprendibile.')
     this.statement(`DELETE FROM ai_call_state WHERE job_id = ?
       AND json_extract(state_json, '$.status') = 'blocked'
       AND json_extract(state_json, '$.code') IN ('network', 'timeout', 'quota', 'auth',
-        'cli-unavailable', 'storage', 'storage-full')`).run(id)
+         'cli-unavailable', 'storage', 'storage-full', 'unknown', 'process-interrupted', 'paused')`).run(id)
+  }
+
+  /** Job-wide guard: changing prompt instructions cannot bypass a blocked
+   * transport call. Only the existing explicit-intervention path clears it. */
+  blockedTransportFailure(id: string): AiCallState | undefined {
+    const row=this.statement(`SELECT state_json FROM ai_call_state WHERE job_id = ?
+      AND json_extract(state_json, '$.status') = 'blocked'
+      AND json_extract(state_json, '$.code') IN ('network','timeout','quota','auth',
+        'cli-unavailable','storage','storage-full','unknown','process-interrupted')
+      ORDER BY key LIMIT 1`).get(id) as {state_json:string}|undefined
+    return row?JSON.parse(row.state_json) as AiCallState:undefined
   }
 
   recordDiagnostics(id: string, change: AiDiagnostics): void {

@@ -91,3 +91,48 @@ Audit APP-184 concluso. Ricostruzione del flusso e conteggi eseguiti due volte s
 Controllo finale dei soli file di checkpoint: **362 foglie salvate della stessa generazione**, ultimo aggiornamento alle **14:14:20 Europe/Rome**. Il job ha continuato ad avanzare durante la misura; i conteggi analitici restano riferiti allo snapshot delle 13:57.
 
 APP-185 è una proposta da rifinire/implementare dopo autorizzazione, con dipendenza dall'integrazione APP-179–181 e dal contratto degli aggregati. Il job corrente continua con il comportamento della v0.3.8. La discrepanza fra file omonimi va conservata come nota diagnostica, senza attribuirle una causa non verificata.
+
+## APP-186 — Valutazione strategica del 30 ottobre 2026
+
+**Giudizio:** il percorso esaminato impone un volume di lavoro AI sproporzionato per una normale richiesta di miglioramento del mazzo. La priorità raccomandata è cambiare l'unità di analisi: decisioni e fatti pertinenti, con calcoli sull'intero archivio e accesso agli originali. Le ottimizzazioni di cache, database e concorrenza restano utili, ma la prima analisi su dati nuovi deve essere sostenibile da sola.
+
+Questa revisione riusa le misure APP-184 del 29 ottobre e controlla i sorgenti locali: non è una nuova misura del job, del pacchetto installato o della qualità della sua risposta finale. Il checkout contiene lavoro preesistente e non stabilisce lo stato attuale di altri checkout. Nessuna generazione AI dell'app o modifica del suo comportamento è stata eseguita.
+
+### Perché il costo cresce più del valore dimostrato
+
+1. **Acquisizione completa e lettura AI integrale sono accoppiate.** `archivedRecords()` consegna schede, liste, partecipazioni, incontri e statistiche; `analyzeLargeEvidence()` fa passare ogni record nei lotti. Nel campione sono 101.505 record e 872 foglie. Conservare dati e denominatori completi è utile; far riassumere ogni riga al modello a ogni nuova analisi è una scelta architetturale ulteriore. Parte dei conteggi è già deterministica: il flusso consegna comunque anche i dettagli individuali.
+2. **La quantità recuperata non misura la pertinenza.** Sei query Evento producono il 96,98% dei byte; Dragapult domina il volume mentre la panoramica generale è respinta. Leggere tutto ciò che corrisponde a una carta non dimostra copertura equilibrata dei matchup. La finestra aprile–ottobre è quella del job osservato, non una finestra ottimale dimostrata per ogni domanda.
+3. **Il costo delle foglie precede la decisione di approfondire.** Il planner ha istruzioni per cercare lacune decisive e può fermarsi. Tuttavia `runAiEvidenceQueries()` attende la sintesi prima della pianificazione successiva, e nuovi record impongono una rivalutazione. Il controllo operativo di progresso conta record aggiunti; non misura se quei record cambiano una raccomandazione. Una query troppo ampia può così costare centinaia di chiamate prima che il piano venga rivisto.
+4. **La compressione non certifica la qualità.** Le foglie ricevono domanda e lotto senza lista base e vincoli espliciti; la sintesi conclusiva dei lotti arriva a un massimo di 2.400 caratteri, oltre a limiti e riferimenti. Il finale riceve anche altro contesto, ma il dettaglio del grande corpus passa attraverso questa compressione. Fonti ammesse e JSON valido non dimostrano che ogni conclusione sia supportata o che le interazioni decisive sopravvivano. Manca un confronto tattico che giustifichi il lavoro aggiuntivo.
+
+Riscontri: `src/main/ai-analysis-work.ts:179–323`, `src/main/ai-evidence-queries.ts:261–326`, `src/main/backend.ts:1381–1435`. Il contratto in `PRODUCT.md` per APP-159 esclude un obbligo di risposta rapida; APP-161–164 e T-161/T-162 consolidano l'elaborazione estesa. Quel compromesso va riesaminato alla luce del feedback attuale, senza attribuire all'utente la scelta dei dettagli implementativi.
+
+### Il precedente obiettivo di 350 lotti è insufficiente come criterio di prodotto
+
+Usando soltanto come esercizio aritmetico la mediana recente di 35,896 secondi per chiamata:
+
+| Foglie seriali | Prodotto foglie × mediana osservata |
+| ---: | ---: |
+| 872 | 8 ore e 42 minuti circa |
+| 350 | 3 ore e 29 minuti circa |
+| 190 | 1 ora e 54 minuti circa |
+
+Non sono durate misurate, previsioni del job o prove delle alternative: la mediana proviene da 39 chiamate, payload e latenza possono cambiare e mancano sintesi, planner, revisioni e attese. Il confronto mostra comunque che accettare centinaia di chiamate seriali è incompatibile con l'obiettivo proposto di un'interazione ordinaria in pochi minuti. Il limite ≤350 di APP-185 resta una misura intermedia di riduzione dei dati, non una definizione di esperienza accettabile.
+
+### Direzione raccomandata
+
+- **Separare preparazione delle fonti e ragionamento sul mazzo.** All'aggiornamento dei dati, produrre viste deterministiche versionate di frequenze, distribuzioni delle quantità, varianti, risultati e denominatori. Conservare differenze tra periodi, fonti e archetipi, avversari irrisolti, eccezioni e collegamenti alle liste esatte. Le viste pubbliche riutilizzabili non devono includere contesti privati dei progetti.
+- **Preparare un contesto specifico per il compito.** Una domanda su una carta richiede schede e interazioni pertinenti; una guida richiede le due strategie e le varianti rilevanti; un miglioramento generale richiede lista, vincoli, panoramica del meta, distribuzioni e alternative. Il numero di record nel database non deve determinare direttamente il numero di chiamate AI.
+- **Interrogare gli originali per risolvere dubbi concreti.** Dare al modello operazioni di panoramica, confronto e approfondimento con provenienza. Ogni ulteriore ricerca deve indicare quale incertezza potrebbe cambiare la proposta. Cercare anche carte per effetti e funzione, varianti rare e controesempi; scegliere soltanto i mazzi più popolari potrebbe eliminare proprio le idee utili. La copertura aggregata e i dettagli letti dal modello vanno dichiarati separatamente.
+- **Mantenere la correttezza verificabile.** Tutte le carte consigliate devono avere testi originali pertinenti; quantità, vincoli e conformità restano controlli locali. Una candidata adottabile resta completa e validata. Se manca una prova decisiva, circoscrivere la conclusione o dichiarare la lacuna. La disponibilità di nuovi dati non obbliga da sola ad ampliare la ricerca.
+- **Distinguere l'uso ordinario dalla ricerca estesa.** Proporre pochi passaggi AI per il percorso ordinario e un obiettivo di pochi minuti da misurare; una ricerca estesa deve avere un risultato aggiuntivo esplicito. I budget sono criteri di progettazione e trasparenza, non autorizzazioni a presentare una risposta incompleta come esaustiva. Nessuna nuova modalità o soglia è attivata da questo audit.
+
+La documentazione ufficiale OpenAI include riduzione delle richieste e uso di elaborazioni convenzionali fra le leve di latenza ([Latency optimization](https://developers.openai.com/api/docs/guides/latency-optimization), consultata il 30-10-2026). Questo sostiene la direzione generale, non garantisce tempi, costi o qualità nel percorso Codex dell'app.
+
+### Priorità e verifica proporzionata
+
+La revisione strategica raccomanda di rifinire APP-185 attorno a viste aggregate e recupero mirato, valutando separatamente la scelta iniziale di consegnare comunque tutte le 7.343 liste. Conservare e contabilizzare tutte le liste non richiede che ognuna sia riassunta dal modello. Il passaggio modifica il contratto di consegna delle evidenze: è una proposta esplicita, non una modifica già approvata di R-07/T-161/T-162. APP-179/180/181 restano investimenti utili; il nuovo percorso dovrebbe riusarli senza perfezionare preventivamente ogni aspetto dei lotti massivi. Modello, effort e concorrenza seguono la verifica dell'architettura.
+
+Prima prova proposta: cinque casi mirati (domanda su carta, sostituzione con vincoli, miglioramento generale Toucannon, guida matchup, revisione), stessi snapshot e stesso modello/effort. Confrontare fatti decisivi e fonti dagli originali, correttezza delle candidate, utilità delle motivazioni, chiamate, token disponibili e tempo alla prima risposta utilizzabile. È una prova di fattibilità, non una dimostrazione statistica di non inferiorità; ampliare la valutazione prima di adottare il percorso generale. Un replay offline verifica esattezza e copertura degli aggregati prima di consumare quota. Nessuna campagna live avviata.
+
+**Verifiche dell'audit:** misure JSON e rapporto APP-184 coerenti per conteggi, quota Eventi e mediana; calcoli della tabella ricontrollati; percorso seriale, punto di pianificazione, contesto delle foglie e schema delle sintesi riscontrati nel codice. La qualità finale e il vantaggio del nuovo disegno restano da provare.

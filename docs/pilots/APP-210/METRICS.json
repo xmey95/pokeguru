@@ -1,0 +1,1828 @@
+{
+  "task": "APP-210",
+  "date": "2026-10-31",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "promptVersion": "matchup-guide-18",
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "manualCorrections": 0,
+  "diagnosticCalls": 0,
+  "estimateOnly": true,
+  "sealedFiles": 56,
+  "changedSealedFiles": [],
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 419,
+    "externalSkipped": 44,
+    "targetedTests": 78,
+    "typecheck": "pass",
+    "build": "pass",
+    "offlineOutputReplay": "pass",
+    "offlineAllSchemas": "pass"
+  },
+  "timeoutRecovery": {
+    "at": "2026-10-31T13:18:14.616Z",
+    "modelCallsForAudit": 0,
+    "actualInvocations": 11,
+    "automaticTimeoutRetries": [
+      {
+        "id": "dragapult-hydrapple",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "identicalInputHash": "5dcbdd72689f6dc4e677f2099f6123ee3136e420269bc34c34ccf7767ac48681",
+        "singleImmutableContext": true,
+        "remainingBefore": 7,
+        "remainingOnRetry": 6,
+        "actualRetryInvoked": true,
+        "retryStatus": "failed"
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "failedSequence": 3,
+        "retrySequence": 4,
+        "stage": "scenarios-1",
+        "identicalInputHash": "5dcbdd72689f6dc4e677f2099f6123ee3136e420269bc34c34ccf7767ac48681",
+        "singleImmutableContext": true,
+        "remainingBefore": 6,
+        "remainingOnRetry": 5,
+        "actualRetryInvoked": true,
+        "retryStatus": "succeeded"
+      }
+    ],
+    "immutableContextFailures": 0
+  },
+  "outputCompressionAudit": {
+    "modelCalls": 0,
+    "priorGuidesChanged": false,
+    "negativeOriginals": [
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 2,
+        "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Il registro presentato richiede correzione prima della validazione: gli eventi 14 e 24 non ricostruiscono un secondo Dreepy realmente disponibile. Non costituisce pertanto uno scenario validato. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "contextError": "Error: scenario-1: ourSetupEvents[3] campi action/affectedSide incompatibili con il contesto.",
+        "rawUnchanged": true
+      },
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 3,
+        "constructionError": null,
+        "contextError": "Error: scenario-1: ourLineEvents[0] campi action/affectedSide incompatibili con il contesto.",
+        "rawUnchanged": true
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 2,
+        "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro e i rami richiesti. Il caso consegnato è incompleto: non va eseguito, validato o presentato come risultato strategico. Questa è una mancanza della costruzione, non delle fonti. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "contextError": "Error: scenario-1: ourFinalAttacks[0] campi action/affectedSide incompatibili con il contesto.",
+        "rawUnchanged": true
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 3,
+        "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Il registro non supera la verifica strategica: nel nostro contrattacco Toucannon già in mano può evolvere Trumbeak preparato nel turno precedente, ricevere Mist Energy e attaccare dopo una ritirata gratuita resa disponibile da Air Balloon. Gli audit identificano questa alternativa migliore, ma i turni non sono stati ricostruiti per eseguirla. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "contextError": "Error: scenario-1: ourSetupEvents[1] campi action/affectedSide incompatibili con il contesto.",
+        "rawUnchanged": true
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 2,
+        "constructionError": null,
+        "contextError": "Error: scenario-1: ourSetupEvents[0] campi action/affectedSide incompatibili con il contesto.",
+        "rawUnchanged": true
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 3,
+        "constructionError": null,
+        "contextError": "Error: scenario-1: opponentSetupEvents[0] campi action/affectedSide incompatibili con il contesto.",
+        "rawUnchanged": true
+      }
+    ],
+    "positive": {
+      "roundTripIdentical": true,
+      "projectionIdentical": true,
+      "localErrors": 0,
+      "packedCharacters": 38500,
+      "prettyPackedCharacters": 73651,
+      "schemaStats": {
+        "bytes": 48400,
+        "properties": 452,
+        "enumValues": 472,
+        "stringCharacters": 9310
+      },
+      "scenarios": [
+        {
+          "id": "scenario-1",
+          "audits": 14,
+          "retreats": 4,
+          "branches": 3
+        }
+      ]
+    }
+  },
+  "feedbackAudit": {
+    "at": "2026-10-31T13:18:14.756Z",
+    "modelCalls": 0,
+    "readOnly": true,
+    "retries": [
+      {
+        "id": "toucannon-dragapult",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "7fec6ba68ae4b2608794eaf54dfafece3870f3df722a94576935bd7d409627fa",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 123446,
+        "retryInputBytes": 145427
+      },
+      {
+        "id": "toucannon-festival",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "7663fb01b0a2a747bdad2fdad125b76e35a6902ce61c790bbed59a666108381e",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 125592,
+        "retryInputBytes": 158960
+      }
+    ]
+  },
+  "outputProtocol": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 23842,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 38858,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "projectionError": "Error: scenario-1: promozione obbligatoria omessa prima della fine del turno."
+            },
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 5,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 14,
+                  "opponentLineEvents": 10,
+                  "ourFinalAttacks": 3
+                },
+                "moves": 21,
+                "energyRoutes": 8,
+                "audits": 9,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 25146,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 39522,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [
+                "scenario-1: promozione diretta omessa in main|3|ours: opponent / me02.5-016.",
+                "scenario-1: promozione diretta omessa in main|3|ours: opponent / me02-014.",
+                "scenario-1: promozione diretta omessa in main|5|ours: opponent / me02.5-016.",
+                "scenario-1: promozione diretta omessa in direct|3|ours: opponent / me02.5-016.",
+                "scenario-1: promozione diretta omessa in direct|3|ours: opponent / me02-014.",
+                "scenario-1: promozione diretta omessa in direct|5|ours: opponent / me02.5-016.",
+                "scenario-1: promozione diretta omessa in access|3|ours: opponent / me02.5-016.",
+                "scenario-1: promozione diretta omessa in access|3|ours: opponent / me02-014.",
+                "scenario-1: promozione diretta omessa in access|5|ours: opponent / me02.5-016.",
+                "scenario-1: promozione diretta omessa in access|5|ours: opponent / me02-014.",
+                "scenario-1: promozione diretta omessa in defend|3|ours: opponent / me02.5-016.",
+                "scenario-1: promozione diretta omessa in defend|3|ours: opponent / me02-014.",
+                "scenario-1: promozione diretta omessa in defend|5|ours: opponent / me02-014."
+              ],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 17,
+                "calculations": 13,
+                "transitions": 18
+              }
+            },
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 5,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 16,
+                  "opponentLineEvents": 8,
+                  "ourFinalAttacks": 3
+                },
+                "moves": 21,
+                "energyRoutes": 7,
+                "audits": 10,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 36023,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: opponentLineEvents contiene dati non referenziati o non è una tabella.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 3,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 17,
+                  "opponentLineEvents": 16,
+                  "ourFinalAttacks": 2
+                },
+                "moves": 37,
+                "energyRoutes": 11,
+                "audits": 13,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 36354,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: energyTable contiene dati non referenziati o non è una tabella.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 3,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 16,
+                  "opponentLineEvents": 15,
+                  "ourFinalAttacks": 2
+                },
+                "moves": 38,
+                "energyRoutes": 12,
+                "audits": 13,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 4,
+            "stage": "scenarios-1",
+            "status": "succeeded",
+            "responseCharacters": 17483,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 26348,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 17,
+                "calculations": 11,
+                "transitions": 12
+              }
+            },
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 0,
+                  "opponentSetupEvents": 1,
+                  "ourLineEvents": 5,
+                  "opponentLineEvents": 7,
+                  "ourFinalAttacks": 1
+                },
+                "moves": 10,
+                "energyRoutes": 9,
+                "audits": 8,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 5,
+            "stage": "scenarios-2",
+            "status": "failed",
+            "responseCharacters": 20872,
+            "encoding": "pg-scenario-tables-2",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 28611,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [
+                "scenario-2: promozione diretta omessa in reply-direct|5|ours: opponent / sv06-018."
+              ],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 17,
+                "calculations": 10,
+                "transitions": 12
+              }
+            },
+            "tables": [
+              {
+                "id": "scenario-2",
+                "events": {
+                  "ourSetupEvents": 1,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 6,
+                  "opponentLineEvents": 8,
+                  "ourFinalAttacks": 2
+                },
+                "moves": 11,
+                "energyRoutes": 8,
+                "audits": 9,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "referenceAudit": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 5,
+                "used": 5,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 14,
+                "used": 14,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 10,
+                "used": 10,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 21,
+                "used": 21,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 8,
+                "used": 8,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 9,
+                "used": 9,
+                "unused": []
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 5,
+                "used": 5,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 16,
+                "used": 16,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 8,
+                "used": 8,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 21,
+                "used": 21,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 7,
+                "used": 7,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 10,
+                "used": 10,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 17,
+                "used": 17,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 16,
+                "used": 15,
+                "unused": [
+                  {
+                    "index": 15,
+                    "value": {
+                      "kind": "effect",
+                      "description": "Dopo il KO di Dipplin o Applin, l’avversario promuove Applin TWM 126.",
+                      "moves": [
+                        16
+                      ],
+                      "energyRoutes": [],
+                      "attack": null,
+                      "trainer": null,
+                      "action": "promote",
+                      "affectedSide": "opponent",
+                      "deckObservations": [],
+                      "retreat": null
+                    }
+                  }
+                ]
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 37,
+                "used": 37,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 13,
+                "used": 13,
+                "unused": []
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 16,
+                "used": 16,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 15,
+                "used": 15,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 38,
+                "used": 38,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 12,
+                "used": 11,
+                "unused": [
+                  {
+                    "index": 10,
+                    "value": {
+                      "side": "ours",
+                      "printId": "sv09-159",
+                      "count": 1,
+                      "path": [
+                        "prizes",
+                        "hand"
+                      ],
+                      "hostPrintId": null,
+                      "sourceIds": [
+                        "rules"
+                      ],
+                      "attachment": null
+                    }
+                  }
+                ]
+              },
+              {
+                "table": "auditTable",
+                "declared": 13,
+                "used": 13,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 4,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 0,
+                "used": 0,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 1,
+                "used": 1,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 5,
+                "used": 5,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 7,
+                "used": 7,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 1,
+                "used": 1,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 10,
+                "used": 10,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 9,
+                "used": 9,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 8,
+                "used": 8,
+                "unused": []
+              }
+            ]
+          },
+          {
+            "sequence": 5,
+            "stage": "scenarios-2",
+            "scenarioId": "scenario-2",
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 1,
+                "used": 1,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 6,
+                "used": 6,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 8,
+                "used": 8,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "moveTable",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              },
+              {
+                "table": "energyTable",
+                "declared": 8,
+                "used": 8,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 9,
+                "used": 9,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "refusalInspection": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "placeholders": [],
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 23842,
+            "limitations": [
+              "Le pescate e i Premi sono ipotesi esplicite; non esiste un record consegnato della nostra lista nel matchup.",
+              "Il documento rules non risolve timing specifici: il caso evita Spiky Energy assegnata e simultaneità decisive.",
+              "La riconciliazione di our-list mantiene contatori incoerenti con la lista esplicita di 60 carte; vengono utilizzate esclusivamente le stampe consegnate."
+            ],
+            "changeSummary": "Costruito un caso contro opponent-1: KO certo di Fan Rotom sotto blocco Strumenti, due Trumbeak preparati e contrattacco di Toucannon. Confrontate diretta Moltres, recupero di Budew e promozione difensiva della seconda copia, senza attribuire KO sufficienti o vittorie forzate.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Prendere il Premio con Fan Rotom e preparare due Trumbeak permette un contrattacco concreto contro danno o rinnovo del blocco?",
+                "assumptions": [
+                  "Ipotesi raggiungibile, non partita osservata. Cominciamo noi. Le pescate indicate sono allocazioni determinate, non accessi garantiti.",
+                  "Le sei carte iniziali di mano includono i Base collocati in Panchina. Tutte le carte non distribuite restano nel mazzo della rispettiva lista esatta di 60.",
+                  "Fan Call trova due Trumbeak e un Pikipek nel primo turno. Le evoluzioni successive sono ordinarie.",
+                  "Il primo Itchy Pollen infligge 10 a Fan Rotom. Nessuna moneta o simultaneità decisiva entra nella dimostrazione.",
+                  "La pesca avversaria della replica è Basic Darkness Energy in tutti i rami. Non sono presenti accessi a Supporter dalla mano iniziale o dalle pescate dichiarate.",
+                  "Le identità dei Premi sono ipotetiche. La discrepanza dei contatori di riconciliazione di our-list resta un limite di provenienza, senza cambiare le stampe esplicitamente consegnate."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Moltres infligge 20; Toucannon lo elimina nel seguito e l'avversario promuove Budew.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher recupera Budew; la ritirata conserva Fire Energy su Moltres. Itchy Pollen rinnova il blocco, ma Toucannon elimina Budew nel seguito.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "La seconda copia di Budew viene promossa direttamente, rinnova Itchy Pollen e conserva Moltres carico senza recuperi o Energie scartate.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 25146,
+            "limitations": [
+              "Le pescate, la mano iniziale e i Premi sono ipotesi dichiarate: il caso non stima frequenze o probabilità del matchup.",
+              "Il documento rules non consegna decisioni specifiche sui timing; il caso evita interazioni decisive con Spiky Energy.",
+              "Our-list contiene una lista esplicita di 60 carte e contatori di riconciliazione incoerenti; sono conservate le stampe e le quantità esplicite."
+            ],
+            "changeSummary": "Ricostruita la chiusura del primo nostro turno con promozione obbligatoria prima della pesca avversaria, anche nella coda del ramo difensivo. Corretti i danni di Feather Rondo sulla Panchina effettiva: 160 nella diretta e nella difesa, 180 nell'accesso. Conservati tre rami completi, contrattacchi, Premi, promozioni e confronti.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Prendere il Premio con Fan Rotom preserva un contrattacco concreto contro danno o rinnovo di Itchy Pollen?",
+                "assumptions": [
+                  "Caso ipotetico raggiungibile, non partita osservata. Cominciamo noi; tutte le carte non distribuite restano nei rispettivi mazzi delle liste esatte di 60 carte.",
+                  "I Base della Panchina iniziale provengono dalle sei carte indicate in hand. Le pescate dichiarate sono allocazioni possibili, non garantite.",
+                  "Fan Call trova due Trumbeak e un Pikipek. Prepariamo entrambi gli stadi intermedi mediante evoluzione ordinaria nel secondo nostro turno, durante il blocco Strumenti.",
+                  "La mano avversaria e le pescate dichiarate non offrono Supporter di pesca, ricerche dal mazzo o accesso a una linea Dreepy. Non si estende questa circostanza al matchup generale.",
+                  "Le promozioni dopo il primo KO appartengono alla chiusura del nostro turno e precedono la pesca avversaria. Ogni ramo dichiara la propria promozione.",
+                  "Le identità dei Premi sono ipotetiche. Non vengono assegnate Spiky Energy né usate monete o simultaneità decisive.",
+                  "La lista esplicita di our-list viene conservata nonostante i contatori incoerenti della riconciliazione."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Moltres infligge 20. Toucannon lo elimina per 160 e l'avversario promuove il Budew rimasto.",
+                    "firstEvents": 0,
+                    "replyEvents": 2
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher recupera Budew e lo rimette in campo; Moltres ritira scartando Psychic Energy, Budew rinnova il blocco. Toucannon elimina Budew per 180 e Moltres viene promosso.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "La riserva Budew è promossa prima della pesca avversaria e rinnova il blocco. Toucannon la elimina per 160; Moltres resta carico e viene promosso.",
+                    "firstEvents": 1,
+                    "replyEvents": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 36023,
+            "limitations": [
+              "Le pescate indicate sostengono soltanto questa ipotesi: il secondo attacco di Toucannon non è garantito in una partita generica.",
+              "Le fonti congelate non risolvono tutti i timing competitivi; nessuna conclusione usa l’interazione fra Spiky Energy e Festival Lead.",
+              "Il record pubblico consegnato riguarda Festival Lead contro il field e non misura questo matchup."
+            ],
+            "changeSummary": "Costruito un solo caso con pressione iniziale di Fan Rotom, risposta che converte il quinto posto in Panchina in due KO, sviluppo alternativo di Seaking, minima da una carta e testimone positivo da 30 danni senza nuove carte.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Il KO economico di Fan Rotom lascia davvero un contrattacco dopo la migliore espansione della Panchina avversaria?",
+                "assumptions": [
+                  "selectedOpponentListId=opponent-1. Tutte le quantità provengono esclusivamente da questa lista e dalla nostra lista congelata.",
+                  "Caso ipotetico raggiungibile, non partita osservata. Cominciamo noi.",
+                  "Le carte elencate in opening.hand sono le sei carte oltre all’Attivo; i Pokémon in opening.bench provengono da quelle carte.",
+                  "Le pescate, i Premi presi e gli esiti di moneta sono allocazioni esplicite dell’ipotesi, non probabilità o accessi garantiti.",
+                  "La prima Tumbling Attack dei rami senza evoluzione dà testa: viene confrontato il suo massimo danno di 30.",
+                  "La pesca del nostro terzo turno è Mist Energy in tutti i rami. Aerial Draw trova Spiky Energy in tutti i rami; nessuna Spiky Energy viene assegnata o coinvolta nei doppi attacchi.",
+                  "La prima copia di Pikipek evoluta in Trumbeak riceve la seconda Mist Energy; la seconda resta senza Energia fino al seguito.",
+                  "Le copie non mosse rimangono nel mazzo: nessuna carta viene rimossa dall’inventario iniziale di 60 carte per lato.",
+                  "Le identità congelate sono utilizzate senza sostenere che l’importazione della nostra lista sia stata riconciliata indipendentemente."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "Due Do the Wave da 100: KO di Fan Rotom e del primo Trumbeak; due Premi. Toucannon superstite risponde con KO su Dipplin.",
+                    "firstEvents": 0,
+                    "replyEvents": 10
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "Poké Pad prepara Seaking; Dipplin prende un Premio e infligge 80 al Trumbeak promosso. Toucannon lo elimina nel turno seguente.",
+                    "firstEvents": 0,
+                    "replyEvents": 8
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Conserva Dipplin e Festival Grounds in mano e sviluppa Seaking; Tumbling Attack infligge 30. Fan Rotom prende poi il KO di Applin. Difesa inferiore alla diretta per Premi e pressione.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 36354,
+            "limitations": [
+              "Le pescate e i Premi specificati valgono per questa ipotesi e non costituiscono una probabilità di continuità.",
+              "Il caso non usa come decisiva l'interazione irrisolta fra Spiky Energy e Festival Lead.",
+              "Il record pubblico consegnato è contro il field, non contro la nostra lista."
+            ],
+            "changeSummary": "Ricostruiti i collegamenti delle tabelle, i Premi, il KO dell'Applin Attivo e le promozioni del seguito. Conservati tre ruoli completi, minima da una carta e testimone positivo senza nuove carte.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Come preparare il contrattacco prima del KO economico di Grookey?",
+                "assumptions": [
+                  "selectedOpponentListId=opponent-1; nessuna quantità proviene da altre liste.",
+                  "Ipotesi raggiungibile, non partita osservata. Cominciamo noi. Le carte della Panchina iniziale sono prese dalle sei carte di opening.hand.",
+                  "Le carte non spostate restano nel mazzo: l'inventario iniziale conserva tutte le 60 carte per lato.",
+                  "Pescate e Premi sono allocazioni dell'ipotesi, non accessi garantiti. La Mist Energy del nostro turno successivo e la Spiky Energy pescata da Aerial Draw sono uguali in tutti i rami; nessuna ricerca avversaria cambia il nostro mazzo.",
+                  "Quando viene eseguito Tumbling Attack, la moneta dà testa: il test confronta il massimo di 30 danni.",
+                  "La prima copia di Trumbeak riceve la seconda Mist Energy. La seconda copia non ha Energia prima della replica.",
+                  "Non viene assegnata Spiky Energy: il caso non dipende dal timing fra i suoi segnalini e Festival Lead.",
+                  "Le stampe della nostra lista sono quelle congelate; non si afferma una riconciliazione indipendente dell'importazione.",
+                  "Il ramo minimo e il testimone di rimozione applicano budget analitici alle nuove carte impiegabili. La diretta completa rappresenta invece la risposta preferita senza quel vincolo."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "Due KO: Fan Rotom e il Trumbeak carico. Il secondo Trumbeak diventa Toucannon e risponde con il KO di Dipplin.",
+                    "firstEvents": 0,
+                    "replyEvents": 10
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "Poké Pad sviluppa Seaking. Dipplin elimina Fan Rotom e infligge 80 al Trumbeak promosso; Toucannon risponde con il KO.",
+                    "firstEvents": 0,
+                    "replyEvents": 8
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Sviluppa Seaking e conserva Dipplin e Festival Grounds. Applin infligge 30; Fan Rotom lo elimina nel seguito. Questa conservazione non supera il vantaggio dei due KO della diretta.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 4,
+            "characters": 17483,
+            "limitations": [
+              "Le pescate e i Premi descrivono un'allocazione possibile delle due liste, non una frequenza o una garanzia.",
+              "Il caso dimostra pressione iniziale e accesso concreto a Bite; non dimostra un KO, la tenuta di Dreepy nel turno seguente o un vantaggio competitivo del matchup."
+            ],
+            "changeSummary": "Costruita una posizione iniziale con tre repliche complete e seguito Bite; la ricerca avversaria è preferita al solo danno immediato per lo sviluppo verificabile di Meganium.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Preparare Bite con Crispin oppure concentrare le Energie su Torchic?",
+                "assumptions": [
+                  "Ipotesi di apertura, non partita osservata. L'avversario comincia; il nostro turno principale è il nostro primo turno.",
+                  "Le identità delle pescate e dei Premi sono ipotetiche. Ogni carta non collocata esplicitamente resta nel mazzo della rispettiva lista esatta.",
+                  "Crispin trova una Fire Energy e una Psychic Energy ancora nel mazzo; non si assume un ordine favorevole dopo il rimescolamento.",
+                  "La pressione è iniziale: nessun ramo dimostra un KO o una vittoria. Il secondo attaccante è Dreepy, senza presumere evoluzioni ancora da cercare."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct-1",
+                    "outcome": "Torchic sopravvive con 40 PS; Bayleef ha una Grass. Bite porta Celebi a 60 danni complessivi, lasciandogli 20 PS.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "access",
+                    "id": "access-1",
+                    "outcome": "Traverse Time trova tre carte di sviluppo. Bite lascia Celebi a 20 PS; Bayleef conserva una Grass e Meganium è realmente in mano per il turno successivo.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend-1",
+                    "outcome": "Chikorita usa Growl, ma il cambio a Dreepy evita la riduzione legata al Defending Pokémon. Bite lascia Chikorita con 30 PS. La Grass di Celebi è persa negli scarti e Bayleef resta in mano.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 5,
+            "characters": 20872,
+            "limitations": [
+              "Il caso descrive uno scambio precoce e condizionato alle aperture dichiarate; non misura il matchup né dimostra una vittoria.",
+              "Nessuna replica raggiunge la soglia del KO in questa posizione: minimumReplyId è null e non esiste una minima da sottoporre a prove di rimozione.",
+              "Le schede consegnate non costituiscono un regolamento completo dei timing; il caso non usa interazioni Festival, Tera o reset di Smolder-sault."
+            ],
+            "changeSummary": "Costruito scenario-2 con una difesa precoce: Dipplin salva Celebi dal secondo Bite. Registrati attacco diretto, recupero dell'Energia appena scartata, difesa senza recupero e attacco nostro successivo in ogni ramo; nessun capitolo o esercizio.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-2",
+                "decision": "Premere ancora su Celebi oppure riconoscere che la ritirata verso Dipplin evita il Premio?",
+                "assumptions": [
+                  "Cominciamo noi. Aperture, Premi e pescate sono ipotesi raggiungibili, non una partita osservata.",
+                  "Il caso verifica una difesa precoce: non presume Dragapult ex, Meganium o Hydrapple ex già accessibili. La tesi riguarda il Premio evitato, non una vittoria.",
+                  "Le carte non collocate nell'apertura o spostate dal registro restano nel mazzo della rispettiva lista esatta di 60 carte.",
+                  "La moneta di Tumbling Attack non viene utilizzata per dimostrare un esito: il suo massimo di 30 non raggiunge la soglia di 40 PS della posizione.",
+                  "Le pescate ordinarie restano identiche nei tre rami. Nessun accesso o rimescolamento modifica le pescate ordinarie mostrate prima del nostro seguito."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "Solar Cutter lascia Dreepy con 10 PS. Il nostro Bite successivo manda KO Celebi; Dipplin già preparato viene promosso.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "Night Stretcher recupera la Grass Energy appena scartata. La manuale la assegna a Dipplin, conservando l'altra Grass Energy in mano. Dipplin attacca e sopravvive al Bite seguente.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Celebi si ritira, Applin evolve e riceve la manuale. Do the Wave infligge 20; il Bite seguente non manda KO Dipplin. Celebi e Night Stretcher restano disponibili.",
+                    "firstEvents": 0,
+                    "replyEvents": 4
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "stopAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 212917,
+          "outputTokens": 19429,
+          "cachedInputTokens": 0,
+          "durationMs": 382151,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T12:53:18.858Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 90590,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 145427,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "toucannon-festival",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 220703,
+          "outputTokens": 30523,
+          "cachedInputTokens": 0,
+          "durationMs": 603689,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T12:56:17.393Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 96617,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 158960,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "status": "interrupted",
+        "failureCode": "call-budget",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 5,
+          "failedAttempts": 3,
+          "attemptLimit": 8,
+          "inputTokens": 169772,
+          "outputTokens": 17926,
+          "cachedInputTokens": 0,
+          "durationMs": 1642575,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": true
+        },
+        "budget": {
+          "stage": "scenarios-2",
+          "checkedAt": "2026-10-31T13:16:29.690Z",
+          "outcome": "blocked",
+          "estimateOnly": true,
+          "reasons": [
+            "calls"
+          ],
+          "remainingCalls": 3,
+          "requiredCalls": 4,
+          "estimatedInputTokens": 79849,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 103791,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      }
+    ]
+  },
+  "nativeDecisionsAudit": "native-decisions-audit.json",
+  "policy": {
+    "inputTarget": 96000,
+    "inputMaximum": 128000,
+    "totalEnvelope": 176000,
+    "margin": 8192,
+    "requestBytes": 500000,
+    "responseCharacters": 100000
+  },
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "jobId": "698eaeed-347f-4c6b-b1bf-d16244d044f0",
+      "startedAt": "2026-10-31T12:48:59.050Z",
+      "endedAt": "2026-10-31T12:55:25.679Z",
+      "passed": false,
+      "error": "scenario-1: promozione diretta omessa in main|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in main|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in main|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in direct|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in direct|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in direct|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in access|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|5|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in defend|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in defend|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in defend|5|ours: opponent / me02-014.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T12:49:00.129Z",
+          "endedAt": "2026-10-31T12:50:09.658Z",
+          "status": "succeeded",
+          "inputHash": "c85837a05f5368fbd0b973df4ef2839f542fc7df27966e2d88e9c01c3793cf4c",
+          "inputBytes": 183179,
+          "durationMs": 69521,
+          "usage": {
+            "inputTokens": 68584,
+            "cachedInputTokens": 0,
+            "outputTokens": 2469
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:50:10.986Z",
+          "endedAt": "2026-10-31T12:53:16.886Z",
+          "status": "failed",
+          "inputHash": "ba3b08e3a0cffa1b9e2d3c9a6a9b2cb65b018b10a8f71e4c1af7ebab82d53329",
+          "inputBytes": 123446,
+          "durationMs": 185893,
+          "usage": {
+            "inputTokens": 68599,
+            "cachedInputTokens": 0,
+            "outputTokens": 8730
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:53:18.915Z",
+          "endedAt": "2026-10-31T12:55:25.658Z",
+          "status": "failed",
+          "inputHash": "beea5ae78b35237ed61b9f4c8b452860e144c596c38c2169cbdb00d370616203",
+          "inputBytes": 145427,
+          "durationMs": 126737,
+          "usage": {
+            "inputTokens": 75734,
+            "cachedInputTokens": 0,
+            "outputTokens": 8230
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 57328,
+          "estimatedInput": 66256,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 183179,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 60149,
+          "estimatedInput": 81203,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 123446,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.315978230533073,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 67282,
+          "estimatedInput": 90590,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 145427,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.315978230533073,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "31face12a5fb0f7359ec8fc78c11120b0b3b708b7921b6cb15fc568b85bc9756",
+          "message": "scenario-1: promozione obbligatoria omessa prima della fine del turno."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "31face12a5fb0f7359ec8fc78c11120b0b3b708b7921b6cb15fc568b85bc9756",
+          "message": "scenario-1: promozione diretta omessa in main|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in main|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in main|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in direct|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in direct|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in direct|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in access|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|5|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in defend|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in defend|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in defend|5|ours: opponent / me02-014."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 212917,
+      "outputTokens": 19429,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 387,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: promozione obbligatoria omessa prima della fine del turno."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: promozione diretta omessa in main|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in main|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in main|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in direct|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in direct|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in direct|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in access|5|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in access|5|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in defend|3|ours: opponent / me02.5-016.\nscenario-1: promozione diretta omessa in defend|3|ours: opponent / me02-014.\nscenario-1: promozione diretta omessa in defend|5|ours: opponent / me02-014."
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "jobId": "aed703ef-f85b-4464-82ab-9918c675a510",
+      "startedAt": "2026-10-31T12:49:00.192Z",
+      "endedAt": "2026-10-31T12:59:07.816Z",
+      "passed": false,
+      "error": "scenario-1: energyTable contiene dati non referenziati o non è una tabella.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T12:49:00.553Z",
+          "endedAt": "2026-10-31T12:50:08.070Z",
+          "status": "succeeded",
+          "inputHash": "7e4db5ebc0de6538a3de4c90d8f1ebf5c2a50fbb94a7b14e1b8b7ec7aa7162fd",
+          "inputBytes": 189317,
+          "durationMs": 67508,
+          "usage": {
+            "inputTokens": 70392,
+            "cachedInputTokens": 0,
+            "outputTokens": 2448
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:50:09.300Z",
+          "endedAt": "2026-10-31T12:56:15.154Z",
+          "status": "failed",
+          "inputHash": "f3bf2292b93e577cf150e762e8cd2f8adb5642a94ece736c8a5c3304f28bd5f0",
+          "inputBytes": 125592,
+          "durationMs": 365849,
+          "usage": {
+            "inputTokens": 69709,
+            "cachedInputTokens": 0,
+            "outputTokens": 16163
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:56:17.455Z",
+          "endedAt": "2026-10-31T12:59:07.793Z",
+          "status": "failed",
+          "inputHash": "7d381df1748757884d9864b62955402971563152cca194123d10812c14f42b5e",
+          "inputBytes": 158960,
+          "durationMs": 170332,
+          "usage": {
+            "inputTokens": 80602,
+            "cachedInputTokens": 0,
+            "outputTokens": 11912
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 59139,
+          "estimatedInput": 68284,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 189317,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 61338,
+          "estimatedInput": 82359,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 125592,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.309308578095673,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 72228,
+          "estimatedInput": 96617,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 158960,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.309308578095673,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "0e6ffe183c7708588d5d22f9e30c6b5b5d43cd3d9720c0a53bad5c4e1149a38f",
+          "message": "scenario-1: opponentLineEvents contiene dati non referenziati o non è una tabella."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "0e6ffe183c7708588d5d22f9e30c6b5b5d43cd3d9720c0a53bad5c4e1149a38f",
+          "message": "scenario-1: energyTable contiene dati non referenziati o non è una tabella."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 220703,
+      "outputTokens": 30523,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 608,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: opponentLineEvents contiene dati non referenziati o non è una tabella."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: energyTable contiene dati non referenziati o non è una tabella."
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "jobId": "8162bed7-d66c-4b37-bc12-16d4740b389e",
+      "startedAt": "2026-10-31T12:49:00.612Z",
+      "endedAt": "2026-10-31T13:16:29.706Z",
+      "passed": false,
+      "error": "Richiesta non inviata. Budget insufficiente: restano 3 chiamate, ma ne servono almeno 4 per completare tutte le verifiche. Il lavoro resta salvato. Questo limite locale è distinto dalla quota del servizio Codex.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T12:49:00.903Z",
+          "endedAt": "2026-10-31T12:50:03.438Z",
+          "status": "succeeded",
+          "inputHash": "7963a059eb87ac5339702003bc1ac2e9151180bfb21685af22e09e419acab74b",
+          "inputBytes": 103586,
+          "durationMs": 62529,
+          "usage": {
+            "inputTokens": 42498,
+            "cachedInputTokens": 0,
+            "outputTokens": 2110
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T12:50:04.029Z",
+          "endedAt": "2026-10-31T13:00:04.147Z",
+          "status": "failed",
+          "inputHash": "5dcbdd72689f6dc4e677f2099f6123ee3136e420269bc34c34ccf7767ac48681",
+          "inputBytes": 132145,
+          "durationMs": 600114,
+          "usage": null
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T13:00:05.224Z",
+          "endedAt": "2026-10-31T13:10:05.309Z",
+          "status": "failed",
+          "inputHash": "5dcbdd72689f6dc4e677f2099f6123ee3136e420269bc34c34ccf7767ac48681",
+          "inputBytes": 132145,
+          "durationMs": 600075,
+          "usage": null
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T13:10:07.382Z",
+          "endedAt": "2026-10-31T13:12:47.775Z",
+          "status": "succeeded",
+          "inputHash": "5dcbdd72689f6dc4e677f2099f6123ee3136e420269bc34c34ccf7767ac48681",
+          "inputBytes": 132145,
+          "durationMs": 160385,
+          "usage": {
+            "inputTokens": 63624,
+            "cachedInputTokens": 0,
+            "outputTokens": 6619
+          }
+        },
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T13:12:48.322Z",
+          "endedAt": "2026-10-31T13:16:27.799Z",
+          "status": "failed",
+          "inputHash": "006bb73896e37be71b4b459e709ba858789b70f088b22c79bc33c53deda56901",
+          "inputBytes": 132242,
+          "durationMs": 219472,
+          "usage": {
+            "inputTokens": 63650,
+            "cachedInputTokens": 0,
+            "outputTokens": 9197
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 31244,
+          "estimatedInput": 37042,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 103586,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 55302,
+          "estimatedInput": 84792,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 132145,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.4962168736397388,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 55302,
+          "estimatedInput": 84792,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 132145,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.4962168736397388,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 55302,
+          "estimatedInput": 84792,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 132145,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.4962168736397388,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 55330,
+          "estimatedInput": 84834,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 132242,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 4,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.4962168736397388,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "7888e23c8ee1d8371179fe8e8ddb65e323c73c19f520a2406acac365f929a846",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "1daa5c6b6e8a16dd3babffebf5c5a0ca57c91517a0bad3f4ea8dc13e44bec698"
+      ],
+      "invalidResponses": [
+        {
+          "sequence": 5,
+          "stage": "scenarios-2",
+          "inputHash": "006bb73896e37be71b4b459e709ba858789b70f088b22c79bc33c53deda56901",
+          "message": "scenario-2: promozione diretta omessa in reply-direct|5|ours: opponent / sv06-018."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 5,
+      "inputTokens": 169772,
+      "outputTokens": 17926,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 2,
+      "elapsedSeconds": 1649,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 1,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "timeout",
+          "message": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "timeout",
+          "message": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati."
+        },
+        {
+          "stage": "scenarios-2",
+          "code": "invalid-response",
+          "message": "scenario-2: promozione diretta omessa in reply-direct|5|ours: opponent / sv06-018."
+        }
+      ]
+    }
+  ],
+  "passed": 0,
+  "scenarioOutputSummary": {
+    "responses": 6,
+    "minimumCharacters": 17483,
+    "maximumCharacters": 36354,
+    "contextSchemasPassed": 6,
+    "losslessRoundtrips": 4,
+    "nativeSchemaPassed": 4,
+    "locallyAcceptedCases": 1
+  },
+  "actualCalls": 11,
+  "inputTokens": 603392,
+  "outputTokens": 67878,
+  "callsWithoutUsage": 2,
+  "unissuedTokenPlans": 0,
+  "elapsedSeconds": 1651,
+  "ui": "Not run: no validated generated guide",
+  "blockedPreflightCandidates": 1,
+  "rawResponsesAvailable": 9
+}

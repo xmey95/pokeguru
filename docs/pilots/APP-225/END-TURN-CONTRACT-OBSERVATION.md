@@ -1,0 +1,9 @@
+# APP-225 — Osservazione sul termine del turno
+
+Durante la prova ampia20, il costruttore del seguito di un ramo alternativo ha ripetuto un turno senza attacco nel testo, mantenendo però il riferimento strutturato a Superb Scissors. I controlli locali lo respingono per audit delle alternative incompleto, pagamento mancante o costo non pagabile. Il timeout della richiesta204 è un esito di trasporto separato: questa osservazione non ne dimostra la causa.
+
+Una verifica locale in sola lettura sul payload206 conferma che il contratto corrente richiede un riferimento a un attacco anche nell'ultimo turno. Sostituire soltanto quel riferimento con null in una copia di prova provoca il rifiuto dello schema. Un test passa in387ms; zero chiamate al modello, nessuna modifica del job o adozione della copia. Log e risultato: `.verify/app225-segments-20261102/epoch20-end-turn-contract.{test.ts,log}` e `epoch20-end-turn-contract-observed.json`.
+
+Il risultato prova un limite di rappresentazione generale del formato corrente, non l'impossibilità di ogni altro seguito. La pesca e le scelte del turno possono consentire alternative entro i requisiti assegnati: questa verifica non enumera tutte le linee legali e non autorizza a saltare attacchi, risorse, audit o sviluppi. La prova congelata resta in corso nei tetti500/1500,riserva24. Nessuna modifica ai sorgenti o ai controlli durante il live.
+
+Al termine della campagna valutare la rappresentazione esplicita di un turno senza attacco, con scelte, motivazione, risorse e sviluppo completi, distinta dalla terminalità della partita. Non usare descrizioni di rinuncia con un attacco fittizio e non trasferire approvazioni storiche. Un eventuale nuovo contratto richiede regressioni su versioni storiche e nuove, rami, proiezioni e riesami: questa nota non dichiara tale correzione già implementata o verificata.

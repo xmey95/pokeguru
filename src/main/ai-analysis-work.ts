@@ -8,6 +8,7 @@ import { readAiTokenUsage } from '../shared/ai-evidence'
 import type { AiJobKind } from '../shared/ai-job'
 import type { AiJobStore } from './ai-job-store'
 import { AiFailure, aiFailureCode } from './ai-failure'
+import type {AiBudgetSnapshot} from '../shared/ai-limits'
 import { runStructuredCodex } from './codex-evidence-plan'
 import { AiEvidenceArchive } from './ai-evidence-archive'
 import { archiveReferences, evidenceArchive } from './ai-evidence-access'
@@ -17,7 +18,7 @@ import { prepareEvidenceManifest, prepareSummaryManifest, readEvidenceBatch, rea
 import { eventAnalysisContext, eventPlanMetrics, prepareEventAnalysisInventory } from './ai-event-analysis'
 import { DECISION_POLICY } from './ai-decision-events'
 
-export interface AiWorkflowInput { schemaVersion?: 1 | 2 | 3 | 4 | 5; kind: AiJobKind; args: unknown[] }
+export interface AiWorkflowInput { schemaVersion?: 1 | 2 | 3 | 4 | 5; guideVersion?: 1; guideConvergence?:'until-valid'; guideTransport?:'minimum-visible-v1'; kind: AiJobKind; args: unknown[] }
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
 function save(path: string, value: unknown): void {
@@ -36,12 +37,15 @@ export function readAiWorkflow(directory: string, jobs?: AiJobStore, id?: string
   if (!input && existsSync(path)) input = JSON.parse(readFileSync(path, 'utf8')) as AiWorkflowInput
   if (!input) return null
   if (!['thread-ask', 'matchup-generate', 'matchup-revise', 'matchup-continue'].includes(input.kind) ||
-    !Array.isArray(input.args) || ![undefined, 1, 2, 3, 4, 5].includes(input.schemaVersion)) throw new Error('Contesto di ripresa non valido.')
+    !Array.isArray(input.args) || ![undefined, 1, 2, 3, 4, 5].includes(input.schemaVersion) || ![undefined, 1].includes(input.guideVersion) ||
+    input.guideConvergence!==undefined&&(input.guideConvergence!=='until-valid'||input.schemaVersion!==2||input.guideVersion!==1||!input.kind.startsWith('matchup-')) ||
+    input.guideTransport!==undefined&&(input.guideTransport!=='minimum-visible-v1'||input.guideConvergence!=='until-valid')) throw new Error('Contesto di ripresa non valido.')
   return input
 }
 
 /** Each completed call is saved atomically and keyed by its full input, never by project name. */
 export class AiAnalysisWork {
+  get guideVersion(): 1 | undefined { return this.archive.value<AiWorkflowInput>('workflow', 'input')?.guideVersion }
   private activeCalls: AiDiagnostics['calls'] = []
   private activeAttempt?: string
   private closed = false
@@ -61,7 +65,7 @@ export class AiAnalysisWork {
     mkdirSync(directory, { recursive: true })
     if (input) {
       const workflow = readAiWorkflow(directory, jobs, id) ?? { ...input,
-        schemaVersion: input.schemaVersion ?? (input.kind === 'thread-ask' ? 5 as const : 4 as const) }
+        schemaVersion: input.schemaVersion ?? (input.guideVersion===1?2 as const:input.kind === 'thread-ask' ? 5 as const : 4 as const) }
       this.archive.saveValue('workflow', 'input', workflow)
       if (workflow.schemaVersion === 3) this.archive.saveValue('analysis-policy', 'algorithm', 'event-aggregates-v1')
       if (workflow.schemaVersion === 4 || workflow.schemaVersion === 5)
@@ -76,6 +80,15 @@ export class AiAnalysisWork {
     if (this.signal.aborted) throw new AiFailure(this.signal.reason === 'pause' ? 'paused' : 'cancelled',
       this.signal.reason === 'pause' ? 'Analisi in pausa. I lotti completati sono conservati.' : 'Operazione Codex annullata.')
   }
+
+  guideProgress(value: NonNullable<AiDiagnostics['guide']>): void { this.jobs.recordDiagnostics(this.id, { guide: value }) }
+  assertTransportResumeAuthorized():void {
+    this.check()
+    const blocked=this.jobs.blockedTransportFailure(this.id)
+    if(blocked)throw new AiFailure(blocked.code??'unknown',blocked.message??'Richiesta interrotta: serve una ripresa esplicita.')
+  }
+  budget(value:AiBudgetSnapshot):void{this.jobs.recordDiagnostics(this.id,{budget:value,...value.outcome==='ready'?{failureCode:undefined}:{}})}
+  failure(error:unknown):void{this.jobs.recordDiagnostics(this.id,{failureCode:aiFailureCode(error),...error instanceof AiFailure&&error.budget?{budget:error.budget}:{}})}
 
   snapshot<T>(name: string, _input: unknown, create: () => T): T {
     this.check()
@@ -97,17 +110,26 @@ export class AiAnalysisWork {
   }
 
   async run<T>(kind: NonNullable<AiDiagnostics['calls']>[number]['kind'], prompt: string,
-    config: AiRunConfig, execute: (reportUsage: (usage: unknown) => void) => Promise<T>, cache = true): Promise<T> {
+    config: AiRunConfig, execute: (reportUsage:(usage:unknown)=>void) => Promise<T>, cache = true,retry?:{maximumFailures?:1;maximumTransportFailures?:1;maximumStructuralFailures?:number;resumeAfterBudgetReplan?:true;cacheValidation?:{id:string;validate:(value:T)=>void}}): Promise<T> {
     this.check()
-    const key = hash([kind, prompt, config])
-    const path = join(this.directory, `call-${key}.json`)
-    const saved = cache ? this.jobs.callResult<T>(this.id, key) : undefined
-    if (cache && (saved || existsSync(path))) {
-      const value = saved ? saved.value : JSON.parse(readFileSync(path, 'utf8')) as T
-      if (!saved) this.jobs.saveCallResult(this.id, key, value)
+    const {cacheValidation,...retryOptions}=retry??{}
+    if(cacheValidation&&(!cacheValidation.id.trim()||cacheValidation.id.length>100))throw new Error('Identità della validazione cache non valida.')
+    const validate=(value:T)=>{try{cacheValidation?.validate(value)}catch(error){throw error instanceof AiFailure?error:new AiFailure('invalid-response',error instanceof Error?error.message:'Risultato cache non conforme.')}}
+    const originKey=hash([kind,prompt,config]);let key=originKey
+    if(cache)for(let depth=0;;depth++){
+      if(depth>32)throw new AiFailure('invalid-response','Troppi risultati cache non conformi; nessuna richiesta inviata.')
+      const path=join(this.directory,`call-${key}.json`),saved=this.jobs.callResult<T>(this.id,key)
+      if(!saved&&!existsSync(path))break
+      const value=saved?saved.value:JSON.parse(readFileSync(path,'utf8')) as T
+      try{validate(value)}catch(error){
+        const replacementKey=this.recordCacheRejection(kind,prompt,originKey,key,cacheValidation!.id,value,error,depth)
+        key=replacementKey;continue
+      }
       this.reuse(kind)
+      if(!saved)this.jobs.saveCallResult(this.id,key,value)
       return value
     }
+    this.assertTransportResumeAuthorized()
     const call: NonNullable<AiDiagnostics['calls']>[number] = { kind,
       startedAt: new Date().toISOString(), endedAt: null, status: 'running',
       inputBytes: Buffer.byteLength(prompt, 'utf8') }
@@ -130,6 +152,7 @@ export class AiAnalysisWork {
             readAiTokenUsage(raw?.promptAudit?.usage) ?? readAiTokenUsage(raw?.report?.promptAudit?.usage)
           if (usage) reportUsage(usage)
           this.check()
+          validate(value)
           this.jobs.finishCallAttempt(this.id, attempt, 'succeeded', performance.now() - started,
             cache ? { key, value } : undefined)
           return value
@@ -140,17 +163,17 @@ export class AiAnalysisWork {
           throw error
         } finally { this.activeAttempt = undefined }
       }, { read: () => this.jobs.callState(this.id, key), write: (state) => this.jobs.saveCallState(this.id, key, state) },
-      { signal: this.signal, onWaiting: (state) => {
+      { signal: this.signal,...retryOptions, onWaiting: (state) => {
         this.jobs.recordDiagnostics(this.id, { automaticWait: true, retryAttempt: state.failures,
           nextRetryAt: new Date(state.nextAttemptAt!).toISOString(), failureCode: state.code })
         this.jobs.updateProgress(this.id, kind === 'planning' ? 'planning' : 'analysis',
-          `Attendo Codex e riprovo automaticamente (${state.failures + 1}/3). Il lavoro completato è salvato.`)
-      }, onRunning: () => this.jobs.recordDiagnostics(this.id, { automaticWait: false, nextRetryAt: undefined }),
-      onWaitElapsed: (milliseconds) => this.jobs.recordCallWait(this.id, kind, milliseconds) })
+          `Attendo Codex e riprovo automaticamente (${state.failures + 1}/${retry?.maximumFailures??(state.code==='invalid-response'?retry?.maximumStructuralFailures??2:3)}). Il lavoro completato è salvato.`)
+      }, onRunning: () => this.jobs.recordDiagnostics(this.id, { automaticWait: false, nextRetryAt: undefined }),onWaitElapsed:(milliseconds)=>this.jobs.recordCallWait(this.id,kind,milliseconds) })
       call.status = 'succeeded'
       return result
     } catch (error) {
       call.status = 'failed'; call.failureCode = this.signal.reason === 'pause' ? 'paused' : aiFailureCode(error)
+      this.failure(error)
       throw error
     } finally {
       call.endedAt = new Date().toISOString()
@@ -162,6 +185,72 @@ export class AiAnalysisWork {
   reuse(kind: NonNullable<AiDiagnostics['calls']>[number]['kind'], count = 1): void {
     this.check()
     this.jobs.recordCallCacheHit(this.id, kind, count)
+  }
+
+  /** Revalidate a completed, exact-prompt raw after a cache/derived-value
+   * validator fix. No provider, attempt, usage sample or approval is invented. */
+  restoreGuideRawCall<T>(kind:NonNullable<AiDiagnostics['calls']>[number]['kind'],prompt:string,
+    config:AiRunConfig,schema:object,decode:(raw:unknown)=>T,validation:{id:string;validate:(value:T)=>void},transportPrompt:string|(()=>string)=prompt):boolean{
+    this.check()
+    if(!validation.id.trim()||validation.id.length>100)throw new Error('Identità della validazione cache non valida.')
+    const originKey=hash([kind,prompt,config]);let cacheKey=originKey
+    // Follow the SAME immutable rejection chain as run(). A conforming value
+    // wins without resolving a transport. A rejected derived value is kept;
+    // its empty replacement slot may recover an authenticated original raw.
+    for(let depth=0;;depth++){
+      if(depth>32)throw new AiFailure('invalid-response','Troppi risultati cache non conformi; nessuna richiesta inviata.')
+      const path=join(this.directory,`call-${cacheKey}.json`),saved=this.jobs.callResult<T>(this.id,cacheKey)
+      if(!saved&&!existsSync(path))break
+      const value=saved?saved.value:JSON.parse(readFileSync(path,'utf8')) as T
+      try{validation.validate(value);return false}catch(error){cacheKey=this.recordCacheRejection(kind,prompt,originKey,cacheKey,validation.id,value,error,depth)}
+    }
+    const actualTransport=typeof transportPrompt==='function'?transportPrompt():transportPrompt,inputHash=hash(actualTransport)
+    const origin=this.archive.value<any>('guide-prompt',inputHash)
+    const shape=this.archive.value<any>('guide-output-schema',hash([prompt,schema]))
+    if(!origin||origin.prompt!==actualTransport||hash(origin.config)!==hash(config)||!shape||shape.stage!==origin.stage||hash(shape.schema)!==hash(schema))return false
+    const rows=[...this.archive.values<any>('guide-raw-response')].filter(r=>r.value.inputHash===inputHash&&r.value.stage===origin.stage).sort((a,b)=>Number(a.key)-Number(b.key))
+    for(const source of rows){
+      const start=this.archive.value<any>('guide-attempt-start',source.key),end=this.archive.value<any>('guide-attempt-end',source.key)
+      if(!start||start.sequence!==Number(source.key)||start.inputHash!==inputHash||start.stage!==origin.stage||end?.status!=='succeeded'||end.sequence!==start.sequence||end.inputHash!==inputHash||end.stage!==origin.stage)continue
+      let value:T
+      try{value=decode(structuredClone(source.value.raw));validation.validate(value)}catch{continue}
+      const replacement=cacheKey!==originKey
+      const receipt={version:replacement?2:1,sourceSequence:source.key,inputHash,logicalPromptHash:hash(prompt),rawHash:hash(source.value.raw),schemaHash:hash(schema),configHash:hash(config),cacheKey,...replacement?{originCacheKey:originKey}:{},validationId:validation.id,valueHash:hash(value)}
+      this.archive.saveValue(replacement?'guide-raw-cache-recovery-v2':'guide-raw-cache-recovery-v1',hash(receipt),receipt)
+      this.jobs.saveCallResult(this.id,cacheKey,value)
+      return true
+    }
+    return false
+  }
+
+  /** Inspect an exact immutable call cache without issuing a request. */
+  cachedCall<T>(kind:NonNullable<AiDiagnostics['calls']>[number]['kind'],prompt:string,config:AiRunConfig,validation?:{id:string;validate:(value:T)=>void}):{value:T}|undefined{
+    this.check()
+    if(validation&&(!validation.id.trim()||validation.id.length>100))throw new Error('Identità della validazione cache non valida.')
+    const originKey=hash([kind,prompt,config]);let key=originKey
+    for(let depth=0;depth<=32;depth++){
+      const saved=this.jobs.callResult<T>(this.id,key)
+      if(!saved)return undefined
+      try{validation?.validate(saved.value);return saved}catch(error){
+        const replacementKey=this.recordCacheRejection(kind,prompt,originKey,key,validation!.id,saved.value,error,depth)
+        key=replacementKey
+      }
+    }
+    throw new AiFailure('invalid-response','Troppi risultati cache non conformi; nessuna richiesta inviata.')
+  }
+
+  private recordCacheRejection(kind:NonNullable<AiDiagnostics['calls']>[number]['kind'],prompt:string,originKey:string,cacheKey:string,validationId:string,value:unknown,error:unknown,depth:number):string{
+    const valueHash=hash(value),replacementKey=hash([cacheKey,'validated-cache',validationId,valueHash]),record={kind,promptHash:hash(prompt),valueHash,validationId,replacementKey,message:error instanceof Error?error.message:String(error)}
+    this.archive.saveValue('ai-call-cache-validation-rejected',hash([originKey,validationId,cacheKey,valueHash]),{...record,originKey,cacheKey,depth})
+    if(!this.archive.value('ai-call-cache-rejected',originKey))this.archive.saveValue('ai-call-cache-rejected',originKey,record)
+    return replacementKey
+  }
+
+  rejectedCachedCall(kind:NonNullable<AiDiagnostics['calls']>[number]['kind'],prompt:string,config:AiRunConfig,validationId:string):{valueHash:string;message:string;validationId:string}|undefined{
+    this.check();const originKey=hash([kind,prompt,config])
+    const records=[...this.archive.values<any>('ai-call-cache-validation-rejected')].map(r=>r.value).filter(r=>r.originKey===originKey&&r.validationId===validationId).sort((a,b)=>a.depth-b.depth)
+    const legacy=this.archive.value<any>('ai-call-cache-rejected',originKey)
+    return records.at(-1)??(legacy?.validationId===validationId?legacy:undefined)
   }
 
   promptBytes(bytes: number): void {

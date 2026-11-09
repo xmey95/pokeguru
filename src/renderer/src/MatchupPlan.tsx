@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { hasStrategyPhases, type MatchupReport } from '../../shared/meta-matchups'
 import { useViewState } from './Navigation'
 import { matchupPlanNarrative } from './matchup-plan-format'
+import { DeepMatchupGuide } from './DeepMatchupGuide'
 
 const phases = [['opening', 'Apertura'], ['development', 'Sviluppo'], ['closing', 'Chiusura']] as const
 
@@ -15,6 +16,7 @@ export function MatchupPlan({ report, renderText, scope = 'current' }: {
   const [selected, setSelected] = useViewState<number>(`matchup.phase:${context}`, 0)
   const active = selected >= 0 && selected < phases.length ? selected : 0
   const planText = (value: string) => renderText(matchupPlanNarrative(value))
+  if (report.guide?.formatVersion === 1) return <DeepMatchupGuide guide={report.guide} renderText={renderText} />
   if (!hasStrategyPhases(report.strategyPhases)) return <div className="matchup-plan legacy-plan">
     {planText(report.strategy)}
   </div>

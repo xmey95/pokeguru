@@ -1,0 +1,3478 @@
+{
+  "task": "APP-212",
+  "date": "2026-10-31",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "promptVersion": "matchup-guide-20",
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "manualCorrections": 0,
+  "diagnosticCalls": 0,
+  "estimateOnly": true,
+  "sealedFiles": 57,
+  "changedSealedFiles": [],
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 427,
+    "externalSkipped": 44,
+    "targetedTests": 98,
+    "typecheck": "pass",
+    "build": "pass",
+    "offlineOutputReplay": "pass",
+    "offlineAllSchemas": "pass",
+    "postLiveChecks": 3
+  },
+  "timeoutRecovery": {
+    "at": "2026-10-31T14:43:47.894Z",
+    "modelCallsForAudit": 0,
+    "actualInvocations": 11,
+    "automaticTimeoutRetries": [
+      {
+        "id": "toucannon-festival",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "identicalInputHash": "2119d90aa3c0f855f10594731523e4986c55ba51671dc6af24e47586e6c263e5",
+        "singleImmutableContext": true,
+        "remainingBefore": 7,
+        "remainingOnRetry": 6,
+        "actualRetryInvoked": true,
+        "retryStatus": "failed"
+      }
+    ],
+    "immutableContextFailures": 0
+  },
+  "outputCompressionAudit": {
+    "modelCalls": 0,
+    "priorGuidesChanged": false,
+    "oldCasesManuallyRepaired": false,
+    "rows": [
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 2,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-19",
+        "error": null,
+        "localChecks": {
+          "errors": [],
+          "checks": {
+            "scenarios": 1,
+            "quantities": 16,
+            "calculations": 15,
+            "transitions": 17
+          }
+        },
+        "roundTripIdentical": true,
+        "inlineCharacters": 24608,
+        "completeAuditDiagnostic": null
+      },
+      {
+        "id": "toucannon-dragapult",
+        "sequence": 3,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-19",
+        "error": "scenario-2: accesso/sviluppo omesso in main|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in direct-moltres|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in access-mind-bend|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in defend-budew|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in witness-fire-only|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in witness-darkness-retreat|5|ours: me03-113 (hand).",
+        "localChecks": {
+          "errors": [
+            "scenario-2: accesso/sviluppo omesso in main|5|ours: me03-113 (hand).",
+            "scenario-2: accesso/sviluppo omesso in direct-moltres|5|ours: me03-113 (hand).",
+            "scenario-2: accesso/sviluppo omesso in access-mind-bend|5|ours: me03-113 (hand).",
+            "scenario-2: accesso/sviluppo omesso in defend-budew|5|ours: me03-113 (hand).",
+            "scenario-2: accesso/sviluppo omesso in witness-fire-only|5|ours: me03-113 (hand).",
+            "scenario-2: accesso/sviluppo omesso in witness-darkness-retreat|5|ours: me03-113 (hand)."
+          ],
+          "checks": {
+            "scenarios": 1,
+            "quantities": 19,
+            "calculations": 21,
+            "transitions": 20
+          }
+        },
+        "roundTripIdentical": true,
+        "inlineCharacters": 36574,
+        "completeAuditDiagnostic": "Error: scenario-2: accesso/sviluppo omesso in main|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in direct-moltres|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in access-mind-bend|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in defend-budew|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in witness-fire-only|5|ours: me03-113 (hand).\nscenario-2: accesso/sviluppo omesso in witness-darkness-retreat|5|ours: me03-113 (hand).\nFRONTIERA COMPLETA DAL REGISTRO (dati, non mosse certificate): [{\"lineId\":\"setup\",\"turn\":1,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"}],\"cards\":[{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-256\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv09-159\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\",\"hand\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"hand\"],\"maximumCopies\":2}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":2,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"me02-014\",\"attackName\":\"Fighting Wings\"},{\"printId\":\"sv06-095\",\"attackName\":\"Mind Bend\"}],\"cards\":[{\"printId\":\"mee-015\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv07-133\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"active\",\"hand\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02-014\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"sv06-095\",\"zones\":[\"bench\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-256\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-095\",\"attackName\":\"Mind Bend\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"me02-014\",\"attackName\":\"Fighting Wings\"}],\"cards\":[{\"printId\":\"sv07-133\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"sv06-095\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02-014\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"mee-015\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"me02.5-250\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me03-113\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"me02-014\",\"sv06-095\",\"me02.5-016\"]}]},{\"lineId\":\"direct-moltres\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-256\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"direct-moltres\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-095\",\"attackName\":\"Mind Bend\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"me02-014\",\"attackName\":\"Fighting Wings\"}],\"cards\":[{\"printId\":\"sv07-133\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"sv06-095\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02-014\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-015\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"direct-moltres\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"me02.5-250\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me03-113\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-095\",\"me02.5-016\"]}]},{\"lineId\":\"access-mind-bend\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-256\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"access-mind-bend\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-095\",\"attackName\":\"Mind Bend\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"me02-014\",\"attackName\":\"Fighting Wings\"}],\"cards\":[{\"printId\":\"sv07-133\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"sv06-095\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02-014\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"mee-015\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"access-mind-bend\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"discard\",\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me03-113\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"me02-014\",\"me02.5-016\"]}]},{\"lineId\":\"defend-budew\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-256\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"defend-budew\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-095\",\"attackName\":\"Mind Bend\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"me02-014\",\"attackName\":\"Fighting Wings\"}],\"cards\":[{\"printId\":\"sv07-133\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"sv06-095\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02-014\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"mee-015\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"defend-budew\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"me02.5-250\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me03-113\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"me02-014\",\"sv06-095\",\"me02.5-016\"]}]},{\"lineId\":\"witness-fire-only\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-256\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"witness-fire-only\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-095\",\"attackName\":\"Mind Bend\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"me02-014\",\"attackName\":\"Fighting Wings\"}],\"cards\":[{\"printId\":\"sv07-133\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"sv06-095\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02-014\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-015\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"witness-fire-only\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"me02.5-250\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me03-113\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-095\",\"me02.5-016\"]}]},{\"lineId\":\"witness-darkness-retreat\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-256\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"witness-darkness-retreat\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-095\",\"attackName\":\"Mind Bend\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"me02-014\",\"attackName\":\"Fighting Wings\"}],\"cards\":[{\"printId\":\"sv07-133\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"sv06-095\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02-014\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"mee-015\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"witness-darkness-retreat\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"me02.5-250\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me03-113\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"me02-014\",\"sv06-095\",\"me02.5-016\"]}]}]. Correggere ogni tactical del turno/ramo indicato: cards deve dichiarare esplicitamente anche carte in mano appena pescate o poi scartate, Energie e accessi. Non basta modificare il testo comparison. Nessuna carta o valutazione è stata aggiunta automaticamente."
+      },
+      {
+        "id": "toucannon-festival",
+        "sequence": 3,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-19",
+        "error": "Error: scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"moveTable\",\"requiredUse\":\"m/moves di un evento referenziato\",\"entries\":[{\"index\":13,\"value\":{\"side\":\"ours\",\"printId\":\"me03-113\",\"count\":1,\"from\":\"hand\",\"to\":\"discard\"}},{\"index\":14,\"value\":{\"side\":\"ours\",\"printId\":\"me05-094\",\"count\":1,\"from\":\"deck\",\"to\":\"hand\"}},{\"index\":45,\"value\":{\"side\":\"ours\",\"printId\":\"me02-116\",\"count\":1,\"from\":\"hand\",\"to\":\"stadium\"}},{\"index\":49,\"value\":{\"side\":\"opponent\",\"printId\":\"sv06-017\",\"count\":1,\"from\":\"bench\",\"to\":\"active\"}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+        "localChecks": null,
+        "roundTripIdentical": false,
+        "inlineCharacters": null,
+        "completeAuditDiagnostic": null
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 2,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-19",
+        "error": "Error: scenario-1: grafo dei riferimenti non valido: [\"reply-defend.turns.opponent.events[5].moves[1]: riferimento moveTable[31] assente o non intero.\",\"reply-defend.turns.opponent.events[5].moves[2]: riferimento moveTable[32] assente o non intero.\"]. Dati non referenziati nelle tabelle: [{\"table\":\"moveTable\",\"index\":27,\"value\":{\"side\":\"ours\",\"printId\":\"sv08.5-004\",\"count\":1,\"from\":\"active\",\"to\":\"bench\"}},{\"table\":\"moveTable\",\"index\":29,\"value\":{\"side\":\"opponent\",\"printId\":\"sv06-017\",\"count\":1,\"from\":\"deck\",\"to\":\"hand\"}}]. Correggere insieme tutti gli indici e i rami prima dell'espansione; nessun dato è stato collegato, cancellato o applicato automaticamente.",
+        "localChecks": null,
+        "roundTripIdentical": false,
+        "inlineCharacters": null,
+        "completeAuditDiagnostic": null
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 3,
+        "rawUnchanged": true,
+        "legacyVersion": "matchup-guide-19",
+        "error": "Error: scenario-1: dati non referenziati nelle tabelle: [{\"table\":\"energyTable\",\"requiredUse\":\"e/energyRoutes di un evento referenziato\",\"entries\":[{\"index\":10,\"value\":{\"side\":\"opponent\",\"printId\":\"mee-009\",\"count\":2,\"path\":[\"attached\",\"discard\"],\"hostPrintId\":\"sv06-025\",\"sourceIds\":[\"rules\",\"card:sv06-025\"],\"attachment\":null}}]}]. Correggere TUTTI i riferimenti e i rami insieme. La tabella segue il giocatore DI TURNO, non affectedSide: una promozione avversaria dopo il nostro KO appartiene a ourLineEvents. Non eliminare fatti o prove necessari né dichiarare una riga usata senza eseguirla; distinguere eventuali duplicati di elaborazione. Nessuna riga è stata applicata, collegata o cancellata automaticamente.",
+        "localChecks": null,
+        "roundTripIdentical": false,
+        "inlineCharacters": null,
+        "completeAuditDiagnostic": null
+      }
+    ]
+  },
+  "feedbackAudit": {
+    "at": "2026-10-31T14:43:47.982Z",
+    "modelCalls": 0,
+    "readOnly": true,
+    "retries": [
+      {
+        "id": "toucannon-dragapult",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "d0b848e515d2d1cb3fb8c6e78ceecb9bfaef4952c8c010936629ed0d6223ee87",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 126697,
+        "retryInputBytes": 166756
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "f9075b2492e873c6c57d9dec52e983c26f906c32ec6bb6d7905646212bf2ba2f",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "plain",
+        "previousInputBytes": 134682,
+        "retryInputBytes": 139924
+      }
+    ]
+  },
+  "outputProtocol": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 28012,
+            "encoding": "pg-scenario-tables-3",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 39809,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "projectionError": "Error: scenario-1: setup|3|ours confronto promozione duplicato, estraneo o senza motivo: opponent|sv06-128.\nFRONTIERA COMPLETA DAL REGISTRO (dati, non mosse certificate): [{\"lineId\":\"setup\",\"turn\":1,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-067\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":2,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"}],\"cards\":[{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"main\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\"]}]},{\"lineId\":\"direct\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"direct\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"direct\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\"]}]},{\"lineId\":\"access\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"access\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\",\"hand\",\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"access\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":1},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\",\"sv06-129\"]}]},{\"lineId\":\"defend\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"defend\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"},{\"printId\":\"sv06-130\",\"attackName\":\"Jet Headbutt\"},{\"printId\":\"sv06-130\",\"attackName\":\"Phantom Dive\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"defend\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]}]. Correggere ogni tactical del turno/ramo indicato: cards deve dichiarare esplicitamente anche carte in mano appena pescate o poi scartate, Energie e accessi. Non basta modificare il testo comparison. Nessuna carta o valutazione è stata aggiunta automaticamente."
+            },
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 9,
+                  "opponentSetupEvents": 6,
+                  "ourLineEvents": 11,
+                  "opponentLineEvents": 14,
+                  "ourFinalAttacks": 2
+                },
+                "audits": 11,
+                "promotionReviewsDeclared": 8,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 35183,
+            "encoding": "pg-scenario-tables-3",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 61991,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "projectionError": "Error: scenario-1: accessProof.eventIndex non indica un accesso aggiuntivo nel turno della replica; la pescata ordinaria non è sufficiente."
+            },
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 11,
+                  "opponentSetupEvents": 6,
+                  "ourLineEvents": 20,
+                  "opponentLineEvents": 17,
+                  "ourFinalAttacks": 2
+                },
+                "audits": 11,
+                "promotionReviewsDeclared": 7,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 38894,
+            "encoding": "pg-scenario-tables-3",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 59206,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "projectionError": "Error: scenario-1: sv06-155 ×1 non disponibile in opponent/deck. Evento turno 3 opponent: Il secondo Rapid Draw infligge altri 60 e pesca Lana's Aid e Growing Grass Energy.. Disponibilità effettiva: active=0, bench=0, evolution=0, attached=0, hand=0, discard=0, prizes=1, deck=0, stadium=0, lost=0. Non inventare un accesso: correggere il percorso dichiarato e la sua fonte, oppure cambiare linea."
+            },
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 0,
+                  "opponentSetupEvents": 3,
+                  "ourLineEvents": 25,
+                  "opponentLineEvents": 16,
+                  "ourFinalAttacks": 4
+                },
+                "audits": 10,
+                "promotionReviewsDeclared": 22,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "status": "failed",
+            "responseCharacters": 4470,
+            "encoding": "pg-scenario-tables-3",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": null,
+            "roundTripIdentical": false,
+            "nativeSchemaPassed": false,
+            "error": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro richiesto. Questo output non costituisce un caso eseguibile o validato e non deve essere utilizzato come guida. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "expansionArchived": false,
+            "localChecks": null,
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 0,
+                  "opponentSetupEvents": 0,
+                  "ourLineEvents": 0,
+                  "opponentLineEvents": 0,
+                  "ourFinalAttacks": 1
+                },
+                "audits": 3,
+                "promotionReviewsDeclared": 0,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "status": "succeeded",
+            "responseCharacters": 24424,
+            "encoding": "pg-scenario-tables-3",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 38706,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 19,
+                "calculations": 13,
+                "transitions": 19
+              }
+            },
+            "tables": [
+              {
+                "id": "scenario-1",
+                "events": {
+                  "ourSetupEvents": 1,
+                  "opponentSetupEvents": 2,
+                  "ourLineEvents": 13,
+                  "opponentLineEvents": 17,
+                  "ourFinalAttacks": 2
+                },
+                "audits": 9,
+                "promotionReviewsDeclared": 1,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-2",
+            "status": "succeeded",
+            "responseCharacters": 21883,
+            "encoding": "pg-scenario-tables-3",
+            "wireSchemaPassed": true,
+            "wireError": null,
+            "expandedCharacters": 28336,
+            "roundTripIdentical": true,
+            "nativeSchemaPassed": true,
+            "error": null,
+            "expansionArchived": true,
+            "localChecks": {
+              "errors": [],
+              "checks": {
+                "scenarios": 1,
+                "quantities": 21,
+                "calculations": 8,
+                "transitions": 9
+              }
+            },
+            "tables": [
+              {
+                "id": "scenario-2",
+                "events": {
+                  "ourSetupEvents": 4,
+                  "opponentSetupEvents": 4,
+                  "ourLineEvents": 4,
+                  "opponentLineEvents": 5,
+                  "ourFinalAttacks": 3
+                },
+                "audits": 11,
+                "promotionReviewsDeclared": 1,
+                "roles": [
+                  "direct",
+                  "access",
+                  "defend",
+                  "others"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "referenceAudit": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "manualEdits": 0,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-tables-3",
+            "inlineMovesAtReferenceSites": 57,
+            "inlineRoutesAtReferenceSites": 21,
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 9,
+                "used": 9,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 6,
+                "used": 6,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 14,
+                "used": 14,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-tables-3",
+            "inlineMovesAtReferenceSites": 121,
+            "inlineRoutesAtReferenceSites": 26,
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 6,
+                "used": 6,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 20,
+                "used": 20,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 17,
+                "used": 17,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-tables-3",
+            "inlineMovesAtReferenceSites": 109,
+            "inlineRoutesAtReferenceSites": 18,
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 0,
+                "used": 0,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 25,
+                "used": 25,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 16,
+                "used": 16,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 4,
+                "used": 4,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 10,
+                "used": 10,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-tables-3",
+            "inlineMovesAtReferenceSites": 0,
+            "inlineRoutesAtReferenceSites": 0,
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 0,
+                "used": 0,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 0,
+                "used": 0,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 0,
+                "used": 0,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 0,
+                "used": 0,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 1,
+                "used": 1,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "scenarioId": "scenario-1",
+            "encoding": "pg-scenario-tables-3",
+            "inlineMovesAtReferenceSites": 48,
+            "inlineRoutesAtReferenceSites": 34,
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 1,
+                "used": 1,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 13,
+                "used": 13,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 17,
+                "used": 17,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 2,
+                "used": 2,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 9,
+                "used": 9,
+                "unused": []
+              }
+            ]
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-2",
+            "scenarioId": "scenario-2",
+            "encoding": "pg-scenario-tables-3",
+            "inlineMovesAtReferenceSites": 20,
+            "inlineRoutesAtReferenceSites": 9,
+            "invalidReferences": [],
+            "tables": [
+              {
+                "table": "ourSetupEvents",
+                "declared": 4,
+                "used": 4,
+                "unused": []
+              },
+              {
+                "table": "opponentSetupEvents",
+                "declared": 4,
+                "used": 4,
+                "unused": []
+              },
+              {
+                "table": "ourLineEvents",
+                "declared": 4,
+                "used": 4,
+                "unused": []
+              },
+              {
+                "table": "opponentLineEvents",
+                "declared": 5,
+                "used": 5,
+                "unused": []
+              },
+              {
+                "table": "ourFinalAttacks",
+                "declared": 3,
+                "used": 3,
+                "unused": []
+              },
+              {
+                "table": "auditTable",
+                "declared": 11,
+                "used": 11,
+                "unused": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "calibrationAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "maximumPolicyUnchanged": true,
+    "perRequestContextMeasured": false,
+    "calibrationRule": "max(1.12, all observed turn input / visible prompt+schema * 1.1), plus 2048 tokens; no outlier divided or discarded",
+    "source": "https://learn.chatgpt.com/docs/non-interactive-mode",
+    "historicalOutlierCause": "Not reconstructible from archived final counters; original CLI used --ephemeral",
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "samples": [
+          {
+            "sequence": 1,
+            "visibleTokens": 57966,
+            "inputTokens": 69220,
+            "outputTokens": 2865,
+            "family": "plan",
+            "units": 1,
+            "responseCharacters": 9545,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 2,
+            "visibleTokens": 61933,
+            "inputTokens": 70352,
+            "outputTokens": 10306,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 28012,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 3,
+            "visibleTokens": 75070,
+            "inputTokens": 83487,
+            "outputTokens": 14004,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 35183,
+            "usageScope": "codex-turn"
+          }
+        ],
+        "issuedPlans": [
+          {
+            "sequence": 1,
+            "stage": "plan",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 57966,
+            "estimatedInput": 66970,
+            "reservedOutput": 6000,
+            "estimatedResponseCharacters": 8000,
+            "margin": 8192,
+            "bytes": 185714,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 8,
+            "reservedCalls": 5,
+            "calibrationFactor": 1.12,
+            "family": "plan",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.12,
+              "samples": 0,
+              "turnSamples": 0,
+              "unknownSamples": 0,
+              "largestInput": 0,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 61933,
+            "estimatedInput": 83401,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 126697,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 7,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.313563123210158,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.313563123210158,
+              "samples": 1,
+              "turnSamples": 1,
+              "unknownSamples": 0,
+              "largestInput": 69220,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 75070,
+            "estimatedInput": 100658,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 166756,
+            "fits": true,
+            "fitsTarget": false,
+            "remainingCalls": 6,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.313563123210158,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.313563123210158,
+              "samples": 2,
+              "turnSamples": 2,
+              "unknownSamples": 0,
+              "largestInput": 70352,
+              "measurement": "turn-usage-conservative"
+            }
+          }
+        ],
+        "blockedCandidates": [],
+        "usageEvidence": [
+          {
+            "sequence": 1,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 2,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 2,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 3,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 3,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 6,
+            "requestInputTokens": null
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "samples": [
+          {
+            "sequence": 1,
+            "visibleTokens": 59788,
+            "inputTokens": 71038,
+            "outputTokens": 2355,
+            "family": "plan",
+            "units": 1,
+            "responseCharacters": 7824,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 3,
+            "visibleTokens": 62694,
+            "inputTokens": 71032,
+            "outputTokens": 15658,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 38894,
+            "usageScope": "codex-turn"
+          }
+        ],
+        "issuedPlans": [
+          {
+            "sequence": 1,
+            "stage": "plan",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 59788,
+            "estimatedInput": 69011,
+            "reservedOutput": 6000,
+            "estimatedResponseCharacters": 8000,
+            "margin": 8192,
+            "bytes": 191852,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 8,
+            "reservedCalls": 5,
+            "calibrationFactor": 1.12,
+            "family": "plan",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.12,
+              "samples": 0,
+              "turnSamples": 0,
+              "unknownSamples": 0,
+              "largestInput": 0,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 62694,
+            "estimatedInput": 83988,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 127121,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 7,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.306981334046966,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.306981334046966,
+              "samples": 1,
+              "turnSamples": 1,
+              "unknownSamples": 0,
+              "largestInput": 71038,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "shared-v2",
+            "visibleTokens": 62694,
+            "estimatedInput": 83988,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 127121,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 6,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.306981334046966,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.306981334046966,
+              "samples": 1,
+              "turnSamples": 1,
+              "unknownSamples": 0,
+              "largestInput": 71038,
+              "measurement": "turn-usage-conservative"
+            }
+          }
+        ],
+        "blockedCandidates": [],
+        "usageEvidence": [
+          {
+            "sequence": 1,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 2,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 3,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 7,
+            "requestInputTokens": null
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "samples": [
+          {
+            "sequence": 1,
+            "visibleTokens": 31902,
+            "inputTokens": 43158,
+            "outputTokens": 2329,
+            "family": "plan",
+            "units": 1,
+            "responseCharacters": 7874,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 2,
+            "visibleTokens": 56982,
+            "inputTokens": 65274,
+            "outputTokens": 3862,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 4470,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 3,
+            "visibleTokens": 58433,
+            "inputTokens": 66720,
+            "outputTokens": 9722,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 24424,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 4,
+            "visibleTokens": 57020,
+            "inputTokens": 65305,
+            "outputTokens": 7898,
+            "family": "scenario",
+            "units": 1,
+            "responseCharacters": 21883,
+            "usageScope": "codex-turn"
+          },
+          {
+            "sequence": 5,
+            "visibleTokens": 68849,
+            "inputTokens": 79997,
+            "outputTokens": 2149,
+            "family": "review",
+            "units": 2,
+            "responseCharacters": 6039,
+            "usageScope": "codex-turn"
+          }
+        ],
+        "issuedPlans": [
+          {
+            "sequence": 1,
+            "stage": "plan",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 31902,
+            "estimatedInput": 37779,
+            "reservedOutput": 6000,
+            "estimatedResponseCharacters": 8000,
+            "margin": 8192,
+            "bytes": 106121,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 8,
+            "reservedCalls": 5,
+            "calibrationFactor": 1.12,
+            "family": "plan",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.12,
+              "samples": 0,
+              "turnSamples": 0,
+              "unknownSamples": 0,
+              "largestInput": 0,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 2,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 56982,
+            "estimatedInput": 86844,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 134682,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 7,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.4881135978935491,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.4881135978935491,
+              "samples": 1,
+              "turnSamples": 1,
+              "unknownSamples": 0,
+              "largestInput": 43158,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 3,
+            "stage": "scenarios-1",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 58433,
+            "estimatedInput": 89003,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 139924,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 6,
+            "reservedCalls": 4,
+            "calibrationFactor": 1.4881135978935491,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.4881135978935491,
+              "samples": 2,
+              "turnSamples": 2,
+              "unknownSamples": 0,
+              "largestInput": 65274,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 4,
+            "stage": "scenarios-2",
+            "units": 1,
+            "encoding": "plain",
+            "visibleTokens": 57020,
+            "estimatedInput": 86901,
+            "reservedOutput": 28000,
+            "estimatedResponseCharacters": 42000,
+            "margin": 8192,
+            "bytes": 134813,
+            "fits": true,
+            "fitsTarget": true,
+            "remainingCalls": 5,
+            "reservedCalls": 3,
+            "calibrationFactor": 1.4881135978935491,
+            "family": "scenario",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.4881135978935491,
+              "samples": 3,
+              "turnSamples": 3,
+              "unknownSamples": 0,
+              "largestInput": 66720,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          {
+            "sequence": 5,
+            "stage": "review-scenarios-1",
+            "units": 2,
+            "encoding": "shared-v2",
+            "visibleTokens": 68849,
+            "estimatedInput": 104504,
+            "reservedOutput": 10000,
+            "estimatedResponseCharacters": 12000,
+            "margin": 8192,
+            "bytes": 192985,
+            "fits": true,
+            "fitsTarget": false,
+            "remainingCalls": 4,
+            "reservedCalls": 2,
+            "calibrationFactor": 1.4881135978935491,
+            "family": "review",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.4881135978935491,
+              "samples": 4,
+              "turnSamples": 4,
+              "unknownSamples": 0,
+              "largestInput": 66720,
+              "measurement": "turn-usage-conservative"
+            }
+          }
+        ],
+        "blockedCandidates": [],
+        "usageEvidence": [
+          {
+            "sequence": 1,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 2,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 2,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 6,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 3,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 4,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 4,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 3,
+            "requestInputTokens": null
+          },
+          {
+            "sequence": 5,
+            "scope": "codex-turn",
+            "completedTurns": 1,
+            "completedItems": 3,
+            "requestInputTokens": null
+          }
+        ]
+      }
+    ]
+  },
+  "calibrationHistory": {
+    "modelCalls": 0,
+    "historicalSamples": [
+      {
+        "visibleTokens": 58000,
+        "inputTokens": 69256,
+        "outputTokens": 2334,
+        "family": "plan",
+        "units": 1,
+        "responseCharacters": 8178
+      },
+      {
+        "visibleTokens": 60879,
+        "inputTokens": 69265,
+        "outputTokens": 9350,
+        "family": "scenario",
+        "units": 1,
+        "responseCharacters": 24255
+      },
+      {
+        "visibleTokens": 60912,
+        "inputTokens": 139697,
+        "outputTokens": 15221,
+        "family": "scenario",
+        "units": 1,
+        "responseCharacters": 35707
+      }
+    ],
+    "calibration": {
+      "factor": 2.5227656291042817,
+      "samples": 3,
+      "turnSamples": 0,
+      "unknownSamples": 3,
+      "largestInput": 139697,
+      "measurement": "turn-usage-conservative"
+    },
+    "oldCliMode": "exec --ephemeral --json",
+    "oldTraceAvailable": false,
+    "causeOfLargerUsage": "Not reconstructible from acquired final counters; no inferred internal request count or per-request context measurement.",
+    "source": "https://learn.chatgpt.com/docs/non-interactive-mode"
+  },
+  "criticAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "outputsChanged": false,
+    "reviewAvailable": true,
+    "nativeEnergyMoves": [],
+    "derivedEnergyMoves": [
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "deck",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[5].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[7].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[9].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[10].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[10].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[11].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[15].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[16].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 2,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[0].expandedLineEvents[17].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "discard",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "deck",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[5].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[7].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[9].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[15].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[16].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[16].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[17].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[21].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[22].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 2,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[1].expandedLineEvents[23].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "discard",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "deck",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[5].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[7].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[9].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[15].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[16].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[16].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[17].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[18].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[22].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[23].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 2,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].replyComparison.options[2].expandedLineEvents[24].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "discard",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "deck",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[5].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[7].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[9].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[10].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[10].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[11].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[15].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[16].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 2,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[0].lineEvents[17].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "discard",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].setupLedger.events[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].setupLedger.events[5].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].setupLedger.events[6].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[0].setupLedger.events[7].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[0].setupLedger.events[8].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[1].replyComparison.options[0].expandedLineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[1].replyComparison.options[0].expandedLineEvents[6].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 2,
+          "from": "attached",
+          "to": "discard"
+        }
+      },
+      {
+        "path": ".scenarios[1].replyComparison.options[1].expandedLineEvents[6].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[1].replyComparison.options[1].expandedLineEvents[7].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[1].replyComparison.options[2].expandedLineEvents[4].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[1].lineEvents[6].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[1].lineEvents[7].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[1].setupLedger.events[5].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[1].setupLedger.events[7].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[1].setupLedger.events[10].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[1].setupLedger.events[11].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-002",
+          "count": 1,
+          "from": "deck",
+          "to": "attached"
+        }
+      },
+      {
+        "path": ".scenarios[1].setupLedger.events[11].moves",
+        "move": {
+          "side": "ours",
+          "printId": "mee-005",
+          "count": 1,
+          "from": "deck",
+          "to": "hand"
+        }
+      },
+      {
+        "path": ".scenarios[1].setupLedger.events[14].moves",
+        "move": {
+          "side": "opponent",
+          "printId": "mee-009",
+          "count": 1,
+          "from": "hand",
+          "to": "attached"
+        }
+      }
+    ],
+    "scenario2Turn7RowsActuallySupplied": [
+      {
+        "attacks": [
+          {
+            "printId": "sv10-040",
+            "attackName": "Collect"
+          },
+          {
+            "printId": "sv10-040",
+            "attackName": "Combustion"
+          },
+          {
+            "printId": "sv06-128",
+            "attackName": "Petty Grudge"
+          },
+          {
+            "printId": "sv06-128",
+            "attackName": "Bite"
+          }
+        ],
+        "cards": [
+          "sv06-128",
+          "sv10-040",
+          "mee-005",
+          "mee-002",
+          "me01-114",
+          "me03-081",
+          "me04-082",
+          "sv06.5-061"
+        ],
+        "comparison": "Combustion infligge 20 senza perdere Energie. Ritirare Torchic costa la sua Fire Energy e permette Bite da 40, senza KO su Bayleef a 40 danni. Poké Pad può evolvere Dreepy e cercare un seguito migliore; Boss su Celebi con Torchic infligge soltanto 20. Stretcher non ha ancora bersagli; Red Card non è giocabile.",
+        "promotions": [],
+        "lineIds": [
+          "main"
+        ],
+        "turn": 7,
+        "side": "ours"
+      },
+      {
+        "attacks": [
+          {
+            "printId": "sv10-040",
+            "attackName": "Collect"
+          },
+          {
+            "printId": "sv10-040",
+            "attackName": "Combustion"
+          },
+          {
+            "printId": "sv06-128",
+            "attackName": "Petty Grudge"
+          },
+          {
+            "printId": "sv06-128",
+            "attackName": "Bite"
+          }
+        ],
+        "cards": [
+          "sv06-128",
+          "sv10-040",
+          "mee-005",
+          "mee-002",
+          "me01-114",
+          "me03-081",
+          "me04-082",
+          "sv06.5-061"
+        ],
+        "comparison": "Combustion infligge 20 senza perdere Energie. Ritirare Torchic costa la sua Fire Energy e permette Bite da 40, senza KO su Bayleef a 40 danni. Poké Pad può evolvere Dreepy e cercare un seguito migliore; Boss su Celebi con Torchic infligge soltanto 20. Stretcher non ha ancora bersagli; Red Card non è giocabile.",
+        "promotions": [],
+        "lineIds": [
+          "access"
+        ],
+        "turn": 7,
+        "side": "ours"
+      }
+    ],
+    "falsePositiveComponents": [
+      "Two findings treat normalized Energy moves as native AI declarations, although the native schema and original output forbid them.",
+      "The last finding says Dreepy attacks are absent from main/access turn 7; both names are present in both rows actually delivered."
+    ],
+    "otherTacticalFindingsNotWaived": true,
+    "reviewVerdictUnchanged": true,
+    "guideNotApproved": true
+  },
+  "accessAudit": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "outputsChanged": false,
+    "actualProof": {
+      "id": "access",
+      "proof": {
+        "sourceIds": [
+          "card:me02.5-196"
+        ],
+        "reason": "Il primo Night Stretcher recupera dagli scarti il Budew eliminato nel setup; il recupero viene effettivamente eseguito prima della ritirata.",
+        "eventIndex": 5
+      },
+      "events": [
+        {
+          "index": 0,
+          "kind": "effect",
+          "description": "Recon Directive dell'Attivo prende Fire Energy e lascia Crushing Hammer in fondo.",
+          "moves": [],
+          "energyRoutes": [
+            {
+              "side": "opponent",
+              "printId": "mee-010",
+              "count": 1,
+              "path": [
+                "deck",
+                "hand"
+              ],
+              "hostPrintId": null,
+              "sourceIds": [
+                "card:sv06-129"
+              ],
+              "attachment": null
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "kind": "play",
+          "description": "Poké Pad cerca Drakloak per la riserva; rimescola.",
+          "moves": [
+            {
+              "side": "opponent",
+              "printId": "me03-081",
+              "count": 1,
+              "from": "hand",
+              "to": "discard"
+            },
+            {
+              "side": "opponent",
+              "printId": "sv06-129",
+              "count": 1,
+              "from": "deck",
+              "to": "hand"
+            }
+          ],
+          "energyRoutes": []
+        },
+        {
+          "index": 2,
+          "kind": "evolve",
+          "description": "Evolvi il Dreepy in Panchina nel secondo Drakloak.",
+          "moves": [
+            {
+              "side": "opponent",
+              "printId": "sv06-128",
+              "count": 1,
+              "from": "bench",
+              "to": "evolution"
+            },
+            {
+              "side": "opponent",
+              "printId": "sv06-129",
+              "count": 1,
+              "from": "hand",
+              "to": "bench"
+            }
+          ],
+          "energyRoutes": []
+        },
+        {
+          "index": 3,
+          "kind": "effect",
+          "description": "La riserva appena evoluta usa Recon Directive: prende Night Stretcher e lascia Psychic Energy in fondo.",
+          "moves": [
+            {
+              "side": "opponent",
+              "printId": "me02.5-196",
+              "count": 1,
+              "from": "deck",
+              "to": "hand"
+            }
+          ],
+          "energyRoutes": []
+        },
+        {
+          "index": 4,
+          "kind": "play",
+          "description": "Night Stretcher recupera Budew in mano, conservando l'accesso al blocco per un turno futuro.",
+          "moves": [
+            {
+              "side": "opponent",
+              "printId": "me02.5-196",
+              "count": 1,
+              "from": "hand",
+              "to": "discard"
+            },
+            {
+              "side": "opponent",
+              "printId": "me02.5-016",
+              "count": 1,
+              "from": "discard",
+              "to": "hand"
+            }
+          ],
+          "energyRoutes": []
+        },
+        {
+          "index": 5,
+          "kind": "play",
+          "description": "Metti il Budew recuperato in Panchina.",
+          "moves": [
+            {
+              "side": "opponent",
+              "printId": "me02.5-016",
+              "count": 1,
+              "from": "hand",
+              "to": "bench"
+            }
+          ],
+          "energyRoutes": []
+        },
+        {
+          "index": 6,
+          "kind": "retreat",
+          "description": "Ritira il Drakloak Attivo scartando Fire Energy; entra Budew.",
+          "moves": [
+            {
+              "side": "opponent",
+              "printId": "sv06-129",
+              "count": 1,
+              "from": "active",
+              "to": "bench"
+            },
+            {
+              "side": "opponent",
+              "printId": "me02.5-016",
+              "count": 1,
+              "from": "bench",
+              "to": "active"
+            }
+          ],
+          "energyRoutes": [
+            {
+              "side": "opponent",
+              "printId": "mee-010",
+              "count": 1,
+              "path": [
+                "attached",
+                "discard"
+              ],
+              "hostPrintId": "sv06-129",
+              "sourceIds": [
+                "rules"
+              ],
+              "attachment": null
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "kind": "play",
+          "description": "Un secondo Night Stretcher recupera subito la Fire Energy appena scartata.",
+          "moves": [
+            {
+              "side": "opponent",
+              "printId": "me02.5-196",
+              "count": 1,
+              "from": "hand",
+              "to": "discard"
+            }
+          ],
+          "energyRoutes": [
+            {
+              "side": "opponent",
+              "printId": "mee-010",
+              "count": 1,
+              "path": [
+                "discard",
+                "hand"
+              ],
+              "hostPrintId": null,
+              "sourceIds": [
+                "card:me02.5-196"
+              ],
+              "attachment": null
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "kind": "effect",
+          "description": "Riassegna manualmente Fire Energy al Drakloak danneggiato, che conserva Psychic Energy.",
+          "moves": [],
+          "energyRoutes": [
+            {
+              "side": "opponent",
+              "printId": "mee-010",
+              "count": 1,
+              "path": [
+                "hand",
+                "attached"
+              ],
+              "hostPrintId": "sv06-129",
+              "sourceIds": [
+                "rules"
+              ],
+              "attachment": "manual"
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "kind": "effect",
+          "description": "Itchy Pollen infligge altri 10 a Fan Rotom e ripristina il blocco Item.",
+          "moves": [],
+          "energyRoutes": []
+        },
+        {
+          "index": 10,
+          "kind": "effect",
+          "description": "Conserva la terza copia di Night Stretcher e Dragapult ex per il seguito; termina il turno dopo l'attacco.",
+          "moves": [],
+          "energyRoutes": []
+        }
+      ]
+    }
+  },
+  "refusalInspection": {
+    "readOnly": true,
+    "modelCalls": 0,
+    "placeholders": [
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 2,
+        "characters": 4470,
+        "productionRefusalDetected": true,
+        "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro richiesto. Questo output non costituisce un caso eseguibile o validato e non deve essere utilizzato come guida. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+        "failed": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro richiesto. Questo output non costituisce un caso eseguibile o validato e non deve essere utilizzato come guida. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+      }
+    ],
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 28012,
+            "limitations": [
+              "Il record aggregato contro il field non misura questo matchup.",
+              "Le pescate di Recon Directive e il risultato di Fly sono ipotesi esplicite del caso, non probabilità o garanzie."
+            ],
+            "changeSummary": "Un solo caso contro opponent-1: la replica difensiva con Dragapult ex confuta la preferenza per Assault Landing e rende preferibile il KO immediato disponibile con Toucannon.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Investire una seconda Mist Energy in Assault Landing oppure conservare l'Energia e attaccare con Trumbeak?",
+                "assumptions": [
+                  "Caso ipotetico: cominciamo noi. Mani, Premi, pescate e risultato di Fly sono allocazioni possibili, non osservazioni né accessi garantiti.",
+                  "Fly nel nostro secondo turno dà testa. La protezione impedisce Dragon Headbutt nel turno immediatamente seguente.",
+                  "Le carte non spostate restano nel mazzo della rispettiva lista congelata. Legacy Energy non è stata usata.",
+                  "La pressione è condizionata: Assault Landing lascia Drakloak a 20 PS, ma l'evoluzione in Dragapult ex conserva danni ed Energie e impedisce il KO con il successivo Feather Rondo."
+                ],
+                "setupRounds": 2,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Fan Rotom KO; il successore elimina Drakloak e prende un Premio.",
+                    "firstEvents": 0,
+                    "replyEvents": 4
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher recupera Budew: Itchy Pollen conserva Drakloak, ma non prende Premi. Il nostro seguito elimina Budew con Fan Rotom.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Dragapult ex elimina Fan Rotom e sopravvive al contrattacco con 130 PS. Battle Cage impedisce i sei segnalini sulla Panchina.",
+                    "firstEvents": 0,
+                    "replyEvents": 5
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 35183,
+            "limitations": [
+              "Nessun risultato osservato della nostra lista contro Dragapult è consegnato; il record opponent-versus-field non misura questo matchup.",
+              "La continuità del caso dipende dalle pescate e dalle selezioni esplicitamente dichiarate. In particolare, Toucannon non era accessibile nel primo turno principale.",
+              "La fonte rules documenta legalità, rotazione ed errata, senza fornire un regolamento operativo completo. Il caso evita timing simultanei decisivi."
+            ],
+            "changeSummary": "Ricostruito un solo caso contro opponent-1: promozione del setup separata dal KO, danni corretti su Fan Rotom, Trainer giocati in eventi distinti, accessi rivalutati dopo ritirata, sviluppo della riserva e audit temporali aggiornati. La pressione non rimuove il motore contro Dragapult ex.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "I 70 certi di Fan Rotom giustificano perdere una Mist Energy in ritirata, e quale replica conserva meglio il motore avversario?",
+                "assumptions": [
+                  "Caso ipotetico raggiungibile: cominciamo noi. Le identità delle pescate, le carte osservate e testa su Fly sono allocazioni dichiarate, non risultati osservati né accessi garantiti.",
+                  "Le liste utilizzate sono esclusivamente our-list e opponent-1, con le quantità congelate. Le carte non movimentate restano nel rispettivo mazzo.",
+                  "Il nostro Toucannon non è disponibile nel primo turno principale: viene pescato nel seguito. La continuità dimostrata dipende esplicitamente da quella pesca; non è garantita contro un diverso ordine del mazzo.",
+                  "Nel setup Fly dà testa. La sua protezione riguarda Trumbeak, mentre i 10 danni precedenti di Itchy Pollen restano su Fan Rotom.",
+                  "Le due Recon Directive della replica diretta e difensiva trovano rispettivamente Fire Energy e Night Stretcher. Le carte lasciate in fondo non sono future pescate garantite.",
+                  "Le selezioni di Hassel nel seguito diretto e difensivo sono ipotesi sul relativo gruppo di otto carte: due Buddy-Buddy Poffin e un Toucannon. Non costituiscono una promessa di accesso.",
+                  "Legacy Energy non è stata utilizzata. Non si impiegano Spiky Energy né timing simultanei controversi."
+                ],
+                "setupRounds": 2,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Fan Rotom KO. Il nostro Toucannon elimina il Drakloak danneggiato, ma l'avversario ha già preparato un secondo Drakloak con Fire Energy.",
+                    "firstEvents": 0,
+                    "replyEvents": 9
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher recupera Budew e Itchy Pollen ripristina il blocco. Drakloak conserva entrambe le Energie grazie al secondo recupero; nel seguito Fan Rotom elimina Budew e Toucannon viene preparato in Panchina.",
+                    "firstEvents": 0,
+                    "replyEvents": 11
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Dragapult ex prende il Premio su Fan Rotom e conserva 50 PS dopo il nostro Feather Rondo da 200. Il secondo Drakloak è già preparato con Fire Energy.",
+                    "firstEvents": 0,
+                    "replyEvents": 10
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "toucannon-festival",
+        "responses": [
+          {
+            "sequence": 3,
+            "characters": 38894,
+            "limitations": [
+              "La fonte rules consegnata documenta legalità, rotazioni ed errata, senza un regolamento completo dei timing. Il caso evita interazioni decisive fra Spiky Energy e Festival Lead.",
+              "Le distribuzioni dichiarate sono ipotesi delle liste consegnate. Il record aggregato contro il field non fornisce una percentuale per questo matchup."
+            ],
+            "changeSummary": "Costruito un caso contro opponent-1 con pressione iniziale di Fan Rotom, ripristino concreto di Festival Grounds tramite Thwackey e successore Toucannon accessibile. Inclusi tre ruoli di replica, testimone positivo e confronti delle promozioni.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Battle Cage basta a proteggere Fan Rotom, oppure occorre preparare subito il contrattacco con Toucannon?",
+                "assumptions": [
+                  "Ipotesi raggiungibile contro la sola lista selezionata opponent-1; non è una partita osservata.",
+                  "L'avversario comincia. Le sei carte iniziali oltre all'Attivo comprendono anche i Base indicati in Panchina.",
+                  "Le identità delle pescate e dei Premi sono allocazioni possibili delle liste esatte, non pescate garantite.",
+                  "Le pescate da Rapid Draw seguono lo stesso ordine dichiarato nei rami che eseguono l'attacco; le ricerche precedenti rendono tale allocazione condizionale, senza garantirla.",
+                  "Mist Energy impedisce l'effetto di scarto di Whirlpool sul suo portatore, ma non il danno. Non vengono usate interazioni fra Spiky Energy e Festival Lead.",
+                  "La soglia del confronto è il KO del Fan Rotom integro da 70 PS dopo il nostro primo attacco. I danni di due Rapid Draw sono sommati soltanto dopo avere ripristinato Festival Grounds.",
+                  "Fan Call viene usata una sola volta nel nostro primo turno. Il successore evolve con Rare Candy nel nostro secondo turno, da un Pikipek già presente dal turno precedente."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "reply-direct",
+                    "outcome": "Seaking infligge 60 e pesca due carte. Fan Rotom sopravvive; Toucannon entra tramite ritirata gratuita e mette KO Seaking. Poké Pad resta disponibile, ma usarlo per Thwackey e Festival Grounds conduce al ramo access, superiore per Premi e pesca.",
+                    "firstEvents": 0,
+                    "replyEvents": 2
+                  },
+                  {
+                    "role": "access",
+                    "id": "reply-access",
+                    "outcome": "Poké Pad trova Thwackey; Boom Boom Groove trova Festival Grounds mentre Goldeen è Attivo. Seaking esegue due Rapid Draw, elimina Fan Rotom e prende un Premio. Il Pikipek promosso evolve e mette KO Seaking con Feather Rondo da 180.",
+                    "firstEvents": 0,
+                    "replyEvents": 9
+                  },
+                  {
+                    "role": "defend",
+                    "id": "reply-defend",
+                    "outcome": "Thwackey cerca Air Balloon anziché lo Stadio. Seaking si ritira gratuitamente dietro Shaymin, conservando Energia e attaccante. Non prende Premi; Toucannon elimina Shaymin e Seaking torna Attivo. Questa difesa conserva Seaking ma concede un Premio senza danneggiare Fan Rotom.",
+                    "firstEvents": 0,
+                    "replyEvents": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "responses": [
+          {
+            "sequence": 2,
+            "characters": 4470,
+            "limitations": [
+              "Non ho completato il registro richiesto. Questo output non costituisce un caso eseguibile o validato e non deve essere utilizzato come guida."
+            ],
+            "changeSummary": "Costruzione non completata; nessuna conclusione competitiva dimostrata.",
+            "constructionError": "Error: scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro richiesto. Questo output non costituisce un caso eseguibile o validato e non deve essere utilizzato come guida. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni.",
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Prendere il KO con Combusken preparando Dreepy, oppure conservare le Energie per l’evoluzione successiva?",
+                "assumptions": [
+                  "Ipotesi di apertura e pescate, non partita osservata. Comincia l’avversario.",
+                  "Le carte non collocate in mano, campo o Premi rimangono nel mazzo della rispettiva lista esatta di 60 carte.",
+                  "Gli esiti delle monete dichiarati valgono solo per questo caso; non sono pescate o risultati garantiti."
+                ],
+                "setupRounds": 0,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Non costruito",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Non costruito",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Non costruito",
+                    "firstEvents": 0,
+                    "replyEvents": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "characters": 24424,
+            "limitations": [
+              "Le pescate dichiarate sono ipotesi e non misure di frequenza o risultati del matchup."
+            ],
+            "changeSummary": "Ricostruito un caso con KO iniziale Fire, accesso tramite Night Stretcher, confronto difensivo e seguito concreto di Dragapult ex.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-1",
+                "decision": "Prendere subito Applin con Blaziken ex preparando Dragapult ex, oppure conservare il primo attaccante?",
+                "assumptions": [
+                  "Cominciamo noi. Aperture e pescate sono ipotesi, non una partita osservata; le carte non collocate restano nei rispettivi mazzi esatti di 60 carte.",
+                  "I Base della Panchina iniziale provengono dalle sei carte indicate in hand. Nessuna copia aggiuntiva è creata.",
+                  "La continuità dimostrata è un attacco successivo di Dragapult ex, non un secondo KO garantito. Nessuna soglia dipende da Wild Growth, protezioni Tera o Festival Lead.",
+                  "Recon Directive osserva Boss's Orders e Poké Pad nella posizione ipotizzata. Le pescate successive sono ipotesi distinte: dopo ricerche e rimescolamenti non sono garantite dall'osservazione."
+                ],
+                "setupRounds": 1,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Ogerpon infligge 180; Blaziken ex sopravvive. Il nostro seguito lascia Ogerpon a 10 PS.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Night Stretcher ricostruisce la linea Applin; Hydrapple ex aggiunge una quarta Energia a Ogerpon. Il seguito colpisce Ogerpon per 200 e Hydrapple ex con sei segnalini.",
+                    "firstEvents": 0,
+                    "replyEvents": 9
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Hydrapple ex prende l'Attivo e attacca per 120 dopo la perdita di un'Energia per ritirata. Boss's Orders riporta Ogerpon davanti: la protezione non evita i 200 del seguito.",
+                    "firstEvents": 0,
+                    "replyEvents": 10
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sequence": 4,
+            "characters": 21883,
+            "limitations": [
+              "Le pescate sono ipotesi dichiarate; non rappresentano probabilità o risultati del matchup.",
+              "Il record aggregato del field non viene usato come record contro Hydrapple."
+            ],
+            "changeSummary": "Caso scenario-2 contro opponent-1: confronto tra Seed Bomb, accesso a Bayleef tramite Dawn e Growl; le alternative di evoluzione disponibili mostrano che insistere con Dreepy non è il piano preferibile.",
+            "constructionError": null,
+            "scenarios": [
+              {
+                "id": "scenario-2",
+                "decision": "Continuare a preparare il KO con Bite, oppure prevedere l'evoluzione difensiva che forza Torchic in posizione attiva?",
+                "assumptions": [
+                  "Ipotesi di apertura raggiungibile, non partita osservata. Cominciamo noi.",
+                  "Le pescate indicate sono allocazioni ipotetiche delle copie della lista, non accessi garantiti.",
+                  "Il caso verifica una difesa di Chikorita: Growl rallenta Bite; Dawn permette invece di evolvere e usare Push Down. Non richiede interpretazioni di Wild Growth.",
+                  "Gli effetti di Growl applicati nei turni preparatori sono consecutivi, non cumulativi: ciascuno vale soltanto nel nostro turno immediatamente seguente."
+                ],
+                "setupRounds": 2,
+                "replies": [
+                  {
+                    "role": "direct",
+                    "id": "direct",
+                    "outcome": "Seed Bomb infligge 30 a Dreepy. Il nostro Bite seguente porta Chikorita da 40 a 80 danni, prende un Premio e lascia Celebi come Attivo.",
+                    "firstEvents": 0,
+                    "replyEvents": 1
+                  },
+                  {
+                    "role": "access",
+                    "id": "access",
+                    "outcome": "Dawn rende disponibile Bayleef; Push Down lascia Dreepy a 20 PS e manda Torchic Attivo. Combustion porta Bayleef a 60 danni, senza KO.",
+                    "firstEvents": 0,
+                    "replyEvents": 3
+                  },
+                  {
+                    "role": "defend",
+                    "id": "defend",
+                    "outcome": "Growl riduce il nostro Bite successivo a 20: Chikorita arriva a 60 danni e sopravvive con 10 PS. Nessun Premio viene preso.",
+                    "firstEvents": 0,
+                    "replyEvents": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "stopAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 223059,
+          "outputTokens": 27175,
+          "cachedInputTokens": 0,
+          "durationMs": 616244,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T14:30:55.432Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 100658,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 166756,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000,
+          "calibration": {
+            "factor": 1.313563123210158,
+            "samples": 2,
+            "turnSamples": 2,
+            "unknownSamples": 0,
+            "largestInput": 70352,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "toucannon-festival",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 142070,
+          "outputTokens": 18013,
+          "cachedInputTokens": 0,
+          "durationMs": 996633,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": true
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T14:36:57.829Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 83988,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 127121,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000,
+          "calibration": {
+            "factor": 1.306981334046966,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 71038,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "status": "interrupted",
+        "failureCode": "call-budget",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 5,
+          "failedAttempts": 1,
+          "attemptLimit": 8,
+          "inputTokens": 320454,
+          "outputTokens": 25960,
+          "cachedInputTokens": 0,
+          "durationMs": 634994,
+          "localErrors": 0,
+          "reviewFindings": 7,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "repair-scenarios",
+          "checkedAt": "2026-10-31T14:36:29.819Z",
+          "outcome": "blocked",
+          "estimateOnly": true,
+          "reasons": [
+            "calls"
+          ],
+          "remainingCalls": 3,
+          "requiredCalls": 4
+        },
+        "quickCheck": "ok"
+      }
+    ]
+  },
+  "nativeDecisionsAudit": "native-decisions-audit.json",
+  "policy": {
+    "inputTarget": 96000,
+    "inputMaximum": 128000,
+    "totalEnvelope": 176000,
+    "margin": 8192,
+    "requestBytes": 500000,
+    "responseCharacters": 100000
+  },
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "jobId": "d18ce993-a616-4e21-9186-5c5e9623505e",
+      "startedAt": "2026-10-31T14:25:49.346Z",
+      "endedAt": "2026-10-31T14:36:08.241Z",
+      "passed": false,
+      "error": "scenario-1: accessProof.eventIndex non indica un accesso aggiuntivo nel turno della replica; la pescata ordinaria non è sufficiente.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T14:25:49.856Z",
+          "endedAt": "2026-10-31T14:27:24.302Z",
+          "status": "succeeded",
+          "inputHash": "eaf9fc2d28b9c1d6f8f794697b1f6c684056b1c728a6ca1627941dd85d337c3b",
+          "inputBytes": 185714,
+          "durationMs": 94446,
+          "usage": {
+            "inputTokens": 69220,
+            "cachedInputTokens": 0,
+            "outputTokens": 2865
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T14:27:24.858Z",
+          "endedAt": "2026-10-31T14:30:53.888Z",
+          "status": "failed",
+          "inputHash": "13a322c7550b7c3d47e62e272110800d413ae90b97a2b490a04c0ea65f837043",
+          "inputBytes": 126697,
+          "durationMs": 209035,
+          "usage": {
+            "inputTokens": 70352,
+            "cachedInputTokens": 0,
+            "outputTokens": 10306
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T14:30:55.455Z",
+          "endedAt": "2026-10-31T14:36:08.228Z",
+          "status": "failed",
+          "inputHash": "44cf5d6c8cf5d15808575967b75916f77a58b8620a9c464b6a5d0b64863ab3f6",
+          "inputBytes": 166756,
+          "durationMs": 312763,
+          "usage": {
+            "inputTokens": 83487,
+            "cachedInputTokens": 0,
+            "outputTokens": 14004
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 57966,
+          "estimatedInput": 66970,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 185714,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.12,
+            "samples": 0,
+            "turnSamples": 0,
+            "unknownSamples": 0,
+            "largestInput": 0,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 61933,
+          "estimatedInput": 83401,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 126697,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.313563123210158,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.313563123210158,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 69220,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 75070,
+          "estimatedInput": 100658,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 166756,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.313563123210158,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.313563123210158,
+            "samples": 2,
+            "turnSamples": 2,
+            "unknownSamples": 0,
+            "largestInput": 70352,
+            "measurement": "turn-usage-conservative"
+          }
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "153766b6f49db6792a4eb947126db7ad800c1ab399daf6ff05d478289f134e4f",
+          "message": "scenario-1: setup|3|ours confronto promozione duplicato, estraneo o senza motivo: opponent|sv06-128.\nFRONTIERA COMPLETA DAL REGISTRO (dati, non mosse certificate): [{\"lineId\":\"setup\",\"turn\":1,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-067\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":2,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"}],\"cards\":[{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"main\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\"]}]},{\"lineId\":\"direct\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"direct\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"direct\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\"]}]},{\"lineId\":\"access\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"access\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\",\"hand\",\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"access\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":1},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\",\"sv06-129\"]}]},{\"lineId\":\"defend\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"defend\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"},{\"printId\":\"sv06-130\",\"attackName\":\"Jet Headbutt\"},{\"printId\":\"sv06-130\",\"attackName\":\"Phantom Dive\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"defend\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]}]. Correggere ogni tactical del turno/ramo indicato: cards deve dichiarare esplicitamente anche carte in mano appena pescate o poi scartate, Energie e accessi. Non basta modificare il testo comparison. Nessuna carta o valutazione è stata aggiunta automaticamente."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "153766b6f49db6792a4eb947126db7ad800c1ab399daf6ff05d478289f134e4f",
+          "message": "scenario-1: accessProof.eventIndex non indica un accesso aggiuntivo nel turno della replica; la pescata ordinaria non è sufficiente."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 223059,
+      "outputTokens": 27175,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 619,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: setup|3|ours confronto promozione duplicato, estraneo o senza motivo: opponent|sv06-128.\nFRONTIERA COMPLETA DAL REGISTRO (dati, non mosse certificate): [{\"lineId\":\"setup\",\"turn\":1,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-067\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":2,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"},{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"}],\"cards\":[{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-016\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":3,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me05-066\",\"attackName\":\"Double Stab\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-066\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"me05-067\",\"zones\":[\"hand\",\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"setup\",\"turn\":4,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"mee-013\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"main\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"main\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\"]}]},{\"lineId\":\"direct\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"direct\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"direct\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\"]}]},{\"lineId\":\"access\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"access\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"},{\"printId\":\"me02.5-016\",\"attackName\":\"Itchy Pollen\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\",\"hand\",\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"access\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"},{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":1},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\"],\"maximumCopies\":2},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me01-175\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"opponent\",\"printIds\":[\"sv06-128\",\"sv06-129\"]}]},{\"lineId\":\"defend\",\"turn\":5,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me02.5-250\",\"attackName\":\"Assault Landing\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":2},{\"printId\":\"me02.5-250\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]},{\"lineId\":\"defend\",\"turn\":6,\"side\":\"opponent\",\"attacks\":[{\"printId\":\"sv06-128\",\"attackName\":\"Petty Grudge\"},{\"printId\":\"sv06-128\",\"attackName\":\"Bite\"},{\"printId\":\"sv06-129\",\"attackName\":\"Dragon Headbutt\"},{\"printId\":\"sv06-130\",\"attackName\":\"Jet Headbutt\"},{\"printId\":\"sv06-130\",\"attackName\":\"Phantom Dive\"}],\"cards\":[{\"printId\":\"sv06-130\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-128\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me02.5-196\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me02.5-016\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me03-081\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"sv06-129\",\"zones\":[\"active\"],\"maximumCopies\":1},{\"printId\":\"mee-010\",\"zones\":[\"hand\"],\"maximumCopies\":2},{\"printId\":\"me01-119\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[{\"side\":\"ours\",\"printIds\":[\"me04-070\",\"me05-067\"]}]},{\"lineId\":\"defend\",\"turn\":7,\"side\":\"ours\",\"attacks\":[{\"printId\":\"me04-070\",\"attackName\":\"Bite\"},{\"printId\":\"me05-067\",\"attackName\":\"Fly\"},{\"printId\":\"me05-094\",\"attackName\":\"Feather Rondo\"}],\"cards\":[{\"printId\":\"sv05-161\",\"zones\":[\"hand\",\"discard\"],\"maximumCopies\":2},{\"printId\":\"me02-116\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me05-094\",\"zones\":[\"hand\",\"active\"],\"maximumCopies\":1},{\"printId\":\"me04-070\",\"zones\":[\"bench\"],\"maximumCopies\":1},{\"printId\":\"me05-067\",\"zones\":[\"bench\",\"active\"],\"maximumCopies\":1},{\"printId\":\"sv06-205\",\"zones\":[\"hand\"],\"maximumCopies\":1},{\"printId\":\"me02.5-250\",\"zones\":[\"discard\"],\"maximumCopies\":1},{\"printId\":\"me01-166\",\"zones\":[\"hand\"],\"maximumCopies\":1}],\"promotions\":[]}]. Correggere ogni tactical del turno/ramo indicato: cards deve dichiarare esplicitamente anche carte in mano appena pescate o poi scartate, Energie e accessi. Non basta modificare il testo comparison. Nessuna carta o valutazione è stata aggiunta automaticamente."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: accessProof.eventIndex non indica un accesso aggiuntivo nel turno della replica; la pescata ordinaria non è sufficiente."
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "jobId": "211c7e4d-f6ce-42af-b9c4-6028ef621de2",
+      "startedAt": "2026-10-31T14:25:49.888Z",
+      "endedAt": "2026-10-31T14:42:28.492Z",
+      "passed": false,
+      "error": "scenario-1: sv06-155 ×1 non disponibile in opponent/deck. Evento turno 3 opponent: Il secondo Rapid Draw infligge altri 60 e pesca Lana's Aid e Growing Grass Energy.. Disponibilità effettiva: active=0, bench=0, evolution=0, attached=0, hand=0, discard=0, prizes=1, deck=0, stadium=0, lost=0. Non inventare un accesso: correggere il percorso dichiarato e la sua fonte, oppure cambiare linea.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T14:25:50.077Z",
+          "endedAt": "2026-10-31T14:26:56.038Z",
+          "status": "succeeded",
+          "inputHash": "1b0ceb6a68c440620816427ee451a42695abd9e91630eef436e97dec0afe56c0",
+          "inputBytes": 191852,
+          "durationMs": 65959,
+          "usage": {
+            "inputTokens": 71038,
+            "cachedInputTokens": 0,
+            "outputTokens": 2355
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T14:26:56.732Z",
+          "endedAt": "2026-10-31T14:36:56.770Z",
+          "status": "failed",
+          "inputHash": "2119d90aa3c0f855f10594731523e4986c55ba51671dc6af24e47586e6c263e5",
+          "inputBytes": 127121,
+          "durationMs": 600030,
+          "usage": null
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T14:36:57.834Z",
+          "endedAt": "2026-10-31T14:42:28.481Z",
+          "status": "failed",
+          "inputHash": "2119d90aa3c0f855f10594731523e4986c55ba51671dc6af24e47586e6c263e5",
+          "inputBytes": 127121,
+          "durationMs": 330644,
+          "usage": {
+            "inputTokens": 71032,
+            "cachedInputTokens": 0,
+            "outputTokens": 15658
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 59788,
+          "estimatedInput": 69011,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 191852,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.12,
+            "samples": 0,
+            "turnSamples": 0,
+            "unknownSamples": 0,
+            "largestInput": 0,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 62694,
+          "estimatedInput": 83988,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 127121,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.306981334046966,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.306981334046966,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 71038,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 62694,
+          "estimatedInput": 83988,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 127121,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.306981334046966,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.306981334046966,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 71038,
+            "measurement": "turn-usage-conservative"
+          }
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "741c6c3e27d2b19f372d44657f0e7a9afe1e6691d4a691eff2ef2f72303652ae",
+          "message": "scenario-1: sv06-155 ×1 non disponibile in opponent/deck. Evento turno 3 opponent: Il secondo Rapid Draw infligge altri 60 e pesca Lana's Aid e Growing Grass Energy.. Disponibilità effettiva: active=0, bench=0, evolution=0, attached=0, hand=0, discard=0, prizes=1, deck=0, stadium=0, lost=0. Non inventare un accesso: correggere il percorso dichiarato e la sua fonte, oppure cambiare linea."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 142070,
+      "outputTokens": 18013,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "elapsedSeconds": 999,
+      "rawResponsesAvailable": 2,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "timeout",
+          "message": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: sv06-155 ×1 non disponibile in opponent/deck. Evento turno 3 opponent: Il secondo Rapid Draw infligge altri 60 e pesca Lana's Aid e Growing Grass Energy.. Disponibilità effettiva: active=0, bench=0, evolution=0, attached=0, hand=0, discard=0, prizes=1, deck=0, stadium=0, lost=0. Non inventare un accesso: correggere il percorso dichiarato e la sua fonte, oppure cambiare linea."
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "jobId": "80bf990b-aa96-4eff-8465-5067a583379e",
+      "startedAt": "2026-10-31T14:25:50.108Z",
+      "endedAt": "2026-10-31T14:36:29.824Z",
+      "passed": false,
+      "error": "Guida non pubblicata: scenari ancora non validati. Richiesta non inviata. Budget insufficiente: restano 3 chiamate, ma ne servono almeno 4 per completare tutte le verifiche. Il lavoro resta salvato. Questo limite locale è distinto dalla quota del servizio Codex.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T14:25:50.254Z",
+          "endedAt": "2026-10-31T14:26:56.751Z",
+          "status": "succeeded",
+          "inputHash": "45405944e29c5375dddcb703f25664aeefb37bac480eca240e816b44e100d86f",
+          "inputBytes": 106121,
+          "durationMs": 66496,
+          "usage": {
+            "inputTokens": 43158,
+            "cachedInputTokens": 0,
+            "outputTokens": 2329
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T14:26:56.992Z",
+          "endedAt": "2026-10-31T14:28:37.928Z",
+          "status": "failed",
+          "inputHash": "a2e4db61eb79e9aee2b0e6019f06ff2d9ee2659176f5090374b2a50a4b879f54",
+          "inputBytes": 134682,
+          "durationMs": 100937,
+          "usage": {
+            "inputTokens": 65274,
+            "cachedInputTokens": 0,
+            "outputTokens": 3862
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T14:28:39.044Z",
+          "endedAt": "2026-10-31T14:32:03.814Z",
+          "status": "succeeded",
+          "inputHash": "c9d4698926974db40bd1160723d614b75d5640586df919828e4f759bbda52b06",
+          "inputBytes": 139924,
+          "durationMs": 204763,
+          "usage": {
+            "inputTokens": 66720,
+            "cachedInputTokens": 0,
+            "outputTokens": 9722
+          }
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios-2",
+          "startedAt": "2026-10-31T14:32:04.062Z",
+          "endedAt": "2026-10-31T14:35:17.828Z",
+          "status": "succeeded",
+          "inputHash": "0e3b0152248ba1830b4c0d2b4453c4d7d73d29f8104fa29ee882532379b1de51",
+          "inputBytes": 134813,
+          "durationMs": 193765,
+          "usage": {
+            "inputTokens": 65305,
+            "cachedInputTokens": 0,
+            "outputTokens": 7898
+          }
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-1",
+          "startedAt": "2026-10-31T14:35:20.762Z",
+          "endedAt": "2026-10-31T14:36:29.806Z",
+          "status": "succeeded",
+          "inputHash": "77266a2ba8d2f82588dd71c9c1ba302d37ba093487628f85b2cb4dc501098e6c",
+          "inputBytes": 192985,
+          "durationMs": 69033,
+          "usage": {
+            "inputTokens": 79997,
+            "cachedInputTokens": 0,
+            "outputTokens": 2149
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 31902,
+          "estimatedInput": 37779,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 106121,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.12,
+            "samples": 0,
+            "turnSamples": 0,
+            "unknownSamples": 0,
+            "largestInput": 0,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 56982,
+          "estimatedInput": 86844,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 134682,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.4881135978935491,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.4881135978935491,
+            "samples": 1,
+            "turnSamples": 1,
+            "unknownSamples": 0,
+            "largestInput": 43158,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 58433,
+          "estimatedInput": 89003,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 139924,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.4881135978935491,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.4881135978935491,
+            "samples": 2,
+            "turnSamples": 2,
+            "unknownSamples": 0,
+            "largestInput": 65274,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "scenarios-2",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 57020,
+          "estimatedInput": 86901,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 134813,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 5,
+          "reservedCalls": 3,
+          "calibrationFactor": 1.4881135978935491,
+          "family": "scenario",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.4881135978935491,
+            "samples": 3,
+            "turnSamples": 3,
+            "unknownSamples": 0,
+            "largestInput": 66720,
+            "measurement": "turn-usage-conservative"
+          }
+        },
+        {
+          "stage": "review-scenarios-1",
+          "units": 2,
+          "encoding": "shared-v2",
+          "visibleTokens": 68849,
+          "estimatedInput": 104504,
+          "reservedOutput": 10000,
+          "estimatedResponseCharacters": 12000,
+          "margin": 8192,
+          "bytes": 192985,
+          "fits": true,
+          "fitsTarget": false,
+          "remainingCalls": 4,
+          "reservedCalls": 2,
+          "calibrationFactor": 1.4881135978935491,
+          "family": "review",
+          "estimateOnly": true,
+          "calibration": {
+            "factor": 1.4881135978935491,
+            "samples": 4,
+            "turnSamples": 4,
+            "unknownSamples": 0,
+            "largestInput": 66720,
+            "measurement": "turn-usage-conservative"
+          }
+        }
+      ],
+      "unitPlans": [
+        {
+          "stage": "review-scenarios-1",
+          "groups": [
+            [
+              "scenario-1",
+              "scenario-2"
+            ]
+          ],
+          "fullRequest": {
+            "stage": "review-scenarios-1",
+            "units": 2,
+            "encoding": "shared-v2",
+            "visibleTokens": 68827,
+            "estimatedInput": 104471,
+            "reservedOutput": 10000,
+            "estimatedResponseCharacters": 12000,
+            "margin": 8192,
+            "bytes": 192892,
+            "fits": true,
+            "fitsTarget": false,
+            "remainingCalls": 4,
+            "reservedCalls": 2,
+            "calibrationFactor": 1.4881135978935491,
+            "family": "review",
+            "estimateOnly": true,
+            "calibration": {
+              "factor": 1.4881135978935491,
+              "samples": 4,
+              "turnSamples": 4,
+              "unknownSamples": 0,
+              "largestInput": 66720,
+              "measurement": "turn-usage-conservative"
+            }
+          },
+          "reserve": 2,
+          "maximum": 8
+        }
+      ],
+      "reviews": [
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 40,
+              "calculations": 21,
+              "transitions": 28
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "blocking",
+                "targetId": "scenario-2",
+                "message": "La replica migliore omessa manda KO Dreepy. Dawn cerca Bayleef e Meganium; Forest of Vitality permette di evolvere Chikorita→Bayleef→Meganium nello stesso turno. Le due Basic Grass Energy già assegnate forniscono quattro unità tramite Wild Growth e pagano Solar Beam: 140 danni contro 70 PS. Sono quindi false la conclusione «nessuna replica manda KO», la preferenza per Push Down e minimumReplyId=null. Questa alternativa è raggiungibile già nel turno preparatorio avversario 4.",
+                "correction": "Ricostruire setup e confronto includendo questa catena completa, Solar Beam, KO, scarti, Premio e promozione separata. Rivalutare la scelta preparatoria avversaria, la minima e i test di rimozione; aggiungere Solar Beam ad attackReview e agli audit dei turni coinvolti.",
+                "sourceIds": [
+                  "card:me02-087",
+                  "card:me01-117",
+                  "card:me01-009",
+                  "card:me01-010",
+                  "card:mee-009",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "Il nostro piano conserva deliberatamente Dreepy benché Poké Pad sia disponibile dall'apertura. Nel turno preparatorio 3 può cercare Drakloak, evolvere Dreepy già in campo e usare Dragon Headbutt con Fire/Psychic: 70 danni bastano a eliminare Chikorita, anche senza fare affidamento sulla rimozione di Growl. Il draft riconosce l'alternativa ma mantiene la storia inferiore per ottenere la tesi desiderata.",
+                "correction": "Cambiare posizione o scelta principale e ricostruire il registro: confrontare ed eseguire lo sviluppo tramite Drakloak quando disponibile, senza conservare gratuitamente Poké Pad per far funzionare la sequenza di Bite.",
+                "sourceIds": [
+                  "our-list",
+                  "card:me03-081",
+                  "card:sv06-129",
+                  "card:sv06-128",
+                  "card:me02.5-008"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "Anche accettando la posizione principale, il contrattacco del ramo access è dominato. Bayleef ha 40 danni e 110 PS: Poké Pad cerca Drakloak, che evolve Dreepy già carico Fire/Psychic; ritirare Torchic scartando la sua Fire Energy consente Dragon Headbutt da 70 e il KO. Combustion da 20 non dimostra che Push Down impedisca il Premio. Nel ramo defend la stessa evoluzione permette il KO di Chikorita.",
+                "correction": "Ricostruire i contrattacchi access e defend con le migliori alternative raggiungibili, includendo ritirata, recuperi successivi eventualmente utili, KO, Premi e promozioni. Aggiornare outcome, conclusione, pivot e confronti.",
+                "sourceIds": [
+                  "card:me03-081",
+                  "card:sv06-129",
+                  "card:sv10-040",
+                  "card:me01-009",
+                  "card:me02.5-008",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-1",
+                "message": "Nel setup avversario 2 Applin riceve Grass Energy ma rinuncia a Tumbling Attack senza alcun beneficio. Il primo turno personale dell'avversario è il turno globale 2: l'attacco è consentito e infligge 10 oppure 30 danni a Torchic. Gli stessi audit ammettono la rinuncia gratuita, mentre posizione e soglie successive mantengono il nostro Pokémon senza danni.",
+                "correction": "Registrare Tumbling Attack con esito della moneta esplicito, oppure costruire uno sviluppo avversario concretamente migliore. Propagare il danno attraverso l'evoluzione in Blaziken ex e aggiornare PS residui, annotazioni e tutti i rami.",
+                "sourceIds": [
+                  "card:sv06-017",
+                  "card:sv10-040",
+                  "card:sv09-024",
+                  "rules"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-1",
+                "message": "Il registro inserisce ripetutamente Energie in moves oltre che in energyRoutes: per esempio Crispin, assegnazioni, KO di Applin, ritirata di Blaziken ex e Seething Spirit. moves deve contenere soltanto carte non Energia. La concordanza dei contatori derivati non rende queste dichiarazioni conformi.",
+                "correction": "Rimuovere esclusivamente i movimenti Energia da moves, conservandoli integralmente in energyRoutes con percorsi, quantità, hostPrintId e fonti corretti. Riespandere e verificare setup, linea principale e tutti i rami.",
+                "sourceIds": [
+                  "rules",
+                  "card:sv07-133",
+                  "card:sv09-024"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "Anche questo scenario dichiara Energie in moves: Crispin nel setup, pescata Fire Energy, assegnazione Psychic Energy e scarto delle due Grass Energy al KO di Chikorita. Alcuni movimenti sono inoltre duplicati nei percorsi Energia.",
+                "correction": "Tenere tutte le Energie esclusivamente in energyRoutes, senza perdere assegnazioni, pescate o scarti reali; verificare nuovamente saldi e copie per ciascun ramo.",
+                "sourceIds": [
+                  "rules",
+                  "card:sv07-133",
+                  "card:mee-002",
+                  "card:mee-005",
+                  "card:mee-009"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-2",
+                "message": "Gli audit del nostro turno 7 principale/access elencano soltanto gli attacchi di Torchic, omettendo Petty Grudge e Bite del Dreepy in Panchina. Inoltre l'esclusione di Solar Cutter sostiene che occorra un accesso ulteriore senza completare il confronto con Night Stretcher già in mano: dopo la ritirata di Chikorita, la Grass Energy scartata è recuperabile e assegnabile manualmente a Celebi nello stesso turno.",
+                "correction": "Completare separatamente gli audit temporali di ogni ramo con tutti gli attacchi del campo. Correggere attackReview descrivendo la catena ritirata→Night Stretcher→manuale e confrontandone costi, danno e sviluppo con le repliche migliori.",
+                "sourceIds": [
+                  "card:sv06-128",
+                  "card:me01-012",
+                  "card:me02.5-196",
+                  "card:me02.5-008",
+                  "rules"
+                ]
+              }
+            ],
+            "checks": [
+              "Valutate esclusivamente scenario-1 e scenario-2 con opponent-1.",
+              "Le quantità delle due liste consegnate sommano a 60 carte per lato.",
+              "Verificati testi rilevanti, costi, soglie e accessi alternativi; i controlli contabili locali non superano i rilievi tattici e di registro."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "25f0e713f2a85f1243f229acbe7f59379e36336c8d6cea14b579022f091dd639",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "db182dc13a39f79e579a0d2510e76a14b2f1ed7298ff38c9b35e5f7d1bd9cae7",
+        "ea9735ed85ea1a92c1abbc818c93e01d79eb2e38383307a8ed4bed5c0500922d"
+      ],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "a2e4db61eb79e9aee2b0e6019f06ff2d9ee2659176f5090374b2a50a4b879f54",
+          "message": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro richiesto. Questo output non costituisce un caso eseguibile o validato e non deve essere utilizzato come guida. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 5,
+      "inputTokens": 320454,
+      "outputTokens": 25960,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 640,
+      "rawResponsesAvailable": 5,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: COSTRUZIONE NON COMPLETATA, rami segnaposto o ID duplicati. Dichiarazione originale: Non ho completato il registro richiesto. Questo output non costituisce un caso eseguibile o validato e non deve essere utilizzato come guida. Non correggere soltanto nomi o accessProof: ricostruisci un caso più semplice e realistico con setup, diretta, accesso aggiuntivo reale, migliore difesa e nostro attacco successivo, mantenendo tutti gli audit, rami e prove. Non inventare fatti né sostituire un ramo con zero danni."
+        }
+      ]
+    }
+  ],
+  "passed": 0,
+  "scenarioOutputSummary": {
+    "responses": 6,
+    "minimumCharacters": 4470,
+    "maximumCharacters": 38894,
+    "contextSchemasPassed": 6,
+    "losslessRoundtrips": 5,
+    "nativeSchemaPassed": 5,
+    "locallyAcceptedCases": 2
+  },
+  "actualCalls": 11,
+  "inputTokens": 685583,
+  "outputTokens": 71148,
+  "callsWithoutUsage": 1,
+  "unissuedTokenPlans": 0,
+  "elapsedSeconds": 999,
+  "ui": "Not run: no validated generated guide",
+  "blockedPreflightCandidates": 0,
+  "rawResponsesAvailable": 10
+}

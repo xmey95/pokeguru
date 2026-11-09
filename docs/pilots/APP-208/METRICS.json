@@ -1,0 +1,719 @@
+{
+  "task": "APP-208",
+  "date": "2026-10-31",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "promptVersion": "matchup-guide-16",
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "manualCorrections": 0,
+  "diagnosticCalls": 0,
+  "estimateOnly": true,
+  "sealedFiles": 54,
+  "changedSealedFiles": [],
+  "evidenceAsOf": "2026-10-30",
+  "localVerification": {
+    "testsPassed": 413,
+    "externalSkipped": 44,
+    "targetedTests": 78,
+    "typecheck": "pass",
+    "build": "pass",
+    "offlineLosslessContext": "pass"
+  },
+  "timeoutRecovery": {
+    "at": "2026-10-31T11:59:27.455Z",
+    "modelCallsForAudit": 0,
+    "actualInvocations": 8,
+    "automaticTimeoutRetries": [
+      {
+        "id": "toucannon-dragapult",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "identicalInputHash": "c7174da7dc7c4660a0f922f938efb4d411aa0fff6f467be4b3c0ebb16feebc43",
+        "singleImmutableContext": true,
+        "remainingBefore": 7,
+        "remainingOnRetry": 6,
+        "actualRetryInvoked": true,
+        "retryStatus": "failed"
+      }
+    ],
+    "immutableContextFailures": 0
+  },
+  "reviewBudgetAudit": {
+    "modelCalls": 0,
+    "guideChanged": false,
+    "roundTripIdentical": true,
+    "sourceCount": 49,
+    "legacy": {
+      "stage": "review-scenarios-1",
+      "units": 2,
+      "encoding": "shared",
+      "visibleTokens": 119743,
+      "estimatedInput": 160388,
+      "reservedOutput": 10000,
+      "estimatedResponseCharacters": 12000,
+      "margin": 8192,
+      "bytes": 391462,
+      "fits": false,
+      "fitsTarget": false,
+      "remainingCalls": 3,
+      "reservedCalls": 2,
+      "calibrationFactor": 1.3223307595618605,
+      "family": "review",
+      "estimateOnly": true
+    },
+    "whole": {
+      "stage": "review-scenarios-1",
+      "units": 2,
+      "encoding": "shared-v2",
+      "visibleTokens": 90151,
+      "estimatedInput": 121258,
+      "reservedOutput": 10000,
+      "estimatedResponseCharacters": 12000,
+      "margin": 8192,
+      "bytes": 245000,
+      "fits": true,
+      "fitsTarget": false,
+      "remainingCalls": 3,
+      "reservedCalls": 2,
+      "calibrationFactor": 1.3223307595618605,
+      "family": "review",
+      "estimateOnly": true
+    },
+    "parts": [
+      {
+        "stage": "review-scenarios-1",
+        "units": 1,
+        "encoding": "shared-v2",
+        "visibleTokens": 70472,
+        "estimatedInput": 95236,
+        "reservedOutput": 8000,
+        "estimatedResponseCharacters": 12000,
+        "margin": 8192,
+        "bytes": 192289,
+        "fits": true,
+        "fitsTarget": true,
+        "remainingCalls": 3,
+        "reservedCalls": 2,
+        "calibrationFactor": 1.3223307595618605,
+        "family": "review",
+        "estimateOnly": true
+      },
+      {
+        "stage": "review-scenarios-1",
+        "units": 1,
+        "encoding": "shared-v2",
+        "visibleTokens": 64063,
+        "estimatedInput": 86761,
+        "reservedOutput": 8000,
+        "estimatedResponseCharacters": 12000,
+        "margin": 8192,
+        "bytes": 175822,
+        "fits": true,
+        "fitsTarget": true,
+        "remainingCalls": 3,
+        "reservedCalls": 2,
+        "calibrationFactor": 1.3223307595618605,
+        "family": "review",
+        "estimateOnly": true
+      }
+    ],
+    "availableCalls": 3,
+    "minimumNeededSplit": 4,
+    "minimumNeededWhole": 3,
+    "decision": "Whole review fits hard policy with every fact preserved; soft-target splitting would prevent the mandatory prose and final review."
+  },
+  "feedbackAudit": {
+    "at": "2026-10-31T11:59:27.529Z",
+    "modelCalls": 0,
+    "readOnly": true,
+    "retries": [
+      {
+        "id": "toucannon-festival",
+        "failedSequence": 2,
+        "retrySequence": 3,
+        "stage": "scenarios-1",
+        "previousRawHash": "1c0dd18c0e4b8b52f5153066c7e97aba0df5dc8cceda92e93879cc35450521c7",
+        "previousRawIdentical": true,
+        "feedbackIdentical": true,
+        "retryEncoding": "shared-v2",
+        "previousInputBytes": 181227,
+        "retryInputBytes": 124878
+      }
+    ]
+  },
+  "localReplay": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "cases": [
+      {
+        "id": "dragapult-hydrapple",
+        "sequence": 2,
+        "scenarioId": "scenario-1",
+        "localErrors": 0,
+        "auditRows": 14,
+        "executedRetreats": 4,
+        "retreatCosts": [
+          {
+            "id": "retreat-1",
+            "printId": "sv06-025",
+            "printedCost": 1
+          },
+          {
+            "id": "retreat-2",
+            "printId": "sv06-129",
+            "printedCost": 1
+          },
+          {
+            "id": "retreat-3",
+            "printId": "sv06-025",
+            "printedCost": 1
+          },
+          {
+            "id": "retreat-4",
+            "printId": "sv06-129",
+            "printedCost": 1
+          }
+        ],
+        "branches": 3,
+        "rawUnchanged": true
+      }
+    ]
+  },
+  "stopAudit": {
+    "modelCalls": 0,
+    "readOnly": true,
+    "cases": [
+      {
+        "id": "toucannon-dragapult",
+        "status": "interrupted",
+        "failureCode": "request-limit",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 67127,
+          "outputTokens": 2429,
+          "cachedInputTokens": 0,
+          "durationMs": 1018468,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": true
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T11:52:14.830Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 93268,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 177341,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "toucannon-festival",
+        "status": "interrupted",
+        "failureCode": "invalid-response",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 3,
+          "failedAttempts": 2,
+          "attemptLimit": 8,
+          "inputTokens": 218182,
+          "outputTokens": 11231,
+          "cachedInputTokens": 0,
+          "durationMs": 284546,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-1",
+          "checkedAt": "2026-10-31T11:44:03.552Z",
+          "outcome": "ready",
+          "estimateOnly": true,
+          "reasons": [],
+          "remainingCalls": 6,
+          "requiredCalls": 5,
+          "estimatedInputTokens": 81839,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 28000,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 124878,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 42000,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      },
+      {
+        "id": "dragapult-hydrapple",
+        "status": "interrupted",
+        "failureCode": "request-limit",
+        "guide": {
+          "formatVersion": 1,
+          "validated": false,
+          "attempts": 2,
+          "failedAttempts": 0,
+          "attemptLimit": 8,
+          "inputTokens": 102785,
+          "outputTokens": 32854,
+          "cachedInputTokens": 0,
+          "durationMs": 624258,
+          "localErrors": 0,
+          "reviewFindings": 0,
+          "usageIncomplete": false
+        },
+        "budget": {
+          "stage": "scenarios-2",
+          "checkedAt": "2026-10-31T11:51:40.386Z",
+          "outcome": "blocked",
+          "estimateOnly": true,
+          "reasons": [
+            "response-size"
+          ],
+          "remainingCalls": 6,
+          "requiredCalls": 4,
+          "estimatedInputTokens": 67883,
+          "inputLimit": 128000,
+          "reservedOutputTokens": 36755,
+          "totalLimit": 176000,
+          "marginTokens": 8192,
+          "requestBytes": 78636,
+          "requestByteLimit": 500000,
+          "estimatedResponseCharacters": 111614,
+          "responseCharacterLimit": 100000
+        },
+        "quickCheck": "ok"
+      }
+    ]
+  },
+  "nativeDecisionsAudit": "native-decisions-audit.json",
+  "policy": {
+    "inputTarget": 96000,
+    "inputMaximum": 128000,
+    "totalEnvelope": 176000,
+    "margin": 8192,
+    "requestBytes": 500000,
+    "responseCharacters": 100000
+  },
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "jobId": "e489a2ef-9f9c-4d3c-8c8a-d35fb3d6bd0c",
+      "startedAt": "2026-10-31T11:41:14.599Z",
+      "endedAt": "2026-10-31T11:58:14.870Z",
+      "passed": false,
+      "error": "La risposta Codex supera il limite locale di 100.000 caratteri. Nessun contenuto parziale è stato applicato.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T11:41:15.102Z",
+          "endedAt": "2026-10-31T11:42:13.520Z",
+          "status": "succeeded",
+          "inputHash": "eac34774bc62188ea333e467e5b6233195e54c625151c30123569d2130006965",
+          "inputBytes": 177411,
+          "durationMs": 58416,
+          "usage": {
+            "inputTokens": 67127,
+            "cachedInputTokens": 0,
+            "outputTokens": 2429
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T11:42:13.765Z",
+          "endedAt": "2026-10-31T11:52:13.810Z",
+          "status": "failed",
+          "inputHash": "c7174da7dc7c4660a0f922f938efb4d411aa0fff6f467be4b3c0ebb16feebc43",
+          "inputBytes": 177341,
+          "durationMs": 600032,
+          "usage": null
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T11:52:14.839Z",
+          "endedAt": "2026-10-31T11:58:14.855Z",
+          "status": "failed",
+          "inputHash": "c7174da7dc7c4660a0f922f938efb4d411aa0fff6f467be4b3c0ebb16feebc43",
+          "inputBytes": 177341,
+          "durationMs": 360020,
+          "usage": null
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 55868,
+          "estimatedInput": 64621,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 177411,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 69018,
+          "estimatedInput": 93268,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 177341,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3216814634495597,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 69018,
+          "estimatedInput": 93268,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 177341,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3216814634495597,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 67127,
+      "outputTokens": 2429,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 2,
+      "elapsedSeconds": 1020,
+      "rawResponsesAvailable": 1,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "timeout",
+          "message": "Questa chiamata Codex ha superato dieci minuti. Puoi riprendere dai lotti salvati."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "request-limit",
+          "message": "La risposta Codex supera il limite locale di 100.000 caratteri. Nessun contenuto parziale è stato applicato."
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "jobId": "64052c3e-391f-40dd-9f9c-c426f520afa5",
+      "startedAt": "2026-10-31T11:41:15.135Z",
+      "endedAt": "2026-10-31T11:46:02.098Z",
+      "passed": false,
+      "error": "scenario-1: replica access senza indice dell'evento di ricerca/recupero/pesca da effetto.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T11:41:15.320Z",
+          "endedAt": "2026-10-31T11:42:08.442Z",
+          "status": "succeeded",
+          "inputHash": "10ec2c9be6e00f451dc92593fa32fd32d7a8bb924eb0885fb32903b897ff2ef4",
+          "inputBytes": 183549,
+          "durationMs": 53118,
+          "usage": {
+            "inputTokens": 68934,
+            "cachedInputTokens": 0,
+            "outputTokens": 2094
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T11:42:09.104Z",
+          "endedAt": "2026-10-31T11:44:02.044Z",
+          "status": "failed",
+          "inputHash": "27c7d74be1fcacea45feafea9178ea895fa3d134a3d52486ea90ad8ff38c027a",
+          "inputBytes": 181227,
+          "durationMs": 112921,
+          "usage": {
+            "inputTokens": 79590,
+            "cachedInputTokens": 0,
+            "outputTokens": 5189
+          }
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T11:44:03.573Z",
+          "endedAt": "2026-10-31T11:46:02.086Z",
+          "status": "failed",
+          "inputHash": "e0ea1006be8a6a13e027fabc8ca4b02a6896126367fa89b2f30f896a1533eff5",
+          "inputBytes": 124878,
+          "durationMs": 118507,
+          "usage": {
+            "inputTokens": 69658,
+            "cachedInputTokens": 0,
+            "outputTokens": 3948
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 57681,
+          "estimatedInput": 66651,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 183549,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 70627,
+          "estimatedInput": 94895,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 181227,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3145992614552453,
+          "family": "scenario",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "shared-v2",
+          "visibleTokens": 60696,
+          "estimatedInput": 81839,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 124878,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 6,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.3145992614552453,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "inputHash": "27c7d74be1fcacea45feafea9178ea895fa3d134a3d52486ea90ad8ff38c027a",
+          "message": "scenario-1: replica access senza indice dell'evento di ricerca/recupero/pesca da effetto."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios-1",
+          "inputHash": "27c7d74be1fcacea45feafea9178ea895fa3d134a3d52486ea90ad8ff38c027a",
+          "message": "scenario-1: replica access senza indice dell'evento di ricerca/recupero/pesca da effetto."
+        }
+      ],
+      "savedReports": 0,
+      "attemptCount": 3,
+      "inputTokens": 218182,
+      "outputTokens": 11231,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 287,
+      "rawResponsesAvailable": 3,
+      "blockedPreflightCandidates": 0,
+      "failures": [
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: replica access senza indice dell'evento di ricerca/recupero/pesca da effetto."
+        },
+        {
+          "stage": "scenarios-1",
+          "code": "invalid-response",
+          "message": "scenario-1: replica access senza indice dell'evento di ricerca/recupero/pesca da effetto."
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "jobId": "ba66a56a-117f-46fd-8381-7a3ac51fa621",
+      "startedAt": "2026-10-31T11:41:15.351Z",
+      "endedAt": "2026-10-31T11:51:40.391Z",
+      "passed": false,
+      "error": "Analisi interrotta: la richiesta o la risposta prevista supera il limite di dimensione verificabile. Il lavoro resta salvato. Questo limite locale è distinto dalla quota del servizio Codex.",
+      "attempts": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "startedAt": "2026-10-31T11:41:15.497Z",
+          "endedAt": "2026-10-31T11:41:56.766Z",
+          "status": "succeeded",
+          "inputHash": "320583de0d99880a87afc6748ccb5e6d7a06a4825bb190fe54b4f7f8229eff88",
+          "inputBytes": 97818,
+          "durationMs": 41266,
+          "usage": {
+            "inputTokens": 41038,
+            "cachedInputTokens": 0,
+            "outputTokens": 2225
+          }
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios-1",
+          "startedAt": "2026-10-31T11:41:57.040Z",
+          "endedAt": "2026-10-31T11:51:40.044Z",
+          "status": "succeeded",
+          "inputHash": "3c7202fc00b9646b34bc1498a8c187cf280b065001c87b89bb26771968f0edfc",
+          "inputBytes": 126107,
+          "durationMs": 582992,
+          "usage": {
+            "inputTokens": 61747,
+            "cachedInputTokens": 0,
+            "outputTokens": 30629
+          }
+        }
+      ],
+      "tokenPlans": [
+        {
+          "stage": "plan",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 29785,
+          "estimatedInput": 35408,
+          "reservedOutput": 6000,
+          "estimatedResponseCharacters": 8000,
+          "margin": 8192,
+          "bytes": 97818,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 8,
+          "reservedCalls": 5,
+          "calibrationFactor": 1.12,
+          "family": "plan",
+          "estimateOnly": true
+        },
+        {
+          "stage": "scenarios-1",
+          "units": 1,
+          "encoding": "plain",
+          "visibleTokens": 52815,
+          "estimatedInput": 82094,
+          "reservedOutput": 28000,
+          "estimatedResponseCharacters": 42000,
+          "margin": 8192,
+          "bytes": 126107,
+          "fits": true,
+          "fitsTarget": true,
+          "remainingCalls": 7,
+          "reservedCalls": 4,
+          "calibrationFactor": 1.5155883834144703,
+          "family": "scenario",
+          "estimateOnly": true
+        }
+      ],
+      "unitPlans": [],
+      "reviews": [],
+      "correctionOrigins": [],
+      "scenarioGates": [],
+      "derivedTactics": [
+        {
+          "hash": "d93a7265131c666d75beec742c071de81dd20696601b1c12ef3d3412e65c307c",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "57f8025a17b013b4e4ece335fb6dfab14c02367751de89ca9a3fd1b138616038"
+      ],
+      "invalidResponses": [],
+      "savedReports": 0,
+      "attemptCount": 2,
+      "inputTokens": 102785,
+      "outputTokens": 32854,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "elapsedSeconds": 625,
+      "rawResponsesAvailable": 2,
+      "blockedPreflightCandidates": 1,
+      "failures": []
+    }
+  ],
+  "passed": 0,
+  "actualCalls": 8,
+  "inputTokens": 388094,
+  "outputTokens": 46514,
+  "callsWithoutUsage": 2,
+  "unissuedTokenPlans": 0,
+  "elapsedSeconds": 1020,
+  "ui": "Not run: no validated generated guide",
+  "blockedPreflightCandidates": 1,
+  "rawResponsesAvailable": 6
+}

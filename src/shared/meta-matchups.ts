@@ -34,6 +34,8 @@ export function hasStrategyPhases(value: unknown): value is MatchupStrategyPhase
 }
 
 export interface MatchupReport {
+  /** Versioned, reviewed chapters. Absent on legacy reports. */
+  guide?: import('./matchup-guide').MatchupGuide
   jobId?: string
   projectId: string
   metaId: string

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'r
 import type { DeckBaseline, DeckImportSource } from '../../shared/deck-import'
 import type { DeckVersion } from '../../shared/deck-threads'
 import type { Project } from '../../shared/projects'
+import type { DemoProfile } from '../../shared/demo-profile'
 import { MatchupSection } from './MatchupSection'
 import { AiSettings } from './AiSettings'
 import { CatalogSection } from './CatalogSection'
@@ -44,6 +45,7 @@ export function App() {
   const [projectActionBusy, setProjectActionBusy] = useState(false)
   const [name, setName] = useDraftState('project-name', '')
   const [loading, setLoading] = useState(true)
+  const [demo, setDemo] = useState<DemoProfile | null>(null)
   const [saving, setSaving] = useBusyState('project.create')
   const [baseline, setBaseline] = useState<DeckBaseline | null>(null)
   const [deckVersions, setDeckVersions] = useState<DeckVersion[]>([])
@@ -111,8 +113,11 @@ export function App() {
     async function load(): Promise<void> {
       try {
         if (!window.projectsApi?.list) throw new Error('Collegamento con l’archivio locale non disponibile.')
-        const [result, archived] = await Promise.all([window.projectsApi.list(), window.projectsApi.listArchived()])
+        const [result, archived, demoInfo] = await Promise.all([
+          window.projectsApi.list(), window.projectsApi.listArchived(), window.demoApi?.getInfo() ?? null
+        ])
         if (!active) return
+        setDemo(demoInfo)
         if (!result.ok) {
           setError(result.error)
           return
@@ -124,6 +129,11 @@ export function App() {
         const project = requested ? result.value.find((item) => item.id === requested) : result.value[0]
         if (project) {
           nav.entry.route.projectId = project.id
+          if (demoInfo && !requested) {
+            nav.entry.route.view = 'project'
+            nav.entry.route.tab = 'matchups'
+            nav.entry.ui['matchup.selected'] = demoInfo.guides.find((g) => g.projectId === project.id)?.opponentId
+          }
           void selectProject(project.id, project)
         } else if (requested) setError('Questo progetto non è più disponibile. Scegli un altro progetto oppure torna indietro.')
       } catch (cause) {
@@ -137,6 +147,10 @@ export function App() {
   }, [])
 
   async function openProject(id: string): Promise<void> {
+    if (demo) {
+      nav.go({ view: 'project', projectId: id }, { 'matchup.selected': demo.guides.find((g) => g.projectId === id)?.opponentId })
+      return
+    }
     nav.go({ view: 'project', projectId: id }, undefined, `${activeTab === 'deck' ? 'Lista' : activeTab === 'threads' ? 'Strategie' : 'Guide matchup'} · ${projects.find((item) => item.id === id)?.name ?? 'Progetto'}`)
   }
 
@@ -331,7 +345,7 @@ export function App() {
             <img className="brand-mark" src="./favicon.svg" alt="Pokéguru" width="40" height="40" />
             <div><strong aria-hidden="true">Pokéguru</strong><span>Analisi competitiva</span></div>
           </div>
-          <ProjectSwitcher projects={projects} archivedProjects={archivedProjects} selected={selected} loading={loading || projectActionBusy}
+          <ProjectSwitcher readOnly={!!demo} projects={projects} archivedProjects={archivedProjects} selected={selected} loading={loading || projectActionBusy}
             onSelect={(id) => void openProject(id)}
             onArchive={(id) => void archiveProject(id)} onRestore={(id) => void restoreProject(id)}
             onDelete={(project) => { setDeleteTarget(project); setDeleteName(''); setError(null) }}
@@ -339,19 +353,27 @@ export function App() {
           <nav className="workspace-nav" aria-label="Aree del progetto">
             <span className="rail-caption">Area di lavoro</span>
             <button type="button" className={view === 'project' && activeTab === 'deck' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'deck' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'deck' })} title="Lista" aria-label="Lista"><Icon name="deck" /><span className="nav-label">Lista</span></button>
-            <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'threads' })} title="Strategie" aria-label="Strategie"><Icon name="thread" /><span className="nav-label">Strategie</span></button>
+            {!demo && <button type="button" className={view === 'project' && activeTab === 'threads' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'threads' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'threads' })} title="Strategie" aria-label="Strategie"><Icon name="thread" /><span className="nav-label">Strategie</span></button>}
             <button type="button" className={view === 'project' && activeTab === 'matchups' ? 'active' : ''} aria-current={view === 'project' && activeTab === 'matchups' ? 'page' : undefined} onClick={() => nav.go({ view: 'project', tab: 'matchups' })} title="Guide matchup" aria-label="Guide matchup"><Icon name="matchup" /><span className="nav-label">Guide matchup</span></button>
           </nav>
-          <nav className="resource-nav" aria-label="Risorse globali">
+          {!demo && <nav className="resource-nav" aria-label="Risorse globali">
             <span className="rail-caption">Risorse</span>
             <button type="button" className={view === 'catalog' ? 'active' : ''} onClick={() => setView('catalog')} title="Catalogo" aria-label="Catalogo" aria-current={view === 'catalog' ? 'page' : undefined}><Icon name="catalog" /><span className="nav-label">Catalogo</span></button>
             <button type="button" className={view === 'tournament' ? 'active' : ''} onClick={() => setView('tournament')} title="Eventi" aria-label="Eventi" aria-current={view === 'tournament' ? 'page' : undefined}><Icon name="event" /><span className="nav-label">Eventi</span></button>
             <button type="button" className={view === 'ai' ? 'active' : ''} onClick={() => setView('ai')} title="Impostazioni AI" aria-label="Impostazioni AI" aria-current={view === 'ai' ? 'page' : undefined}><Icon name="settings" /><span className="nav-label">Impostazioni AI</span></button>
           </nav>
-          <div className="local-indicator"><span aria-hidden="true" /> Archivio locale</div>
+          }
+          <div className="local-indicator"><span aria-hidden="true" /> {demo ? 'Demo offline · sola lettura' : 'Archivio locale'}</div>
         </aside>
 
         <main id="main-content" className="main-content" tabIndex={-1} data-nav-loading={loading || baselineLoading}>
+          {demo && <section className="demo-notice" aria-label={demo.mode === 'pilot-readonly' ? 'Demo offline del pilota' : 'Guida verificata offline'}>
+            <strong>{demo.mode === 'pilot-readonly' ? 'Demo offline · guide del pilota precedente' : 'Guida generata e verificata · consultazione offline'}</strong>
+            <p>Consulta le guide e le liste originali. Generazione AI, aggiornamenti online e modifiche sono disabilitati. {demo.mode === 'pilot-readonly' ? 'Questi esempi appartengono al pilota precedente.' : 'Questo profilo separato contiene soltanto il risultato verificato; gli altri matchup restano da completare.'}</p>
+            <div className="demo-guide-links">{demo.guides.map((guide) => <button key={guide.projectId} type="button"
+              className="secondary-button" aria-pressed={selected?.id === guide.projectId}
+              onClick={() => nav.go({ view: 'project', tab: 'matchups', projectId: guide.projectId }, { 'matchup.selected': guide.opponentId })}>{guide.title}</button>)}</div>
+          </section>}
           {showCompactCreate && <form className="compact-create-panel" onSubmit={(event) => void createProject(event)}>
             <div className="panel-heading"><h2>Nuovo progetto</h2><button type="button" className="text-button" onClick={() => { setShowCompactCreate(false); document.getElementById('project-switcher-trigger')?.focus() }}>Chiudi</button></div>
             <label htmlFor="compact-project-name">Nome progetto</label>
@@ -399,11 +421,11 @@ export function App() {
                   </div>
                 </div>
               </form>}
-              {!baselineLoading && <DeckConstraintIndex />}
+              {!demo && !baselineLoading && <DeckConstraintIndex />}
               {baselineLoading ? <LoadingSkeleton label="Caricamento lista…" /> : baseline ? (
                 <div className="baseline-panel" data-testid="baseline-panel">
-                  <DeckList key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={focusImport} importOpen={importOpen} footer={<>
-                    <DeckHistory projectId={selected.id} versions={deckVersions} onOpenChange={setHistoryOpen}
+                  <DeckList readOnly={!!demo} key={`${selected.id}:${baseline.importedAt}`} projectId={selected.id} baseline={baseline} onOpenCatalog={() => setView('catalog')} onImport={demo ? undefined : focusImport} importOpen={importOpen} footer={<>
+                    <DeckHistory readOnly={!!demo} projectId={selected.id} versions={deckVersions} onOpenChange={setHistoryOpen}
                     onAnnotated={(version) => {
                       if (selectionVersion.current === activeSelectionVersion) setDeckVersions((items) =>
                         items.map((item) => item.id === version.id ? version : item))
@@ -445,7 +467,7 @@ export function App() {
                   setFileName(adopted.fileName)
                   setSelected(updated)
                   setProjects((current) => current.map((project) => project.id === selected.id ? updated : project))
-                }} /> : <MatchupSection key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')}
+                }} /> : <MatchupSection demo={!!demo} demoMode={demo?.mode} key={selected.id} projectId={selected.id} baseline={baseline} onOpenAiSettings={() => setView('ai')}
                   onOpenCatalogCard={(identityId) => nav.go({ view: 'catalog' }, { 'catalog.focus': identityId, 'catalog.focusConsumed': false, 'catalog.selected': identityId, 'catalog.query': '', 'catalog.set': 'all' }, 'Catalogo · carta dalla guida')} />}
             </section>
           ) : (

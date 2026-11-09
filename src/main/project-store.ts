@@ -1,4 +1,6 @@
 import { ensureMatchupSummaries } from './matchup-summary-schema'
+import { assertGuideReport } from '../shared/matchup-guide'
+import { assertGuideIntegrity } from './matchup-guide-generation'
 import { createHash, randomUUID } from 'node:crypto'
 import { ensureRetentionIndex, retainedIds } from './retention-index'
 import { collectUnusedEvidence } from './ai-evidence-archive'
@@ -516,6 +518,13 @@ export class ProjectStore {
     this.db.exec('BEGIN IMMEDIATE')
     try {
       for (const row of rows) {
+        const report = JSON.parse(row.payload) as MatchupReport
+        // Version-scoped discussions already own this report. Reopening must not
+        // backfill a second, hash-only discussion and hide its revision history.
+        if (report.deckVersionId && this.db.prepare(`SELECT 1 FROM matchup_discussions
+          WHERE project_id = ? AND meta_id = ? AND opponent_id = ? AND content_hash = ?
+          AND deck_version_id = ? AND deck_resolution_id IS ?`).get(row.project_id, row.meta_id,
+          row.opponent_id, row.deck_hash, report.deckVersionId, report.deckResolutionId ?? null)) continue
         this.db.prepare(`INSERT OR IGNORE INTO matchup_discussions
           (id, project_id, meta_id, opponent_id, deck_hash, parent_id, created_at)
           VALUES (?, ?, ?, ?, ?, NULL, ?)`).run(randomUUID(), row.project_id, row.meta_id, row.opponent_id, row.deck_hash, row.generated_at)
@@ -1627,6 +1636,8 @@ export class ProjectStore {
   }
 
   saveMatchupReport(report: MatchupReport): void {
+    assertGuideReport(report)
+    if (report.guide) assertGuideIntegrity(report.guide)
     if (!this.reportMatchesSavedContext(report))
       throw new Error(report.deckVersionId ? 'La base salvata della guida non è verificabile in questo progetto.'
         : 'La lista è cambiata e questa guida non identifica una versione storica verificabile.')
@@ -1741,9 +1752,16 @@ export class ProjectStore {
       .get(projectId, opponentId, metaId, hash, versionId ?? null, resolutionId ?? null)
   }
 
+  /** Public numeric IDs retain their existing contract. Read-only history also
+   * accepts an opaque ID already saved for THIS project, without rewriting it
+   * or allowing it into public-network query validation. */
+  private assertMatchupHistoryOpponent(projectId:string,opponentId:string):void{
+    if(typeof opponentId!=='string'||!opponentId.length||opponentId.length>100||/[\u0000-\u001f\u007f]/.test(opponentId)||!(/^\d+$/.test(opponentId)||this.db.prepare('SELECT 1 FROM matchup_discussions WHERE project_id=? AND opponent_id=? LIMIT 1').get(projectId,opponentId)))throw new Error('Archetipo non valido.')
+  }
+
   listMatchupDiscussionPage(projectId: string, opponentId: string, before?: { createdAt: string; rowId: number }): MatchupDiscussionPage {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    if (typeof opponentId !== 'string' || !/^\d+$/.test(opponentId)) throw new Error('Archetipo non valido.')
+    this.assertMatchupHistoryOpponent(projectId,opponentId)
     if (before && (typeof before.createdAt !== 'string' || !Number.isSafeInteger(before.rowId) || before.rowId < 1))
       throw new Error('Cursore non valido.')
     const rows = this.db.prepare(`SELECT ${discussionColumns}, '' AS context_summary FROM matchup_discussions d
@@ -1763,7 +1781,7 @@ export class ProjectStore {
 
   listMatchupDiscussions(projectId: string, opponentId: string): MatchupDiscussion[] {
     if (!this.get(projectId)) throw new Error('Progetto non trovato.')
-    if (typeof opponentId !== 'string' || !/^\d+$/.test(opponentId)) throw new Error('Archetipo non valido.')
+    this.assertMatchupHistoryOpponent(projectId,opponentId)
     const rows = this.db.prepare(`SELECT id FROM matchup_discussions WHERE project_id = ? AND opponent_id = ?
       ORDER BY created_at DESC, rowid DESC`).all(projectId, opponentId) as { id: string }[]
     return rows.map((row) => this.getMatchupDiscussion(row.id)!)
@@ -1798,6 +1816,8 @@ export class ProjectStore {
   }
 
   completeMatchupFeedback(discussionId: string, turnId: string, report: MatchupReport, changeSummary: string): MatchupDiscussion {
+    assertGuideReport(report)
+    if (report.guide) assertGuideIntegrity(report.guide)
     const discussion = this.getMatchupDiscussion(discussionId, true)
     if (!discussion || !discussion.turns.some((turn) => turn.id === turnId && turn.feedback && !turn.report))
       throw new Error('Commento Matchup in attesa non trovato.')
@@ -1823,6 +1843,8 @@ export class ProjectStore {
   }
 
   saveContinuedMatchupReport(report: MatchupReport, parentId: string): MatchupDiscussion {
+    assertGuideReport(report)
+    if (report.guide) assertGuideIntegrity(report.guide)
     const parent = this.getMatchupDiscussion(parentId, true)
     if (!parent || parent.projectId !== report.projectId || parent.opponentId !== report.opponentId)
       throw new Error('Discussione di origine non valida.')

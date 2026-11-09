@@ -72,7 +72,7 @@ const api: ProjectsApi = {
   listConstraints: (projectId) => ipcRenderer.invoke('constraints:list', projectId),
   saveConstraint: (input) => ipcRenderer.invoke('constraints:save', input),
   deleteConstraint: (input) => ipcRenderer.invoke('constraints:delete', input),
-  getMeta: () => ipcRenderer.invoke('matchups:get-meta'),
+  getMeta: (projectId) => ipcRenderer.invoke('matchups:get-meta', projectId),
   getMatchupEvidence: (metaId, opponentId) => ipcRenderer.invoke('matchups:evidence-preview', metaId, opponentId),
   listMatchupReportSummaries: (projectId, metaId) => ipcRenderer.invoke('matchups:report-summaries', projectId, metaId),
   listMatchupReports: (projectId, metaId) => ipcRenderer.invoke('matchups:list-reports', projectId, metaId),
@@ -112,3 +112,4 @@ const api: ProjectsApi = {
 }
 
 contextBridge.exposeInMainWorld('projectsApi', api)
+contextBridge.exposeInMainWorld('demoApi', { getInfo: () => ipcRenderer.invoke('demo:info') })

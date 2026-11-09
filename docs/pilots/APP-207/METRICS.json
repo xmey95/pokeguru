@@ -1,0 +1,56 @@
+{
+  "task": "APP-207",
+  "date": "2026-10-31",
+  "testsPassed": 409,
+  "externalSkipped": 44,
+  "typecheck": "pass",
+  "build": "pass",
+  "realQuotaRpc": "pass",
+  "ui": {
+    "realCodexQuota": true,
+    "quota": {
+      "status": "available",
+      "fetchedAt": "2026-10-31T11:12:31.860Z",
+      "buckets": [
+        {
+          "id": "codex",
+          "name": null,
+          "primary": {
+            "usedPercent": 0,
+            "windowDurationMins": 10080,
+            "resetsAt": 1794048868
+          },
+          "secondary": null
+        }
+      ],
+      "availableResets": 0
+    },
+    "budgetFixtureFrom": "APP-206 immutable input replay, diagnostic metadata only in profile copy",
+    "viewports": [
+      1440,
+      640
+    ],
+    "sourceDatabaseUnchanged": true,
+    "inferenceCalls": 0,
+    "guideAttemptCountUnchanged": 5,
+    "pageErrors": []
+  },
+  "newInferenceCalls": 0,
+  "resetCreditsConsumed": 0,
+  "previousCampaign": {
+    "task": "APP-206",
+    "validated": 0,
+    "calls": 14,
+    "perGuide": [
+      5,
+      4,
+      5
+    ]
+  },
+  "limitations": [
+    "Quota is a service-reported percentage, not an exact remaining token count.",
+    "Quota snapshot is refreshed explicitly in AI Settings.",
+    "Budget UI tested with diagnostic metadata reconstructed from APP-206 in an isolated copy; old guide contents and source database unchanged."
+  ],
+  "source": "https://learn.chatgpt.com/docs/app-server"
+}

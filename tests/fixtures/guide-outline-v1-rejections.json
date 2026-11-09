@@ -1,0 +1,845 @@
+{
+  "notice": "Unapproved unchanged real responses for protocol regression only. Never guide approvals or certified tactical facts.",
+  "source": "APP-235 bounded v10",
+  "plan": {
+    "thesis": "Contro la lista esatta N's Zoroark di Regional Puebla, Crustle offre protezione condizionale e pressione Grass, mentre Mega Manectric ex permette un attacco esplosivo al prezzo di Energie e rischio di tre Premi. La guida confronterà due decisioni concrete: preparare un KO con Riotous Blasting oppure sviluppare Crustle senza confondere Mysterious Rock Inn con un blocco assoluto. Le conclusioni riguarderanno soltanto le linee ricostruite, senza affermare vittoria forzata o ottimalità nel matchup.",
+    "sections": [
+      {
+        "kind": "summary",
+        "objective": "Definire il matchup esclusivamente contro N's Zoroark · Regional Puebla · posizione 12, mantenendo entrambe le liste complete di 60 carte. Separare provenienza pubblica, frequenze osservate e risultati: nessuna fonte consegnata dimostra un winrate della nostra lista contro questo matchup.",
+        "sourceIds": [
+          "our-list",
+          "opponent-1",
+          "our-test-provenance",
+          "tournament-aggregate"
+        ]
+      },
+      {
+        "kind": "preparation",
+        "objective": "Verificare accessi e risorse prima delle scelte: Buddy-Buddy Poffin per i Base ammessi, Poké Pad per Pokémon senza Rule Box, Hilda per evoluzione ed Energia, Ultra Ball con due scarti effettivi. Distinguere Team Rocket's Petrel da una seconda giocata di Supporter. Jolting Charge cerca soltanto Basic Grass Energy e Basic Lightning Energy: non assumere che recuperi Voltaic Lightning Energy o Growing Grass Energy in base alla categoria Normal del catalogo. Registrare Premi e copie residue senza attribuire al giocatore conoscenza dei Premi coperti.",
+        "sourceIds": [
+          "our-list",
+          "card:sv05-144",
+          "card:me03-081",
+          "card:sv10.5w-084",
+          "card:me01-131",
+          "card:sv10-176",
+          "card:sv07-050",
+          "card:me05-084",
+          "card:me03-086"
+        ]
+      },
+      {
+        "kind": "opening",
+        "objective": "Usare le due aperture iniziali come ipotesi raggiungibili, con Panchina ricavata dalle sei carte dichiarate in mano. Costruire successivamente ogni pesca e azione di setup alternando i lati. Fissare nella costruzione chi comincia; non usare evoluzioni ordinarie al primo turno personale né attacchi o Supporter nel turno globale 1. L'apertura con Joltik serve a confrontare distribuzione delle quattro Energie ricercabili, sviluppo e vulnerabilità dei Base.",
+        "sourceIds": [
+          "card:sv07-050",
+          "card:me05-023",
+          "card:sv10-011",
+          "card:sv09-097",
+          "card:me01-088",
+          "rules"
+        ]
+      },
+      {
+        "kind": "decisions",
+        "objective": "Caso 1, favorevole sotto condizioni esplicite: decidere se evolvere Electrike direttamente in Mega Manectric ex e consumare tutte le Energie con Riotous Blasting per eliminare un N's Zoroark ex integro. Congelare come condizioni l'accesso legale all'evoluzione, tre unità Lightning sul destinatario corretto, avversario con 280 PS e nessun modificatore non tracciato. Confrontare prima dell'evoluzione anche Manectric e, prima dell'attacco, Flash Ray e Riotous Blasting senza scarto: 200+130 supera 280, mentre il seguito richiede una nuova alimentazione. Il caso deve proseguire fino alla risposta avversaria e al nostro turno seguente; i piani delle 2–4 risposte pertinenti saranno definiti nella fase successiva.",
+        "sourceIds": [
+          "card:me05-023",
+          "card:me05-024",
+          "card:me01-050",
+          "card:sv09-098",
+          "card:sv07-050",
+          "card:sv10.5w-084",
+          "rules:prizes:pokemon-ex-2",
+          "rules:prizes:mega-evolution-ex-3"
+        ]
+      },
+      {
+        "kind": "development",
+        "objective": "Caso 2, piano interrompibile: decidere come distribuire Jolting Charge e sviluppare Dwebble in Crustle conservando una seconda minaccia. Verificare il costo Grass più due Colorless di Superb Scissors e la soglia reale: contro N's Zoroark ex integro, 120×2=240 lascia 40 PS. Esaminare Mysterious Rock Inn insieme alla possibilità di Shred, agli accessi avversari e a Boss's Orders; non presentare Crustle come muro assoluto. Confrontare anche l'evoluzione alternativa di Electrike prima di consumarla. Ricostruire risposta e nostro turno successivo; rinviare alla fase successiva la selezione dei 2–4 piani di risposta.",
+        "sourceIds": [
+          "card:sv07-050",
+          "card:sv10-011",
+          "card:sv10-012",
+          "card:sv09-098",
+          "card:me02.5-155",
+          "card:me01-114",
+          "card:me05-024",
+          "card:me01-050"
+        ]
+      },
+      {
+        "kind": "resources",
+        "objective": "Controllare per entrambi i casi la competizione fra assegnazione manuale, Jolting Charge, Hilda e conservazione delle Energie; sul lato avversario includere Trade con scarto, N's PP Up soltanto da scarti a un N's Pokémon in Panchina, Janine's Secret Art soltanto sui Pokémon Darkness e Night Stretcher soltanto sui bersagli ammessi. Valutare Jumbo Ice Cream solo sull'Attivo con almeno tre carte Energia assegnate. Separare danni, segnalini di Adrena-Brain, effetti degli attacchi prevenuti da Mist Energy e bonus condizionali di Binding Mochi.",
+        "sourceIds": [
+          "card:sv07-050",
+          "card:sv10.5w-084",
+          "card:sv09-098",
+          "card:sv09-153",
+          "card:sv08.5-112",
+          "card:me02.5-196",
+          "card:me02-091",
+          "card:sv06-095",
+          "card:sv05-161",
+          "card:sv08.5-095"
+        ]
+      },
+      {
+        "kind": "closing",
+        "objective": "Definire analysisScope con tutte le linee effettivamente confrontate, condizioni, categorie escluse e motivi. Controllare pressione diretta, accesso aggiuntivo e difesa senza equiparare una linea non esaminata a impossibilità o zero danni. Per ogni ramo verificare inventari completi, copie fisiche, pagamenti, scarti delle Energie, danni, KO, Premi e promozioni. La chiusura distinguerà vantaggio locale, sostenibilità del seguito e rischi dei tre Premi di Mega Manectric ex, senza dedurne un esito generale.",
+        "sourceIds": [
+          "our-list",
+          "opponent-1",
+          "card:me01-050",
+          "rules:prizes:knock-out-1",
+          "rules:prizes:pokemon-ex-2",
+          "rules:prizes:mega-evolution-ex-3"
+        ]
+      },
+      {
+        "kind": "variants",
+        "objective": "Tenere separate le liste di Nice, Recife e la lista campione: Budew e Meowth ex nelle prime due; Punk Helmet e Unfair Stamp a Recife; Fezandipiti ex e Tool Scrapper nella lista campione. Non trasferire queste carte nella lista di Puebla. Riportare le frequenze aggregate soltanto sul campione dichiarato di sette liste complete e distinguere le quattro liste esatte consegnate, senza trattarle come campione casuale o ricostruire liste mancanti.",
+        "sourceIds": [
+          "opponent-1",
+          "opponent-2",
+          "opponent-3",
+          "opponent-4",
+          "tournament-aggregate",
+          "card:me02.5-016",
+          "card:me03-062",
+          "card:me02-092",
+          "card:sv06-165",
+          "card:me02.5-142",
+          "card:me02.5-212"
+        ]
+      }
+    ],
+    "additionalPrintIds": [],
+    "additionalLists": [],
+    "gaps": [
+      "Nessuna scheda aggiuntiva indispensabile per questa pianificazione. Le pescate successive e gli esiti delle ricerche non sono ancora fissati: saranno ipotesi esplicite nella ricostruzione, non osservazioni di partita.",
+      "Le fonti consegnate non forniscono un chiarimento specifico su tutti i timing delle interazioni fra Night Joker, attacchi copiati e protezioni. Le dimostrazioni decisive dovranno evitare timing irrisolti oppure dichiarare il limite, senza certificarli per sola citazione.",
+      "La categoria Normal di Voltaic Lightning Energy e Growing Grass Energy non dimostra che siano Energie Base ricercabili con Jolting Charge; il piano non userà tale equivalenza.",
+      "Il campo storico di riconciliazione riporta 60 copie irrisolte, mentre ourList e la provenienza consegnano la lista risolta. Per questo piano si mantiene esattamente ourList, senza presentare il registro storico come certificazione dell'identità.",
+      "Le risposte avversarie non sono ancora piani congelati: saranno richieste e riesaminate dopo la linea principale, includendo pertinenza, accessi e difesa. Nessuna delle due decisioni è già dimostrata ottimale."
+    ],
+    "opponentListId": "opponent-1",
+    "initialOpenings": [
+      {
+        "id": "scenario-1",
+        "opening": {
+          "ours": {
+            "active": "sv07-050",
+            "hand": [
+              "me05-023",
+              "sv10-011",
+              "sv05-161",
+              "sv05-144",
+              "sv10.5w-084",
+              "me01-119"
+            ],
+            "prizes": [
+              "sv10-176",
+              "me02-091",
+              "sv05-161",
+              "me03-081",
+              "mee-009",
+              "me05-024"
+            ],
+            "bench": [
+              "me05-023",
+              "sv10-011"
+            ]
+          },
+          "opponent": {
+            "active": "sv09-097",
+            "hand": [
+              "sv09-097",
+              "me02.5-155",
+              "mee-015",
+              "sv09-098",
+              "me01-119",
+              "me01-131"
+            ],
+            "prizes": [
+              "sv10-180",
+              "sv08-177",
+              "me01-114",
+              "sv05-144",
+              "mee-015",
+              "me03-081"
+            ],
+            "bench": [
+              "sv09-097",
+              "me02.5-155"
+            ]
+          }
+        }
+      },
+      {
+        "id": "scenario-2",
+        "opening": {
+          "ours": {
+            "active": "sv07-050",
+            "hand": [
+              "sv10-011",
+              "me05-023",
+              "sv05-161",
+              "sv10.5w-084",
+              "me01-130",
+              "me03-081"
+            ],
+            "prizes": [
+              "sv10-176",
+              "me02-091",
+              "me01-114",
+              "sv05-144",
+              "mee-012",
+              "sv05-146"
+            ],
+            "bench": [
+              "sv10-011",
+              "me05-023"
+            ]
+          },
+          "opponent": {
+            "active": "me01-088",
+            "hand": [
+              "sv09-097",
+              "me02.5-155",
+              "mee-015",
+              "me03-081",
+              "me01-119",
+              "me01-114"
+            ],
+            "prizes": [
+              "sv10-180",
+              "sv08-177",
+              "sv05-144",
+              "mee-015",
+              "sv08-170",
+              "me02.5-196"
+            ],
+            "bench": [
+              "sv09-097",
+              "me02.5-155"
+            ]
+          }
+        }
+      }
+    ],
+    "__usage": {
+      "inputTokens": 53039,
+      "cachedInputTokens": 0,
+      "outputTokens": 2732
+    },
+    "__responseCharacters": 9054,
+    "__usageEvidence": {
+      "scope": "codex-turn",
+      "completedTurns": 1,
+      "completedItems": 2,
+      "requestInputTokens": 53039,
+      "requestUsage": {
+        "status": "reconciled",
+        "events": [
+          {
+            "inputTokens": 2,
+            "outputTokens": 0,
+            "cachedInputTokens": 0
+          },
+          {
+            "inputTokens": 53039,
+            "outputTokens": 2732,
+            "cachedInputTokens": 0
+          }
+        ],
+        "maximumInputTokens": 53039,
+        "observedKeys": [
+          "event.name",
+          "duration_ms",
+          "http.response.status_code",
+          "success",
+          "attempt",
+          "endpoint",
+          "auth.header_attached",
+          "auth.header_name",
+          "auth.env_openai_api_key_present",
+          "auth.env_codex_api_key_present",
+          "auth.env_codex_api_key_enabled",
+          "auth.env_refresh_token_url_override_present",
+          "auth.mode",
+          "provider_name",
+          "reasoning_summary",
+          "approval_policy",
+          "sandbox_policy",
+          "mcp_servers",
+          "event.timestamp",
+          "conversation.id",
+          "app.version",
+          "auth_mode",
+          "originator",
+          "user.account_id",
+          "user.email",
+          "terminal.type",
+          "model",
+          "slug",
+          "startup.phase",
+          "startup.status",
+          "prompt_length",
+          "prompt",
+          "auth.retry_after_unauthorized",
+          "auth.connection_reused",
+          "event.kind",
+          "input_token_count",
+          "output_token_count",
+          "cached_token_count",
+          "cache_write_token_count",
+          "reasoning_token_count",
+          "tool_token_count",
+          "ttft_ms",
+          "model_reasoning_effort"
+        ],
+        "accountingPrefixEvents": 1
+      }
+    },
+    "allocations": [
+      {
+        "caseId": "scenario-1",
+        "opening": {
+          "ours": {
+            "active": "sv07-050",
+            "hand": [
+              "me05-023",
+              "sv10-011",
+              "sv05-161",
+              "sv05-144",
+              "sv10.5w-084",
+              "me01-119"
+            ],
+            "prizes": [
+              "sv10-176",
+              "me02-091",
+              "sv05-161",
+              "me03-081",
+              "mee-009",
+              "me05-024"
+            ],
+            "bench": [
+              "me05-023",
+              "sv10-011"
+            ]
+          },
+          "opponent": {
+            "active": "sv09-097",
+            "hand": [
+              "sv09-097",
+              "me02.5-155",
+              "mee-015",
+              "sv09-098",
+              "me01-119",
+              "me01-131"
+            ],
+            "prizes": [
+              "sv10-180",
+              "sv08-177",
+              "me01-114",
+              "sv05-144",
+              "mee-015",
+              "me03-081"
+            ],
+            "bench": [
+              "sv09-097",
+              "me02.5-155"
+            ]
+          }
+        },
+        "remainingDeck": {
+          "ours": [
+            {
+              "printId": "me05-023",
+              "count": 2
+            },
+            {
+              "printId": "me05-024",
+              "count": 1
+            },
+            {
+              "printId": "me01-050",
+              "count": 1
+            },
+            {
+              "printId": "sv07-050",
+              "count": 2
+            },
+            {
+              "printId": "sv10-011",
+              "count": 1
+            },
+            {
+              "printId": "sv10-012",
+              "count": 2
+            },
+            {
+              "printId": "sv10-176",
+              "count": 3
+            },
+            {
+              "printId": "me01-119",
+              "count": 3
+            },
+            {
+              "printId": "sv10.5w-084",
+              "count": 2
+            },
+            {
+              "printId": "me01-114",
+              "count": 3
+            },
+            {
+              "printId": "sv05-146",
+              "count": 1
+            },
+            {
+              "printId": "me03-081",
+              "count": 3
+            },
+            {
+              "printId": "me02-091",
+              "count": 3
+            },
+            {
+              "printId": "sv05-144",
+              "count": 3
+            },
+            {
+              "printId": "me01-130",
+              "count": 2
+            },
+            {
+              "printId": "me01-131",
+              "count": 2
+            },
+            {
+              "printId": "sv09-156",
+              "count": 1
+            },
+            {
+              "printId": "sv05-152",
+              "count": 1
+            },
+            {
+              "printId": "sv05-161",
+              "count": 2
+            },
+            {
+              "printId": "mee-012",
+              "count": 3
+            },
+            {
+              "printId": "mee-009",
+              "count": 2
+            },
+            {
+              "printId": "me05-084",
+              "count": 2
+            },
+            {
+              "printId": "me03-086",
+              "count": 2
+            }
+          ],
+          "opponent": [
+            {
+              "printId": "sv09-097",
+              "count": 2
+            },
+            {
+              "printId": "sv09-098",
+              "count": 3
+            },
+            {
+              "printId": "me02.5-155",
+              "count": 1
+            },
+            {
+              "printId": "sv06-131",
+              "count": 1
+            },
+            {
+              "printId": "me01-088",
+              "count": 1
+            },
+            {
+              "printId": "sv06.5-039",
+              "count": 1
+            },
+            {
+              "printId": "sv09-116",
+              "count": 1
+            },
+            {
+              "printId": "sv06-095",
+              "count": 1
+            },
+            {
+              "printId": "sv09-096",
+              "count": 1
+            },
+            {
+              "printId": "me01-119",
+              "count": 3
+            },
+            {
+              "printId": "me01-114",
+              "count": 3
+            },
+            {
+              "printId": "sv08-170",
+              "count": 2
+            },
+            {
+              "printId": "sv08.5-112",
+              "count": 1
+            },
+            {
+              "printId": "sv09-143",
+              "count": 1
+            },
+            {
+              "printId": "me03-076",
+              "count": 1
+            },
+            {
+              "printId": "sv05-144",
+              "count": 3
+            },
+            {
+              "printId": "me03-081",
+              "count": 3
+            },
+            {
+              "printId": "sv09-153",
+              "count": 3
+            },
+            {
+              "printId": "me01-131",
+              "count": 1
+            },
+            {
+              "printId": "me02.5-196",
+              "count": 2
+            },
+            {
+              "printId": "me04-082",
+              "count": 1
+            },
+            {
+              "printId": "sv06-163",
+              "count": 1
+            },
+            {
+              "printId": "sv08.5-095",
+              "count": 2
+            },
+            {
+              "printId": "sv10-180",
+              "count": 1
+            },
+            {
+              "printId": "sv09-152",
+              "count": 1
+            },
+            {
+              "printId": "sv08-177",
+              "count": 0
+            },
+            {
+              "printId": "mee-015",
+              "count": 6
+            }
+          ]
+        }
+      },
+      {
+        "caseId": "scenario-2",
+        "opening": {
+          "ours": {
+            "active": "sv07-050",
+            "hand": [
+              "sv10-011",
+              "me05-023",
+              "sv05-161",
+              "sv10.5w-084",
+              "me01-130",
+              "me03-081"
+            ],
+            "prizes": [
+              "sv10-176",
+              "me02-091",
+              "me01-114",
+              "sv05-144",
+              "mee-012",
+              "sv05-146"
+            ],
+            "bench": [
+              "sv10-011",
+              "me05-023"
+            ]
+          },
+          "opponent": {
+            "active": "me01-088",
+            "hand": [
+              "sv09-097",
+              "me02.5-155",
+              "mee-015",
+              "me03-081",
+              "me01-119",
+              "me01-114"
+            ],
+            "prizes": [
+              "sv10-180",
+              "sv08-177",
+              "sv05-144",
+              "mee-015",
+              "sv08-170",
+              "me02.5-196"
+            ],
+            "bench": [
+              "sv09-097",
+              "me02.5-155"
+            ]
+          }
+        },
+        "remainingDeck": {
+          "ours": [
+            {
+              "printId": "me05-023",
+              "count": 2
+            },
+            {
+              "printId": "me05-024",
+              "count": 2
+            },
+            {
+              "printId": "me01-050",
+              "count": 1
+            },
+            {
+              "printId": "sv07-050",
+              "count": 2
+            },
+            {
+              "printId": "sv10-011",
+              "count": 1
+            },
+            {
+              "printId": "sv10-012",
+              "count": 2
+            },
+            {
+              "printId": "sv10-176",
+              "count": 3
+            },
+            {
+              "printId": "me01-119",
+              "count": 4
+            },
+            {
+              "printId": "sv10.5w-084",
+              "count": 2
+            },
+            {
+              "printId": "me01-114",
+              "count": 2
+            },
+            {
+              "printId": "sv05-146",
+              "count": 0
+            },
+            {
+              "printId": "me03-081",
+              "count": 3
+            },
+            {
+              "printId": "me02-091",
+              "count": 3
+            },
+            {
+              "printId": "sv05-144",
+              "count": 3
+            },
+            {
+              "printId": "me01-130",
+              "count": 1
+            },
+            {
+              "printId": "me01-131",
+              "count": 2
+            },
+            {
+              "printId": "sv09-156",
+              "count": 1
+            },
+            {
+              "printId": "sv05-152",
+              "count": 1
+            },
+            {
+              "printId": "sv05-161",
+              "count": 3
+            },
+            {
+              "printId": "mee-012",
+              "count": 2
+            },
+            {
+              "printId": "mee-009",
+              "count": 3
+            },
+            {
+              "printId": "me05-084",
+              "count": 2
+            },
+            {
+              "printId": "me03-086",
+              "count": 2
+            }
+          ],
+          "opponent": [
+            {
+              "printId": "sv09-097",
+              "count": 3
+            },
+            {
+              "printId": "sv09-098",
+              "count": 4
+            },
+            {
+              "printId": "me02.5-155",
+              "count": 1
+            },
+            {
+              "printId": "sv06-131",
+              "count": 1
+            },
+            {
+              "printId": "me01-088",
+              "count": 0
+            },
+            {
+              "printId": "sv06.5-039",
+              "count": 1
+            },
+            {
+              "printId": "sv09-116",
+              "count": 1
+            },
+            {
+              "printId": "sv06-095",
+              "count": 1
+            },
+            {
+              "printId": "sv09-096",
+              "count": 1
+            },
+            {
+              "printId": "me01-119",
+              "count": 3
+            },
+            {
+              "printId": "me01-114",
+              "count": 3
+            },
+            {
+              "printId": "sv08-170",
+              "count": 1
+            },
+            {
+              "printId": "sv08.5-112",
+              "count": 1
+            },
+            {
+              "printId": "sv09-143",
+              "count": 1
+            },
+            {
+              "printId": "me03-076",
+              "count": 1
+            },
+            {
+              "printId": "sv05-144",
+              "count": 3
+            },
+            {
+              "printId": "me03-081",
+              "count": 3
+            },
+            {
+              "printId": "sv09-153",
+              "count": 3
+            },
+            {
+              "printId": "me01-131",
+              "count": 2
+            },
+            {
+              "printId": "me02.5-196",
+              "count": 1
+            },
+            {
+              "printId": "me04-082",
+              "count": 1
+            },
+            {
+              "printId": "sv06-163",
+              "count": 1
+            },
+            {
+              "printId": "sv08.5-095",
+              "count": 2
+            },
+            {
+              "printId": "sv10-180",
+              "count": 1
+            },
+            {
+              "printId": "sv09-152",
+              "count": 1
+            },
+            {
+              "printId": "sv08-177",
+              "count": 0
+            },
+            {
+              "printId": "mee-015",
+              "count": 6
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "raw": [
+    {
+      "planHash": "f48715a1eae754432b68c27ceff7820677fd6d67aa3fc0eb76f09f54bb9a43a9",
+      "verdict": "pass",
+      "findings": [
+        "Piano pertinente alle due aperture e alle liste esatte: mantiene Puebla separata dalle varianti e confronta entrambe le evoluzioni di Electrike.",
+        "Obiettivi realistici sotto condizioni esplicite: Riotous Blasting con scarto raggiunge 330 danni; Superb Scissors infligge 240 a N's Zoroark ex integro, lasciandogli 40 PS. La protezione di Crustle resta condizionale, con Shred e Boss's Orders da esaminare.",
+        "Le lacune sono esplicite: pescate, accessi, risposte avversarie e timing irrisolti restano da ricostruire. Jolting Charge fornisce al massimo due Energie Lightning Base: la terza unità richiesta da Mega Manectric ex dovrà avere provenienza e assegnazione tracciate.",
+        "Il pass riguarda esclusivamente pertinenza e realismo dell'impostazione; non certifica turni futuri, rami, ottimalità, vittoria forzata o winrate."
+      ]
+    },
+    {
+      "planHash": "f48715a1eae754432b68c27ceff7820677fd6d67aa3fc0eb76f09f54bb9a43a9",
+      "verdict": "pass",
+      "findings": [
+        "Impostazione pertinente alle due aperture e alla lista esatta di Puebla: conserva le liste e distingue correttamente le varianti, senza importarvi carte assenti.",
+        "Caso 1 plausibile sotto le condizioni dichiarate: Riotous Blasting con scarto raggiunge 330 danni contro 280 PS. Jolting Charge cerca al massimo due Lightning Base; la terza unità Lightning dovrà avere accesso e assegnazione tracciati. Il confronto con Manectric e gli attacchi alternativi è pertinente.",
+        "Caso 2 realistico come sviluppo interrompibile: Superb Scissors richiede Grass e due Colorless e infligge 240 per debolezza, lasciando 40 PS. Shred, Boss's Orders e Adrena-Brain rendono pertinente l'esame dei limiti della protezione di Crustle.",
+        "Le lacune sono esplicite: pescate, ricerche, ordine di gioco, risposte avversarie e timing irrisolti restano da ricostruire. Il pass riguarda soltanto pertinenza e realismo del piano; non certifica turni o capitoli futuri, ottimalità, vittoria forzata o winrate."
+      ]
+    }
+  ]
+}

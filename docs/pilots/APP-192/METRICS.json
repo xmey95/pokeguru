@@ -1,0 +1,521 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-192",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "sealedFiles": 29,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh generation per pilot matchup; no previous guide and no editorial patch. Scenarios-first v2 pipeline, explicit card-movement ledger, all existing gates retained.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 379064,
+      "outputTokens": 32803,
+      "cachedInputTokens": 9344,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 675538,
+      "elapsedMs": 676125,
+      "startedAt": "2026-10-30T15:02:15.669Z",
+      "endedAt": "2026-10-30T15:13:31.794Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 24,
+              "calculations": 7,
+              "transitions": 12
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-protezione",
+                "message": "La linea favorevole omette Fan Call nel nostro primo turno senza valutarne l'effetto. Fan Rotom può cercare fino a tre Pokémon Colorless da massimo 100 PS, disponibili nel mazzo dichiarato, mentre abbiamo quattro posti liberi in Panchina. Fermarsi con il solo Pikipek e poi descrivere la necessità di ricostruire sottostima lo sviluppo garantito dalla posizione.",
+                "correction": "Confrontare esplicitamente la linea proposta con Fan Call prima dell'attacco, per esempio cercando altri Pikipek e Patrat. Scegliere e dimostrare una linea motivata, aggiornando azioni, risorse, conteggi Panchina e pivot; se si conserva l'omissione, presentare il caso come errore di sviluppo e non come linea consigliata.",
+                "sourceIds": [
+                  "card:me02.5-250",
+                  "card:me05-066",
+                  "card:me04-070",
+                  "our-list"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-protezione",
+                "message": "La replica dimostrata garantisce il KO, ma lascia inutilizzate migliorie certe raggiungibili dalla mano completa. Con il Poké Pad ipotizzato, l'avversario può cercare e mettere in Panchina Dreepy, usare Crispin cercando Fire e Psychic e assegnarne una al nuovo Dreepy, oltre all'assegnazione manuale di Fire a Drakloak. Mantiene Dragon Headbutt e prepara un secondo attaccante senza dipendere da Recon Directive. Il campo finale con Panchina avversaria vuota non rappresenta questa alternativa più sviluppata.",
+                "correction": "Dimostrare e confrontare almeno questa replica completa con il semplice KO, specificando ordine, Energie cercate, assegnazioni e mano residua. Aggiornare il campo finale e il calcolo condizionato di Feather Rondo; distinguere questa miglioria garantita dalle ulteriori opzioni dipendenti dalle pescate.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me03-081",
+                  "card:sv06-128",
+                  "card:sv06-129",
+                  "card:sv07-133",
+                  "card:me05-094"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-rottura",
+                "message": "Anche qui la migliore alternativa deterministica non viene dimostrata: Poké Pad può trovare un secondo Dreepy e Crispin può alimentarlo mentre Drakloak conserva il KO grazie alle Energie già disponibili. La prosa riconosce genericamente Crispin, ma gli steps conservano artificialmente entrambe le Panchine vuote e il pivot usa quel campo impoverito. I due casi mostrano inoltre quasi lo stesso scambio iniziale e nessuno completa il confronto richiesto con una replica avversaria sviluppata.",
+                "correction": "Integrare la ricerca di Dreepy e l'uso di Crispin in una replica verificata, con mano completa e campo risultante, oppure confrontarli in un ramo alternativo separato e motivare la scelta. Ricalcolare il pivot sul campo effettivo e rendere questo caso utile a una decisione distinta dal primo, mantenendo la specificità dell'evoluzione naturale sotto blocco Item.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:me03-081",
+                  "card:sv06-128",
+                  "card:sv06-129",
+                  "card:sv07-133",
+                  "card:me05-067",
+                  "card:me05-094"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi openingHands, pescate, assegnazioni e handAfter: i registri iniziali coincidono con state e inventory.",
+              "Verificati inventari rispetto alle 60 carte delle due liste selezionate, Premi iniziali, setupDraws e assenza di ritorni al mazzo.",
+              "Verificati costi degli attacchi, evoluzioni, blocco Item, sostituzione dello Stadio, danni e separazione tra KO e promozioni.",
+              "I sette conti dichiarati sono aritmeticamente coerenti con i rami mostrati; il campo finale dipende però dalle azioni avversarie omesse.",
+              "Confrontata la replica dichiarata con la catena garantita Poké Pad → Dreepy → Crispin e con le opzioni condizionate di Recon Directive, Ultra Ball e recupero di Budew.",
+              "Revisione limitata agli scenari; non costituisce certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-protezione: Panchina incoerente dopo bench."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 40,
+              "calculations": 11,
+              "transitions": 21
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-protezione",
+                "message": "Lo step action=bench mette insieme tre ingressi e passa da ourBench=1 a ourBench=4. Il controllo locale segnala questa transizione come incoerente: manca la rappresentazione individuale dei tre cambiamenti del campo.",
+                "correction": "Dividere lo step in tre step bench consecutivi: primo Pikipek 1→2, secondo Pikipek 2→3, Patrat 3→4. Riportare rispettivamente mani nostre di 8, 7 e 6 carte; mantenere invariati Premi, Panchina avversaria e mano avversaria. Ogni before deve coincidere con l'after precedente.",
+                "sourceIds": [
+                  "card:me02.5-250",
+                  "card:me05-066",
+                  "card:me04-070",
+                  "our-list"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi openingHands, openingPrizes e setupLedger: le mani residue coincidono con state e inventory in entrambi gli scenari.",
+              "Verificate le 60 carte per lato rispetto a our-list e opponent-1, comprese Energie assegnate, Premi e preevoluzioni.",
+              "Verificati costi degli attacchi, finestre evolutive assunte, assegnazioni manuali e uso di Crispin.",
+              "Verificati danni, Premi rimasti, KO e promozioni; corretti i mazzi finali e le soglie condizionate di Feather Rondo.",
+              "Confrontata la replica descritta con recupero di Budew, Recon Directive e accessi ulteriori tramite Ultra Ball, Fezandipiti ex e Meowth ex: gli sviluppi dipendenti da pescate restano esplicitamente non certificati come ottimali.",
+              "Nessuna linea dimostrata usa carte assenti da opponent-1 o dipende dal timing di Spiky Energy.",
+              "La revisione non costituisce una certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "c625ec385a0c4a10ba5917ea55948aa7fe82cf8638be328f656832e1cf516076"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "e7cd292fe3bd1f9dbefcaca6ef58fad424fc3cde6c4b86c1a9302782fdee7493"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "32dddc29b3bcd62588959be1b43479834863441a72e03be805e81fdbd0c01dc5"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "1c27fc8959adf7cc1570565c21ca021daf64331cd0f3e77d4aaaf362b96751d1"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "f92f7bb0963054bae182ea0d0a0754a3b0c21c8672842277ef48245a5447861e"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 391135,
+      "outputTokens": 36405,
+      "cachedInputTokens": 9984,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 627637,
+      "elapsedMs": 628222,
+      "startedAt": "2026-10-30T15:02:15.837Z",
+      "endedAt": "2026-10-30T15:12:44.059Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 33,
+              "calculations": 11,
+              "transitions": 7
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "La sopravvivenza dimostrata dipende da una distribuzione artificiale che mette nei sei Premi tutte le quattro Lillie's Determination e i due Gladion's Final Battle. La distribuzione è raggiungibile e dichiarata, ma elimina proprio tutte le risposte di pesca e potenziamento prima del confronto delle ricerche. Non soddisfa la richiesta di una posizione realistica che metta alla prova la tesi senza escludere artificialmente le repliche.",
+                "correction": "Ricostruire questo scenario con almeno parte dei Supporter di pesca e potenziamento accessibile. Ripercorrere il registro completo e confrontare la ricerca di Festival Grounds con le linee raggiungibili tramite Lillie's Determination, comprese pescate esplicitamente ipotizzate e possibili ricerche concatenate. Se Toucannon non sopravvive alla migliore replica così verificata, modificare la conclusione invece di proteggere la tesi mediante i Premi.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-015",
+                  "card:me01-119",
+                  "card:me05-077",
+                  "card:sv06-018"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Il secondo caso ripete la medesima apertura e gli stessi sei Premi avversari estremamente restrittivi del primo. Dimostra correttamente la scelta della promozione contro la linea Poffin, ma il confronto strategico precedente viene nuovamente semplificato rendendo inaccessibili tutti i Supporter di pesca e Gladion's Final Battle. I due casi non offrono quindi la profondità richiesta contro risposte realistiche diverse.",
+                "correction": "Ricostruire il secondo caso con una distribuzione nascosta meno restrittiva e una storia distinta. Verificare dalla mano completa precedente alla ricerca di Thwackey anche l'accesso a Lillie's Determination e alle successive catene di ricerca, specificando le pescate necessarie. Conservare il confronto tra Poffin e Boss's Orders, ma aggiornare stato, registro, inventario e conclusione alla replica effettivamente verificata.",
+                "sourceIds": [
+                  "opponent-1",
+                  "card:sv06-015",
+                  "card:me01-119",
+                  "card:me05-077",
+                  "card:me01-114",
+                  "card:sv05-144"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi openingHands, openingPrizes, eventi e handAfter: coerenti con gli inventari finali dichiarati.",
+              "Verificate le 60 carte per lato, le quantità delle stampe utilizzate e l'assenza di duplicazioni nei recuperi.",
+              "Verificati costi, evoluzioni, assegnazioni, ritirata, condizioni delle Abilità e sostituzioni dello Stadio rispetto ai testi forniti e alle assunzioni regolamentari dichiarate.",
+              "Gli undici calcoli e le sette transizioni di steps risultano coerenti: KO dell'Attivo e promozione sono separati.",
+              "Legacy Energy riduce correttamente a zero i Premi del primo KO senza impedire il secondo attacco.",
+              "Confrontate le repliche dichiarate con Poffin, Boss's Orders, Poké Pad, recuperi e costi di Ultra Ball e Secret Box nelle distribuzioni indicate.",
+              "Spiky Energy e carte assenti da opponent-1 non sono utilizzate nelle dimostrazioni.",
+              "La revisione non costituisce una certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [
+              "scenario-a: Panchina incoerente dopo bench.",
+              "scenario-b: Panchina incoerente dopo bench."
+            ],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 52,
+              "calculations": 11,
+              "transitions": 13
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Il passaggio bench aggiunge due Pokémon in una sola transizione (Panchina 3→5), causando l'errore locale «Panchina incoerente dopo bench».",
+                "correction": "Separare la risoluzione di Buddy-Buddy Poffin in due transizioni bench consecutive, 3→4 e 4→5. Scartare e contare Poffin una sola volta; mantenere invariati Premi e mano fra i due ingressi.",
+                "sourceIds": [
+                  "card:sv05-144"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-b",
+                "message": "Il passaggio bench aggiunge due Pokémon in una sola transizione (Panchina 3→5), causando l'errore locale «Panchina incoerente dopo bench».",
+                "correction": "Registrare separatamente l'ingresso di Grookey e quello di Rellor con transizioni 3→4 e 4→5, senza duplicare Poffin o modificarne nuovamente il costo in mano.",
+                "sourceIds": [
+                  "card:sv05-144"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "scenario-a",
+                "message": "Il calcolo della ritirata contiene soltanto terms=[0] e minimum=null: verifica il risultato già calcolato, senza rappresentare costo e riduzione. La limitazione che dichiara minimum indisponibile contraddice il campo presente nei dati e il contratto.",
+                "correction": "Registrare terms=[1,-2], multiplier=1, minimum=0 ed expected=0, applicando il clamp dopo la somma. Correggere anche la limitazione relativa all'indisponibilità del campo.",
+                "sourceIds": [
+                  "card:me02.5-250",
+                  "card:me01-166"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi openingHands, openingPrizes ed eventi: mani residue e inventari finali coincidono; ogni lato conserva esattamente le 60 copie della lista selezionata.",
+              "Verificate pescate iniziali, evoluzioni, assegnazioni, ricerche, scarti e Premi del setup; nessun ritorno effettivo al mazzo omesso.",
+              "Verificati costi degli attacchi, danni, riduzione Legacy Energy, KO e promozioni: i KO dell'Attivo mantengono la Panchina invariata fino alla promozione.",
+              "Confrontati i rami dichiarati con accessi tramite Thwackey, Poké Pad, Ultra Ball e Night Stretcher, distinguendo disponibilità delle carte, assegnazione già consumata e limite del Supporter.",
+              "Le conclusioni favorevoli restano condizionate alle otto pescate dichiarate; nello scenario-b Boss's Orders diretto costituisce la replica descritta che ottiene un Premio.",
+              "Timing Spiky Energy/Festival Lead escluso dalle dimostrazioni. La revisione non costituisce certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "b0fea133046c729844ce47fe41e8fa0a87353f856bfab958ef132cfa8c48ff8c"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "ffb44251dffdd485d65f1977c4ccd929751e69ad65dd87379d6cafc2a0848988"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "0814ad1933a8e30357efd4df10e4d0cbc34480faf3a190f83eb414fcfa276385"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "69356c878e9434138c80356983ab7341b9e6aab453b31d9423e704d946e3e7e3"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "5b8ace34c01a1f1af28eddb1d5c953c44c2bfc1cc977c5b347b146421dc64151"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 0,
+      "inputTokens": 259273,
+      "outputTokens": 39407,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 652146,
+      "elapsedMs": 652691,
+      "startedAt": "2026-10-30T15:02:15.980Z",
+      "endedAt": "2026-10-30T15:13:08.671Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 30,
+              "calculations": 14,
+              "transitions": 15
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-replica",
+                "message": "La replica sottovaluta Myriad Leaf Shower: il KO di Dragapult ex è già raggiungibile dalla mano iniziale più il Night Stretcher fissato, senza pescare Meowth ex, giocare Lillie's Determination o trovare altri due Ogerpon. Dopo le evoluzioni registrate, l'avversario può assegnare tutte e tre le Grass in mano all'Ogerpon Attivo: una manualmente, una con Ripening Charge e una con Teal Dance. Ogerpon arriva a cinque carte Grass, che Wild Growth fa valere dieci Energie; Dragapult ha altre due Energie. Myriad Leaf Shower infligge quindi 30 + 30 × (10 + 2) = 390. Hydrapple può usare Ripening Charge dalla Panchina senza avere Energie assegnate. La pescata di Teal Dance può essere qualsiasi carta. La dimostrazione presentata è raggiungibile, ma introduce dipendenze superflue e identifica erroneamente quando il KO è già assicurato nelle ipotesi fissate.",
+                "correction": "Riscrivere la replica principale con recupero di Applin, entrambe le catene evolutive e tutte e tre le assegnazioni su Ogerpon, seguito da Myriad Leaf Shower per 390 e KO di Dragapult. Ripening Charge su Ogerpon cura anche 30 dei suoi 200 danni: dichiarare 170 danni residui. Aggiornare steps, calculations, resources, explanation, opponentResponse e pivot coerentemente. Confrontare questa linea con quella di Syrup Storm: quest'ultima richiede ulteriori pescate e ritirata, mentre il KO tramite Ogerpon non dipende dal risultato di Teal Dance. Conservare eventuali prosecuzioni alternative in rami separati.",
+                "sourceIds": [
+                  "card:sv06-025",
+                  "card:sv07-014",
+                  "card:me01-010",
+                  "card:me01-117",
+                  "card:me02.5-196",
+                  "opponent-2"
+                ]
+              },
+              {
+                "severity": "major",
+                "targetId": "claim-portata",
+                "message": "La condizione sulle pescate della replica è troppo forte: nello scenario-replica il Night Stretcher ipotizzato come pescata iniziale basta a rendere raggiungibile un KO da 390 tramite Ogerpon, indipendentemente dalle successive pescate dichiarate. Il claim attribuisce invece al KO una dipendenza dalla sequenza Meowth/Lillie's Determination/altri Ogerpon.",
+                "correction": "Precisare che il KO tramite Ogerpon è disponibile con la mano iniziale e il Night Stretcher fissato, senza richiedere risultati specifici dalle pescate successive. Distinguere questa conclusione dalla linea più lunga con Hydrapple attaccante, che resta condizionata alle ulteriori pescate, e dall'assenza di una vittoria forzata.",
+                "sourceIds": [
+                  "card:sv06-025",
+                  "card:sv07-014",
+                  "card:me01-010",
+                  "card:me02.5-196",
+                  "opponent-2"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi openingHands, openingPrizes ed eventi dei due setup: conteggi delle mani coerenti e inventari finali di 60 carte per lato.",
+              "Verificate le stampe impiegate rispetto a our-list e opponent-2, incluse preevoluzioni, Energie e Applin recuperato senza duplicazione.",
+              "Verificati Rare Candy, Forest of Vitality, assegnazioni manuali, limiti delle Abilità e Supporter nelle linee registrate.",
+              "Verificati i 14 conti e le transizioni dichiarate di Panchina, KO, Premi e promozioni: corretti per le azioni rappresentate.",
+              "Confrontata la replica con un'alternativa raggiungibile usando l'intera mano: Myriad Leaf Shower elimina le dipendenze dalle ulteriori pescate.",
+              "La revisione riguarda esclusivamente gli scenari e i claim collegati; non costituisce certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 29,
+              "calculations": 15,
+              "transitions": 16
+            }
+          },
+          "review": {
+            "verdict": "revise",
+            "findings": [
+              {
+                "severity": "major",
+                "targetId": "scenario-replica",
+                "message": "La replica dimostrata da 390 è legale, ma il confronto con le alternative trascura un KO più economico e già disponibile senza Night Stretcher né la ricostruzione di Hydrapple ex. Basta evolvere Chikorita fino a Meganium, assegnare una Grass manualmente a Ogerpon e una con Teal Dance: quattro carte Grass forniscono otto Energie; contando le due su Dragapult, Myriad Leaf Shower infligge 30 + 30 × (8 + 2) = 330. Ogerpon può attaccare anche restando a 200 danni. Il pivot suggerisce quindi di riconoscere il pericolo soltanto quando sono accessibili risorse superflue.",
+                "correction": "Confrontare esplicitamente questa alternativa con la linea da 390: garantisce già il KO senza dipendere dall'identità della pescata iniziale, conserva Night Stretcher, entrambe le evoluzioni di Applin e una Grass, ma lascia Ogerpon a 10 PS invece di 40. Correggere il pivot: Meganium e due assegnazioni aggiuntive su Ogerpon bastano alla soglia di KO. Se l'alternativa viene rappresentata con passaggi e inventario finale, mantenerla come ramo separato e ricalcolarne tutte le mani; nella linea principale spiegare il vantaggio della cura e dello sviluppo aggiuntivo.",
+                "sourceIds": [
+                  "opponent-2",
+                  "card:sv06-025",
+                  "card:me01-010",
+                  "card:me01-009",
+                  "card:me01-117",
+                  "card:sv06-130",
+                  "card:sv07-014"
+                ]
+              }
+            ],
+            "checks": [
+              "Ripercorsi entrambi i setupLedger: mani iniziali da sette carte, sei Premi, pescate, ritorni nel mazzo e handAfter coerenti con gli inventari iniziali.",
+              "Verificate le quantità fisiche nelle due liste selezionate, comprese preevoluzioni ed Energie recuperate senza duplicazione.",
+              "Verificati Rare Candy, Forest of Vitality, costi degli attacchi, assegnazioni e limiti delle Abilità nelle linee dichiarate.",
+              "Confermati i danni dimostrati di 400 e 390, la cura di 30, i Premi rimasti e le transizioni distinte di KO e promozione.",
+              "Esaminate le alternative tramite Ultra Ball, Meowth ex, Supporter e recuperi; individuata una replica da 330 che richiede meno risorse.",
+              "Briar non soddisfa il requisito nei turni considerati; nessuna linea dimostrata dipende da timing Festival o status Tera non documentato.",
+              "La revisione riguarda esclusivamente gli scenari e non costituisce certificazione competitiva."
+            ],
+            "revalidatedIds": [],
+            "textCorrections": []
+          },
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "41896e2c9709083b2fc9025afe0ab4d058a330ba56cfbd472e505825f15141f0"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "da6399732bd91ed7fb63d4d9f54abccb92fe26da5fee96a7c11e7f578b8eec54"
+        },
+        {
+          "sequence": 3,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "716570f7307411f963e788468fd79f8c56e2c77a3480a366ba0e876ea88c1e7d"
+        },
+        {
+          "sequence": 4,
+          "stage": "repair-scenarios",
+          "status": "succeeded",
+          "inputHash": "134fe3dc6a3da8f92d1fe92e4b57a4d1dd244463256a44e9a6b024342db7d48d"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-2",
+          "status": "succeeded",
+          "inputHash": "6abdd8d456f2780dc8b51fa706eaafee14e972cbf9ce13c36a844add63f172c6"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 15,
+  "passed": 0
+}

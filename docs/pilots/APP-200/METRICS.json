@@ -1,0 +1,220 @@
+{
+  "date": "2026-10-30",
+  "task": "APP-200",
+  "model": {
+    "provider": "codex",
+    "source": "global",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": null
+  },
+  "maximumPerGuide": 8,
+  "maximumTotal": 24,
+  "verificationBasis": "Archived tested-code and original campaign inputs. v10 typed actor/attack pairs, complete branch continuations or verified terminal states, adjacent explicit KO/prize normalization, direct/access/defense coverage; all earlier controls preserved.",
+  "historicalPrizeAudit": {
+    "paths": 6,
+    "foldedAwards": 10,
+    "preservedFinalZones": true,
+    "newModelCalls": 0,
+    "guideValidation": false
+  },
+  "sealedFiles": 39,
+  "changedSealedFiles": [],
+  "manualCorrections": 0,
+  "scope": "One fresh autonomous generation per matchup with maximum eight invocations each, no editorial input and frozen code/data. Version 10 binds attacks to card/actor, preserves explicit prizes with their KO, requires complete branches and direct/access/defense comparisons backed by actual access flows and sources.",
+  "cases": [
+    {
+      "id": "toucannon-dragapult",
+      "title": "Toucannon contro Dragapult",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 179262,
+      "outputTokens": 7414,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 748905,
+      "elapsedMs": 750092,
+      "startedAt": "2026-10-30T21:06:04.473Z",
+      "endedAt": "2026-10-30T21:18:34.565Z",
+      "error": "scenario-engine: ramo terminale dichiarato senza fine partita.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "inputHash": "f9be5cf90056efe23ff23c5ea1181f0e8efa1f500601162c47ec0026e82bc5e1",
+          "message": "scenario-engine: ramo terminale dichiarato senza fine partita."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "f94605d200f179ae1f693eb6e379822a8d7bd88db43ac20c408025fd2b33671c"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "f9be5cf90056efe23ff23c5ea1181f0e8efa1f500601162c47ec0026e82bc5e1"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "f9be5cf90056efe23ff23c5ea1181f0e8efa1f500601162c47ec0026e82bc5e1"
+        }
+      ]
+    },
+    {
+      "id": "toucannon-festival",
+      "title": "Toucannon contro Festival Lead",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 3,
+      "failedCalls": 2,
+      "inputTokens": 298633,
+      "outputTokens": 10745,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 0,
+      "totalInvocationMs": 242085,
+      "elapsedMs": 243283,
+      "startedAt": "2026-10-30T21:06:04.640Z",
+      "endedAt": "2026-10-30T21:10:07.923Z",
+      "error": "scenario-stadio: ramo terminale dichiarato senza fine partita.",
+      "correctionOrigins": [],
+      "reviews": [],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "b5343a70619a8789e175ec4333316f927bec0679377314a678184d686abb52f4",
+          "message": "scenario-stadio: ramo terminale dichiarato senza fine partita."
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "inputHash": "b5343a70619a8789e175ec4333316f927bec0679377314a678184d686abb52f4",
+          "message": "scenario-stadio: ramo terminale dichiarato senza fine partita."
+        }
+      ],
+      "derivedTactics": [],
+      "projectedStates": [],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "6ba1ad59a43e521815b90b5eb29dd6c776337d74d472aea5dc441ee0f3a2583c"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "b5343a70619a8789e175ec4333316f927bec0679377314a678184d686abb52f4"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "e0f5e7736eeaf19c24055ace5b15809f8b627119628f4ea5cb888b65c60bbe36"
+        }
+      ]
+    },
+    {
+      "id": "dragapult-hydrapple",
+      "title": "Dragapult Blaziken contro Hydrapple",
+      "passed": false,
+      "savedReports": 0,
+      "attempts": 5,
+      "failedCalls": 2,
+      "inputTokens": 317795,
+      "outputTokens": 31496,
+      "cachedInputTokens": 0,
+      "callsWithoutUsage": 1,
+      "totalInvocationMs": 1193247,
+      "elapsedMs": 1196883,
+      "startedAt": "2026-10-30T21:06:04.788Z",
+      "endedAt": "2026-10-30T21:26:01.671Z",
+      "error": "Guida non pubblicata: scenari ancora non validati; prosa non avviata. Il budget residuo non consente correzione e verifiche complete.",
+      "correctionOrigins": [],
+      "reviews": [
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "localChecks": {
+            "errors": [],
+            "checks": {
+              "scenarios": 2,
+              "quantities": 47,
+              "calculations": 18,
+              "transitions": 33
+            }
+          },
+          "review": null,
+          "failure": null
+        }
+      ],
+      "scenarioGates": [],
+      "invalidResponses": [
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "inputHash": "516d8d1d538dfe2c6a07d56ef2cdf51a6ee87c5ca9ea4f93d285ea8ee8c98b97",
+          "message": "scenario-motore: la carta che dichiara l’attacco non è l’Attivo corrente."
+        }
+      ],
+      "derivedTactics": [
+        {
+          "hash": "75406ed4b3a292a482a82bfc19ed484bdda5a7f5297bead5e24deac7a54fc3f6",
+          "origin": "compiler-v3"
+        }
+      ],
+      "projectedStates": [
+        "2c415ea96b8f24119a1900ad7adbe1958ce6449f3cc92bae6d20452aa1df435d"
+      ],
+      "stages": [
+        {
+          "sequence": 1,
+          "stage": "plan",
+          "status": "succeeded",
+          "inputHash": "310a043638976b1c6c193d76f0440a47545093e7be4cd4efa2b6566e2a11bc6d"
+        },
+        {
+          "sequence": 2,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "516d8d1d538dfe2c6a07d56ef2cdf51a6ee87c5ca9ea4f93d285ea8ee8c98b97"
+        },
+        {
+          "sequence": 3,
+          "stage": "scenarios",
+          "status": "failed",
+          "inputHash": "d93cf7869b5038f055cb0e1f5f9811d10f9ed92c493f4d1a86f1ad5b16decec0"
+        },
+        {
+          "sequence": 4,
+          "stage": "scenarios",
+          "status": "succeeded",
+          "inputHash": "d93cf7869b5038f055cb0e1f5f9811d10f9ed92c493f4d1a86f1ad5b16decec0"
+        },
+        {
+          "sequence": 5,
+          "stage": "review-scenarios-1",
+          "status": "succeeded",
+          "inputHash": "d40ac67ad577d770f0327182176ffe88abb765be40df6af2a1b47a053f90e367"
+        }
+      ]
+    }
+  ],
+  "actualCalls": 11,
+  "passed": 0
+}
