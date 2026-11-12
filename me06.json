@@ -1,0 +1,565 @@
+{
+  "schemaVersion": 1,
+  "setId": "me06",
+  "checkedAt": "2026-11-12",
+  "cards": [
+    {
+      "id": "me06-089",
+      "name": "Aarune",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Search your deck for up to 3 in any combination of Supporter and Stadium cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_089_R_EN.png",
+      "imageSha256": "c7bb5c3a957a81edcb722a454672366a9a7b9736356ceb14d897b9e297dfa95a"
+    },
+    {
+      "id": "me06-090",
+      "name": "Adventure Lantern",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Item",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Search your deck for a Basic Fire Energy card and a Basic Lightning Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_090_R_EN.png",
+      "imageSha256": "63fcabcc8ecde61d35c19e949e67dc31b7c8ebb8c4af4c9b41f523340c61f162"
+    },
+    {
+      "id": "me06-091",
+      "name": "Custom Vest",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Tool",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "If the Pokémon this card is attached to isn't a Mega Evolution Pokémon ex, it takes 60 less damage from attacks from your opponent's Mega Evolution Pokémon ex (after applying Weakness and Resistance).",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_091_R_EN.png",
+      "imageSha256": "993b0171fadafbeca51b031e3e78b80e63fc65b5ad4bfa1cea714d8980f32fdd"
+    },
+    {
+      "id": "me06-092",
+      "name": "Emcee's Hype",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_092_R_EN.png",
+      "imageSha256": "f930679a48669fcde208ee6c96cd6b4da353d7d36126bc0b5eb9497f537fc316"
+    },
+    {
+      "id": "me06-093",
+      "name": "Grisham",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Heal 50 damage from each Pokémon (both yours and your opponent's).",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_093_R_EN.png",
+      "imageSha256": "60de9f9582c3d6d5f9a0fd8c93eda1c72c1505a1f619b3da5291cac8a00e5176"
+    },
+    {
+      "id": "me06-094",
+      "name": "Legendary Pyroduct",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Stadium",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Evolution Pokémon in play (both yours and your opponent's) have no Abilities. You cannot play this card by itself. You must combine 2 different Legendary Pyroduct from your hand to play as 1 Stadium card.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_094_R_EN.png",
+      "imageSha256": "c93d2ce092a3f4cd208257670994db00c6e475c53879f3cfb945289194e1fd6e"
+    },
+    {
+      "id": "me06-095",
+      "name": "Legendary Pyroduct",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Stadium",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Evolution Pokémon in play (both yours and your opponent's) have no Abilities. You cannot play this card by itself. You must combine 2 different Legendary Pyroduct from your hand to play as 1 Stadium card.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_095_R_EN.png",
+      "imageSha256": "ad0b133eec0f3a3fddb5f6ec4e1ce558d910ad69d2a69e356d0b83d62727836a"
+    },
+    {
+      "id": "me06-096",
+      "name": "Legendary Summit",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Stadium",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Whenever a Colorless Pokémon (yours or your opponent's) is Knocked Out by damage from an attack from the opponent's Pokémon, that player takes 1 fewer Prize card. You cannot play this card by itself. You must combine 2 different Legendary Summit from your hand to play as 1 Stadium card.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_096_R_EN.png",
+      "imageSha256": "df4fbadd0dccde3fe3f83deca59b8fd5b5bf3b096c5e7a15cd390088d9853ed7"
+    },
+    {
+      "id": "me06-097",
+      "name": "Legendary Summit",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Stadium",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Whenever a Colorless Pokémon (yours or your opponent's) is Knocked Out by damage from an attack from the opponent's Pokémon, that player takes 1 fewer Prize card. You cannot play this card by itself. You must combine 2 different Legendary Summit from your hand to play as 1 Stadium card.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_097_R_EN.png",
+      "imageSha256": "0927efe3d7de34f9db15affce8e15bf55bccc7440bef0edc490e5523a98da983"
+    },
+    {
+      "id": "me06-098",
+      "name": "Legendary Trench",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Stadium",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Whenever a Pokémon (yours or your opponent's) is healed, double the amount of damage healed. You cannot play this card by itself. You must combine 2 different Legendary Trench from your hand to play as 1 Stadium card.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_098_R_EN.png",
+      "imageSha256": "d562c533efd111974df528415cd36346d7cdf0415886493173acc5c9efb2c218"
+    },
+    {
+      "id": "me06-099",
+      "name": "Legendary Trench",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Stadium",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Whenever a Pokémon (yours or your opponent's) is healed, double the amount of damage healed. You cannot play this card by itself. You must combine 2 different Legendary Trench from your hand to play as 1 Stadium card.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_099_R_EN.png",
+      "imageSha256": "735cf39022713c6fea8fce0dde99ed6e32d2b2d7fa341dedbc5c28857c15f153"
+    },
+    {
+      "id": "me06-100",
+      "name": "Mega Rayquaza Cap",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [
+          {
+            "name": "Delta Gift",
+            "cost": [
+              "Colorless"
+            ],
+            "damage": null,
+            "effect": "For each of your Pokémon that has a Mega Rayquaza Cap attached, search your deck for a Basic Energy card and attach it to that Pokémon. Then, shuffle your deck."
+          }
+        ],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Tool",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "The Pokémon this card is attached to can use the attack on this card. (You still need the necessary Energy to use this attack.)",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_100_R_EN.png",
+      "imageSha256": "e442b479ba657c17cc2a669f4b270d5459473373d0f8ec302a02cb7b3ed95651"
+    },
+    {
+      "id": "me06-101",
+      "name": "Tasty Rice Ball",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Item",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Heal 30 damage from your Active Pokémon. For each Tasty Rice Ball card (not including this card) in your discard pile, heal 30 more damage.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_101_R_EN.png",
+      "imageSha256": "c49a239140cd1dda128668df03693f3b7e8c9029510b538de93bc3047e33a25b"
+    },
+    {
+      "id": "me06-102",
+      "name": "Tate & Liza's Training",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Draw 2 cards. If you drew any cards in this way, and if a Stadium that has \"Legendary\" in its name is in play, put this Tate & Liza's Training into your hand instead of the discard pile.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_102_R_EN.png",
+      "imageSha256": "a8f9811382c4f129a4a1295d990775fa3c2350644ba258b4b3d2e8b5928ca622"
+    },
+    {
+      "id": "me06-103",
+      "name": "Zinnia's Trust",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, move an Energy from the Pokémon you moved to your Bench to the new Active Pokémon.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_103_R_EN.png",
+      "imageSha256": "67570ac7499e9aa8729bfcf9df93421b7c7dd89f4b441c16b23979019673c358"
+    },
+    {
+      "id": "me06-125",
+      "name": "Aarune",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Search your deck for up to 3 in any combination of Supporter and Stadium cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_125_R_EN.png",
+      "imageSha256": "8a28257628fb52641c85ca9f6c32db75f1c27a5ede189a6ad068d77a382d088e"
+    },
+    {
+      "id": "me06-126",
+      "name": "Adventure Lantern",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Item",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Search your deck for a Basic Fire Energy card and a Basic Lightning Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_126_R_EN.png",
+      "imageSha256": "703abb4cf115e60338f8fc20e66d420c2d6fd01427940a136fef28ad2586a6ed"
+    },
+    {
+      "id": "me06-127",
+      "name": "Custom Vest",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Tool",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "If the Pokémon this card is attached to isn't a Mega Evolution Pokémon ex, it takes 60 less damage from attacks from your opponent's Mega Evolution Pokémon ex (after applying Weakness and Resistance).",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_127_R_EN.png",
+      "imageSha256": "7498ab360d7e03ae4693ca65742f7a549cf52231bc715d513190d6e85449af2a"
+    },
+    {
+      "id": "me06-128",
+      "name": "Emcee's Hype",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_128_R_EN.png",
+      "imageSha256": "92efad145b15ac3d5ff4d4c9637c81e7a8bf2998308e377aa5b2984d7e230b6a"
+    },
+    {
+      "id": "me06-129",
+      "name": "Pokémon Catcher",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Item",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Flip a coin. If heads, switch in 1 of your opponent's Benched Pokémon to the Active Spot.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_129_R_EN.png",
+      "imageSha256": "0b18c523673e523b85f17543cbd89d9cf8f4b27c5ad73af01c56e15470a3c3b2"
+    },
+    {
+      "id": "me06-130",
+      "name": "Tate & Liza's Training",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Draw 2 cards. If you drew any cards in this way, and if a Stadium that has \"Legendary\" in its name is in play, put this Tate & Liza's Training into your hand instead of the discard pile.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_130_R_EN.png",
+      "imageSha256": "ab665a5c69c8ac7ea874a0bc6fbf20cad6b750c81f5684b5221e987f67ca2481"
+    },
+    {
+      "id": "me06-131",
+      "name": "Zinnia's Trust",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, move an Energy from the Pokémon you moved to your Bench to the new Active Pokémon.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_131_R_EN.png",
+      "imageSha256": "716c2a5efdc2515c7e11af3e54af6ab23f9f05b16ae948bc3904aa153d7faa0b"
+    },
+    {
+      "id": "me06-132",
+      "name": "Bubbly Water Energy",
+      "category": "Energy",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [
+          "Water"
+        ],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "As long as this card is attached to a Pokémon, it provides Water Energy. The Water Pokémon this card is attached to recovers from all Special Conditions and can't be affected by any Special Conditions.",
+      "energyType": "Special",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_132_R_EN.png",
+      "imageSha256": "3483530a5b661b2503543bc1f48c9b62a90d85782d31c6b7b97135f106323969"
+    },
+    {
+      "id": "me06-133",
+      "name": "Growing Grass Energy",
+      "category": "Energy",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [
+          "Grass"
+        ],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "As long as this card is attached to a Pokémon, it provides Grass Energy. The Grass Pokémon this card is attached to gets +20 HP.",
+      "energyType": "Special",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_133_R_EN.png",
+      "imageSha256": "f6cd045b621dfed13846a779d953c83e1b9528e97230b2fda0a134c105e42d13"
+    },
+    {
+      "id": "me06-134",
+      "name": "Nitro Fire Energy",
+      "category": "Energy",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [
+          "Fire"
+        ],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": null,
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "As long as this card is attached to a Pokémon, it provides Fire Energy. If this card is discarded by an effect of an attack used by the Fire Pokémon this card is attached to, put this card into your hand after attack damage and effects.",
+      "energyType": "Special",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_134_R_EN.png",
+      "imageSha256": "08f4b0c737bad804b0c3cf1eea6375b6b5067e388909afa375cef3b7c296772a"
+    },
+    {
+      "id": "me06-139",
+      "name": "Aarune",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Search your deck for up to 3 in any combination of Supporter and Stadium cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_139_R_EN.png",
+      "imageSha256": "885af3b392162b5bb77c61dd6c827b5c4f69f3875a331067006d42a30d311032"
+    },
+    {
+      "id": "me06-140",
+      "name": "Zinnia's Trust",
+      "category": "Trainer",
+      "expectedGameplay": {
+        "hp": null,
+        "types": [],
+        "evolveFrom": null,
+        "attacks": [],
+        "abilities": [],
+        "effect": null,
+        "trainerType": "Supporter",
+        "weaknesses": [],
+        "resistances": [],
+        "retreat": null
+      },
+      "effect": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, move an Energy from the Pokémon you moved to your Bench to the new Active Pokémon.",
+      "sourceUrl": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_140_R_EN.png",
+      "imageSha256": "a254bb058fbddf1f18cffe887baf3288f3dd9a20b546bb0e6b579d081ecb9c93"
+    }
+  ]
+}
