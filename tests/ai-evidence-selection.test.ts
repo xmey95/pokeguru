@@ -7,12 +7,57 @@ import {gzipSync} from 'node:zlib'
 import {ProjectStore} from '../src/main/project-store'
 import {AiJobStore} from '../src/main/ai-job-store'
 import {AiEvidenceArchive} from '../src/main/ai-evidence-archive'
-import {matchingEvidenceValues} from '../src/main/ai-evidence-selection'
+import {matchingEvidenceValues,matchingEvidenceFields} from '../src/main/ai-evidence-selection'
 
 function fixture(){
  const dir=mkdtempSync(join(tmpdir(),'pokeguru-selection-')),file=join(dir,'data.sqlite'),projects=new ProjectStore(file),jobs=new AiJobStore(file),project=projects.create({name:'Independent selectors',format:'STANDARD'}),job=jobs.start('thread-ask',project.id,'independent'),archive=new AiEvidenceArchive(file,job)
  return {archive,file,projects,jobs,project,close(){archive.close();jobs.close();projects.close();rmSync(dir,{recursive:true,force:true})}}
 }
+it('selects ordered nested conjunctions and unions exactly across pages, mutations, reopen and jobs',()=>{
+ const f=fixture(),role='nested-fields',filters=[{path:['request','validationId'],expected:['v3','v4']},{path:['request','data','sourceHash'],expected:['wanted']}]
+ try{
+  for(let i=0;i<75;i++)f.archive.saveValue(role,String(i).padStart(3,'0'),{request:{validationId:i%3?'v3':'v4',data:{sourceHash:i%4?'other':'wanted'}},nested:{n:i}})
+  const view={values:<T>(r:string)=>f.archive.values<T>(r)},reference=()=>[...matchingEvidenceFields<any>(view,role,filters)],select=()=>[...matchingEvidenceFields<any>(f.archive,role,filters)]
+  expect(select()).toEqual(reference());select()[0].value.nested.n=999;expect(select()).toEqual(reference())
+  f.archive.saveValue(role,'new',{request:{validationId:'v4',data:{sourceHash:'wanted'}},nested:{n:75}})
+  expect(select()).toEqual(reference())
+  const reopened=new AiEvidenceArchive(f.file,{id:f.archive.id,projectId:f.archive.projectId,resourceId:f.archive.resourceId},true)
+  try{expect([...matchingEvidenceFields(reopened,role,filters)]).toEqual(reference())}finally{reopened.close()}
+  const project=f.projects.create({name:'Different project',format:'STANDARD'}),job=f.jobs.start('thread-ask',project.id,'other'),other=new AiEvidenceArchive(f.file,job)
+  try{expect([...matchingEvidenceFields(other,role,filters)]).toEqual([])}finally{other.close()}
+ }finally{f.close()}
+})
+it('preserves short circuit/null errors, missing and non-string leaves and uncached long fields',()=>{
+ const f=fixture(),role='nested-fields',filters=[{path:['kind'],expected:['audit']},{path:['data','hash'],expected:['wanted']}]
+ try{
+  f.archive.saveValue(role,'a',{kind:'other',data:null});f.archive.saveValue(role,'b',{kind:'audit',data:{hash:12}})
+  f.archive.saveValue(role,'c',{kind:'audit',data:{}});f.archive.saveValue(role,'d',{kind:'audit',data:{hash:'wanted'}})
+  for(let i=0;i<2;i++)expect([...matchingEvidenceFields(f.archive,role,filters)].map(r=>r.key)).toEqual(['d'])
+  f.archive.saveValue(role,'e',{kind:'audit',data:null})
+  for(let i=0;i<2;i++)expect(()=>[...matchingEvidenceFields(f.archive,role,filters)]).toThrow(TypeError)
+  f.archive.saveValue('long','a',{text:'é'.repeat(800)})
+  for(let i=0;i<2;i++)expect([...matchingEvidenceFields(f.archive,'long',[{path:['text'],expected:['é'.repeat(800)]}])]).toHaveLength(1)
+ }finally{f.close()}
+})
+it.each(['body','size','missing','ordinal','binding'] as const)('rechecks excluded originals and current bindings on nested selector cache hits: %s',kind=>{
+ const f=fixture(),role='nested-fields',filters=[{path:['kind'],expected:['audit']},{path:['data','hash'],expected:['wanted']}]
+ try{
+  f.archive.saveValue(role,'a',{kind:'audit',data:{hash:'wanted'}});f.archive.saveValue(role,'b',{kind:'audit',data:{hash:'excluded'}})
+  expect([...matchingEvidenceFields(f.archive,role,filters)]).toHaveLength(1)
+  const db=new DatabaseSync(f.file)
+  try{
+   const hash=(db.prepare('SELECT object_hash FROM ai_evidence_values WHERE job_id=? AND role=? AND key=?').get(f.archive.id,role,'b') as {object_hash:string}).object_hash
+   if(kind==='body')db.prepare('UPDATE ai_evidence_chunks SET body=? WHERE object_hash=?').run(gzipSync(JSON.stringify({kind:'audit',data:{hash:'wanted'}})),hash)
+   if(kind==='size')db.prepare('UPDATE ai_evidence_objects SET bytes=bytes+1 WHERE hash=?').run(hash)
+   if(kind==='missing')db.prepare('DELETE FROM ai_evidence_chunks WHERE object_hash=?').run(hash)
+   if(kind==='ordinal')db.prepare('UPDATE ai_evidence_chunks SET ordinal=ordinal+1 WHERE object_hash=?').run(hash)
+   if(kind==='binding'){
+    db.prepare("UPDATE ai_evidence_values SET object_hash=(SELECT object_hash FROM ai_evidence_values WHERE job_id=? AND role=? AND key='a') WHERE job_id=? AND role=? AND key='b'").run(f.archive.id,role,f.archive.id,role)
+    expect([...matchingEvidenceFields(f.archive,role,filters)].map(r=>r.key)).toEqual(['a','b'])
+   }else expect(()=>[...matchingEvidenceFields(f.archive,role,filters)]).toThrow()
+  }finally{db.close()}
+ }finally{f.close()}
+})
 it('matches full scans, isolates mutable results, observes new entries and respects lightweight archive views',()=>{
  const f=fixture(),role='independent-selection'
  try{

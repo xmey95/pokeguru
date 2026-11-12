@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "..",
+    "outDir": "../.verify/guide-phase-profile"
+  },
+  "include": [],
+  "files": ["./guide-phase-profile.ts"]
+}

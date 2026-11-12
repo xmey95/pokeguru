@@ -1,4 +1,4 @@
-import {matchingEvidenceValues} from './ai-evidence-selection'
+import {matchingEvidenceFields} from './ai-evidence-selection'
 import {collectGuideAuditCandidates} from '../shared/guide-ledger-projection'
 import {guideAuditAt,guideWithoutNativeAudits,type GuideAuditMode} from '../shared/guide-audit-candidates'
 import {guideHash} from './matchup-guide-packet'
@@ -125,7 +125,10 @@ export async function repairGuideNativeAudits(native:Record<string,any>,mode:Gui
     // Rebuild previously purchased descriptors exactly. Version changes never
     // reset a logical slot, discard its rejected raw, or repurchase valid work.
     const deliveryFollowupKeys=bounded?[...options.deliveryReserveKeys??[],native.id+'/audit-review/'+native.id+'/'+(options.deliveryLineId??'setup')+'/'+task.key+'/0']:undefined
-    const prior=[...matchingEvidenceValues<any>(options.archive,'guide-finite-request-v1',['request','validationId'],'guide-finite-audit-3'),...matchingEvidenceValues<any>(options.archive,'guide-finite-request-v1',['request','validationId'],'guide-finite-audit-4')].sort((a,b)=>Buffer.compare(Buffer.from(a.key),Buffer.from(b.key))).map(r=>r.value).filter(d=>d.scopeHash===guideHash(options.scope)&&/^guide-finite-audit-[34]$/.test(d.request.validationId)&&['packet','native','mode','deliveryBounded','deliveryLineId','sourceHash','candidatesHash','quantityContextHash','turnKey','decisions','promotions','locationPath','auditCards','auditAttacks','semanticRound','semanticFeedback'].every(k=>guideHash(d.request.data[k])===guideHash((data as any)[k]))&&guideHash(d.request.data.feedback??null)===guideHash(feedback??null)).sort((a,b)=>a.request.retryOrdinal-b.request.retryOrdinal)
+    const prior=[...matchingEvidenceFields<any>(options.archive,'guide-finite-request-v1',[
+      {path:['request','validationId'],expected:['guide-finite-audit-3','guide-finite-audit-4']},
+      {path:['request','data','sourceHash'],expected:[sourceHash]},
+    ])].sort((a,b)=>Buffer.compare(Buffer.from(a.key),Buffer.from(b.key))).map(r=>r.value).filter(d=>d.scopeHash===guideHash(options.scope)&&/^guide-finite-audit-[34]$/.test(d.request.validationId)&&['packet','native','mode','deliveryBounded','deliveryLineId','sourceHash','candidatesHash','quantityContextHash','turnKey','decisions','promotions','locationPath','auditCards','auditAttacks','semanticRound','semanticFeedback'].every(k=>guideHash(d.request.data[k])===guideHash((data as any)[k]))&&guideHash(d.request.data.feedback??null)===guideHash(feedback??null)).sort((a,b)=>a.request.retryOrdinal-b.request.retryOrdinal)
     if(prior.length){
       const saved=prior[0].request,{previousInvalid:_invalid,...savedData}=saved.data
       const read=(raw:any)=>{assertNativeScenarioSchema(raw,saved.schema);quantifiedPatch(savedData,raw);return structuredClone(raw)}
@@ -140,7 +143,11 @@ export async function repairGuideNativeAudits(native:Record<string,any>,mode:Gui
   }
   const declarations=tasks.map(task=>{
     const data=request(task).data as any
-    const rows=[...options.archive.values<any>('guide-segment-unit-result-v1')].filter(r=>{const d=options.archive.value<any>('guide-finite-request-v1',r.value.unitId);return d?.scopeHash===guideHash(options.scope)&&d.request.validationId==='guide-finite-audit-2'&&['sourceHash','candidatesHash','quantityContextHash','turnKey','decisions','promotions','locationPath','auditCards','auditAttacks'].every(k=>guideHash(d.request.data[k])===guideHash(data[k]))&&guideHash(d.request.data.feedback??null)===guideHash(data.feedback??null)}).sort((a,b)=>Number(b.value.accepted)-Number(a.value.accepted)||b.value.retryOrdinal-a.value.retryOrdinal)
+    const legacyIds=[...matchingEvidenceFields<any>(options.archive,'guide-finite-request-v1',[
+      {path:['request','validationId'],expected:['guide-finite-audit-2']},
+      {path:['request','data','sourceHash'],expected:[sourceHash]},
+    ])].map(r=>r.key)
+    const rows=[...matchingEvidenceFields<any>(options.archive,'guide-segment-unit-result-v1',[{path:['unitId'],expected:legacyIds}])].filter(r=>{const d=options.archive.value<any>('guide-finite-request-v1',r.value.unitId);return d?.scopeHash===guideHash(options.scope)&&d.request.validationId==='guide-finite-audit-2'&&['sourceHash','candidatesHash','quantityContextHash','turnKey','decisions','promotions','locationPath','auditCards','auditAttacks'].every(k=>guideHash(d.request.data[k])===guideHash(data[k]))&&guideHash(d.request.data.feedback??null)===guideHash(data.feedback??null)}).sort((a,b)=>Number(b.value.accepted)-Number(a.value.accepted)||b.value.retryOrdinal-a.value.retryOrdinal)
     const adopted=rows.flatMap(r=>{try{const ref:AuditDeclarationRef={unitId:r.value.unitId,outcomeKey:r.key,inputVersion:2,...r.value.accepted?{}:{declarationOnly:true}};readAuditDeclaration(ref,options,(d,raw)=>{assertNativeScenarioSchema(raw,options.archive.value<any>('guide-finite-request-v1',ref.unitId).request.schema);return quantifiedPatch(d,raw,3)});return [{raw:r.value.raw,ref}]}catch{return []}})[0]
     if(!adopted&&rows.some(r=>!r.value.accepted&&!guideSemanticRetryAllowed(options.archive,rows.filter(v=>!v.value.accepted&&v.value.unitKey===r.value.unitKey).length)))throw new AiFailure('invalid-response','Audit storico ancora invalido nel protocollo nuovo: due risposte non valide conservate; nessun costruttore riavviato dal cambio di formato.')
     return adopted

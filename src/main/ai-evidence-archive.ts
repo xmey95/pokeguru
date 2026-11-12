@@ -137,6 +137,7 @@ export interface EvidenceSnapshotRow {
   key: string; deckKey: string; date: string; placing: number | null
   deckName: string; deckText: string; cardsText: string; value: unknown
 }
+export interface EvidenceFieldFilter {path:readonly string[];expected:readonly string[]}
 export interface EvidenceAnalysisInput {
   key: string
   fingerprint: string
@@ -355,6 +356,45 @@ export class AiEvidenceArchive {
         // Consumers may recursively read other originals while this generator
         // is suspended. The fingerprint/read is complete; do not retain its
         // compressed buffers for the lifetime of that nested work.
+        original.compressed.length=0
+        yield {key:row.key,value:result}
+      }
+    }
+  }
+
+  /** Ordered conjunction of exact string selectors. Authenticate ALL current
+   * chunks, including excluded rows, before consulting primitive metadata.
+   * No parsed value, verdict or approval survives a lookup. Deeper paths are
+   * evaluated only after preceding selectors match, preserving short circuit
+   * access/errors. This avoids decoding unrelated historical audit bodies. */
+  *valuesByFields<T>(role:string,filters:readonly EvidenceFieldFilter[]):Generator<{key:string;value:T}>{
+    let after:string|null=null
+    while(true){
+      const rows=this.prepare(`SELECT key, object_hash FROM ai_evidence_values
+        WHERE job_id = ? AND role = ? ${after===null?'':'AND key > ?'} ORDER BY key LIMIT 64`)
+        .all(this.id,role,...after===null?[]:[after]) as {key:string;object_hash:string}[]
+      if(!rows.length)return
+      for(const row of rows){
+        after=row.key
+        const original=this.originalParts(row.object_hash)
+        let value:T|undefined,loaded=false,match=true
+        for(const filter of filters){
+          const key=original.cacheKey+':field:'+JSON.stringify(filter.path)
+          const prior=this.selectionFields.get(key)
+          let field:unknown
+          if(prior!==undefined)field=JSON.parse(prior)
+          else{
+            if(!loaded){value=this.get<T>(row.object_hash,original);loaded=true}
+            field=filter.path.reduce<any>((v,k)=>v[k],value)
+            // Non-string leaves cannot equal a requested string. Oversized
+            // paths/strings remain uncached, with the full original access.
+            if(key.length<=1024&&(typeof field!=='string'||field.length<=256))
+              this.selectionFields.put(key,JSON.stringify(typeof field==='string'?field:null))
+          }
+          if(typeof field!=='string'||!filter.expected.includes(field)){match=false;break}
+        }
+        if(!match)continue
+        const result=loaded?value!:this.get<T>(row.object_hash,original)
         original.compressed.length=0
         yield {key:row.key,value:result}
       }
